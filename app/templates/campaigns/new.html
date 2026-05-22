@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block title %}New campaign · Jugabet Admin{% endblock %}
+{% block page_title %}New Campaign{% endblock %}
+
+{% block page_actions %}
+  <a href="/admin/campaigns" class="text-xs text-muted-400 hover:text-zinc-200">← Back to campaigns</a>
+{% endblock %}
+
+{% block content %}
+
+{% if error %}
+  <div class="bg-red-950/50 border border-red-900 text-red-300 text-sm rounded-lg px-4 py-3 mb-6 max-w-2xl">
+    ⚠ {{ error }}
+  </div>
+{% endif %}
+
+<form id="campaign-form" method="POST" action="/admin/campaigns" class="max-w-2xl space-y-5">
+
+  {# ── Title + Slug + Sport ── #}
+  <div class="bg-ink-850 border border-ink-600 rounded-xl p-5 space-y-4">
+    <div>
+      <label class="block text-xs uppercase tracking-wider text-muted-400 mb-1.5">Title</label>
+      <input id="title-input" type="text" name="title" required maxlength="120"
+             placeholder="e.g. VIP Weekend Picks"
+             class="w-full bg-ink-700 border border-ink-600 text-zinc-100 rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500"/>
+      <p class="text-xs text-muted-500 mt-1">Friendly name shown in admin only.</p>
+    </div>
+
+    <div>
+      <label class="block text-xs uppercase tracking-wider text-muted-400 mb-1.5">Public URL</label>
+      <div class="flex items-center gap-2">
+        <span class="text-muted-500 text-sm font-mono">/r/</span>
+        <input id="slug-input" type="text" name="slug" required pattern="^[a-z0-9][a-z0-9-]{1,49}$"
+               placeholder="my-campaign"
+               class="flex-1 bg-ink-700 border border-ink-600 text-zinc-100 rounded-lg px-3 py-2 font-mono focus:outline-none focus:border-brand-500"/>
+        <span class="text-muted-500 text-sm font-mono">.png</span>
+      </div>
+      <p class="text-xs text-muted-500 mt-1">
+        Final URL: <code id="url-preview" class="text-brand-400">/r/your-slug.png</code>
+      </p>
+    </div>
+
+    <div>
+      <label class="block text-xs uppercase tracking-wider text-muted-400 mb-1.5">Sport</label>
+      <select id="sport-select" name="sport"
+              class="w-full bg-ink-700 border border-ink-600 text-zinc-100 rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
+        {% for s in valid_sports %}
+          <option value="{{ s }}">{{ s|capitalize }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  {# ── Mode picker (real radios styled as cards) ── #}
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup" aria-label="Campaign mode">
+    <label class="mode-card cursor-pointer block bg-ink-850 border-2 rounded-xl p-4 transition-all"
+           data-mode="auto">
+      <input type="radio" name="mode" value="auto" class="sr-only" checked/>
+      <div class="flex items-center gap-2 mb-1.5">
+        <span class="text-xs px-2 py-0.5 rounded-full bg-orange-900/40 text-orange-300 font-semibold">Auto</span>
+        <span class="text-sm font-semibold text-zinc-100">Top League</span>
+        <span class="check-mark ml-auto text-brand-400 text-lg hidden">●</span>
+      </div>
+      <p class="text-xs text-muted-400">
+        Tracks the hottest matches for the sport. Optionally narrow to one league.
+        Render count is controlled by <code class="font-mono text-muted-300">?limit=N</code> on the URL.
+      </p>
+    </label>
+
+    <label class="mode-card cursor-pointer block bg-ink-850 border-2 rounded-xl p-4 transition-all"
+           data-mode="manual">
+      <input type="radio" name="mode" value="manual" class="sr-only"/>
+      <div class="flex items-center gap-2 mb-1.5">
+        <span class="text-xs px-2 py-0.5 rounded-full bg-blue-900/40 text-blue-300 font-semibold">Manual</span>
+        <span class="text-sm font-semibold text-zinc-100">Hand-picked</span>
+        <span class="check-mark ml-auto text-brand-400 text-lg hidden">●</span>
+      </div>
+      <p class="text-xs text-muted-400">
+        You curate the exact list of matches and their order on the next screen.
+        Renders precisely what you pick.
+      </p>
+    </label>
+  </div>
+
+  {# ── Mode-specific panels ── #}
+  <div id="panel-auto" class="bg-ink-850 border border-ink-600 rounded-xl p-5">
+    <label class="block text-xs uppercase tracking-wider text-muted-400 mb-1.5">League / Tournament</label>
+    <select id="league-select" name="league"
+            class="w-full bg-ink-700 border border-ink-600 text-zinc-100 rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
+      <option value="">All leagues in sport</option>
+    </select>
+    <p id="league-hint" class="text-xs text-muted-500 mt-1"></p>
+  </div>
+
+  <div id="panel-manual" class="bg-ink-850 border border-ink-600 rounded-xl p-5 text-sm text-muted-300 hidden">
+    <div class="flex items-start gap-3">
+      <span class="text-2xl leading-none">🎯</span>
+      <div>
+        <div class="text-zinc-100 font-medium mb-1">Pick matches on the next screen</div>
+        <p class="text-xs text-muted-400">
+          After you create the campaign, you'll get a searchable picker that lets
+          you add matches one-by-one and reorder them by dragging.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  {# ── Submit ── #}
+  <div class="flex items-center gap-3">
+    <button id="submit-btn" type="submit"
+            class="bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold px-5 py-2.5 rounded-lg">
+      Create auto campaign
+    </button>
+    <a href="/admin/campaigns" class="text-xs text-muted-400 hover:text-zinc-200">Cancel</a>
+  </div>
+</form>
+
+<script>
+(function() {
+  const TOURNAMENTS = {{ tournaments_by_sport|tojson }};
+
+  const titleInput = document.getElementById('title-input');
+  const slugInput = document.getElementById('slug-input');
+  const sportSelect = document.getElementById('sport-select');
+  const leagueSelect = document.getElementById('league-select');
+  const leagueHint = document.getElementById('league-hint');
+  const urlPreview = document.getElementById('url-preview');
+  const submitBtn = document.getElementById('submit-btn');
+  const panelAuto = document.getElementById('panel-auto');
+  const panelManual = document.getElementById('panel-manual');
+  const modeCards = document.querySelectorAll('.mode-card');
+
+  function slugify(v) {
+    return (v||'').toString().toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 50);
+  }
+
+  function currentMode() {
+    const r = document.querySelector('input[name="mode"]:checked');
+    return r ? r.value : 'auto';
+  }
+
+  function refreshLeagueOptions() {
+    const sport = sportSelect.value;
+    const list = TOURNAMENTS[sport] || [];
+    // Preserve "All leagues" + repopulate from current sport
+    leagueSelect.innerHTML = '';
+    const allOpt = document.createElement('option');
+    allOpt.value = '';
+    allOpt.textContent = 'All leagues in sport';
+    leagueSelect.appendChild(allOpt);
+    list.forEach(t => {
+      const o = document.createElement('option');
+      o.value = t;
+      o.textContent = t;
+      leagueSelect.appendChild(o);
+    });
+    if (list.length === 0) {
+      leagueHint.textContent =
+        `No active ${sport} matches yet. The dropdown fills automatically as the parser sees them. Saving with "All leagues" works now.`;
+    } else {
+      leagueHint.textContent =
+        `${list.length} tournaments currently active for ${sport}. Leave blank to rank across all of them.`;
+    }
+  }
+
+  function refreshUrlPreview() {
+    const slug = slugInput.value || 'your-slug';
+    const suffix = currentMode() === 'auto' ? '?limit=5' : '';
+    urlPreview.textContent = `/r/${slug}.png${suffix}`;
+  }
+
+  function refreshMode() {
+    const mode = currentMode();
+    modeCards.forEach(card => {
+      const selected = card.dataset.mode === mode;
+      // Visual: border, ring, check mark
+      card.classList.toggle('border-brand-500', selected);
+      card.classList.toggle('ring-1', selected);
+      card.classList.toggle('ring-brand-500/40', selected);
+      card.classList.toggle('border-ink-600', !selected);
+      card.querySelector('.check-mark').classList.toggle('hidden', !selected);
+    });
+    panelAuto.classList.toggle('hidden', mode !== 'auto');
+    panelManual.classList.toggle('hidden', mode !== 'manual');
+    submitBtn.textContent = mode === 'auto' ? 'Create auto campaign' : 'Create manual campaign';
+    refreshUrlPreview();
+  }
+
+  // Wire up
+  titleInput.addEventListener('input', () => {
+    if (!slugInput.value) slugInput.value = slugify(titleInput.value);
+    refreshUrlPreview();
+  });
+  slugInput.addEventListener('input', () => {
+    slugInput.value = slugify(slugInput.value);
+    refreshUrlPreview();
+  });
+  sportSelect.addEventListener('change', () => {
+    refreshLeagueOptions();
+  });
+  modeCards.forEach(card => {
+    card.addEventListener('click', () => {
+      card.querySelector('input[type="radio"]').checked = true;
+      refreshMode();
+    });
+  });
+
+  // Initial paint
+  refreshLeagueOptions();
+  refreshMode();
+})();
+</script>
+
+{% endblock %}

@@ -1,0 +1,303 @@
+"""
+Match repository — all queries against the `matches` table.
+
+Public surface:
+  - upsert_event(event_dict, sport, mode)        single match upsert
+  - bulk_upsert(events, sport, mode)             many matches at once
+  - deactivate_stale(sport, mode, active_ids)    mark dropped matches inactive
+  - deactivate_expired(hours)                    mark old matches inactive
+  - find_by_event_id / find_by_event_ids
+  - find_active_by_sport(sport, mode=None)
+  - search(query, sport, status, limit, offset)
+  - count_active()
+"""
+
+from __future__ import annotations
+
+import json
+from datetime import datetime, timedelta
+from typing import Any, Dict, Iterable, List, Optional
+
+from sqlalchemy import update
+from sqlalchemy.orm import Session
+
+from ..logging_config import get_logger
+from ..models import Match
+from ..utils.slugify import slugify_league
+
+logger = get_logger("app.repositories.match")
+
+
+class MatchRepository:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    # ─── parse helpers ────────────────────────────────────────────────
+    @staticmethod
+    def _parse_utc(value: Optional[str]) -> Optional[datetime]:
+        if not value:
+            return None
+        try:
+            # accept "2026-05-19T22:00:00+00:00" or "...Z"
+            v = value.replace("Z", "+00:00")
+            return datetime.fromisoformat(v).replace(tzinfo=None)
+        except Exception:
+            return None
+
+    @staticmethod
+    def _odds_to_json(odds: Any) -> Optional[str]:
+        if not odds:
+            return None
+        try:
+            return json.dumps(odds, ensure_ascii=False)
+        except Exception:
+            return None
+
+    # ─── upsert ───────────────────────────────────────────────────────
+    def upsert_event(
+        self,
+        event: Dict[str, Any],
+        sport: str,
+        mode: str,
+        prefetched: Optional[Dict[str, Match]] = None,
+    ) -> Optional[Match]:
+        """Insert or update one event. Returns the Match instance, or None on failure.
+
+        If `prefetched` is provided, look the existing row up in that dict instead
+        of issuing a per-event SELECT (see `bulk_upsert`).
+        """
+        event_id = str(event.get("event_id") or "").strip()
+        if not event_id:
+            logger.warning("upsert_event: missing event_id, skipping")
+            return None
+
+        comps = event.get("competitors") or {}
+        home = comps.get("home") or {}
+        away = comps.get("away") or {}
+        score = event.get("score") or {}
+        market = event.get("market") or {}
+        time_info = event.get("time") or {}
+        tournament = event.get("tournament") or {}
+
+        home_name = (home.get("name") or "").strip()
+        away_name = (away.get("name") or "").strip()
+        if not home_name or not away_name:
+            logger.debug(f"upsert_event: {event_id} missing team names, skipping")
+            return None
+
+        if prefetched is not None:
+            match = prefetched.get(event_id)
+        else:
+            match = self.session.get(Match, event_id)
+        now = datetime.utcnow()
+        is_new = match is None
+
+        if is_new:
+            match = Match(
+                event_id=event_id,
+                first_seen_at=now,
+            )
+            self.session.add(match)
+            if prefetched is not None:
+                prefetched[event_id] = match
+
+        # Update all fields. Use existing value as fallback to avoid wiping
+        # data on a partial refresh.
+        match.sport = sport
+        # H4: don't let a prematch cycle clobber a row that's been promoted
+        # to live by the live feed. The match disappearing from /hot during
+        # the next prematch parse was the most common "missing match" cause.
+        incoming_status = (event.get("status") or "").strip().lower()
+        if mode == "live" or incoming_status == "live" or match.mode != "live":
+            match.mode = mode
+        match.status = event.get("status") or match.status or "prematch"
+        match.home_name = home_name
+        match.away_name = away_name
+        match.home_logo = home.get("logo") or match.home_logo
+        match.away_logo = away.get("logo") or match.away_logo
+        # Slugs come from data-event-competitors JSON; fall back to existing
+        # value so a feed cycle that lost the JSON doesn't wipe them.
+        match.home_slug = (home.get("slug") or "").strip() or match.home_slug
+        match.away_slug = (away.get("slug") or "").strip() or match.away_slug
+        new_tournament_name = tournament.get("name") or match.tournament_name
+        if new_tournament_name != match.tournament_name:
+            match.tournament_name = new_tournament_name
+            match.tournament_slug = slugify_league(new_tournament_name)
+        elif match.tournament_slug is None and match.tournament_name:
+            match.tournament_slug = slugify_league(match.tournament_name)
+        match.href = event.get("href") or match.href
+        match.time_raw = time_info.get("raw") or match.time_raw
+
+        utc = self._parse_utc(time_info.get("utc"))
+        if utc is not None:
+            match.start_time_utc = utc
+
+        match.home_score = score.get("home") if score.get("home") is not None else match.home_score
+        match.away_score = score.get("away") if score.get("away") is not None else match.away_score
+        match.market_type = market.get("type") or match.market_type
+        match.market_name = market.get("name") or match.market_name
+
+        new_odds = self._odds_to_json(market.get("odds"))
+        if new_odds is not None:
+            match.odds_json = new_odds
+
+        match.is_active = True
+        match.last_updated_at = now
+
+        if is_new:
+            logger.info(
+                f"NEW match {event_id}: {home_name} vs {away_name} [{sport}/{mode}]"
+            )
+        return match
+
+    def bulk_upsert(self, events: Iterable[Dict[str, Any]], sport: str, mode: str) -> int:
+        # C2: pre-load all existing rows in one query so upsert_event doesn't
+        # issue a SELECT per event. Cuts cycle DB round-trips from O(N) to O(1).
+        events_list = list(events)
+        ids = [
+            str(e.get("event_id")).strip()
+            for e in events_list
+            if e.get("event_id")
+        ]
+        prefetched: Dict[str, Match] = {}
+        if ids:
+            for m in self.session.query(Match).filter(Match.event_id.in_(ids)).all():
+                prefetched[m.event_id] = m
+        n = 0
+        for event in events_list:
+            try:
+                if self.upsert_event(event, sport, mode, prefetched=prefetched) is not None:
+                    n += 1
+            except Exception:
+                logger.exception(f"bulk_upsert: failed for event {event.get('event_id')}")
+        return n
+
+    # ─── lifecycle ────────────────────────────────────────────────────
+    def deactivate_stale(self, sport: str, mode: str, active_event_ids: Iterable[str]) -> int:
+        """Mark matches in this (sport, mode) feed that are NOT in active_event_ids as inactive."""
+        ids = [str(eid) for eid in active_event_ids if eid]
+        if not ids:
+            # Bug 8: live feeds have no start_time_utc-based fallback, so an
+            # empty live cycle MUST authoritatively deactivate; otherwise
+            # finished live matches stay is_active=True forever ("ghost
+            # live"). Prematch feeds still no-op on empty to avoid wiping
+            # the future schedule on a transient outage — deactivate_expired
+            # cleans those up.
+            if mode != "live":
+                return 0
+            stmt = (
+                update(Match)
+                .where(Match.sport == sport)
+                .where(Match.mode == mode)
+                .where(Match.is_active.is_(True))
+                .values(is_active=False, last_updated_at=datetime.utcnow())
+            )
+            return int(self.session.execute(stmt).rowcount or 0)
+        stmt = (
+            update(Match)
+            .where(Match.sport == sport)
+            .where(Match.mode == mode)
+            .where(Match.is_active.is_(True))
+            .where(~Match.event_id.in_(ids))
+            .values(is_active=False, last_updated_at=datetime.utcnow())
+        )
+        result = self.session.execute(stmt)
+        return int(result.rowcount or 0)
+
+    def deactivate_expired(self, hours: int = 6) -> int:
+        """Mark matches whose scheduled start was more than `hours` ago as inactive."""
+        cutoff = datetime.utcnow() - timedelta(hours=hours)
+        stmt = (
+            update(Match)
+            .where(Match.is_active.is_(True))
+            .where(Match.start_time_utc.is_not(None))
+            .where(Match.start_time_utc < cutoff)
+            .values(is_active=False, last_updated_at=datetime.utcnow())
+        )
+        result = self.session.execute(stmt)
+        return int(result.rowcount or 0)
+
+    # ─── reads ────────────────────────────────────────────────────────
+    def find_by_event_id(self, event_id: str) -> Optional[Match]:
+        return self.session.get(Match, event_id)
+
+    def find_by_event_ids(self, event_ids: Iterable[str]) -> List[Match]:
+        ids = [str(e) for e in event_ids if e]
+        if not ids:
+            return []
+        return self.session.query(Match).filter(Match.event_id.in_(ids)).all()
+
+    def find_active_by_sport(
+        self,
+        sport: str,
+        mode: Optional[str] = None,
+        since: Optional[datetime] = None,
+    ) -> List[Match]:
+        q = self.session.query(Match).filter(Match.sport == sport, Match.is_active.is_(True))
+        if mode:
+            q = q.filter(Match.mode == mode)
+        if since is not None:
+            q = q.filter(Match.last_updated_at >= since)
+        return q.all()
+
+    def count_active(self) -> int:
+        return self.session.query(Match).filter(Match.is_active.is_(True)).count()
+
+    @staticmethod
+    def _escape_like(s: str) -> str:
+        """Escape % and _ so user-supplied terms can't wildcard-DoS the search."""
+        return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+    def search(
+        self,
+        query: Optional[str] = None,
+        sport: Optional[str] = None,
+        status: Optional[str] = None,
+        tournament: Optional[str] = None,
+        team: Optional[str] = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> List[Match]:
+        q = self.session.query(Match).filter(Match.is_active.is_(True))
+        if sport:
+            q = q.filter(Match.sport == sport)
+        if status:
+            q = q.filter(Match.status == status)
+        if tournament:
+            q = q.filter(Match.tournament_name == tournament)
+        if team:
+            t = team.strip().lower()
+            name_like = f"%{self._escape_like(t)}%"
+            q = q.filter(
+                (Match.home_slug == t)
+                | (Match.away_slug == t)
+                | (Match.home_name.ilike(name_like, escape="\\"))
+                | (Match.away_name.ilike(name_like, escape="\\"))
+            )
+        if query:
+            like = f"%{self._escape_like(query)}%"
+            q = q.filter(
+                (Match.home_name.ilike(like, escape="\\"))
+                | (Match.away_name.ilike(like, escape="\\"))
+                | (Match.tournament_name.ilike(like, escape="\\"))
+            )
+        return (
+            q.order_by(Match.hot_score.desc().nullslast(), Match.last_updated_at.desc())
+            .limit(limit)
+            .offset(offset)
+            .all()
+        )
+
+    def list_tournaments(self, sport: Optional[str] = None) -> List[str]:
+        """Distinct tournament names of active matches, ordered alphabetically.
+        Used to populate league-filter dropdowns in the admin picker.
+        """
+        q = (
+            self.session.query(Match.tournament_name)
+            .filter(Match.is_active.is_(True))
+            .filter(Match.tournament_name.is_not(None))
+        )
+        if sport:
+            q = q.filter(Match.sport == sport)
+        rows = q.distinct().order_by(Match.tournament_name.asc()).all()
+        return [r[0] for r in rows if r[0]]

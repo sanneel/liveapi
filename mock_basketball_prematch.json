@@ -1,0 +1,102 @@
+{
+    "16763518": {
+        "id": "16763518_145_0_-_1_-",
+        "translation": "Ganador (incl. prórroga)",
+        "status": 1,
+        "items": [
+            {
+                "rows": [
+                    {
+                        "cells": [
+                            {
+                                "translation": "Oklahoma City Thunder",
+                                "price": "1.44",
+                                "outcomeType": 0
+                            },
+                            {
+                                "translation": "San Antonio Spurs",
+                                "price": "3.03",
+                                "outcomeType": 3
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "16788590": {
+        "id": "16788590_145_0_-_1_-",
+        "translation": "Ganador (incl. prórroga)",
+        "status": 1,
+        "items": [
+            {
+                "rows": [
+                    {
+                        "cells": [
+                            {
+                                "translation": "New York Knicks",
+                                "price": "1.39",
+                                "outcomeType": 0
+                            },
+                            {
+                                "translation": "Cleveland Cavaliers",
+                                "price": "3.26",
+                                "outcomeType": 3
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "16709067": {
+        "id": "16709067_145_0_-_1_-",
+        "translation": "Ganador (incl. prórroga)",
+        "status": 1,
+        "items": [
+            {
+                "rows": [
+                    {
+                        "cells": [
+                            {
+                                "translation": "Dallas Wings (f)",
+                                "price": "1.47",
+                                "outcomeType": 0
+                            },
+                            {
+                                "translation": "Las Vegas Aces (f)",
+                                "price": "2.65",
+                                "outcomeType": 3
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "16723453": {
+        "id": "16723453_145_0_-_1_-",
+        "translation": "Ganador (incl. prórroga)",
+        "status": 1,
+        "items": [
+            {
+                "rows": [
+                    {
+                        "cells": [
+                            {
+                                "translation": "Portland Trail Blazers (Jovke)",
+                                "price": "1.85",
+                                "outcomeType": 0
+                            },
+                            {
+                                "translation": "Sacramento Kings (Dema21)",
+                                "price": "1.85",
+                                "outcomeType": 3
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}

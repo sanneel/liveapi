@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Enable 2FA - Jugabet Admin{% endblock %}
+{% block page_title %}Two-Factor Authentication{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+  <div class="bg-ink-850 border border-ink-600 rounded-xl p-6">
+    <h2 class="text-lg font-semibold text-white mb-1">Set up authenticator app</h2>
+    <p class="text-sm text-muted-400 mb-6">
+      2FA adds a second step to your login: a 6-digit code from an authenticator app on your phone.
+      No SMS, no email, no third-party service.
+    </p>
+
+    <ol class="space-y-6 text-sm text-zinc-300">
+      <li class="flex gap-4">
+        <span class="flex-shrink-0 w-8 h-8 bg-brand-500 text-ink-950 rounded-full font-bold flex items-center justify-center">1</span>
+        <div>
+          <h3 class="font-semibold text-white mb-1">Install an authenticator app on your phone</h3>
+          <p class="text-muted-400 text-xs">
+            Recommended, all free:<br>
+            Google Authenticator, Authy, 1Password, Bitwarden, or Microsoft Authenticator.
+          </p>
+        </div>
+      </li>
+
+      <li class="flex gap-4">
+        <span class="flex-shrink-0 w-8 h-8 bg-brand-500 text-ink-950 rounded-full font-bold flex items-center justify-center">2</span>
+        <div class="flex-1">
+          <h3 class="font-semibold text-white mb-2">Scan this QR code with the app</h3>
+
+          <div class="flex flex-wrap items-center gap-6 mt-3">
+            <div class="bg-white p-3 rounded-lg" id="qr"></div>
+            <div class="text-xs text-muted-400 max-w-xs">
+              <div class="mb-2">Or enter the secret manually:</div>
+              <code class="block bg-ink-700 p-2 rounded text-brand-400 font-mono break-all">{{ secret }}</code>
+              <button onclick="navigator.clipboard.writeText('{{ secret }}'); toast('Secret copied')"
+                      class="mt-2 text-xs text-brand-500 hover:underline">Copy secret</button>
+            </div>
+          </div>
+        </div>
+      </li>
+
+      <li class="flex gap-4">
+        <span class="flex-shrink-0 w-8 h-8 bg-brand-500 text-ink-950 rounded-full font-bold flex items-center justify-center">3</span>
+        <div class="flex-1">
+          <h3 class="font-semibold text-white mb-2">Enter the 6-digit code shown in the app</h3>
+          <form method="POST" action="/admin/2fa/enable" class="flex items-center gap-3">
+            <input type="text" name="code" maxlength="6" pattern="[0-9]{6}" required autocomplete="off"
+                   placeholder="000000"
+                   class="w-40 bg-ink-700 border border-ink-600 rounded-lg px-4 py-2.5 text-lg font-mono tracking-widest text-center text-white focus:border-brand-500 focus:outline-none"/>
+            <button type="submit"
+                    class="bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold px-5 py-2.5 rounded-lg">
+              Enable 2FA
+            </button>
+          </form>
+          {% if request.query_params.get('error') == 'bad_code' %}
+            <p class="text-red-400 text-xs mt-2">Warning: That code was wrong. Try again with a fresh code from the app.</p>
+          {% endif %}
+        </div>
+      </li>
+    </ol>
+  </div>
+
+  <p class="text-xs text-muted-500 mt-4">
+    If you lose your phone, an admin can reset 2FA via the CLI:
+    <code class="text-zinc-400">python scripts/reset_2fa.py {{ current_user.username }}</code>
+  </p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script>
+  QRCode.toCanvas(document.getElementById('qr'), "{{ otpauth_uri }}", {
+    width: 200,
+    margin: 1,
+    color: { dark: '#0a0f1e', light: '#ffffff' },
+  });
+</script>
+
+{% endblock %}

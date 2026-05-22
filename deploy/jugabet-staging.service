@@ -1,0 +1,56 @@
+# systemd unit for the Jugabet STAGING instance.
+# Lives alongside the production `jugabet.service` on the same VPS, on a
+# different port + working directory + DB file. Production is untouched.
+#
+# Install: sudo cp deploy/jugabet-staging.service /etc/systemd/system/
+#          sudo systemctl daemon-reload
+#          sudo systemctl enable --now jugabet-staging
+#
+# Logs:    sudo journalctl -u jugabet-staging -f
+# Restart: sudo systemctl restart jugabet-staging
+# Status:  sudo systemctl status jugabet-staging
+
+[Unit]
+Description=Jugabet Odds CRM — Staging
+After=network.target
+# Crash + cooldown: 5 restarts in 120s, then give up so we don't log-flood.
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=jugabet
+Group=jugabet
+WorkingDirectory=/var/www/jugabet-staging
+Environment=APP_ENV=staging
+EnvironmentFile=/var/www/jugabet-staging/.env
+
+# Port 8001 (production is 8000). --workers 1 is MANDATORY: the parser runs
+# inside the FastAPI process as background threads; a pidfile guard
+# (server.py:_acquire_parser_lock) refuses to spawn duplicate parsers but
+# you still pay the cost of dead idle worker processes if you raise this.
+ExecStart=/var/www/jugabet-staging/.venv/bin/uvicorn server:app \
+    --host 127.0.0.1 --port 8001 --workers 1 \
+    --proxy-headers --forwarded-allow-ips 127.0.0.1
+
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGINT
+
+StandardOutput=append:/var/log/jugabet-staging/app.stdout.log
+StandardError=append:/var/log/jugabet-staging/app.stderr.log
+
+# Security hardening — mirrors production unit.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/www/jugabet-staging /var/log/jugabet-staging
+PrivateDevices=true
+
+MemoryMax=1500M
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

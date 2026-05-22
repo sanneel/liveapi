@@ -1,0 +1,50 @@
+# systemd unit for the Jugabet odds CRM.
+#
+# Install: sudo cp deploy/jugabet.service /etc/systemd/system/
+#          sudo systemctl daemon-reload
+#          sudo systemctl enable --now jugabet
+#
+# Logs:    sudo journalctl -u jugabet -f
+# Restart: sudo systemctl restart jugabet
+# Status:  sudo systemctl status jugabet
+
+[Unit]
+Description=Jugabet Odds CRM (FastAPI on uvicorn)
+After=network.target
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=jugabet
+Group=jugabet
+WorkingDirectory=/var/www/jugabet
+Environment=APP_ENV=production
+
+# Path to the venv-provided uvicorn. Change if your venv is elsewhere.
+ExecStart=/var/www/jugabet/.venv/bin/uvicorn server:app --host 127.0.0.1 --port 8000 --workers 1 --proxy-headers --forwarded-allow-ips 127.0.0.1
+
+# Restart policy: always restart on any crash, but back off if it keeps failing.
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGINT
+
+# Logging
+StandardOutput=append:/var/log/jugabet/app.stdout.log
+StandardError=append:/var/log/jugabet/app.stderr.log
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/www/jugabet /var/log/jugabet
+PrivateDevices=true
+
+# Resource limits (tune if needed)
+MemoryMax=1500M
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

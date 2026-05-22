@@ -1,0 +1,56 @@
+# Caddy v2 — auto-HTTPS reverse proxy in front of the FastAPI app.
+#
+# Replace `odds.jugabet.cl` with your real domain (or subdomain) before deploying.
+#
+# Once `caddy reload` is run, Caddy will:
+#   - request a free Let's Encrypt cert
+#   - keep it auto-renewed
+#   - HTTP-redirect to HTTPS
+#   - forward client IP via X-Forwarded-For (slowapi + login audit log use this)
+
+odds.jugabet.cl {
+    encode zstd gzip
+
+    @admin path /admin* /api/admin* /manual*
+
+    # Security headers
+    header {
+        # HSTS — one year + subdomains. Enable AFTER you've confirmed everything is HTTPS-only.
+        # Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+        # Remove the leaky default server header
+        -Server
+    }
+    header @admin Cache-Control "no-store"
+
+    # All app traffic goes to FastAPI on localhost:8000.
+    # The render PNGs (/r/...) are public.
+    # /admin and /api/admin require login (handled in-app).
+    reverse_proxy 127.0.0.1:8000 {
+        # Forward client IP and protocol to the app (slowapi reads X-Forwarded-For).
+        # Keep this overwritten by Caddy so clients cannot spoof rate-limit IPs.
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Optional: block direct access to the legacy render-only ports
+    # so nothing accidentally bypasses the app.
+
+    # Access logs (rotated by Caddy automatically)
+    log {
+        output file /var/log/caddy/jugabet.log {
+            roll_size 10mb
+            roll_keep 10
+        }
+        format json
+    }
+}
+
+# OPTIONAL: deny known scrapers / bad bots at the edge.
+# Uncomment and add User-Agent patterns to block before they hit the app.
+#
+# @bad_bots header User-Agent *MJ12bot*|*AhrefsBot*|*SemrushBot*
+# respond @bad_bots 403

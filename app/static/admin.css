@@ -1,0 +1,20 @@
+/* Small overrides on top of Tailwind. */
+
+html { scroll-behavior: smooth; }
+body { font-feature-settings: "cv11", "ss03"; }
+
+/* Custom scrollbar for the dark theme */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #0a0f1e; }
+::-webkit-scrollbar-thumb { background: #1e2d4a; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #2c4360; }
+
+/* HTMX request indicator — small pulse on the cursor while requests are in-flight */
+.htmx-request { cursor: progress; }
+.htmx-indicator { opacity: 0; transition: opacity 200ms; }
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator { opacity: 1; }
+
+/* Subtle focus ring */
+*:focus-visible { outline: 2px solid #b6de13; outline-offset: 2px; border-radius: 4px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: none; }

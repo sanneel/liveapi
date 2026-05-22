@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Clubs · Jugabet Admin{% endblock %}
+{% block page_title %}Clubs{% endblock %}
+
+{% block page_actions %}
+  <div class="flex items-center gap-3">
+    <span class="text-xs text-muted-400">
+      {{ stats.total }} total · <span class="text-green-400">{{ stats.with_upcoming }} with upcoming</span> · {{ stats.no_upcoming }} dormant
+    </span>
+    <button type="button" onclick="document.getElementById('create-club-form').classList.toggle('hidden')"
+            class="text-sm bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold px-3 py-1.5 rounded">
+      + Create club
+    </button>
+  </div>
+{% endblock %}
+
+{% block content %}
+
+<p class="text-sm text-muted-400 mb-5 max-w-3xl">
+  Clubs are auto-discovered by the parser: every team slug seen in a match feed
+  becomes a permanent <code class="font-mono text-brand-400">/club/&lt;slug&gt;.png</code>.
+  You can also create a club manually (above) to seed a slug before the parser sees it,
+  and use the per-club edit page to set a fallback message or hide the opponent's logo.
+</p>
+
+<form id="create-club-form"
+      method="POST" action="/admin/clubs"
+      class="hidden bg-ink-850 border border-ink-600 rounded-xl p-5 mb-5"
+      onsubmit="this.querySelector('button[type=submit]').disabled = true;">
+  <div class="text-sm font-semibold text-zinc-100 mb-3">Create a new club</div>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3"
+       data-club-create>
+    <div>
+      <label class="block text-xs uppercase tracking-wider text-muted-400 mb-1.5">Slug</label>
+      <div class="flex items-center gap-2">
+        <span class="text-muted-500 text-sm font-mono">/club/</span>
+        <input type="text" name="slug" required pattern="^[a-z0-9][a-z0-9-]{1,49}$"
+               placeholder="colocolo"
+               class="flex-1 bg-ink-700 border border-ink-600 text-zinc-100 rounded-lg px-3 py-2 font-mono focus:outline-none focus:border-brand-500"/>
+        <span class="text-muted-500 text-sm font-mono">.png</span>
+      </div>
+    </div>
+    <div>
+      <label class="block text-xs uppercase tracking-wider text-muted-400 mb-1.5">Display name</label>
+      <input type="text" name="name" required maxlength="120"
+             placeholder="Colo-Colo"
+             class="w-full bg-ink-700 border border-ink-600 text-zinc-100 rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500"/>
+    </div>
+    <div>
+      <label class="block text-xs uppercase tracking-wider text-muted-400 mb-1.5">Logo URL <span class="text-muted-600">(optional)</span></label>
+      <input type="url" name="logo"
+             placeholder="https://…"
+             class="w-full bg-ink-700 border border-ink-600 text-zinc-100 rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500"/>
+    </div>
+  </div>
+  <div class="mt-4 flex items-center gap-3">
+    <button type="submit" class="bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold px-4 py-2 rounded-lg text-sm">Create club</button>
+    <button type="button" onclick="document.getElementById('create-club-form').classList.add('hidden')"
+            class="text-xs text-muted-400 hover:text-zinc-200">Cancel</button>
+    <span class="text-xs text-muted-500 ml-auto">
+      The fallback message and "hide opponent logo" toggle live on the edit page after creation.
+    </span>
+  </div>
+</form>
+
+<form method="get" action="/admin/clubs"
+      class="bg-ink-850 border border-ink-600 rounded-xl p-4 mb-5 flex items-center gap-3">
+  <input type="text" name="q" value="{{ q }}" placeholder="Search by name or slug…"
+         class="flex-1 bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500"/>
+  <button class="bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold text-sm px-4 py-2 rounded-lg">Search</button>
+  {% if q %}
+    <a href="/admin/clubs" class="text-xs text-muted-400 hover:text-zinc-200 underline">Clear</a>
+  {% endif %}
+</form>
+
+<div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">
+  {% if clubs %}
+    <table class="w-full text-sm">
+      <thead class="bg-ink-800 text-[10px] uppercase tracking-wider text-muted-400">
+        <tr>
+          <th class="px-5 py-3 text-left">Club</th>
+          <th class="px-5 py-3 text-left">Slug</th>
+          <th class="px-5 py-3 text-left">Next match</th>
+          <th class="px-5 py-3 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-ink-600">
+      {% for c in clubs %}
+        {% set ns = match_summaries.get(c.slug) %}
+        <tr class="hover:bg-ink-800/50">
+          <td class="px-5 py-3 text-zinc-100 font-medium">
+            <div class="flex items-center gap-2">
+              {% if c.logo %}
+                <img src="{{ c.logo }}" alt="" class="w-6 h-6 rounded object-cover bg-ink-700"/>
+              {% else %}
+                <span class="w-6 h-6 rounded bg-ink-700 inline-flex items-center justify-center text-[10px] text-muted-400 font-bold">
+                  {{ (c.name or c.slug)[:2]|upper }}
+                </span>
+              {% endif %}
+              {{ c.name }}
+            </div>
+          </td>
+          <td class="px-5 py-3 font-mono text-xs text-brand-400">/club/{{ c.slug }}.png</td>
+          <td class="px-5 py-3 text-xs">
+            {% if ns %}
+              <div class="text-zinc-200 truncate">
+                vs {{ ns.opponent }}
+              </div>
+              <div class="text-muted-500">
+                {{ ns.tournament or '—' }}
+                {% if ns.time_raw %}<span class="text-muted-600"> · </span>{{ ns.time_raw }}{% endif %}
+              </div>
+            {% else %}
+              <span class="text-muted-500 italic">No upcoming match — empty PNG</span>
+            {% endif %}
+          </td>
+          <td class="px-5 py-3 text-right">
+            <div class="inline-flex gap-1">
+              <a href="/admin/clubs/{{ c.slug }}"
+                 class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 px-2.5 py-1 rounded">Edit</a>
+              <a href="/club/{{ c.slug }}.png" target="_blank"
+                 class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 px-2.5 py-1 rounded">PNG ↗</a>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="px-5 py-16 text-center text-muted-500 text-sm">
+      {% if q %}
+        No clubs matched "{{ q }}".
+        <br><a href="/admin/clubs" class="text-brand-400 hover:text-brand-300">Clear search</a>
+      {% else %}
+        <div class="text-4xl mb-3 opacity-30">🪂</div>
+        <div class="text-zinc-300 mb-1">No clubs yet</div>
+        <div class="text-xs">Clubs appear here automatically once the parser starts seeing matches with team slugs.</div>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+
+{% endblock %}

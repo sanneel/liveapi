@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Jugabet Admin{% endblock %}</title>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            // Surface scale — flat, neutral, no opacity stacking.
+            // 950 = page background; 900 = first surface; 800 = elevated; 700 = hover; 600 = subtle border.
+            ink: { 950: '#06080F', 900: '#0A0D17', 850: '#0F131F', 800: '#141826', 700: '#1A1F2E', 600: '#262C3D', 500: '#3A4258' },
+            // Brand reserved for primary CTAs + slug links ONLY. Not backgrounds, not borders.
+            brand: { 400: '#D7F340', 500: '#C2E325', 600: '#A6C311' },
+            // Muted/text scale.
+            muted: { 300: '#94A0B5', 400: '#6B7891', 500: '#4A556B', 600: '#363F52' },
+          },
+          fontFamily: {
+            sans: ['"Inter"', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+          },
+          fontSize: {
+            'label': ['11px', { lineHeight: '14px', letterSpacing: '0.06em' }],
+            'meta':  ['12px', { lineHeight: '16px' }],
+            'body':  ['13px', { lineHeight: '18px' }],
+            'h-sm':  ['14px', { lineHeight: '20px', fontWeight: '600' }],
+            'h-md':  ['16px', { lineHeight: '22px', fontWeight: '600' }],
+            'h-lg':  ['18px', { lineHeight: '24px', fontWeight: '600' }],
+            'h-xl':  ['22px', { lineHeight: '28px', fontWeight: '600' }],
+            'num':   ['24px', { lineHeight: '28px', fontWeight: '600' }],
+          },
+          borderRadius: {
+            DEFAULT: '6px',
+            'md':    '6px',
+            'lg':    '8px',
+            'xl':    '10px',
+          },
+          boxShadow: {
+            'card': '0 1px 0 0 rgba(255,255,255,0.02) inset, 0 1px 3px 0 rgba(0,0,0,0.4)',
+            'pop':  '0 4px 12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)',
+          },
+        }
+      }
+    }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <link rel="stylesheet" href="/static/admin.css">
+  <style>
+    /* Design-language baseline — kept tiny on purpose. */
+    body { font-feature-settings: 'cv11','ss01'; }
+    *:focus-visible { outline: 2px solid #C2E325; outline-offset: 2px; border-radius: 4px; }
+    /* Scrollbars match the ink palette. */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #262C3D; border-radius: 6px; border: 2px solid transparent; background-clip: content-box; }
+    ::-webkit-scrollbar-thumb:hover { background: #3A4258; background-clip: content-box; border: 2px solid transparent; }
+    /* Disable text selection on drag handles for cleaner drag UX. */
+    .drag-handle, [data-drag-handle] { user-select: none; -webkit-user-select: none; }
+    .lucide { width: 16px; height: 16px; stroke-width: 1.75; }
+    /* Alpine x-cloak — hide elements until Alpine has booted and applied
+       x-show / x-if. Without this rule, components flash visible during
+       page load (root cause of the "Loading… stuck" report). */
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+
+<body class="h-full bg-ink-950 text-zinc-200 font-sans antialiased text-body"
+      x-data="{ navOpen: false }">
+
+<div class="flex h-full">
+  {# ── Off-canvas backdrop (mobile) ── #}
+  <div class="fixed inset-0 bg-black/60 z-20 md:hidden"
+       x-show="navOpen" x-transition.opacity @click="navOpen=false" style="display:none"></div>
+
+  {# ── Sidebar: full on lg+, icon-rail on md, off-canvas on sm ── #}
+  <aside class="bg-ink-900 border-r border-ink-600/60 flex flex-col
+                fixed md:static inset-y-0 left-0 z-30
+                w-56 lg:w-56 md:w-14
+                transition-transform md:translate-x-0"
+         :class="navOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'">
+    <div class="h-14 px-4 md:px-3 lg:px-4 flex items-center border-b border-ink-600/60">
+      <span class="text-brand-500 font-bold text-h-sm tracking-tight whitespace-nowrap md:hidden lg:inline">Jugabet</span>
+      <span class="hidden md:inline lg:hidden text-brand-500 font-bold text-h-md">J</span>
+      <button class="ml-auto md:hidden text-muted-400 hover:text-zinc-200"
+              @click="navOpen=false" aria-label="Close menu">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+
+    <nav class="flex-1 py-2 overflow-y-auto">
+      {% set nav = [
+        ('dashboard',    '/admin',               'layout-dashboard',  'Dashboard'),
+        ('matches',      '/admin/matches',       'list',              'Matches'),
+        ('campaigns',    '/admin/campaigns',     'megaphone',         'Campaigns'),
+        ('hot',          '/admin/hot',           'flame',             'Hot'),
+        ('clubs',        '/admin/clubs',         'shield',            'Clubs'),
+        ('logs',         '/admin/logs',          'scroll-text',       'Logs'),
+      ] %}
+      {% for key, url, icon, label in nav %}
+        {% set active = active_page == key %}
+        <a href="{{ url }}" title="{{ label }}"
+           class="group relative flex items-center gap-3 mx-2 px-2.5 py-2 text-body rounded-md transition-colors
+                  {% if active %}bg-ink-800 text-zinc-100{% else %}text-muted-400 hover:bg-ink-800/60 hover:text-zinc-100{% endif %}">
+          {% if active %}<span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-brand-500"></span>{% endif %}
+          <i data-lucide="{{ icon }}" class="flex-shrink-0"></i>
+          <span class="md:hidden lg:inline whitespace-nowrap">{{ label }}</span>
+        </a>
+      {% endfor %}
+    </nav>
+
+    <div class="border-t border-ink-600/60 px-3 py-3">
+      {% if current_user %}
+        <div class="flex items-center gap-2 md:justify-center lg:justify-start">
+          <div class="w-7 h-7 rounded-md bg-ink-700 text-muted-300 flex items-center justify-center text-meta font-semibold flex-shrink-0">
+            {{ (current_user.username or '?')[:1]|upper }}
+          </div>
+          <div class="min-w-0 flex-1 md:hidden lg:block">
+            <div class="text-body text-zinc-200 truncate">{{ current_user.username }}</div>
+            <form method="post" action="/admin/logout" class="leading-none">
+              <button type="submit" class="text-meta text-muted-400 hover:text-red-400">Sign out</button>
+            </form>
+          </div>
+        </div>
+      {% else %}
+        <a href="/admin/login" class="text-meta text-muted-400 hover:text-brand-500">Sign in →</a>
+      {% endif %}
+    </div>
+  </aside>
+
+  <main class="flex-1 flex flex-col min-w-0 md:ml-0">
+    <header class="h-14 bg-ink-900 border-b border-ink-600/60 px-4 md:px-6 flex items-center gap-3 flex-shrink-0">
+      <button class="md:hidden text-muted-400 hover:text-zinc-200"
+              @click="navOpen=true" aria-label="Open menu">
+        <i data-lucide="menu"></i>
+      </button>
+      <h1 class="text-h-md text-zinc-100 truncate flex-1">{% block page_title %}{% endblock %}</h1>
+      <div class="flex items-center gap-2">
+        {% block page_actions %}{% endblock %}
+      </div>
+    </header>
+
+    <div class="flex-1 overflow-y-auto px-4 md:px-6 py-6">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+</div>
+
+{# ── Toast ── #}
+<div x-data="{ msg: '', kind: 'info', show: false }"
+     x-on:toast.window="msg = $event.detail?.msg ?? $event.detail; kind = $event.detail?.kind || 'info'; show = true; clearTimeout($el._t); $el._t = setTimeout(() => show = false, 2500)"
+     x-show="show" x-transition.opacity
+     class="fixed bottom-5 right-5 max-w-sm px-4 py-2.5 rounded-md text-body shadow-pop z-40
+            border bg-ink-800"
+     :class="{
+       'border-ink-600 text-zinc-100': kind === 'info',
+       'border-red-700/60 text-red-200': kind === 'error',
+       'border-emerald-700/60 text-emerald-200': kind === 'success',
+     }"
+     style="display:none">
+  <span x-text="msg"></span>
+</div>
+<script>
+  // Helper used by templates: toast('saved') or toast({msg:'oops',kind:'error'})
+  window.toast = function(detail) {
+    window.dispatchEvent(new CustomEvent('toast', { detail }));
+  };
+  // Render Lucide icons after page + each HTMX swap.
+  document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });
+  document.body.addEventListener('htmx:afterSwap', () => { if (window.lucide) lucide.createIcons(); });
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

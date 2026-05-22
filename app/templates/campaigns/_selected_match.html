@@ -1,0 +1,36 @@
+{# Renders a single selected match row in the edit page. #}
+{# Expects: m (Match) #}
+<li data-event-id="{{ m.event_id }}"
+    class="px-5 py-3 flex items-center gap-3 hover:bg-ink-800/40 transition-colors">
+  <span class="drag-handle cursor-grab text-muted-500 text-lg select-none">⠿</span>
+
+  {% if m.status == 'live' %}
+    <span class="text-[10px] font-bold text-red-300 bg-red-900/40 px-1.5 py-0.5 rounded">LIVE</span>
+  {% endif %}
+
+  <div class="flex-1 min-w-0">
+    <div class="text-sm text-zinc-100 truncate">
+      {{ m.home_name }} <span class="text-muted-400">vs</span> {{ m.away_name }}
+    </div>
+    <div class="text-xs text-muted-400 truncate">
+      {{ m.tournament_name or '—' }} · {{ m.time_raw or '—' }}
+    </div>
+  </div>
+
+  {% set odds = m.odds() %}
+  <div class="hidden sm:flex gap-1">
+    {% if m.market_type == '1x2' %}
+      <span class="text-xs bg-ink-700 text-brand-400 px-1.5 py-0.5 rounded font-semibold">{{ odds.p1 or '-' }}</span>
+      <span class="text-xs bg-ink-700 text-brand-400 px-1.5 py-0.5 rounded font-semibold">{{ odds.draw or '-' }}</span>
+      <span class="text-xs bg-ink-700 text-brand-400 px-1.5 py-0.5 rounded font-semibold">{{ odds.p2 or '-' }}</span>
+    {% elif m.market_type == 'winner' %}
+      <span class="text-xs bg-ink-700 text-brand-400 px-1.5 py-0.5 rounded font-semibold">{{ odds.p1 or '-' }}</span>
+      <span class="text-xs bg-ink-700 text-brand-400 px-1.5 py-0.5 rounded font-semibold">{{ odds.p2 or '-' }}</span>
+    {% endif %}
+  </div>
+
+  <button type="button" onclick="removeMatch('{{ m.event_id }}')"
+          class="text-xs bg-red-950/40 hover:bg-red-900/40 border border-red-900/50 text-red-300 px-2 py-1 rounded">
+    ✕
+  </button>
+</li>

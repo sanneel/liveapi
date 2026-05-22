@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2FA - Sign in - Jugabet Admin</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { colors: {
+        ink: { 950: '#070b16', 900: '#0a0f1e', 850: '#0d1526', 800: '#121e35', 700: '#172040', 600: '#1e2d4a' },
+        brand: { 400: '#cef020', 500: '#b6de13' },
+        muted: { 400: '#5a7a9a', 500: '#3a5570' },
+      }}}
+    }
+  </script>
+</head>
+
+<body class="h-full bg-ink-900 text-zinc-200 font-sans antialiased flex items-center justify-center">
+
+<div class="w-full max-w-md px-6">
+  <div class="text-center mb-8">
+    <div class="text-brand-500 font-bold text-5xl mb-2">2FA</div>
+    <div class="text-brand-500 font-bold text-2xl tracking-widest">VERIFY</div>
+    <div class="text-muted-400 text-xs mt-1 uppercase tracking-wider">Two-factor authentication</div>
+  </div>
+
+  <div class="bg-ink-850 border border-ink-600 rounded-xl shadow-2xl p-8">
+    <h1 class="text-base font-semibold text-white mb-2">Enter your code</h1>
+    <p class="text-sm text-muted-400 mb-6">
+      Open your authenticator app and enter the current 6-digit code for <strong class="text-zinc-300">Jugabet Admin</strong>.
+    </p>
+
+    {% if error %}
+      <div class="mb-4 bg-red-950/50 border border-red-900 text-red-300 text-sm rounded-lg px-4 py-3">
+        Warning: {{ error }}
+      </div>
+    {% endif %}
+
+    <form method="POST" action="/admin/2fa/verify" class="space-y-4">
+      <input type="hidden" name="next" value="{{ next }}">
+      <input type="text" name="code" maxlength="6" pattern="[0-9]{6}" required autofocus autocomplete="one-time-code"
+             placeholder="000000"
+             class="w-full bg-ink-700 border border-ink-600 rounded-lg px-4 py-3 text-2xl font-mono tracking-[0.5em] text-center text-white focus:border-brand-500 focus:outline-none"/>
+
+      <button type="submit"
+              class="w-full bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold rounded-lg py-2.5">
+        Verify
+      </button>
+    </form>
+
+    <form method="post" action="/admin/logout" class="mt-5 text-center">
+      <button type="submit" class="text-xs text-muted-500 hover:text-zinc-300">
+        Cancel and sign out
+      </button>
+    </form>
+  </div>
+
+  <p class="text-center text-xs text-muted-500 mt-6">
+    Lost your phone? Contact an admin to reset 2FA from the CLI.
+  </p>
+</div>
+
+</body>
+</html>

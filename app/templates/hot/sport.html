@@ -1,0 +1,460 @@
+{% extends "base.html" %}
+{% block title %}Hot · {{ sport|capitalize }} · Jugabet{% endblock %}
+
+{% block page_title %}
+  <div class="flex items-baseline gap-2 min-w-0">
+    <a href="/admin/hot" class="text-meta text-muted-400 hover:text-zinc-200 flex-shrink-0">Hot</a>
+    <i data-lucide="chevron-right" class="!w-3 !h-3 text-muted-500 flex-shrink-0"></i>
+    <span class="text-h-md text-zinc-100 capitalize truncate">{{ sport }}</span>
+  </div>
+{% endblock %}
+
+{% block page_actions %}
+  <a href="/hot/{{ sport }}.png" target="_blank"
+     class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-meta text-muted-300 border border-ink-600 hover:bg-ink-800 hover:text-zinc-100">
+    <i data-lucide="image" class="!w-3.5 !h-3.5"></i> PNG
+  </a>
+  <button @click="$dispatch('hot:refresh')"
+          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-meta text-muted-300 border border-ink-600 hover:bg-ink-800 hover:text-zinc-100">
+    <i data-lucide="refresh-cw" class="!w-3.5 !h-3.5"></i> Refresh
+  </button>
+{% endblock %}
+
+{% block content %}
+
+<div x-data="hotCard('{{ sport }}', {{ top_n }}, {{ leaderboard_max }})"
+     x-init="load()"
+     x-on:hot:refresh.window="load()"
+     x-cloak
+     class="max-w-4xl mx-auto">
+
+  {# ── Summary strip ── #}
+  <div class="flex flex-wrap items-center gap-x-6 gap-y-2 mb-5 pb-4 border-b border-ink-600/60">
+    <div class="flex items-baseline gap-1.5">
+      <span class="text-num text-zinc-100 tabular-nums" x-text="topMatches.length"></span>
+      <span class="text-label uppercase text-muted-400">in top {{ top_n }}</span>
+    </div>
+    <div class="flex items-baseline gap-1.5">
+      <span class="text-num text-zinc-100 tabular-nums" x-text="pinCount"></span>
+      <span class="text-label uppercase text-muted-400">pinned</span>
+    </div>
+    <div class="flex items-baseline gap-1.5">
+      <span class="text-num text-zinc-100 tabular-nums" x-text="suppressedMatches.length"></span>
+      <span class="text-label uppercase text-muted-400">suppressed</span>
+    </div>
+    <div class="flex items-baseline gap-1.5">
+      <span class="text-num text-zinc-100 tabular-nums" x-text="restMatches.length + topMatches.length"></span>
+      <span class="text-label uppercase text-muted-400">candidates</span>
+    </div>
+    <div class="ml-auto text-meta text-muted-500" x-show="loading" style="display:none">Loading…</div>
+  </div>
+
+  {# ── Error banner ── #}
+  <div x-show="error" x-transition
+       class="mb-4 px-3 py-2 rounded-md border border-red-800/60 bg-red-950/40 flex items-start gap-2"
+       style="display:none">
+    <i data-lucide="alert-triangle" class="!w-4 !h-4 text-red-300 mt-0.5"></i>
+    <div class="text-body text-red-200 flex-1" x-text="error"></div>
+    <button class="text-meta text-red-300 hover:text-red-100" @click="error=null">Dismiss</button>
+  </div>
+
+  {# ── Top N table ── #}
+  <section class="bg-ink-900 border border-ink-600/60 rounded-lg overflow-hidden mb-4">
+    <header class="sticky top-0 z-10 bg-ink-900/95 backdrop-blur-sm border-b border-ink-600/60">
+      <div class="px-4 py-2 flex items-center gap-3">
+        <h2 class="text-label uppercase text-muted-400">Top {{ top_n }} · drag to reorder</h2>
+        <div class="ml-auto text-meta text-muted-500 hidden sm:flex items-center gap-3">
+          <span class="flex items-center gap-1.5">
+            <kbd class="px-1 py-px text-[10px] rounded border border-ink-600 bg-ink-800 font-mono">⠿</kbd> drag to reorder
+          </span>
+          <span class="flex items-center gap-1.5">
+            <kbd class="px-1 py-px text-[10px] rounded border border-ink-600 bg-ink-800 font-mono">⊘</kbd> hide
+          </span>
+        </div>
+      </div>
+    </header>
+
+    {# Skeleton while initial load — show 3 placeholder rows. #}
+    <template x-if="loading && topMatches.length === 0">
+      <ul>
+        <template x-for="i in 3" :key="'sk' + i">
+          <li class="px-3 py-2.5 flex items-center gap-3 border-b border-ink-600/30 last:border-0">
+            <div class="w-4"></div>
+            <div class="w-5 h-3 rounded bg-ink-700/60 animate-pulse"></div>
+            <div class="w-10 h-3 rounded bg-ink-700/60 animate-pulse"></div>
+            <div class="flex-1">
+              <div class="h-3 w-2/3 rounded bg-ink-700/60 animate-pulse"></div>
+              <div class="h-2 w-1/3 mt-1.5 rounded bg-ink-700/40 animate-pulse"></div>
+            </div>
+          </li>
+        </template>
+      </ul>
+    </template>
+
+    <ul :id="'top-list-' + sport"
+        x-show="!loading || topMatches.length > 0">
+      <template x-for="(m, idx) in topMatches" :key="m.event_id">
+        <li class="group px-3 py-2 flex items-center gap-3 border-b border-ink-600/30 last:border-0 hover:bg-ink-800/40 transition-colors"
+            :data-event-id="m.event_id">
+          <span class="drag-handle cursor-grab text-muted-500 hover:text-muted-300 flex-shrink-0">
+            <i data-lucide="grip-vertical" class="!w-4 !h-4"></i>
+          </span>
+          <span class="w-5 text-right text-meta text-muted-400 font-mono tabular-nums flex-shrink-0"
+                x-text="idx + 1"></span>
+
+          <span class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase flex-shrink-0"
+                :class="m.status === 'live'
+                  ? 'bg-red-500/15 text-red-300 ring-1 ring-red-500/30'
+                  : 'bg-sky-500/15 text-sky-300 ring-1 ring-sky-500/30'"
+                x-text="m.status === 'live' ? 'Live' : 'Pre'"></span>
+
+          <span x-show="m.position"
+                class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30 flex-shrink-0">
+            Pinned
+          </span>
+
+          <div class="flex-1 min-w-0">
+            <div class="text-body text-zinc-100 truncate">
+              <span x-text="m.home_name"></span>
+              <span class="text-muted-500"> vs </span>
+              <span x-text="m.away_name"></span>
+            </div>
+            <div class="text-meta text-muted-400 truncate">
+              <span x-text="m.tournament_name || '—'"></span>
+              <span x-show="m.time_raw" class="text-muted-600"> · </span>
+              <span x-text="m.time_raw || ''"></span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+            <button x-show="m.position"
+                    @click="clearOverride(m.event_id)"
+                    title="Unpin"
+                    class="p-1.5 rounded text-muted-400 hover:text-zinc-100 hover:bg-ink-700">
+              <i data-lucide="pin-off" class="!w-3.5 !h-3.5"></i>
+            </button>
+            <button @click="suppress(m.event_id, true)"
+                    title="Hide from hot"
+                    class="p-1.5 rounded text-muted-400 hover:text-red-300 hover:bg-red-950/40">
+              <i data-lucide="eye-off" class="!w-3.5 !h-3.5"></i>
+            </button>
+          </div>
+        </li>
+      </template>
+
+      <li x-show="!loading && topMatches.length === 0"
+          class="px-4 py-12 text-center">
+        <i data-lucide="inbox" class="!w-6 !h-6 text-muted-500 mx-auto mb-3"></i>
+        <div class="text-body text-zinc-300">No active matches</div>
+        <div class="text-meta text-muted-500 mt-1">
+          Waiting for the parser to fetch <span class="text-zinc-300 capitalize">{{ sport }}</span> feeds.
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  {# ── Search matches ── #}
+  <section class="bg-ink-900 border border-ink-600/60 rounded-lg overflow-hidden mb-4"
+           x-show="topMatches.length > 0">
+    <div class="px-4 py-3 border-b border-ink-600/60 flex items-center justify-between gap-3 bg-ink-950/20">
+      <div class="flex-1 min-w-0">
+        <label for="match-search" class="sr-only">Search matches</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <i data-lucide="search" class="!w-4 !h-4 text-muted-500"></i>
+          </div>
+          <input type="text"
+                 id="match-search"
+                 x-model="searchQuery"
+                 @input.debounce.300ms="performSearch()"
+                 placeholder="Search active matches to override (e.g. Colo-Colo)..."
+                 class="block w-full pl-9 pr-3 py-1.5 bg-ink-950 text-body text-zinc-100 rounded-md border border-ink-600/80 focus:border-zinc-400 focus:outline-none focus:ring-0 placeholder-muted-500 text-meta">
+        </div>
+      </div>
+      <div class="text-meta text-muted-500 flex-shrink-0" x-show="searching" style="display:none">Searching...</div>
+    </div>
+
+    <div x-show="searchResults.length > 0">
+      <header class="px-4 py-1.5 bg-ink-950/40 border-b border-ink-600/30">
+        <h3 class="text-[10px] font-semibold uppercase tracking-wider text-muted-400">Search Results · drag to top to promote</h3>
+      </header>
+      <ul :id="'search-list-' + sport">
+        <template x-for="m in searchResults" :key="'search-' + m.event_id">
+          <li class="group px-3 py-2 flex items-center gap-3 border-b border-ink-600/30 last:border-0 hover:bg-ink-800/40 transition-colors"
+              :data-event-id="m.event_id">
+            <span class="drag-handle cursor-grab text-muted-500 hover:text-muted-300 flex-shrink-0">
+              <i data-lucide="grip-vertical" class="!w-4 !h-4"></i>
+            </span>
+            <span class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase flex-shrink-0"
+                  :class="m.status === 'live'
+                    ? 'bg-red-500/10 text-red-300/80 ring-1 ring-red-500/20'
+                    : 'bg-sky-500/10 text-sky-300/80 ring-1 ring-sky-500/20'"
+                  x-text="m.status === 'live' ? 'Live' : 'Pre'"></span>
+            <div class="flex-1 min-w-0">
+              <div class="text-body text-zinc-200 truncate">
+                <span x-text="m.home_name"></span>
+                <span class="text-muted-500"> vs </span>
+                <span x-text="m.away_name"></span>
+              </div>
+              <div class="text-meta text-muted-500 truncate" x-text="m.tournament_name || '—'"></div>
+            </div>
+            <button @click="suppress(m.event_id, true)" title="Hide from hot"
+                    class="p-1.5 rounded text-muted-500 hover:text-red-300 hover:bg-red-950/40 opacity-0 group-hover:opacity-100 transition-opacity">
+              <i data-lucide="eye-off" class="!w-3.5 !h-3.5"></i>
+            </button>
+          </li>
+        </template>
+      </ul>
+    </div>
+    <div x-show="searchQuery && searchResults.length === 0 && !searching"
+         class="px-4 py-4 text-center text-meta text-muted-500">
+      No matches found matching "<span x-text="searchQuery" class="text-zinc-300"></span>"
+    </div>
+  </section>
+
+  {# ── Leaderboard expandable ── #}
+  <section class="bg-ink-900 border border-ink-600/60 rounded-lg overflow-hidden mb-4"
+           x-show="topMatches.length > 0">
+    <button @click="expanded = !expanded"
+            class="w-full px-4 py-2 flex items-center justify-between text-left hover:bg-ink-800/40 transition-colors"
+            :class="expanded && 'border-b border-ink-600/60'">
+      <span class="text-label uppercase text-muted-400">
+        Leaderboard Candidates <span class="text-muted-500 normal-case tracking-normal">· drag into top to promote</span>
+      </span>
+      <i data-lucide="chevron-down" class="!w-4 !h-4 text-muted-500 transition-transform"
+         :class="expanded && 'rotate-180'"></i>
+    </button>
+
+    <div x-show="expanded" x-transition.duration.150ms>
+      <ul :id="'rest-list-' + sport">
+        <template x-for="(m, idx) in restMatches" :key="m.event_id">
+          <li class="group px-3 py-2 flex items-center gap-3 border-b border-ink-600/30 last:border-0 hover:bg-ink-800/40 transition-colors"
+              :data-event-id="m.event_id">
+            <span class="drag-handle cursor-grab text-muted-500 hover:text-muted-300 flex-shrink-0">
+              <i data-lucide="grip-vertical" class="!w-4 !h-4"></i>
+            </span>
+            <span class="w-5 text-right text-meta text-muted-500 font-mono tabular-nums flex-shrink-0"
+                  x-text="topMatches.length + idx + 1"></span>
+            <span class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase flex-shrink-0"
+                  :class="m.status === 'live'
+                    ? 'bg-red-500/10 text-red-300/80 ring-1 ring-red-500/20'
+                    : 'bg-sky-500/10 text-sky-300/80 ring-1 ring-sky-500/20'"
+                  x-text="m.status === 'live' ? 'Live' : 'Pre'"></span>
+            <div class="flex-1 min-w-0">
+              <div class="text-body text-zinc-200 truncate">
+                <span x-text="m.home_name"></span>
+                <span class="text-muted-500"> vs </span>
+                <span x-text="m.away_name"></span>
+              </div>
+              <div class="text-meta text-muted-500 truncate" x-text="m.tournament_name || '—'"></div>
+            </div>
+            <button @click="suppress(m.event_id, true)" title="Hide from hot"
+                    class="p-1.5 rounded text-muted-500 hover:text-red-300 hover:bg-red-950/40 opacity-0 group-hover:opacity-100 transition-opacity">
+              <i data-lucide="eye-off" class="!w-3.5 !h-3.5"></i>
+            </button>
+          </li>
+        </template>
+        <li x-show="restMatches.length === 0"
+            class="px-4 py-8 text-center text-meta text-muted-500">
+          No more candidates beyond the top {{ top_n }}.
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  {# ── Suppressed bucket ── #}
+  <section class="bg-ink-900 border border-ink-600/60 rounded-lg overflow-hidden"
+           x-show="suppressedMatches.length > 0">
+    <header class="px-4 py-2 border-b border-ink-600/60 flex items-center gap-2">
+      <i data-lucide="eye-off" class="!w-3.5 !h-3.5 text-muted-400"></i>
+      <h2 class="text-label uppercase text-muted-400">
+        Hidden from hot <span class="text-muted-500 normal-case tracking-normal">· click to restore</span>
+      </h2>
+    </header>
+    <ul>
+      <template x-for="m in suppressedMatches" :key="'sup-' + m.event_id">
+        <li class="px-3 py-2 flex items-center gap-3 border-b border-ink-600/30 last:border-0 hover:bg-ink-800/40">
+          <span class="w-4"></span>
+          <span class="w-5"></span>
+          <span class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase bg-ink-700 text-muted-400 ring-1 ring-ink-600">Hidden</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-body text-muted-300 truncate">
+              <span x-text="m.home_name"></span>
+              <span class="text-muted-500"> vs </span>
+              <span x-text="m.away_name"></span>
+            </div>
+            <div class="text-meta text-muted-500 truncate" x-text="m.tournament_name || '—'"></div>
+          </div>
+          <button @click="suppress(m.event_id, false)" title="Restore to hot"
+                  class="p-1.5 rounded text-muted-400 hover:text-emerald-300 hover:bg-emerald-950/40">
+            <i data-lucide="rotate-ccw" class="!w-3.5 !h-3.5"></i>
+          </button>
+        </li>
+      </template>
+    </ul>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script>
+function hotCard(sport, topN, leaderboardMax) {
+  return {
+    sport, topN, leaderboardMax,
+    expanded: false,
+    loading: false,
+    error: null,
+    topMatches: [], restMatches: [], suppressedMatches: [],
+    searchQuery: '',
+    searching: false,
+    searchResults: [],
+    _sortableTop: null, _sortableRest: null, _sortableSearch: null,
+
+    get pinCount() { return this.topMatches.filter(m => m.position).length; },
+
+    async load() {
+      this.loading = true;
+      this.error = null;
+      const url = `/api/admin/hot/${this.sport}/leaderboard?limit=${this.leaderboardMax}`;
+      try {
+        const r = await fetch(url, { credentials: 'same-origin' });
+        if (r.redirected || r.status === 401 || r.status === 403) {
+          // Session expired → API redirected to /login. Don't try to parse HTML as JSON.
+          throw new Error('Session expired — reload the page and sign in again.');
+        }
+        if (!r.ok) throw new Error(`HTTP ${r.status} from ${url}`);
+        const ctype = r.headers.get('content-type') || '';
+        if (!ctype.includes('json')) {
+          throw new Error(`Expected JSON, got ${ctype || 'unknown'} from ${url}`);
+        }
+        const data = await r.json();
+        this.topMatches = (data.top || []).slice(0, this.topN);
+        this.restMatches = (data.top || []).slice(this.topN);
+        this.suppressedMatches = data.suppressed || [];
+
+        if (this.searchQuery.trim()) {
+          const sr = await fetch(`/api/admin/hot/${this.sport}/leaderboard?q=${encodeURIComponent(this.searchQuery)}`, { credentials: 'same-origin' });
+          if (sr.ok) {
+            const sdata = await sr.json();
+            this.searchResults = sdata.search_results || [];
+          }
+        } else {
+          this.searchResults = [];
+        }
+
+        this.$nextTick(() => {
+          this._wireSortable();
+          if (window.lucide) lucide.createIcons();
+        });
+      } catch (e) {
+        // Silent failures here were the #1 reported bug — surface to console
+        // AND to the in-page error banner so admins see what went wrong.
+        console.error('[hotCard.load]', e, 'url=', url);
+        this.error = `Failed to load: ${e.message}`;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async performSearch() {
+      if (!this.searchQuery.trim()) {
+        this.searchResults = [];
+        this.$nextTick(() => {
+          this._wireSortable();
+        });
+        return;
+      }
+      this.searching = true;
+      try {
+        const r = await fetch(`/api/admin/hot/${this.sport}/leaderboard?q=${encodeURIComponent(this.searchQuery)}`);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const data = await r.json();
+        this.searchResults = data.search_results || [];
+        this.$nextTick(() => {
+          this._wireSortable();
+          if (window.lucide) lucide.createIcons();
+        });
+      } catch (e) {
+        this.error = `Search failed: ${e.message}`;
+      } finally {
+        this.searching = false;
+      }
+    },
+
+    _wireSortable() {
+      const topEl = document.getElementById('top-list-' + this.sport);
+      const restEl = document.getElementById('rest-list-' + this.sport);
+      const searchEl = document.getElementById('search-list-' + this.sport);
+      if (!topEl) return;
+      this._sortableTop?.destroy();
+      this._sortableRest?.destroy();
+      this._sortableSearch?.destroy();
+      const onUpdate = () => this.saveOrder();
+      const opts = {
+        group: { name: this.sport, pull: true, put: true },
+        handle: '.drag-handle',
+        animation: 140,
+        ghostClass: 'opacity-30',
+        chosenClass: 'ring-1',
+        dragClass: 'shadow-pop',
+        onEnd: onUpdate,
+      };
+      this._sortableTop = new Sortable(topEl, opts);
+      if (restEl) this._sortableRest = new Sortable(restEl, opts);
+      if (searchEl) this._sortableSearch = new Sortable(searchEl, opts);
+    },
+
+    async saveOrder() {
+      const topEl = document.getElementById('top-list-' + this.sport);
+      const topIds = [...topEl.querySelectorAll('[data-event-id]')].map(el => el.dataset.eventId);
+      const lockedIds = topIds.slice(0, this.topN);
+      if (lockedIds.length === 0) return;
+      try {
+        const r = await fetch(`/api/admin/hot/${this.sport}/reorder`, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({event_ids: lockedIds}),
+        });
+        if (r.status === 409) {
+          toast({msg: 'Another reorder is in progress — try again', kind: 'error'});
+          await this.load();
+          return;
+        }
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        toast({msg: `${this.sport}: order saved`, kind: 'success'});
+        await this.load();
+      } catch (e) {
+        this.error = `Save failed: ${e.message}`;
+        await this.load();
+      }
+    },
+
+    async suppress(eventId, on) {
+      try {
+        const r = await fetch(`/api/admin/hot/${this.sport}/suppress/${encodeURIComponent(eventId)}`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({suppress: !!on}),
+        });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        toast({msg: on ? 'Hidden from hot' : 'Restored to hot', kind: 'success'});
+        await this.load();
+      } catch (e) {
+        this.error = `Update failed: ${e.message}`;
+      }
+    },
+
+    async clearOverride(eventId) {
+      try {
+        const r = await fetch(`/api/admin/hot/${this.sport}/override/${encodeURIComponent(eventId)}`, {method: 'DELETE'});
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        toast({msg: 'Override cleared', kind: 'success'});
+        await this.load();
+      } catch (e) {
+        this.error = `Clear failed: ${e.message}`;
+      }
+    },
+  };
+}
+</script>
+
+{% endblock %}

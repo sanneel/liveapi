@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Logs - Jugabet Admin{% endblock %}
+{% block page_title %}Audit Log{% endblock %}
+
+{% block page_actions %}
+  <button onclick="location.reload()"
+          class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 text-zinc-300 px-3 py-1.5 rounded">Refresh</button>
+{% endblock %}
+
+{% block content %}
+
+<form method="GET" action="/admin/logs"
+      class="bg-ink-850 border border-ink-600 rounded-xl p-4 mb-5 flex flex-wrap items-center gap-3">
+  <div class="flex-1 min-w-[200px] relative">
+    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-500 text-xs font-bold">Q</span>
+    <input type="text" name="action" value="{{ filter_action }}"
+           placeholder="filter by action (e.g. login.failed, campaign.create)..."
+           class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:border-brand-500"/>
+  </div>
+  <select name="limit"
+          class="bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
+    {% for n in [100, 200, 500, 1000] %}
+      <option value="{{ n }}" {% if limit == n %}selected{% endif %}>Last {{ n }}</option>
+    {% endfor %}
+  </select>
+  <button class="bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold text-sm px-4 py-2 rounded-lg">Apply</button>
+  {% if filter_action %}
+    <a href="/admin/logs" class="text-xs text-muted-400 hover:text-zinc-200 underline">Clear</a>
+  {% endif %}
+</form>
+
+<div class="mb-5 flex flex-wrap gap-2 text-xs">
+  {% set chips = [
+    ('All', ''),
+    ('Logins', 'login.success'),
+    ('Failed logins', 'login.failed'),
+    ('2FA', '2fa.enabled'),
+    ('Campaigns', 'campaign.create'),
+  ] %}
+  {% for label, val in chips %}
+    <a href="/admin/logs?action={{ val }}"
+       class="px-3 py-1 rounded-full border {% if filter_action == val %}bg-brand-500 text-ink-950 border-brand-500 font-semibold{% else %}bg-ink-800 text-muted-400 border-ink-600 hover:text-zinc-200{% endif %}">
+      {{ label }}
+    </a>
+  {% endfor %}
+</div>
+
+<div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">
+  {% if entries %}
+    <table class="w-full text-sm">
+      <thead class="bg-ink-800 text-xs uppercase tracking-wider text-muted-400">
+        <tr>
+          <th class="px-5 py-3 text-left">Time (UTC)</th>
+          <th class="px-5 py-3 text-left">User</th>
+          <th class="px-5 py-3 text-left">Action</th>
+          <th class="px-5 py-3 text-left">Target</th>
+          <th class="px-5 py-3 text-left">Payload</th>
+          <th class="px-5 py-3 text-left">IP</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-ink-600">
+      {% for e in entries %}
+        {% set is_warn = 'failed' in e.action or 'lockout' in e.action %}
+        {% set is_ok = 'success' in e.action or 'ok' in e.action %}
+        <tr class="hover:bg-ink-800/40">
+          <td class="px-5 py-2.5 text-xs text-muted-400 font-mono whitespace-nowrap">
+            {{ e.ts.strftime('%Y-%m-%d %H:%M:%S') }}
+          </td>
+          <td class="px-5 py-2.5 text-zinc-200">{{ e.username or '-' }}</td>
+          <td class="px-5 py-2.5">
+            <span class="font-mono text-xs px-2 py-0.5 rounded
+                         {% if is_warn %}bg-red-900/30 text-red-300
+                         {% elif is_ok %}bg-green-900/30 text-green-300
+                         {% else %}bg-ink-700 text-zinc-300{% endif %}">
+              {{ e.action }}
+            </span>
+          </td>
+          <td class="px-5 py-2.5 text-muted-300 text-xs font-mono">{{ e.target or '' }}</td>
+          <td class="px-5 py-2.5 text-muted-500 text-xs font-mono truncate max-w-xs">
+            {{ e.payload_json or '' }}
+          </td>
+          <td class="px-5 py-2.5 text-muted-500 text-xs font-mono">{{ e.ip or '' }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="px-5 py-16 text-center text-muted-500 text-sm">
+      <div class="text-4xl mb-3 opacity-40 font-bold">LOG</div>
+      No log entries{% if filter_action %} for "{{ filter_action }}"{% endif %}.
+    </div>
+  {% endif %}
+</div>
+
+<p class="text-xs text-muted-500 mt-3">
+  Showing newest first. {{ entries|length }} entries.
+</p>
+{% endblock %}

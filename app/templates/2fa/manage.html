@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}2FA - Jugabet Admin{% endblock %}
+{% block page_title %}Two-Factor Authentication{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+  <div class="bg-ink-850 border border-ink-600 rounded-xl p-6">
+    <div class="flex items-start gap-4">
+      <div class="text-brand-500 font-bold text-3xl">2FA</div>
+      <div class="flex-1">
+        <h2 class="text-lg font-semibold text-white mb-1">2FA is active</h2>
+        <p class="text-sm text-muted-400">
+          Your account is protected. Every login requires a 6-digit code from your authenticator app
+          in addition to your password.
+        </p>
+      </div>
+      <span class="text-xs px-2 py-0.5 rounded-full bg-green-900/40 text-green-300 flex items-center gap-1">
+        <span class="w-1.5 h-1.5 rounded-full bg-green-400"></span> Enabled
+      </span>
+    </div>
+  </div>
+
+  <div class="bg-red-950/20 border border-red-900/40 rounded-xl p-6 mt-5">
+    <h3 class="text-sm font-semibold text-red-300 mb-2">Disable 2FA</h3>
+    <p class="text-xs text-muted-400 mb-4">
+      You'll need to enter a current 6-digit code from your authenticator app to confirm.
+      Disabling lowers your account's security.
+    </p>
+
+    <form method="POST" action="/admin/2fa/disable" class="flex items-center gap-3">
+      <input type="text" name="code" maxlength="6" pattern="[0-9]{6}" required autocomplete="off"
+             placeholder="000000"
+             class="w-40 bg-ink-700 border border-ink-600 rounded-lg px-4 py-2.5 text-lg font-mono tracking-widest text-center focus:border-brand-500 focus:outline-none"/>
+      <button type="submit"
+              class="bg-red-950/40 hover:bg-red-900/40 border border-red-900/50 text-red-300 font-semibold px-5 py-2.5 rounded-lg">
+        Disable 2FA
+      </button>
+    </form>
+    {% if request.query_params.get('error') == 'bad_code' %}
+      <p class="text-red-400 text-xs mt-2">Warning: Invalid code. Try again.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

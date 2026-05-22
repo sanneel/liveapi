@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Themed Cubes · Jugabet</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      padding: 40px 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0b0d11;
+      color: #e7e9ee;
+    }
+    .hdr {
+      max-width: 1200px;
+      margin: 0 auto 32px;
+    }
+    h1 { margin: 0 0 8px; font-size: 24px; }
+    p.muted { margin: 0; color: #8a93a3; font-size: 14px; max-width: 720px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .card {
+      background: #15181f;
+      border: 1px solid #232833;
+      border-radius: 14px;
+      padding: 18px;
+    }
+    .card h2 { margin: 0 0 4px; font-size: 17px; }
+    .card .scope { color: #8a93a3; font-size: 12px; margin-bottom: 14px; }
+    .stage {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: #0b0d11;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid #232833;
+    }
+    .stage iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: transparent;
+    }
+    .links {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 14px;
+      font-size: 12px;
+      color: #8a93a3;
+    }
+    .links code {
+      color: #b6c1d2;
+      background: #232833;
+      padding: 3px 7px;
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .links a { color: inherit; text-decoration: none; }
+    .links a:hover code { background: #2e3645; color: #fff; }
+    .embed {
+      margin-top: 14px;
+      font-size: 11px;
+      color: #6c7686;
+    }
+    .embed pre {
+      margin: 6px 0 0;
+      background: #0a0c10;
+      border: 1px solid #1b1f28;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px;
+      color: #b6c1d2;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="hdr">
+    <h1>Themed Cubes</h1>
+    <p class="muted">
+      Rotating 3D widgets with live odds. Each theme filters football matches
+      to a specific competition. Faces cycle every ~3.5&nbsp;s; live odds are
+      polled every 30&nbsp;s. Embed via <code>&lt;iframe&gt;</code>.
+    </p>
+  </div>
+  <div class="grid">
+    {% for t in themes %}
+      <div class="card">
+        <h2>{{ t.display_name }}</h2>
+        <div class="scope">sport: {{ t.sport }} · patterns: {{ t.league_patterns|join(', ') }}</div>
+        <div class="stage">
+          <iframe src="/cube/{{ t.slug }}/widget"
+                  title="{{ t.display_name }}"
+                  loading="lazy"
+                  allowtransparency="true"></iframe>
+        </div>
+        <div class="links">
+          <a href="/cube/{{ t.slug }}/widget" target="_blank">Widget: <code>/cube/{{ t.slug }}/widget</code></a>
+          <a href="/cube/{{ t.slug }}.png" target="_blank">PNG: <code>/cube/{{ t.slug }}.png</code></a>
+          <a href="/cube/{{ t.slug }}/data.json" target="_blank">Data: <code>/cube/{{ t.slug }}/data.json</code></a>
+        </div>
+        <div class="embed">
+          Embed snippet:
+          <pre>&lt;iframe src="/cube/{{ t.slug }}/widget" width="240" height="240" frameborder="0" allowtransparency="true"&gt;&lt;/iframe&gt;</pre>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</body>
+</html>
