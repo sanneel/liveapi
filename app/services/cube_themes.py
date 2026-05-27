@@ -27,7 +27,7 @@ from ..utils.slugify import slugify_league
 # A "face" on the rotating widget cube. Two kinds:
 #   - "brand": static promo (logo + tagline, color background)
 #   - "match": dynamic match face (filled in from /cube/{theme}/data.json)
-FaceKind = Literal["brand", "match"]
+FaceKind = Literal["brand", "match", "image"]
 
 
 @dataclass(frozen=True)
@@ -48,6 +48,8 @@ class CubeFace:
     # Match face: which slot in resolve_for_theme(limit=N) to render.
     # 0 = top-ranked match. Brand faces ignore this.
     match_index: int = 0
+    # Image face: URL of the static promo photo to display full-bleed.
+    image_url: str = ""
 
 
 @dataclass(frozen=True)
@@ -77,12 +79,24 @@ class CubeTheme:
     # point at it (relative to repo root) and the renderer will composite
     # event text onto it instead of drawing the gradient programmatically.
     template_image_path: Optional[str] = None
+    # URL of the static promo photo shown on the non-odds faces of the 3D cube.
+    promo_image_url: str = ""
     # Rotating widget configuration. Each entry is a face on the cube; the
     # widget cycles through them on a Y-axis rotation. 4 faces fit a cube
     # (the front-rotating presentation in the reference video) — extra faces
     # are tolerated, they just rotate further. Defaults to a 4-face mix:
     # brand → match → brand → match for a familiar promo loop.
     faces: Tuple[CubeFace, ...] = field(default_factory=tuple)
+    # If set, only matches where ALL strings appear (case-insensitive) in the
+    # combined "home_name away_name" are kept. Use for one-off fixtures like
+    # a specific final (e.g. PSG vs Arsenal).
+    required_teams: Tuple[str, ...] = field(default_factory=tuple)
+    # When True, the cube resolver promotes LIVE matches above prematch ones
+    # in the final ordering — so a World Cup cube on match-day always shows
+    # the live fixture instead of tomorrow's group-stage opener even if the
+    # latter has a higher hot_score. Falls back to prematch when no live
+    # in-scope match exists.
+    prefer_live: bool = False
     # Optional admin notes (not rendered).
     notes: str = ""
 
@@ -123,39 +137,32 @@ CUBE_THEMES: Dict[str, CubeTheme] = {
         text_primary=(255, 255, 255),
         text_muted=(200, 215, 240),
         faces=(
-            CubeFace(
-                kind="brand",
-                label="JUGABET",
-                sublabel="APUESTAS DEPORTIVAS",
-                bg="#0a1f5c",
-                fg="#ffffff",
-                accent="#ffc72c",
-            ),
-            CubeFace(kind="match", match_index=0),
-            CubeFace(
-                kind="brand",
-                label="UCL FINAL",
-                sublabel="VIVE LA GLORIA",
-                bg="#001233",
-                fg="#ffc72c",
-                accent="#ffffff",
-            ),
+            CubeFace(kind="image", image_url="/static/cube-ucl.jpg"),
             CubeFace(kind="match", match_index=0),
         ),
-        notes=(
-            "If the feed surfaces only the group stage, the cube still "
-            "picks the highest-scoring UCL match available."
-        ),
+        required_teams=("arsenal",),
+        promo_image_url="/static/cube-ucl.jpg",
+        notes="Locked to the PSG vs Arsenal final fixture.",
     ),
     "worldcup": CubeTheme(
         slug="worldcup",
         display_name="FIFA World Cup",
         sport="football",
+        # Jugabet labels World Cup matches with many regional variants
+        # ("Copa del Mundo", "Mundial de Clubes", "Clasificación · Eliminatorias
+        # Mundial · ...", etc.). Cover every reasonable prefix so the cube
+        # doesn't go dark just because the feed uses a Spanish variant.
         league_patterns=_slug_list(
             "FIFA World Cup",
             "World Cup",
             "Copa Mundial",
+            "Copa del Mundo",
             "Mundial",
+            "Eliminatorias Mundial",
+            "Clasificación Mundial",
+            "Mundial de Clubes",
+            "Club World Cup",
+            "Copa Mundial de Clubes",
         ),
         badge_text="WORLD CUP",
         subtitle="FIFA World Cup",
@@ -165,27 +172,23 @@ CUBE_THEMES: Dict[str, CubeTheme] = {
         accent=(255, 184, 28),
         text_primary=(255, 255, 255),
         text_muted=(250, 230, 200),
+        # Three match slots: the widget rotates through them every 20s so
+        # the cube isn't stuck on a single fixture. Each slot is independently
+        # pinnable from the admin (/admin/cube/worldcup), and an empty slot
+        # is auto-filled by the next hot-ranked in-theme match.
         faces=(
-            CubeFace(
-                kind="brand",
-                label="JUGABET",
-                sublabel="APUESTAS DEPORTIVAS",
-                bg="#420021",
-                fg="#ffffff",
-                accent="#ffb81c",
-            ),
+            CubeFace(kind="image", image_url="/static/cube-worldcup.jpg"),
             CubeFace(kind="match", match_index=0),
-            CubeFace(
-                kind="brand",
-                label="WORLD CUP",
-                sublabel="VIVE EL MUNDIAL",
-                bg="#7a0033",
-                fg="#ffb81c",
-                accent="#ffffff",
-            ),
-            CubeFace(kind="match", match_index=0),
+            CubeFace(kind="match", match_index=1),
+            CubeFace(kind="match", match_index=2),
         ),
-        notes="Filters football matches whose tournament_slug starts with any World Cup variant.",
+        promo_image_url="/static/cube-worldcup.jpg",
+        prefer_live=True,
+        notes=(
+            "Filters football matches whose tournament_slug starts with any "
+            "World Cup variant. Live matches surface above prematch. "
+            "Widget rotates through 3 match slots."
+        ),
     ),
 }
 

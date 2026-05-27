@@ -38,10 +38,16 @@ class Settings(BaseSettings):
     parser_timeout_ms: int = 30000
     parser_js_settle_ms: int = 1200
     parser_enabled: bool = True
-    parser_max_concurrency: int = 2
+    parser_max_concurrency: int = 8
 
     # ── Match lifecycle ──────────────────────────────────────────────
-    match_deactivate_after_hours: int = 6  # mark a match inactive this long after start
+    # Hours after start_time_utc a match is considered expired. Was 6,
+    # which was too tight for: UFC events (5-6h cards), Champions League
+    # nights with delayed kickoff + extra time + post-match coverage that
+    # keeps the row visible on Jugabet, and any match whose start_time
+    # the parser misread by an hour. 12h handles every realistic case
+    # without keeping truly-finished matches active for the whole next day.
+    match_deactivate_after_hours: int = 12
 
     # ── Logging ──────────────────────────────────────────────────────
     log_level: str = "INFO"

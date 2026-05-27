@@ -441,8 +441,13 @@ def pick_hot(
     max_per_team: int = 1,
     require_min_prematch: int = 2,
     debug: bool = False,
+    single_league: bool = False,
 ) -> Dict[str, Any]:
+    # See hot_scoring.pick_hot for single_league rationale.
     limit = max(1, min(int(limit), 50))
+    if single_league:
+        max_per_tournament = limit
+        require_min_prematch = 0
     tz = ZoneInfo(timezone)
     now_cl = datetime.now(tz=tz)
 
@@ -537,6 +542,7 @@ def pick_hot(
             "max_per_tournament": max_per_tournament,
             "max_per_team": max_per_team,
             "require_min_prematch": require_min_prematch,
+            "single_league": bool(single_league),
             "debug": bool(debug),
             "candidates_scored": len(scored),
             "winner_only": True,

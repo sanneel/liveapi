@@ -105,6 +105,7 @@
         ('matches',      '/admin/matches',       'list',              'Matches'),
         ('campaigns',    '/admin/campaigns',     'megaphone',         'Campaigns'),
         ('hot',          '/admin/hot',           'flame',             'Hot'),
+        ('cube',         '/admin/cube',          'box',               'Cubes'),
         ('clubs',        '/admin/clubs',         'shield',            'Clubs'),
         ('logs',         '/admin/logs',          'scroll-text',       'Logs'),
       ] %}
@@ -123,11 +124,12 @@
     <div class="border-t border-ink-600/60 px-3 py-3">
       {% if current_user %}
         <div class="flex items-center gap-2 md:justify-center lg:justify-start">
-          <div class="w-7 h-7 rounded-md bg-ink-700 text-muted-300 flex items-center justify-center text-meta font-semibold flex-shrink-0">
+          <div class="w-7 h-7 rounded-md bg-ink-700 text-muted-300 flex items-center justify-center text-meta font-semibold flex-shrink-0"
+               title="{{ current_user.username }}">
             {{ (current_user.username or '?')[:1]|upper }}
           </div>
-          <div class="min-w-0 flex-1 md:hidden lg:block">
-            <div class="text-body text-zinc-200 truncate">{{ current_user.username }}</div>
+          <div class="min-w-0 flex-1 md:hidden lg:flex lg:flex-col lg:gap-0.5">
+            <div class="text-body text-zinc-200 truncate leading-tight">{{ current_user.username }}</div>
             <form method="post" action="/admin/logout" class="leading-none">
               <button type="submit" class="text-meta text-muted-400 hover:text-red-400">Sign out</button>
             </form>

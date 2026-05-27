@@ -44,7 +44,12 @@ from ..repositories.log_repo import LogRepository
 from ..repositories.match_repo import MatchRepository
 from ..services.hot_engine import HotEngine
 from ..utils.slugify import slugify_league
-from .public_render import DEFAULT_AUTO_LIMIT, _cache_invalidate, _clamp_limit
+from .public_render import (
+    DEFAULT_AUTO_LIMIT,
+    _cache_invalidate,
+    _clamp_limit,
+    manual_render_stats,
+)
 
 logger = get_logger("app.routes.campaigns")
 
@@ -94,7 +99,15 @@ def campaigns_list(request: Request, user: User = Depends(require_login)) -> HTM
     with db_session() as session:
         repo = CampaignRepository(session)
         campaigns = repo.list_all()
-        match_counts = {c.slug: len(repo.get_match_rows(c.slug)) for c in campaigns}
+        # Per-campaign render stats so we can warn before a synthetic-only
+        # or all-stale manual campaign ships a silent 1×1 PNG.
+        manual_stats: Dict[str, Dict[str, Any]] = {}
+        match_counts: Dict[str, int] = {}
+        for c in campaigns:
+            rows = repo.get_match_rows(c.slug)
+            match_counts[c.slug] = len(rows)
+            if c.mode == "manual":
+                manual_stats[c.slug] = manual_render_stats(repo.get_matches(c.slug))
 
     return templates.TemplateResponse(
         request,
@@ -103,6 +116,7 @@ def campaigns_list(request: Request, user: User = Depends(require_login)) -> HTM
             "active_page": "campaigns",
             "campaigns": campaigns,
             "match_counts": match_counts,
+            "manual_stats": manual_stats,
             "current_user": user,
         },
     )
@@ -169,6 +183,11 @@ def campaigns_edit(
             raise HTTPException(404, "Campaign not found.")
         selected_matches = repo.get_matches(slug)
         tournaments = MatchRepository(session).list_tournaments(sport=campaign.sport)
+        render_stats = (
+            manual_render_stats(selected_matches)
+            if campaign.mode == "manual"
+            else None
+        )
 
     return templates.TemplateResponse(
         request,
@@ -180,6 +199,7 @@ def campaigns_edit(
             "selected_matches": selected_matches,
             "valid_sports": VALID_SPORTS,
             "tournaments": tournaments,
+            "render_stats": render_stats,
         },
     )
 
@@ -460,10 +480,17 @@ def api_picker_search(
     sport: str = "",
     tournament: str = "",
     team: str = "",
+    include_synthetic: int = 0,
     user: User = Depends(require_login),
 ) -> HTMLResponse:
-    """HTMX partial: search results for the manual match picker."""
+    """HTMX partial: search results for the manual match picker.
+
+    Synthetic content (virtual football, replays, ESportsBattle, etc.) is
+    hidden by default — pass `include_synthetic=1` to see it. The campaign
+    edit page exposes an admin toggle that flips this query flag.
+    """
     slug = _validate_slug(slug)
+    show_synth = bool(include_synthetic)
     with db_session() as session:
         c = CampaignRepository(session).find_by_slug(slug)
         if not c:
@@ -476,6 +503,7 @@ def api_picker_search(
             tournament=(tournament or None),
             team=(team or None),
             limit=25,
+            include_synthetic=show_synth,
         )
         existing_ids = {r.event_id for r in CampaignRepository(session).get_match_rows(slug)}
         results = [m for m in results if m.event_id not in existing_ids]
@@ -483,5 +511,9 @@ def api_picker_search(
     return templates.TemplateResponse(
         request,
         "campaigns/_picker_results.html",
-        {"results": results, "slug": slug},
+        {
+            "results": results,
+            "slug": slug,
+            "include_synthetic": show_synth,
+        },
     )

@@ -31,6 +31,7 @@ from ..logging_config import get_logger
 from ..middleware import limiter
 from ..models import Match
 from ..render.cube_render import render_cube_png
+from ..render.cube_odds_render import render_odds_face
 from ..services import png_cache
 from ..services.cube_resolver import resolve_for_theme
 from ..services.cube_themes import CUBE_THEMES, CubeTheme, get_theme, list_themes
@@ -125,16 +126,63 @@ def cube_png(theme: str, request: Request) -> Response:
     return _png_response(png, cache_status="MISS", etag=etag)
 
 
+@router.get("/cube/{theme}/odds.png")
+@limiter.limit("600/minute")
+def cube_odds_png(theme: str, request: Request, slot: int = 0) -> Response:
+    """Live odds face for a specific match slot.
+
+    `slot` is 0-indexed; default 0 keeps backward compatibility for callers
+    that don't know about multi-slot themes. The widget cycles through
+    `slot=0,1,2,…` every 20 seconds to rotate the displayed fixture.
+
+    Each slot caches separately (`cube_odds:{theme}:{slot}`) so a pin or
+    suppress for slot N only invalidates that slot's cache, not all of them.
+    """
+    t = get_theme(theme)
+    if t is None:
+        raise HTTPException(404, f"Unknown cube theme: {theme}")
+
+    # Clamp slot to the number of match-faces this theme has, so a stale
+    # client URL doesn't render slot 9 of a 1-slot theme.
+    max_slot = 0
+    for face in t.faces:
+        if face.kind == "match" and face.match_index > max_slot:
+            max_slot = face.match_index
+    slot = max(0, min(int(slot or 0), max_slot))
+
+    key = f"cube_odds:{t.slug}:{slot}"
+    cached = png_cache.get(key)
+    if cached is not None:
+        etag = _etag(cached)
+        if request.headers.get("if-none-match") == etag:
+            return Response(status_code=304, headers={"ETag": etag})
+        return _png_response(cached, cache_status="HIT", etag=etag)
+
+    with db_session() as session:
+        matches = resolve_for_theme(session, t, limit=slot + 1)
+        match = matches[slot] if slot < len(matches) else None
+
+    try:
+        png = render_odds_face(match)
+    except Exception:
+        logger.exception(f"cube odds render failed theme={t.slug} slot={slot}")
+        return _png_response(_TRANSPARENT_PNG_1X1, cache_status="ERROR", status_code=500)
+
+    png_cache.put(key, png)
+    etag = _etag(png)
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers={"ETag": etag})
+    return _png_response(png, cache_status="MISS", etag=etag)
+
+
 @router.get("/cube/{theme}", response_class=HTMLResponse)
 def cube_html(theme: str, request: Request) -> HTMLResponse:
-    """HTML preview page. Auto-refreshes the PNG so the displayed image
-    tracks the latest parse cycle without the user reloading."""
     t = get_theme(theme)
     if t is None:
         raise HTTPException(404, f"Unknown cube theme: {theme}")
     return templates.TemplateResponse(
         request,
-        "cube/theme.html",
+        "cube/widget.html",
         {"theme": t},
     )
 
@@ -205,6 +253,12 @@ def cube_data(theme: str, request: Request) -> JSONResponse:
                 "fg": face.fg or "#ffffff",
                 "accent": face.accent or _rgb_to_hex(t.accent),
             })
+        elif face.kind == "image":
+            faces_payload.append({
+                "kind": "image",
+                "image_url": face.image_url,
+                "bg": face.bg or _rgb_to_hex(t.bg_top),
+            })
         else:
             m = matches[face.match_index] if face.match_index < len(matches) else None
             faces_payload.append({
@@ -263,9 +317,16 @@ def _rgb_to_hex(rgb: tuple) -> str:
 def invalidate_all_cubes() -> int:
     """Called by the parser persistence hook after a football cycle so
     cube PNGs reflect fresh odds within one cycle. Returns the number of
-    keys dropped."""
+    keys dropped.
+
+    Wipes both the main face cache and EVERY per-slot odds cache for each
+    registered theme (cube_odds:{slug}:{slot}). The per-slot keys use a
+    consistent prefix so a single invalidate_prefix("cube_odds:{slug}")
+    call handles all slots without needing to know how many there are.
+    """
     n = 0
-    for slug in CUBE_THEMES:
+    for slug, theme in CUBE_THEMES.items():
         png_cache.invalidate(_cache_key(slug))
+        png_cache.invalidate_prefix(f"cube_odds:{slug}")
         n += 1
     return n

@@ -24,6 +24,7 @@ def run_scoring(
     limit: int,
     timezone: str,
     with_scores: bool = False,
+    single_league: bool = False,
 ) -> List[Dict[str, Any]]:
     """Return the top-N scored event dicts using the per-sport scorer.
 
@@ -35,7 +36,19 @@ def run_scoring(
     returned event carries `_hot_score` (and `_hot_reasons` where supported).
     Default `with_scores=False` keeps the legacy behaviour byte-identical
     for Phase 3's `HotResolver._resolve_auto`.
+
+    When `single_league=True`, the caller has already narrowed candidates to
+    one tournament. Every scorer disables its `max_per_tournament` cap (and
+    where applicable, `require_min_prematch`) so a league-filtered auto
+    campaign asking for `?limit=10` actually returns up to 10 matches from
+    that single league instead of capping at 2-3.
     """
+    # Per-sport scorer + per-sport kwarg overrides. Combat sports announce
+    # fixtures 1–3 months ahead (UFC/boxing), so the football-style 4-day
+    # horizon rejects every candidate and leaves /hot/{ufc|mma}.png blank.
+    # Tune horizon by sport here, not inside the scorer, so the constant
+    # stays semantic ("ufc looks at the next 60 days").
+    extra: dict[str, object] = {}
     if sport == "football":
         from hot_scoring import pick_hot
     elif sport == "tennis":
@@ -46,12 +59,26 @@ def run_scoring(
         from hot_scoring_cybersport import pick_hot
     elif sport in ("fights", "ufc", "mma", "boxing"):
         from hot_scoring_fights import pick_hot
+        extra["horizon_days"] = 60
+        # When the caller asks for one canonical combat sport (not the
+        # 'fights' union), every candidate is already in that sport, so
+        # the cross-sport diversity cap (MAX_PER_SPORT=3) would silently
+        # truncate /hot/ufc.png to 3 even with limit=10. Disable it here
+        # — the union view ('fights') still gets the cap so ufc/mma/boxing
+        # remain balanced there.
+        if sport in ("ufc", "mma", "boxing"):
+            extra["single_sport"] = True
     else:
         logger.warning(f"unknown sport {sport}, using football scorer")
         from hot_scoring import pick_hot
 
     payload = pick_hot(
-        events=events, limit=limit, timezone=timezone, debug=with_scores
+        events=events,
+        limit=limit,
+        timezone=timezone,
+        debug=with_scores,
+        single_league=single_league,
+        **extra,
     )
     # Pure move of legacy `_run_scoring` return: returns payload["events"]
     # when payload is a dict (even if that value is None), [] otherwise.

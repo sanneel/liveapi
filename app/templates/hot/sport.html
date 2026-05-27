@@ -46,7 +46,12 @@
       <span class="text-num text-zinc-100 tabular-nums" x-text="restMatches.length + topMatches.length"></span>
       <span class="text-label uppercase text-muted-400">candidates</span>
     </div>
-    <div class="ml-auto text-meta text-muted-500" x-show="loading" style="display:none">Loading…</div>
+    <div class="ml-auto text-meta text-muted-500"
+         x-show="loading && topMatches.length === 0 && restMatches.length === 0"
+         style="display:none">Loading…</div>
+    <div class="ml-auto text-meta text-muted-500"
+         x-show="loading && (topMatches.length > 0 || restMatches.length > 0)"
+         style="display:none">Refreshing…</div>
   </div>
 
   {# ── Error banner ── #}
@@ -123,6 +128,10 @@
               <span x-text="m.tournament_name || '—'"></span>
               <span x-show="m.time_raw" class="text-muted-600"> · </span>
               <span x-text="m.time_raw || ''"></span>
+              <span x-show="m.reason && m.reason !== 'auto'" class="text-muted-600"> · </span>
+              <span x-show="m.reason && m.reason !== 'auto'"
+                    class="text-[10px] uppercase tracking-wider text-muted-500"
+                    x-text="m.reason"></span>
             </div>
           </div>
 
@@ -153,9 +162,9 @@
     </ul>
   </section>
 
-  {# ── Search matches ── #}
-  <section class="bg-ink-900 border border-ink-600/60 rounded-lg overflow-hidden mb-4"
-           x-show="topMatches.length > 0">
+  {# ── Search matches ── Always available, even when top is empty,
+       so admins can find and pin a match the scorer hasn't surfaced. #}
+  <section class="bg-ink-900 border border-ink-600/60 rounded-lg overflow-hidden mb-4">
     <div class="px-4 py-3 border-b border-ink-600/60 flex items-center justify-between gap-3 bg-ink-950/20">
       <div class="flex-1 min-w-0">
         <label for="match-search" class="sr-only">Search matches</label>
@@ -171,7 +180,13 @@
                  class="block w-full pl-9 pr-3 py-1.5 bg-ink-950 text-body text-zinc-100 rounded-md border border-ink-600/80 focus:border-zinc-400 focus:outline-none focus:ring-0 placeholder-muted-500 text-meta">
         </div>
       </div>
-      <div class="text-meta text-muted-500 flex-shrink-0" x-show="searching" style="display:none">Searching...</div>
+      <div class="text-meta text-muted-500 flex-shrink-0"
+           x-show="searching && searchResults.length === 0"
+           style="display:none">Searching…</div>
+      <div class="text-meta text-muted-500 flex-shrink-0"
+           x-show="!searching && searchQuery.trim() && searchResults.length > 0"
+           style="display:none"
+           x-text="searchResults.length + ' match' + (searchResults.length === 1 ? '' : 'es')"></div>
     </div>
 
     <div x-show="searchResults.length > 0">
@@ -181,6 +196,7 @@
       <ul :id="'search-list-' + sport">
         <template x-for="m in searchResults" :key="'search-' + m.event_id">
           <li class="group px-3 py-2 flex items-center gap-3 border-b border-ink-600/30 last:border-0 hover:bg-ink-800/40 transition-colors"
+              :class="m.is_active === false && 'opacity-60'"
               :data-event-id="m.event_id">
             <span class="drag-handle cursor-grab text-muted-500 hover:text-muted-300 flex-shrink-0">
               <i data-lucide="grip-vertical" class="!w-4 !h-4"></i>
@@ -190,6 +206,16 @@
                     ? 'bg-red-500/10 text-red-300/80 ring-1 ring-red-500/20'
                     : 'bg-sky-500/10 text-sky-300/80 ring-1 ring-sky-500/20'"
                   x-text="m.status === 'live' ? 'Live' : 'Pre'"></span>
+            <span x-show="m.is_active === false"
+                  class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase flex-shrink-0
+                         bg-zinc-700/40 text-zinc-300 ring-1 ring-zinc-500/30"
+                  title="Match is no longer in the feed. You can still pin/suppress it."
+                  style="display:none">Inactive</span>
+            <span x-show="m.is_synthetic"
+                  class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase flex-shrink-0
+                         bg-amber-500/10 text-amber-300/80 ring-1 ring-amber-500/20"
+                  title="Synthetic / virtual / replay inventory. Default-hidden from public renders."
+                  style="display:none">Syn</span>
             <div class="flex-1 min-w-0">
               <div class="text-body text-zinc-200 truncate">
                 <span x-text="m.home_name"></span>
@@ -212,9 +238,12 @@
     </div>
   </section>
 
-  {# ── Leaderboard expandable ── #}
-  <section class="bg-ink-900 border border-ink-600/60 rounded-lg overflow-hidden mb-4"
-           x-show="topMatches.length > 0">
+  {# ── Leaderboard expandable ── Always visible so admins can browse the
+       full candidate pool, including when the top is empty (the engine's
+       fallback to raw active matches fills `restMatches` only if there are
+       more than `topN` active rows; an empty `restMatches` shows its own
+       message below). #}
+  <section class="bg-ink-900 border border-ink-600/60 rounded-lg overflow-hidden mb-4">
     <button @click="expanded = !expanded"
             class="w-full px-4 py-2 flex items-center justify-between text-left hover:bg-ink-800/40 transition-colors"
             :class="expanded && 'border-b border-ink-600/60'">
@@ -388,7 +417,7 @@ function hotCard(sport, topN, leaderboardMax) {
       this._sortableTop?.destroy();
       this._sortableRest?.destroy();
       this._sortableSearch?.destroy();
-      const onUpdate = () => this.saveOrder();
+      const onEnd = (evt) => this.onDragEnd(evt);
       const opts = {
         group: { name: this.sport, pull: true, put: true },
         handle: '.drag-handle',
@@ -396,46 +425,71 @@ function hotCard(sport, topN, leaderboardMax) {
         ghostClass: 'opacity-30',
         chosenClass: 'ring-1',
         dragClass: 'shadow-pop',
-        onEnd: onUpdate,
+        onEnd,
       };
       this._sortableTop = new Sortable(topEl, opts);
       if (restEl) this._sortableRest = new Sortable(restEl, opts);
       if (searchEl) this._sortableSearch = new Sortable(searchEl, opts);
     },
 
-    async saveOrder() {
+    // Single-item pin/unpin on drag, instead of the old "save full order"
+    // semantic that pinned every match in the top-N. SortableJS gives us
+    // the moved element and its old / new index — that's all we need.
+    async onDragEnd(evt) {
+      const movedEl = evt.item;
+      if (!movedEl) return;
+      const eventId = movedEl.dataset.eventId;
+      if (!eventId) return;
+
       const topEl = document.getElementById('top-list-' + this.sport);
-      const topIds = [...topEl.querySelectorAll('[data-event-id]')].map(el => el.dataset.eventId);
-      const lockedIds = topIds.slice(0, this.topN);
-      if (lockedIds.length === 0) return;
+      const toTop = evt.to === topEl;
+      // Slot is 1-based within the destination list. If dropped past the
+      // top-N cutoff (shouldn't happen — we cap top list visually), bail.
+      const slot = toTop ? (evt.newIndex + 1) : null;
+      if (toTop && (slot < 1 || slot > this.topN)) return;
+
       try {
-        const r = await fetch(`/api/admin/hot/${this.sport}/reorder`, {
-          method: 'PUT',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({event_ids: lockedIds}),
-        });
-        if (r.status === 409) {
-          toast({msg: 'Another reorder is in progress — try again', kind: 'error'});
-          await this.load();
-          return;
+        const r = await fetch(
+          `/api/admin/hot/${this.sport}/pin/${encodeURIComponent(eventId)}`,
+          {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'same-origin',
+            body: JSON.stringify({position: slot}),
+          }
+        );
+        if (!r.ok) {
+          const bodyTxt = await r.text();
+          throw new Error(`HTTP ${r.status}: ${bodyTxt.slice(0, 200)}`);
         }
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        toast({msg: `${this.sport}: order saved`, kind: 'success'});
+        const data = await r.json().catch(() => ({}));
+        if (toTop) {
+          toast({msg: `Pinned to slot ${slot}` + (data.displaced ? ' (displaced previous pin)' : ''), kind: 'success'});
+        } else {
+          toast({msg: 'Unpinned — back to auto-rank', kind: 'success'});
+        }
         await this.load();
       } catch (e) {
-        this.error = `Save failed: ${e.message}`;
+        this.error = `Pin failed: ${e.message}`;
         await this.load();
       }
     },
 
     async suppress(eventId, on) {
       try {
-        const r = await fetch(`/api/admin/hot/${this.sport}/suppress/${encodeURIComponent(eventId)}`, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({suppress: !!on}),
-        });
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const r = await fetch(
+          `/api/admin/hot/${this.sport}/suppress/${encodeURIComponent(eventId)}`,
+          {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'same-origin',
+            body: JSON.stringify({suppress: !!on}),
+          }
+        );
+        if (!r.ok) {
+          const bodyTxt = await r.text();
+          throw new Error(`HTTP ${r.status}: ${bodyTxt.slice(0, 200)}`);
+        }
         toast({msg: on ? 'Hidden from hot' : 'Restored to hot', kind: 'success'});
         await this.load();
       } catch (e) {
@@ -445,8 +499,14 @@ function hotCard(sport, topN, leaderboardMax) {
 
     async clearOverride(eventId) {
       try {
-        const r = await fetch(`/api/admin/hot/${this.sport}/override/${encodeURIComponent(eventId)}`, {method: 'DELETE'});
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const r = await fetch(
+          `/api/admin/hot/${this.sport}/override/${encodeURIComponent(eventId)}`,
+          {method: 'DELETE', credentials: 'same-origin'}
+        );
+        if (!r.ok) {
+          const bodyTxt = await r.text();
+          throw new Error(`HTTP ${r.status}: ${bodyTxt.slice(0, 200)}`);
+        }
         toast({msg: 'Override cleared', kind: 'success'});
         await this.load();
       } catch (e) {

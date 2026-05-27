@@ -7,6 +7,13 @@
   {% if m.status == 'live' %}
     <span class="text-[10px] font-bold text-red-300 bg-red-900/40 px-1.5 py-0.5 rounded">LIVE</span>
   {% endif %}
+  {% if not m.is_active %}
+    <span class="text-[10px] font-bold text-zinc-300 bg-zinc-700/60 px-1.5 py-0.5 rounded ring-1 ring-zinc-600"
+          title="Parser dropped this match from the feed. It will not appear in the rendered PNG.">INACTIVE</span>
+  {% elif m.is_synthetic %}
+    <span class="text-[10px] font-semibold text-amber-300 bg-amber-900/30 px-1.5 py-0.5 rounded ring-1 ring-amber-700/40"
+          title="Virtual / replay / esports inventory. Filtered out of the public PNG.">SYN</span>
+  {% endif %}
 
   <div class="flex-1 min-w-0">
     <div class="text-sm text-zinc-100 truncate">

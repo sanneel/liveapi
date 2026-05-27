@@ -15,8 +15,13 @@ odds.jugabet.cl {
 
     # Security headers
     header {
-        # HSTS — one year + subdomains. Enable AFTER you've confirmed everything is HTTPS-only.
-        # Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        # HSTS — one year + subdomains. Caddy auto-redirects HTTP→HTTPS for
+        # this site, so a stray HTTP asset would already 301; HSTS just
+        # tells repeat visitors to skip that round-trip and refuse plaintext.
+        # If you ever need to serve THIS hostname over HTTP for a probe,
+        # comment this line out FIRST and wait `max-age` seconds for the
+        # browser pin to expire.
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"
         Referrer-Policy "strict-origin-when-cross-origin"

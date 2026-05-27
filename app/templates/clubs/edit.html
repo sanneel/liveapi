@@ -4,13 +4,13 @@
 
 {% block page_actions %}
   <div class="flex items-center gap-2">
-    <a href="/admin/clubs" class="text-xs text-muted-400 hover:text-zinc-200">← Back to clubs</a>
+    <a href="/admin/clubs" class="text-xs text-muted-400 hover:text-zinc-200">Back to clubs</a>
     <a href="/club/{{ club.slug }}.png" target="_blank"
-       class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 text-zinc-300 px-3 py-1.5 rounded">PNG ↗</a>
+       class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 text-zinc-300 px-3 py-1.5 rounded">Open PNG</a>
     {% if current_user.role == 'admin' %}
       <form method="POST" action="/admin/clubs/{{ club.slug }}/delete" class="inline"
             onsubmit="return confirm('Delete club {{ club.slug }}? This cannot be undone.');">
-        <button class="text-xs bg-red-950/40 hover:bg-red-900/40 border border-red-900/50 text-red-300 px-3 py-1.5 rounded">✕ Delete</button>
+        <button class="text-xs bg-red-950/40 hover:bg-red-900/40 border border-red-900/50 text-red-300 px-3 py-1.5 rounded">Delete</button>
       </form>
     {% endif %}
   </div>
@@ -22,7 +22,7 @@
   <span class="text-xs uppercase text-muted-400 tracking-wider">Public URL</span>
   <code class="flex-1 font-mono text-brand-400 text-sm truncate">/club/{{ club.slug }}.png</code>
   <button onclick="copyToClipboard(location.origin + '/club/{{ club.slug }}.png', 'URL copied')"
-          class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 px-3 py-1 rounded">📋 Copy</button>
+          class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 px-3 py-1 rounded">Copy</button>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -35,14 +35,13 @@
       <div>
         <label class="block text-xs uppercase tracking-wider text-muted-400 mb-1.5">Slug</label>
         <div class="font-mono text-brand-400 bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-sm">{{ club.slug }}</div>
-        <p class="text-xs text-muted-500 mt-1">Slug is fixed at parser-discovery time and cannot change.</p>
+        <p class="text-xs text-muted-500 mt-1">Slug is set at creation time and cannot change. Must match the team's <code class="font-mono">home_slug</code> / <code class="font-mono">away_slug</code> in the parser feed.</p>
       </div>
 
       <div>
         <label class="block text-xs uppercase tracking-wider text-muted-400 mb-1.5">Display name</label>
         <input type="text" name="name" value="{{ club.name }}" required
                class="w-full bg-ink-700 border border-ink-600 text-zinc-100 rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500"/>
-        <p class="text-xs text-muted-500 mt-1">First name seen by the parser is locked in here. Override if needed.</p>
       </div>
 
       <div>
@@ -51,10 +50,6 @@
                placeholder="https://jugabet.cl/static/iolite/icons/{{ club.slug }}.webp"
                class="w-full bg-ink-700 border border-ink-600 text-zinc-100 rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500"/>
       </div>
-
-      {# Fallback text is a vestigial column — clubs now render the same
-         match PNG as campaigns, and an empty 1×1 when there is no match. #}
-      <input type="hidden" name="fallback_text" value="{{ club.fallback_text or '' }}"/>
 
       <div>
         <label class="block text-xs uppercase tracking-wider text-muted-400 mb-2">Render options</label>
@@ -72,11 +67,6 @@
           </div>
         </label>
       </div>
-
-      {# cta_url is a vestigial column from the pre-cleanup admin API; keep it
-         hidden so we don't overwrite stored values on submit, but don't ask
-         the editor for it — rendering ignores it. #}
-      <input type="hidden" name="cta_url" value="{{ club.cta_url or '' }}"/>
 
       <button type="submit"
               class="bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold px-5 py-2.5 rounded-lg">

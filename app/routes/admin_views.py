@@ -48,14 +48,23 @@ def dashboard(request: Request, user: User = Depends(require_login)) -> HTMLResp
         campaigns_auto = session.query(func.count(Campaign.slug)).filter(Campaign.mode == "auto").scalar() or 0
         campaigns_manual = session.query(func.count(Campaign.slug)).filter(Campaign.mode == "manual").scalar() or 0
         campaigns_enabled = session.query(func.count(Campaign.slug)).filter(Campaign.enabled.is_(True)).scalar() or 0
+        # Only count overrides that target a currently-active match. Without
+        # the join, a pin/suppress left behind on a deactivated match keeps
+        # contributing to the global count even though no per-sport browse
+        # page ever lists it — admins saw "5 suppressed" with nothing to
+        # un-suppress.
         hot_pinned = (
             session.query(func.count(HotBoost.event_id))
+            .join(Match, Match.event_id == HotBoost.event_id)
             .filter(HotBoost.position.is_not(None))
+            .filter(Match.is_active.is_(True))
             .scalar() or 0
         )
         hot_suppressed = (
             session.query(func.count(HotBoost.event_id))
+            .join(Match, Match.event_id == HotBoost.event_id)
             .filter(HotBoost.suppress.is_(True))
+            .filter(Match.is_active.is_(True))
             .scalar() or 0
         )
 
@@ -117,12 +126,14 @@ def matches_list(
     sport: str = "",
     status: str = "",
     tournament: str = "",
+    include_synthetic: int = 0,
     page: int = 1,
     user: User = Depends(require_login),
 ) -> HTMLResponse:
     page = max(1, page)
     per_page = 25
     offset = (page - 1) * per_page
+    show_synth = bool(include_synthetic)
 
     with db_session() as session:
         repo = MatchRepository(session)
@@ -133,12 +144,13 @@ def matches_list(
             tournament=tournament or None,
             limit=per_page + 1,
             offset=offset,
+            include_synthetic=show_synth,
         )
         has_next = len(matches) > per_page
         matches = matches[:per_page]
-        tournaments = repo.list_tournaments(sport=sport or None)
-        # Quick stat: total active matches matching the current sport/status filters
-        # (ignoring text + tournament). Cheap because count_active is one row.
+        tournaments = repo.list_tournaments(
+            sport=sport or None, include_synthetic=show_synth
+        )
         total_active = repo.count_active()
 
     return templates.TemplateResponse(
@@ -151,6 +163,7 @@ def matches_list(
             "sport": sport,
             "status": status,
             "tournament": tournament,
+            "include_synthetic": show_synth,
             "tournaments": tournaments,
             "total_active": total_active,
             "page": page,

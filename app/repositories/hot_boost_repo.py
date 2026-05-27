@@ -67,6 +67,23 @@ class HotBoostRepository:
     ) -> HotBoost:
         return self._upsert_field(event_id, "suppress", bool(suppress), by=by)
 
+    def event_at_position(
+        self, candidate_event_ids: Iterable[str], position: int
+    ) -> Optional[str]:
+        """If any of `candidate_event_ids` currently holds `position`, return its
+        event_id. Used when pinning an event to a slot to detect and displace
+        whatever was there before."""
+        ids = [str(e) for e in candidate_event_ids if e]
+        if not ids:
+            return None
+        row = (
+            self.session.query(HotBoost.event_id)
+            .filter(HotBoost.event_id.in_(ids))
+            .filter(HotBoost.position == int(position))
+            .first()
+        )
+        return row[0] if row else None
+
     def clear_positions_for_events(self, event_ids: Iterable[str]) -> int:
         """Set position=NULL for every row in `event_ids`. Cheap idempotent reset."""
         ids = [str(e) for e in event_ids if e]
@@ -141,10 +158,26 @@ class HotBoostRepository:
         event_id = str(event_id).strip()
         if not event_id:
             raise ValueError("event_id required")
+        # `session.get()` only checks rows already flushed to the DB; it
+        # does NOT see pending inserts in the identity map / `session.new`.
+        # When the caller does e.g. `set_position(eid, 3); set_suppress(eid, False)`
+        # in one transaction, the second get() returned None even though the
+        # first call had just queued an insert, so a second HotBoost row was
+        # queued for the same primary key — INSERT, INSERT, UNIQUE constraint
+        # failed on commit, route returned 500. Look in the identity map
+        # first so we re-use the pending row.
         row = self.session.get(HotBoost, event_id)
+        if row is None:
+            # Identity map covers both attached + pending rows for this key.
+            row = self.session.identity_map.get(
+                (HotBoost, (event_id,), None)
+            )
         if row is None:
             row = HotBoost(event_id=event_id, boost=0.0, pin=False, suppress=False)
             self.session.add(row)
+            # Belt-and-braces: also flush so a later `session.get()` from a
+            # different code path in the same transaction picks it up.
+            self.session.flush()
         setattr(row, field, value)
         row.updated_by = by
         row.updated_at = datetime.utcnow()

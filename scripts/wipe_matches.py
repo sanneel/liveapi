@@ -15,15 +15,33 @@ from app.database import db_session
 
 
 def main() -> None:
-    with db_session() as s:
-        m_before = s.execute(text("SELECT COUNT(*) FROM matches")).scalar()
-        cm_before = s.execute(text("SELECT COUNT(*) FROM campaign_matches")).scalar()
-        s.execute(text("DELETE FROM campaign_matches"))
-        s.execute(text("DELETE FROM matches"))
-        m_after = s.execute(text("SELECT COUNT(*) FROM matches")).scalar()
-        cm_after = s.execute(text("SELECT COUNT(*) FROM campaign_matches")).scalar()
+    from app.database import engine
+    dbapi_conn = engine.raw_connection()
+    try:
+        cursor = dbapi_conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM matches")
+        m_before = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM campaign_matches")
+        cm_before = cursor.fetchone()[0]
+
+        cursor.execute("PRAGMA foreign_keys = OFF")
+        cursor.execute("BEGIN TRANSACTION")
+        cursor.execute("DELETE FROM campaign_matches")
+        cursor.execute("DELETE FROM matches")
+        dbapi_conn.commit()
+
+        cursor.execute("SELECT COUNT(*) FROM matches")
+        m_after = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM campaign_matches")
+        cm_after = cursor.fetchone()[0]
+
         print(f"matches:          {m_before} -> {m_after}  (deleted {m_before - m_after})")
         print(f"campaign_matches: {cm_before} -> {cm_after}  (deleted {cm_before - cm_after})")
+    except Exception as e:
+        dbapi_conn.rollback()
+        raise e
+    finally:
+        dbapi_conn.close()
 
 
 if __name__ == "__main__":

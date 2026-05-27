@@ -21,10 +21,9 @@
 <form method="get" action="/admin/matches"
       class="bg-ink-850 border border-ink-600 rounded-xl p-4 mb-5 grid grid-cols-1 md:grid-cols-12 gap-3">
   <div class="md:col-span-4 relative">
-    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-500 text-xs font-bold">🔍</span>
     <input type="text" name="q" value="{{ q }}"
            placeholder="Search team or league…"
-           class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:border-brand-500"/>
+           class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500"/>
   </div>
 
   <select name="sport"
@@ -54,7 +53,14 @@
     <button class="flex-1 bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold text-sm px-3 py-2 rounded-lg">Apply</button>
   </div>
 
-  {% if q or sport or status or tournament %}
+  <label class="md:col-span-12 flex items-center gap-2 text-xs text-muted-400 select-none">
+    <input type="checkbox" name="include_synthetic" value="1"
+           {% if include_synthetic %}checked{% endif %}
+           class="rounded border-ink-600 bg-ink-700 text-brand-500 focus:ring-brand-500" />
+    <span>Show virtual / replay / esports inventory (hidden by default)</span>
+  </label>
+
+  {% if q or sport or status or tournament or include_synthetic %}
     <div class="md:col-span-12 -mt-1">
       <a href="/admin/matches" class="text-xs text-muted-400 hover:text-zinc-200 underline">Clear all filters</a>
     </div>
@@ -88,6 +94,9 @@
             {% endif %}
             {% if not m.is_active %}
               <span class="block text-[9px] text-muted-600 mt-0.5">inactive</span>
+            {% endif %}
+            {% if m.is_synthetic %}
+              <span class="block text-[9px] text-amber-400/80 mt-0.5">virtual</span>
             {% endif %}
           </td>
           <td class="px-5 py-3">
@@ -128,12 +137,11 @@
     </table>
   {% else %}
     <div class="px-5 py-16 text-center text-muted-500 text-sm">
-      <div class="text-4xl mb-3 opacity-30">∅</div>
-      No matches found.
+      <div class="text-zinc-300 mb-1">No matches found</div>
       {% if q or sport or status or tournament %}
-        <br><a href="/admin/matches" class="text-brand-400 hover:text-brand-300">Clear filters</a>
+        <a href="/admin/matches" class="text-brand-400 hover:text-brand-300">Clear filters</a>
       {% else %}
-        <br><span class="text-xs">Once the parser fetches from jugabet.cl, matches will appear here.</span>
+        <span class="text-xs">Once the parser fetches from jugabet.cl, matches will appear here.</span>
       {% endif %}
     </div>
   {% endif %}
@@ -144,11 +152,11 @@
     <div>Page {{ page }}</div>
     <div class="flex gap-2">
       {% if page > 1 %}
-        <a href="?q={{ q }}&sport={{ sport }}&tournament={{ tournament }}&status={{ status }}&page={{ page - 1 }}"
+        <a href="?q={{ q }}&sport={{ sport }}&tournament={{ tournament }}&status={{ status }}{% if include_synthetic %}&include_synthetic=1{% endif %}&page={{ page - 1 }}"
            class="px-3 py-1.5 bg-ink-700 border border-ink-600 rounded hover:bg-ink-600">← Previous</a>
       {% endif %}
       {% if has_next %}
-        <a href="?q={{ q }}&sport={{ sport }}&tournament={{ tournament }}&status={{ status }}&page={{ page + 1 }}"
+        <a href="?q={{ q }}&sport={{ sport }}&tournament={{ tournament }}&status={{ status }}{% if include_synthetic %}&include_synthetic=1{% endif %}&page={{ page + 1 }}"
            class="px-3 py-1.5 bg-ink-700 border border-ink-600 rounded hover:bg-ink-600">Next →</a>
       {% endif %}
     </div>

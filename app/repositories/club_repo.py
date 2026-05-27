@@ -2,8 +2,8 @@
 Club repository — CRUD on the `clubs` table.
 
 Insert-only by design: `ensure(slug, ...)` does INSERT OR IGNORE.
-Admin can update mutable fields (logo, fallback_text, cta_url, name)
-via `update(slug, **fields)`.
+Admin can update mutable fields (name, logo, hide_opponent_logo) via
+`update(slug, **fields)`.
 """
 
 from __future__ import annotations
@@ -80,7 +80,7 @@ class ClubRepository:
         c = self.find_by_slug(slug)
         if c is None:
             return None
-        allowed = {"name", "logo", "fallback_text", "cta_url", "hide_opponent_logo"}
+        allowed = {"name", "logo", "hide_opponent_logo"}
         for k, v in fields.items():
             if k in allowed and v is not None:
                 setattr(c, k, v)

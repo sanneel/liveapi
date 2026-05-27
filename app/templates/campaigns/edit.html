@@ -5,23 +5,46 @@
 {% block page_actions %}
   <div class="flex items-center gap-2">
     <a href="/r/{{ campaign.slug }}.png" target="_blank"
-       class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 text-zinc-300 px-3 py-1.5 rounded">PNG ↗</a>
+       class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 text-zinc-300 px-3 py-1.5 rounded">Open PNG</a>
     <form method="POST" action="/admin/campaigns/{{ campaign.slug }}/duplicate" class="inline">
-      <button class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 text-zinc-300 px-3 py-1.5 rounded">⎘ Duplicate</button>
+      <button class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 text-zinc-300 px-3 py-1.5 rounded">Duplicate</button>
     </form>
     <form method="POST" action="/admin/campaigns/{{ campaign.slug }}/toggle" class="inline">
       <button class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 text-zinc-300 px-3 py-1.5 rounded">
-        {% if campaign.enabled %}⏸ Disable{% else %}▶ Enable{% endif %}
+        {% if campaign.enabled %}Disable{% else %}Enable{% endif %}
       </button>
     </form>
     <form method="POST" action="/admin/campaigns/{{ campaign.slug }}/delete" class="inline"
           onsubmit="return confirm('Delete campaign {{ campaign.slug }}? This cannot be undone.');">
-      <button class="text-xs bg-red-950/40 hover:bg-red-900/40 border border-red-900/50 text-red-300 px-3 py-1.5 rounded">✕ Delete</button>
+      <button class="text-xs bg-red-950/40 hover:bg-red-900/40 border border-red-900/50 text-red-300 px-3 py-1.5 rounded">Delete</button>
     </form>
   </div>
 {% endblock %}
 
 {% block content %}
+
+{% if render_stats and render_stats.total > 0 and (render_stats.will_render_blank or render_stats.synthetic or render_stats.inactive) %}
+  <div class="mb-4 px-4 py-3 rounded-lg border flex items-start gap-3
+              {% if render_stats.will_render_blank %}bg-red-950/40 border-red-800/60 text-red-100
+              {% else %}bg-amber-950/40 border-amber-800/60 text-amber-100{% endif %}">
+    <i data-lucide="alert-triangle" class="!w-4 !h-4 mt-0.5 flex-shrink-0"></i>
+    <div class="text-sm flex-1">
+      {% if render_stats.will_render_blank %}
+        <div class="font-semibold">PNG will render blank (1&times;1 transparent).</div>
+        <div class="text-xs mt-1">
+          {{ render_stats.total }} match{{ '' if render_stats.total == 1 else 'es' }} selected, but none are renderable —
+          {% if render_stats.synthetic %}{{ render_stats.synthetic }} hidden as virtual / replay / esports{% endif %}{% if render_stats.synthetic and render_stats.inactive %}, {% endif %}{% if render_stats.inactive %}{{ render_stats.inactive }} dropped from the parser feed{% endif %}.
+          Add real, currently-active fixtures from the picker on the right.
+        </div>
+      {% else %}
+        <div class="font-semibold">{{ render_stats.renderable }} of {{ render_stats.total }} selected matches will render.</div>
+        <div class="text-xs mt-1">
+          {% if render_stats.synthetic %}{{ render_stats.synthetic }} hidden as virtual / replay / esports{% endif %}{% if render_stats.synthetic and render_stats.inactive %}, {% endif %}{% if render_stats.inactive %}{{ render_stats.inactive }} no longer in the parser feed{% endif %}.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
 
 {# Public URL bar #}
 <div class="bg-ink-850 border border-ink-600 rounded-xl px-5 py-3 mb-6 flex items-center gap-3">
@@ -34,7 +57,7 @@
     {% if campaign.mode == 'auto' %}Auto{% else %}Manual{% endif %}
   </span>
   <button onclick="copyToClipboard(location.origin + '/r/{{ campaign.slug }}.png', 'URL copied')"
-          class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 px-3 py-1 rounded">📋 Copy</button>
+          class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 px-3 py-1 rounded">Copy</button>
   {% if campaign.enabled %}
     <span class="text-xs text-green-400 flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-green-400"></span> Live
@@ -199,19 +222,29 @@
   <div class="space-y-6">
 
     {% if campaign.mode == 'manual' %}
-      <div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">
-        <div class="px-5 py-4 border-b border-ink-600">
+      <div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden"
+           x-data="pickerState()"
+           x-init="wireHtmxLifecycle()">
+        <div class="px-5 py-4 border-b border-ink-600 flex items-center justify-between gap-3">
           <h2 class="text-sm font-semibold text-white">Add matches</h2>
+          {# Searching… ONLY while a real fetch is in flight. When the
+             request finishes the indicator is removed entirely (not just
+             opacity-hidden), so the operator never sees stale loading
+             text next to populated results. #}
+          <span x-show="loading" x-cloak
+                class="text-[11px] text-muted-400 inline-flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></span>
+            Searching…
+          </span>
         </div>
 
         <div class="p-4 border-b border-ink-600 space-y-2"
              hx-get="/api/admin/campaigns/{{ campaign.slug }}/picker"
-             hx-trigger="keyup changed delay:250ms from:input[name='q'], change from:select[name='tournament'], change delay:250ms from:input[name='team'], load"
-             hx-include="input[name='q'], select[name='tournament'], input[name='team']"
-             hx-target="#picker-results"
-             hx-indicator="#picker-loading">
+             hx-trigger="keyup changed delay:250ms from:input[name='q'], change from:select[name='tournament'], change delay:250ms from:input[name='team'], change from:input[name='include_synthetic'], load"
+             hx-include="input[name='q'], select[name='tournament'], input[name='team'], input[name='include_synthetic']:checked"
+             hx-target="#picker-results">
           <input type="text" name="q"
-                 placeholder="🔍  Search team or league…"
+                 placeholder="Search team or league…"
                  class="w-full bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"/>
           <div class="grid grid-cols-2 gap-2">
             <select name="tournament"
@@ -225,12 +258,16 @@
                    placeholder="Team slug or name…"
                    class="bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-xs focus:border-brand-500 focus:outline-none"/>
           </div>
+          <label class="flex items-center gap-2 text-[11px] text-muted-400 select-none cursor-pointer mt-1">
+            <input type="checkbox" name="include_synthetic" value="1"
+                   class="accent-brand-500"/>
+            <span>Show virtual / replays / esports inventory</span>
+            <span class="text-muted-600">(hidden by default — keeps fake fixtures out of public PNGs)</span>
+          </label>
         </div>
 
-        <div id="picker-loading" class="htmx-indicator text-center text-xs text-muted-400 py-2">Searching…</div>
-
         <div id="picker-results" class="max-h-[480px] overflow-y-auto">
-          <div class="px-5 py-10 text-center text-muted-500 text-xs">Loading…</div>
+          <div x-show="!loaded" x-cloak class="px-5 py-10 text-center text-muted-500 text-xs">Loading…</div>
         </div>
       </div>
     {% endif %}
@@ -273,10 +310,20 @@
     const liveBadge = status === 'live'
       ? '<span class="text-[10px] font-bold text-red-300 bg-red-900/40 px-1.5 py-0.5 rounded">LIVE</span>'
       : '';
+    // Render-state badge: INACTIVE wins (worse than SYN — parser totally
+    // dropped the row); SYN is only shown when still active but filtered
+    // out of the public PNG.
+    let stateBadge = '';
+    if (m.is_active === false) {
+      stateBadge = '<span class="text-[10px] font-bold text-zinc-300 bg-zinc-700/60 px-1.5 py-0.5 rounded ring-1 ring-zinc-600" title="Parser dropped this match from the feed. It will not appear in the rendered PNG.">INACTIVE</span>';
+    } else if (m.is_synthetic === true) {
+      stateBadge = '<span class="text-[10px] font-semibold text-amber-300 bg-amber-900/30 px-1.5 py-0.5 rounded ring-1 ring-amber-700/40" title="Virtual / replay / esports inventory. Filtered out of the public PNG.">SYN</span>';
+    }
     return `<li data-event-id="${escapeHTML(m.event_id)}"
         class="px-5 py-3 flex items-center gap-3 hover:bg-ink-800/40 transition-colors">
       <span class="drag-handle cursor-grab text-muted-500 text-lg select-none">⠿</span>
       ${liveBadge}
+      ${stateBadge}
       <div class="flex-1 min-w-0">
         <div class="text-sm text-zinc-100 truncate">
           ${home} <span class="text-muted-400">vs</span> ${away}
@@ -346,11 +393,36 @@
     const q = document.querySelector('input[name="q"]')?.value || '';
     const tournament = document.querySelector('select[name="tournament"]')?.value || '';
     const team = document.querySelector('input[name="team"]')?.value || '';
+    const synthEl = document.querySelector('input[name="include_synthetic"]');
+    const values = { q, tournament, team };
+    if (synthEl && synthEl.checked) values.include_synthetic = '1';
     htmx.ajax('GET', `/api/admin/campaigns/${SLUG}/picker`, {
       target: '#picker-results',
-      values: { q, tournament, team },
+      values,
       swap: 'innerHTML',
     });
+  }
+
+  // Alpine factory backing the picker's loading indicator. We listen for
+  // htmx lifecycle events scoped to the picker panel so "Searching…" is
+  // ONLY visible during an in-flight request — the previous CSS
+  // `htmx-indicator` approach left the element occupying vertical space
+  // (opacity: 0) which read as a stale loading row beside the results.
+  function pickerState() {
+    return {
+      loading: false,
+      loaded: false,
+      wireHtmxLifecycle() {
+        const root = this.$el;
+        root.addEventListener('htmx:beforeRequest', () => {
+          this.loading = true;
+        });
+        const end = () => { this.loading = false; this.loaded = true; };
+        root.addEventListener('htmx:afterRequest', end);
+        root.addEventListener('htmx:responseError', end);
+        root.addEventListener('htmx:sendError', end);
+      },
+    };
   }
 
   async function addMatch(eventId) {
@@ -396,9 +468,18 @@
   // Initial drag-reorder wiring for the server-rendered rows.
   wireSortable();
 
-  function reloadPreview() {
+  // `limit` is optional. When passed (from the auto-campaign Live
+  // Preview spinner) we propagate it to the PNG so the rendered image
+  // matches the JSON match-list shown above it. Manual campaigns don't
+  // honour ?limit=, so we omit it there.
+  function reloadPreview(limit) {
     const img = document.getElementById('preview-img');
-    img.src = `/r/${SLUG}.png?t=${Date.now()}`;
+    if (!img) return;
+    const qs = new URLSearchParams({ t: Date.now() });
+    if (limit !== undefined && limit !== null && limit !== '') {
+      qs.set('limit', String(limit));
+    }
+    img.src = `/r/${SLUG}.png?${qs.toString()}`;
     img.style.opacity = 1;
   }
 
@@ -428,6 +509,13 @@
           this.error = `Failed to load preview: ${e.message}`;
         } finally {
           this.loading = false;
+        }
+        // Keep the PNG preview <img> in sync with the spinner. Without
+        // this, the JSON match-list above respects the chosen limit but
+        // the rendered PNG below stays at whatever the page first loaded
+        // with — operator sees mismatched counts and assumes a bug.
+        if (typeof reloadPreview === 'function') {
+          reloadPreview(this.limit);
         }
       },
     };

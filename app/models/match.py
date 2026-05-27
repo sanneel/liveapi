@@ -61,6 +61,12 @@ class Match(Base):
     # ── ranking / state ──
     hot_score = Column(Float, nullable=True, index=True)
     is_active = Column(Boolean, default=True, nullable=False, index=True)
+    # Synthetic content marker — virtual football, FIFA replays, esports
+    # replays, etc. Populated at parser-write time from
+    # `app.utils.quality.is_synthetic_tournament`. Read paths (campaign
+    # picker, HotEngine) filter this out by default so admins don't
+    # accidentally render a fake fixture as a public PNG.
+    is_synthetic = Column(Boolean, default=False, nullable=False, index=True)
 
     # ── timestamps ──
     first_seen_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -88,6 +94,10 @@ class Match(Base):
         """
         Convert to the same dict shape `parse_html` produces, so this Match
         can be fed directly to scoring / render code without changes.
+
+        `is_active` and `is_synthetic` are passed through so the admin UI
+        can surface INACTIVE / SYN badges on JS-rendered match rows; the
+        scoring / render code already ignores extra keys.
         """
         return {
             "event_id": self.event_id,
@@ -109,6 +119,8 @@ class Match(Base):
                 "type": self.market_type,
                 "odds": self.odds(),
             },
+            "is_active": bool(self.is_active),
+            "is_synthetic": bool(self.is_synthetic),
         }
 
     def __repr__(self) -> str:

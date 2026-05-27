@@ -202,7 +202,16 @@ def _clamp_limit(limit: Optional[int]) -> int:
 
 
 def _resolve_matches(session, campaign: Campaign, auto_limit: int) -> List[Match]:
-    """Return the matches that this campaign should render right now."""
+    """Return the matches that this campaign should render right now.
+
+    Manual-mode silently drops:
+      * `is_active=False` rows (the parser stopped seeing the match)
+      * `is_synthetic=True` rows (virtual / replay / esports — never public)
+
+    The admin-side counterparts (campaign list + edit) call
+    `manual_render_stats()` to surface WHY a campaign's render is empty,
+    so a synthetic-only or all-stale selection doesn't ship a silent 1×1.
+    """
     if campaign.mode == "auto":
         engine = HotEngine(session, campaign.sport, league=campaign.league)
         candidates = engine.resolve(auto_limit)
@@ -217,10 +226,35 @@ def _resolve_matches(session, campaign: Campaign, auto_limit: int) -> List[Match
             )
         return candidates
 
-    # mode == "manual" — editor's selection in order, drop inactive
+    # mode == "manual" — editor's selection in order
     repo = CampaignRepository(session)
     matches = repo.get_matches(campaign.slug)
-    return [m for m in matches if m.is_active]
+    return [m for m in matches if m.is_active and not m.is_synthetic]
+
+
+def manual_render_stats(matches: List[Match]) -> Dict[str, Any]:
+    """Bucket a manual campaign's selected matches by why each one would
+    or wouldn't render in the public PNG. Used by the campaign list +
+    edit page to warn the operator BEFORE they ship.
+
+    Returns:
+      total                  Selected matches (regardless of state)
+      renderable             Active + not synthetic — go to the PNG
+      inactive               is_active=False — parser dropped from feed
+      synthetic              is_synthetic=True — hidden as virtual/replay
+      will_render_blank      True if total > 0 but renderable == 0
+    """
+    total = len(matches)
+    renderable = sum(1 for m in matches if m.is_active and not m.is_synthetic)
+    inactive = sum(1 for m in matches if not m.is_active)
+    synthetic = sum(1 for m in matches if m.is_active and m.is_synthetic)
+    return {
+        "total": total,
+        "renderable": renderable,
+        "inactive": inactive,
+        "synthetic": synthetic,
+        "will_render_blank": total > 0 and renderable == 0,
+    }
 
 
 

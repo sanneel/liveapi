@@ -35,7 +35,11 @@ VALID_SPORTS = (
     "fights", "ufc", "mma", "boxing",
 )
 DEFAULT_LIMIT = 5
-MAX_LIMIT = 20
+# MAX_LIMIT bounds /hot/{sport}.png?limit=N — combat sports (ufc/boxing) can
+# have 50+ active fixtures and operators want a "full board" PNG; football
+# leagues rarely need >20. 50 is a generous ceiling that still bounds render
+# time (~10 s for a 50-row PNG) and PNG payload (~3 MB).
+MAX_LIMIT = 50
 
 # 1×1 transparent PNG (mirrors public_render.TRANSPARENT_PNG_1X1)
 TRANSPARENT_PNG_1X1 = (

@@ -36,13 +36,27 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
         response.headers.setdefault("Cross-Origin-Resource-Policy", "same-site")
+        # `unsafe-eval` is required by:
+        #   - Alpine.js: compiles every x-show/x-text/x-model/etc. directive
+        #     into a runtime Function() — without it, every binding silently
+        #     no-ops and the admin pages render as static templates with no
+        #     fetched data (root cause of "browse shows nothing while PNG
+        #     works").
+        #   - Tailwind CDN JIT: also uses Function() to compile class names
+        #     at runtime.
+        # `style-src 'unsafe-inline'` is required by Tailwind CDN injecting
+        # styles dynamically.
+        # Follow-up (out of scope here): replace the Tailwind CDN with a
+        # pre-built CSS bundle and swap Alpine for its CSP-friendly build
+        # so we can drop both `unsafe-eval` and the third-party CDN hosts.
         response.headers.setdefault(
             "Content-Security-Policy",
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://unpkg.com https://cdn.jsdelivr.net; "
-            "style-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
+            "https://cdn.tailwindcss.com https://unpkg.com https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "img-src 'self' data: https:; "
-            "font-src 'self' data:; "
+            "font-src 'self' data: https://fonts.gstatic.com; "
             "connect-src 'self'; "
             "frame-ancestors 'none'; "
             "base-uri 'self'; "

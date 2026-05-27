@@ -335,8 +335,13 @@ def pick_hot(
     limit: int = 5,
     timezone: Optional[str] = None,
     debug: bool = False,
+    single_league: bool = False,
 ) -> Dict[str, Any]:
     limit = max(1, int(limit))
+    # When the caller has already filtered to a single tournament (auto
+    # campaign with league set), disable the per-tournament cap so we don't
+    # cut the result down to MAX_PER_TOURNAMENT below the requested limit.
+    per_tournament_cap = limit if single_league else MAX_PER_TOURNAMENT
 
     scored: List[Tuple[int, Dict[str, Any]]] = []
 
@@ -365,7 +370,7 @@ def pick_hot(
             continue
         if per_team.get(a, 0) >= MAX_PER_TEAM:
             continue
-        if per_tournament.get(t, 0) >= MAX_PER_TOURNAMENT:
+        if per_tournament.get(t, 0) >= per_tournament_cap:
             continue
 
         per_team[h] = per_team.get(h, 0) + 1
@@ -383,6 +388,7 @@ def pick_hot(
             "limit": limit,
             "selected": len(selected),
             "timezone": timezone or FORCED_TIMEZONE,
+            "single_league": bool(single_league),
         },
         "events": selected,
     }

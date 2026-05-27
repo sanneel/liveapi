@@ -2,347 +2,180 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>{{ theme.display_name }} · Cube Widget</title>
+  <title>{{ theme.display_name }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    /* ── Reset for iframe embedding ───────────────────────────────── */
     html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
       background: transparent;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-                   "Helvetica Neue", Arial, sans-serif;
       overflow: hidden;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* ── 3D cube scene ────────────────────────────────────────────── */
-    .scene {
-      width: 100%;
-      height: 100%;
-      perspective: 1200px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    /* The cube container. Edge length = min(width, height) of viewport,
-       computed in JS so the cube scales with the iframe. */
+    /*
+      Scene: perspective container.
+      Face ratio matches media-cub-template (420×380 = 1.105:1).
+      Capped at 300px wide so it looks like an ad unit — not full-screen —
+      when visited directly in a browser. Shrinks to fit smaller iframes.
+    */
+    .scene {
+      --face-w: min(90vmin, 300px);
+      width:    var(--face-w);
+      height:   calc(var(--face-w) / 1.105);
+      perspective: calc(var(--face-w) * 3);
+    }
+
+    /* The rotating box. 4 faces, 90° apart around Y-axis. */
     .cube {
+      width: 100%;
+      height: 100%;
       position: relative;
       transform-style: preserve-3d;
-      transition: transform 900ms cubic-bezier(.25, .8, .25, 1);
-      will-change: transform;
+      animation: spin 9s linear infinite;
     }
 
-    /* Each face is absolutely positioned and rotated to its slot on
-       a 4-sided rotation around the Y axis. translateZ(half) pushes it
-       outward to form the cube surface. The widget rotates around Y
-       only — top/bottom faces aren't used (matches the reference
-       video, which never shows them). */
+    @keyframes spin {
+      from { transform: rotateY(0deg); }
+      to   { transform: rotateY(-360deg); }
+    }
+
     .face {
       position: absolute;
-      top: 0;
-      left: 0;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      overflow: hidden;
+      backface-visibility: hidden;
+      /* translateZ set by JS once we know the rendered width */
+    }
+
+    .face img {
       width: 100%;
       height: 100%;
-      backface-visibility: hidden;
-      box-sizing: border-box;
-      border-radius: 14px;
-      overflow: hidden;
-      box-shadow: 0 18px 50px -18px rgba(0, 0, 0, .55),
-                  0 0 0 1px rgba(255, 255, 255, .06);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 14px;
-      text-align: center;
+      object-fit: fill;
+      display: block;
+      /* Prevent broken-image icons while loading */
+      background: #0a0e1a;
     }
-
-    /* ── Brand face ─────────────────────────────────────────────── */
-    .brand {
-      gap: 8px;
-    }
-    .brand .label {
-      font-weight: 900;
-      font-style: italic;
-      letter-spacing: .04em;
-      font-size: clamp(22px, 7.5vmin, 44px);
-      line-height: 1;
-      text-shadow: 0 2px 14px rgba(0, 0, 0, .35);
-    }
-    .brand .underline {
-      width: 60%;
-      max-width: 140px;
-      height: 3px;
-      border-radius: 2px;
-    }
-    .brand .sublabel {
-      font-weight: 600;
-      font-size: clamp(9px, 2.6vmin, 13px);
-      letter-spacing: .14em;
-      opacity: .85;
-    }
-
-    /* ── Match face ─────────────────────────────────────────────── */
-    .match {
-      gap: 6px;
-      justify-content: space-between;
-      padding: 12px 12px 10px;
-    }
-    .match .badge {
-      align-self: center;
-      font-size: clamp(8px, 2.4vmin, 11px);
-      font-weight: 800;
-      letter-spacing: .14em;
-      padding: 3px 10px;
-      border-radius: 999px;
-      background: rgba(0, 0, 0, .35);
-    }
-    .match .badge.live {
-      background: #d9162e;
-      color: #fff;
-      animation: pulse 1.6s ease-in-out infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(217, 22, 46, .55); }
-      50%      { box-shadow: 0 0 0 6px rgba(217, 22, 46, 0); }
-    }
-    .match .teams {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      flex: 1;
-      justify-content: center;
-    }
-    .match .team {
-      font-weight: 800;
-      font-size: clamp(11px, 3.6vmin, 18px);
-      line-height: 1.1;
-    }
-    .match .vs {
-      font-style: italic;
-      font-weight: 900;
-      font-size: clamp(10px, 3vmin, 14px);
-      opacity: .85;
-    }
-    .match .score {
-      font-weight: 900;
-      font-size: clamp(14px, 4.2vmin, 22px);
-      letter-spacing: .05em;
-    }
-    .match .odds {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 4px;
-      width: 100%;
-    }
-    .match .odd {
-      background: rgba(0, 0, 0, .35);
-      border: 1px solid rgba(255, 255, 255, .18);
-      border-radius: 6px;
-      padding: 4px 0 3px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      line-height: 1.05;
-    }
-    .match .odd .k {
-      font-size: clamp(7px, 1.9vmin, 9px);
-      opacity: .7;
-      letter-spacing: .05em;
-    }
-    .match .odd .v {
-      font-weight: 800;
-      font-size: clamp(11px, 3.2vmin, 16px);
-    }
-
-    /* Empty / placeholder state */
-    .empty {
-      font-size: clamp(10px, 3vmin, 13px);
-      opacity: .75;
-      padding: 0 12px;
-    }
-
-    /* Bottom-left tournament caption on match face */
-    .match .caption {
-      font-size: clamp(8px, 2.2vmin, 10px);
-      opacity: .65;
-      letter-spacing: .04em;
-    }
-
-    /* No-JS fallback: show only the first face flat. */
-    .nojs .cube .face:not(:first-child) { display: none; }
-    .nojs .cube { transform: none !important; }
   </style>
 </head>
-<body class="nojs">
-  <div class="scene">
-    <div class="cube" id="cube" aria-label="{{ theme.display_name }}">
-      <!-- Faces injected by JS so theme registry stays single-source-of-truth -->
+<body>
+  <div class="scene" id="scene">
+    <div class="cube" id="cube">
+      <!--
+        4 faces, alternating: promo → odds → promo → odds.
+        The two odds faces stay in sync — both show the currently-active
+        match slot. Every SLOT_INTERVAL_MS, both odds <img>s swap to the
+        next slot.
+      -->
+      <div class="face" id="f0">
+        <img src="{{ theme.promo_image_url }}" alt="" />
+      </div>
+      <div class="face" id="f1">
+        <img id="odds-a" src="/cube/{{ theme.slug }}/odds.png?slot=0" alt="" />
+      </div>
+      <div class="face" id="f2">
+        <img src="{{ theme.promo_image_url }}" alt="" />
+      </div>
+      <div class="face" id="f3">
+        <img id="odds-b" src="/cube/{{ theme.slug }}/odds.png?slot=0" alt="" />
+      </div>
     </div>
   </div>
 
   <script>
   (function () {
     'use strict';
-    document.body.classList.remove('nojs');
 
-    var themeSlug = "{{ theme.slug }}";
-    var ROTATE_INTERVAL_MS = 3500;   // ~3.5s per face like the reference widget
-    var POLL_INTERVAL_MS = 30000;    // refresh data every 30s (parser cycle is 120s)
-    var cubeEl = document.getElementById('cube');
-    var sceneEl = document.querySelector('.scene');
+    var THEME             = "{{ theme.slug }}";
+    // How long each slot stays on-screen before cycling to the next.
+    // Requested cadence: 20 s per slot.
+    var SLOT_INTERVAL_MS  = 20000;
+    // How often to silently re-pull the same slot so live odds tick over.
+    var REFRESH_INTERVAL_MS = 30000;
 
-    // ── Sizing ──────────────────────────────────────────────────
-    function edge() {
-      // Cube edge = smaller viewport dimension minus a small bezel so
-      // shadow + perspective have breathing room. The iframe host
-      // controls the outer size; we honor whatever it gives us.
-      var w = sceneEl.clientWidth || 240;
-      var h = sceneEl.clientHeight || 240;
-      return Math.max(80, Math.min(w, h) - 16);
-    }
+    var scene   = document.getElementById('scene');
+    var cube    = document.getElementById('cube');
+    var faces   = cube.querySelectorAll('.face');
+    var oddsA   = document.getElementById('odds-a');
+    var oddsB   = document.getElementById('odds-b');
+    var N       = faces.length;            // 4 (geometry)
+    var step    = 360 / N;                 // 90°
 
-    function layout(facesCount) {
-      var e = edge();
-      cubeEl.style.width = e + 'px';
-      cubeEl.style.height = e + 'px';
-      // 4-face cube: 90° apart. For 3 faces we'd use 120°, etc.
-      var step = 360 / Math.max(1, facesCount);
-      // translateZ = edge/2 / tan(step/2 rad). For 4 faces, step/2=45° => edge/2.
-      var rad = (step / 2) * Math.PI / 180;
-      var tz = (e / 2) / Math.tan(rad);
-      var faces = cubeEl.querySelectorAll('.face');
-      for (var i = 0; i < faces.length; i++) {
-        var rotY = i * step;
-        faces[i].style.transform = 'rotateY(' + rotY + 'deg) translateZ(' + tz + 'px)';
+    function layout() {
+      /* translateZ = half the face width — makes a perfect square prism. */
+      var tz = scene.clientWidth / 2;
+      for (var i = 0; i < N; i++) {
+        faces[i].style.transform =
+          'rotateY(' + (i * step) + 'deg) translateZ(' + tz + 'px)';
       }
-      // Center camera so face #0 fills the viewport: pull back by tz.
-      cubeEl.style.transform = 'translateZ(' + (-tz) + 'px) rotateY(' + currentRotY + 'deg)';
     }
 
-    // ── Rendering ───────────────────────────────────────────────
-    function escapeHtml(s) {
-      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
-      });
+    layout();
+    window.addEventListener('resize', layout);
+
+    /*
+      Slot cycling state.
+
+      slotCount: how many match slots the theme has. Discovered from the
+      first /data.json response — keeps the widget self-configuring so we
+      don't have to template a Python list of slot indices into JS.
+
+      currentSlot: which slot is currently rendered in the odds <img>s.
+      Advances 0 → 1 → ... → slotCount-1 → 0 every SLOT_INTERVAL_MS.
+    */
+    var slotCount = 1;
+    var currentSlot = 0;
+
+    function setOddsSlot(slot) {
+      var url = '/cube/' + THEME + '/odds.png?slot=' + slot + '&t=' + Date.now();
+      oddsA.src = url;
+      oddsB.src = url;
     }
 
-    function brandFaceHtml(face) {
-      return ''
-        + '<div class="face brand" style="background:' + face.bg + ';color:' + face.fg + '">'
-        +   '<div class="label">' + escapeHtml(face.label) + '</div>'
-        +   '<div class="underline" style="background:' + face.accent + '"></div>'
-        +   '<div class="sublabel">' + escapeHtml(face.sublabel) + '</div>'
-        + '</div>';
+    function advanceSlot() {
+      if (slotCount <= 1) return;
+      currentSlot = (currentSlot + 1) % slotCount;
+      setOddsSlot(currentSlot);
     }
 
-    function oddHtml(k, v) {
-      return ''
-        + '<div class="odd">'
-        +   '<div class="k">' + escapeHtml(k) + '</div>'
-        +   '<div class="v">' + escapeHtml(v == null ? '-' : v) + '</div>'
-        + '</div>';
+    function refreshCurrentSlot() {
+      // Re-fetch the same slot to pick up live odds changes between
+      // rotations. Cache-bust on the URL forces a fresh request even
+      // though the slot index didn't change.
+      setOddsSlot(currentSlot);
     }
 
-    function matchFaceHtml(face) {
-      var m = face.match;
-      if (!m) {
-        return ''
-          + '<div class="face match" style="background:' + face.bg + ';color:' + face.fg + '">'
-          +   '<div class="empty">Awaiting in-scope matches</div>'
-          + '</div>';
-      }
-      var liveBadge = m.is_live
-        ? '<div class="badge live">LIVE</div>'
-        : '<div class="badge">' + escapeHtml(m.time || 'PRÓX.') + '</div>';
-      var scoreOrVs = (m.is_live && m.score && m.score.home != null && m.score.away != null)
-        ? '<div class="score">' + m.score.home + ' - ' + m.score.away + '</div>'
-        : '<div class="vs">VS</div>';
-      var odds = m.odds || {};
-      return ''
-        + '<div class="face match" style="background:' + face.bg + ';color:' + face.fg + '">'
-        +   liveBadge
-        +   '<div class="teams">'
-        +     '<div class="team">' + escapeHtml(m.home) + '</div>'
-        +     scoreOrVs
-        +     '<div class="team">' + escapeHtml(m.away) + '</div>'
-        +   '</div>'
-        +   '<div class="odds">'
-        +     oddHtml('1', odds.p1)
-        +     oddHtml('X', odds.draw)
-        +     oddHtml('2', odds.p2)
-        +   '</div>'
-        + '</div>';
+    function discoverSlotCount() {
+      // /data.json includes one entry per face the theme defines; count
+      // the match-kind faces. Done once at boot, retried on next interval
+      // if the request fails (so a transient parser hiccup doesn't strand
+      // the widget on slot 0 forever).
+      fetch('/cube/' + THEME + '/data.json', { credentials: 'omit' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (data) {
+          if (!data || !Array.isArray(data.faces)) return;
+          var matchFaces = data.faces.filter(function (f) { return f && f.kind === 'match'; });
+          var n = matchFaces.length;
+          if (n > 0 && n !== slotCount) {
+            slotCount = n;
+            currentSlot = Math.min(currentSlot, slotCount - 1);
+          }
+        })
+        .catch(function () { /* silent — keep slotCount as-is */ });
     }
 
-    function renderFaces(faces) {
-      var html = '';
-      for (var i = 0; i < faces.length; i++) {
-        html += (faces[i].kind === 'brand' ? brandFaceHtml(faces[i]) : matchFaceHtml(faces[i]));
-      }
-      cubeEl.innerHTML = html;
-      layout(faces.length);
-    }
+    // Boot sequence.
+    setOddsSlot(0);
+    discoverSlotCount();
+    // Rediscover periodically so adding/removing a slot in cube_themes.py
+    // takes effect without forcing every embedded widget to be reloaded.
+    setInterval(discoverSlotCount, 5 * 60 * 1000);
 
-    // ── State ──────────────────────────────────────────────────
-    var currentRotY = 0;          // never resets — keeps rotating smoothly
-    var currentFaceIdx = 0;
-    var facesCount = 0;
-    var step = 90;                 // updated to match faces count
-
-    function rotateNext() {
-      currentFaceIdx = (currentFaceIdx + 1) % Math.max(1, facesCount);
-      currentRotY -= step;         // negative = rotates left → next face faces camera
-      // Re-apply the transform (preserve translateZ pullback).
-      var e = edge();
-      var rad = (step / 2) * Math.PI / 180;
-      var tz = (e / 2) / Math.tan(rad);
-      cubeEl.style.transform = 'translateZ(' + (-tz) + 'px) rotateY(' + currentRotY + 'deg)';
-    }
-
-    // ── Data fetch ─────────────────────────────────────────────
-    function fetchData() {
-      var url = '/cube/' + themeSlug + '/data.json?t=' + Date.now();
-      return fetch(url, { credentials: 'omit' })
-        .then(function (r) {
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return r.json();
-        });
-    }
-
-    function applyPayload(p) {
-      facesCount = p.faces.length;
-      step = 360 / Math.max(1, facesCount);
-      renderFaces(p.faces);
-    }
-
-    // ── Boot ───────────────────────────────────────────────────
-    fetchData()
-      .then(applyPayload)
-      .catch(function (e) {
-        cubeEl.innerHTML = '<div class="face brand" style="background:#222;color:#fff">'
-          + '<div class="label">…</div><div class="sublabel">' + escapeHtml(e.message) + '</div></div>';
-      });
-
-    // Rotation tick. Starts after the first paint.
-    setInterval(function () {
-      if (facesCount > 1) rotateNext();
-    }, ROTATE_INTERVAL_MS);
-
-    // Live odds tick. ETag/304 keeps this cheap.
-    setInterval(function () {
-      fetchData().then(applyPayload).catch(function () { /* keep last good state */ });
-    }, POLL_INTERVAL_MS);
-
-    // Re-layout on iframe resize (host may change width/height).
-    window.addEventListener('resize', function () {
-      if (facesCount > 0) layout(facesCount);
-    });
+    setInterval(advanceSlot, SLOT_INTERVAL_MS);
+    setInterval(refreshCurrentSlot, REFRESH_INTERVAL_MS);
   })();
   </script>
 </body>

@@ -1,18 +1,21 @@
 """
-Admin CLUB API (Phase A) — JSON only, no UI.
+Admin CLUB API + UI.
 
-  GET    /api/admin/clubs                       list clubs
-  GET    /api/admin/clubs/{slug}                fetch one
-  POST   /api/admin/clubs                       manual create {slug, name, logo?, fallback_text?, cta_url?}
-  PUT    /api/admin/clubs/{slug}                update {name?, logo?, fallback_text?, cta_url?}
+  GET    /admin/clubs                           list page (HTML)
+  GET    /admin/clubs/{slug}                    edit page (HTML)
+  POST   /admin/clubs                           manual create from list page
+  POST   /admin/clubs/{slug}                    update from edit page
+  POST   /admin/clubs/{slug}/delete             delete from edit page
+
+  GET    /api/admin/clubs                       list clubs (JSON)
+  GET    /api/admin/clubs/{slug}                fetch one (JSON)
+  POST   /api/admin/clubs                       manual create {slug, name, logo?}
+  PUT    /api/admin/clubs/{slug}                update {name?, logo?}
   DELETE /api/admin/clubs/{slug}                delete
 
-Parser-driven auto-creation lives in `app/parser/persistence.py`; this
-API exists for manual seeding + admin maintenance only. Slug is immutable.
-
-Following the slug allow-list pattern, `cta_url` is NOT validated against
-a host allow-list here — it's a click-through destination, not a server-
-side fetch. Should be your own betting domain by convention.
+Clubs are admin-only — the parser does NOT auto-create. Slug is immutable.
+Clubs render a pure PNG of the team's next upcoming match; there is no CTA
+button, no fallback overlay, no HTML landing page.
 """
 
 from __future__ import annotations
@@ -51,8 +54,6 @@ def _serialize(c: Club) -> Dict[str, Any]:
         "slug": c.slug,
         "name": c.name,
         "logo": c.logo,
-        "fallback_text": c.fallback_text,
-        "cta_url": c.cta_url,
         "hide_opponent_logo": bool(getattr(c, "hide_opponent_logo", False)),
         "created_at": c.created_at.isoformat() if c.created_at else None,
         "updated_at": c.updated_at.isoformat() if c.updated_at else None,
@@ -201,12 +202,8 @@ def clubs_admin_create(
     logo: Optional[str] = Form(None),
     user: User = Depends(require_role("editor")),
 ) -> RedirectResponse:
-    """Manual club create from the admin list page.
-
-    Parser auto-creates clubs every cycle; this is for seeding a slug
-    BEFORE the parser sees it (e.g. you want /club/colocolo.png to render
-    a fallback PNG while waiting for the next match feed).
-    """
+    """Manual club create from the admin list page. Admin-only creation —
+    the parser never auto-creates clubs."""
     slug = _validate_slug(slug)
     name = (name or "").strip()
     if not name:
@@ -233,8 +230,6 @@ def clubs_admin_update(
     request: Request,
     name: str = Form(...),
     logo: Optional[str] = Form(None),
-    fallback_text: Optional[str] = Form(None),
-    cta_url: Optional[str] = Form(None),
     hide_opponent_logo: Optional[str] = Form(None),
     user: User = Depends(require_role("editor")),
 ) -> RedirectResponse:
@@ -245,8 +240,6 @@ def clubs_admin_update(
     fields = {
         "name": name,
         "logo": _validate_public_url(logo, "logo"),
-        "fallback_text": (fallback_text or "").strip() or None,
-        "cta_url": _validate_public_url(cta_url, "cta_url"),
         "hide_opponent_logo": bool(hide_opponent_logo),
     }
     with db_session() as session:
@@ -299,8 +292,6 @@ def create_club(
     if not name:
         raise HTTPException(400, "name required")
     logo: Optional[str] = _validate_public_url(body.get("logo") or None, "logo")
-    fallback_text: Optional[str] = body.get("fallback_text") or None
-    cta_url: Optional[str] = _validate_public_url(body.get("cta_url") or None, "cta_url")
 
     with db_session() as session:
         repo = ClubRepository(session)
@@ -310,9 +301,6 @@ def create_club(
         c = repo.ensure(slug, name, logo=logo)
         if c is None:
             raise HTTPException(400, "Failed to create club.")
-        if fallback_text is not None or cta_url is not None:
-            repo.update(slug, fallback_text=fallback_text, cta_url=cta_url)
-            c = repo.find_by_slug(slug)
         LogRepository(session).record(
             "club.create",
             username=user.username,
@@ -336,15 +324,13 @@ def update_club(
 ) -> Dict[str, Any]:
     slug = _validate_slug(slug)
     fields: Dict[str, Any] = {}
-    for k in ("name", "logo", "fallback_text", "cta_url"):
+    for k in ("name", "logo"):
         if k in body:
             v = body[k]
             if v is None or isinstance(v, str):
                 fields[k] = (v.strip() if isinstance(v, str) else None) or None
     if "logo" in fields:
         fields["logo"] = _validate_public_url(fields["logo"], "logo")
-    if "cta_url" in fields:
-        fields["cta_url"] = _validate_public_url(fields["cta_url"], "cta_url")
     if not fields:
         raise HTTPException(400, "No editable fields provided.")
     with db_session() as session:

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Cube Size Demo</title>
+  <style>
+    body { background:#0a0d14; font-family:sans-serif; color:#e7e9ee; padding:32px; display:flex; flex-direction:column; gap:36px; align-items:flex-start; }
+    .lbl { font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#8a93a3; margin-bottom:8px; }
+    .box { background:#111827; border:1px solid #1e293b; display:flex; align-items:center; justify-content:center; position:relative; }
+    .tag { position:absolute; bottom:6px; right:8px; font-size:9px; color:#475569; }
+  </style>
+</head>
+<body>
+
+  <div>
+    <div class="lbl">Large browser (900px+ viewport) — cube capped at 300×272</div>
+    <div class="box" style="width:600px;height:340px;">
+      <img src="cube-ucl.jpg" style="width:300px;height:272px;object-fit:fill;border-radius:6px;box-shadow:0 16px 48px rgba(0,0,0,.8);" />
+      <span class="tag">300×272px (max size)</span>
+    </div>
+  </div>
+
+  <div>
+    <div class="lbl">320×290 ad-banner iframe — 90vmin = 261px → cube 261×236</div>
+    <div class="box" style="width:320px;height:290px;">
+      <img src="render_output.png" style="width:261px;height:236px;object-fit:fill;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.8);" />
+      <span class="tag">261×236px (fills iframe)</span>
+    </div>
+  </div>
+
+  <div>
+    <div class="lbl">Both faces — promo + live odds</div>
+    <div style="display:flex;gap:16px;">
+      <img src="cube-ucl.jpg" style="width:200px;height:181px;object-fit:fill;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.6);" />
+      <img src="render_output.png" style="width:200px;height:181px;object-fit:fill;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.6);" />
+    </div>
+  </div>
+
+</body>
+</html>

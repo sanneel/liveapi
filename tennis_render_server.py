@@ -14,6 +14,11 @@ import requests
 from fastapi import FastAPI, Response
 from PIL import Image, ImageChops, ImageDraw, ImageFont, ImageFilter
 
+from app.render.logos import (
+    get_logo_bytes_for_team,
+    get_logo_png_bytes as _shared_get_logo_png_bytes,
+)
+
 
 # ===== CONFIG =====
 DATA_API_BASE = "http://127.0.0.1:8000"
@@ -306,25 +311,7 @@ def _download_logo(url: str) -> Optional[bytes]:
 
 
 def get_logo_png_bytes(url: Optional[str]) -> Optional[bytes]:
-    if not url:
-        return None
-    u = url.strip()
-    if not u:
-        return None
-
-    now = time.time()
-    with _logo_lock:
-        entry = _logo_cache.get(u)
-        if entry and (now - entry["ts"] <= LOGO_TTL_SECONDS):
-            return entry.get("png")
-
-    png_bytes = _download_logo(u)
-
-    with _logo_lock:
-        _logo_cache[u] = {"ts": now, "png": png_bytes}
-        _prune_logo_cache()
-
-    return png_bytes
+    return _shared_get_logo_png_bytes(url)
 
 
 def _rounded_rect(draw: ImageDraw.ImageDraw, box, r: int, fill=None, outline=None, width=1):
@@ -673,8 +660,8 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
         home_name = _display_team_name(ev, "home")
         away_name = _display_team_name(ev, "away")
 
-        home_logo = get_logo_png_bytes(_txt(home.get("logo"))) if home.get("logo") else None
-        away_logo = get_logo_png_bytes(_txt(away.get("logo"))) if away.get("logo") else None
+        home_logo = get_logo_bytes_for_team(home)
+        away_logo = get_logo_bytes_for_team(away)
 
         paste_logo_box(
             img, d,

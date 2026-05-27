@@ -42,9 +42,28 @@ dist/
 # Local debug output
 debug_output.html
 api_urls_discovered.json
+discovered_tournaments.json
 local_*.png
 test_*.png
+# Ad-hoc test PNGs dropped at repo root. Without these, `git pull --ff-only`
+# in deploy.sh aborts on conflicts the next time someone runs the parser
+# locally.
+mma_*.png
+ufc_*.png
+basketball_*.png
+football_*.png
+tennis_*.png
+boxing_*.png
+cybersport_*.png
+
+# Audit / architecture reports — keep local.
+ARCHITECTURE_REPORT.md
 
 # Local snapshots / backups
 _phase_c_backup/
 v1public_html/
+# `data/` is already ignored above, but deploy.sh's snapshot files land
+# in `data/` AND the explicit data/*.before-deploy-* pattern documents
+# intent for anyone unsetting the broader rule.
+data/jugabet.db.before-deploy-*
+data/parser.pid

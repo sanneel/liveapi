@@ -11,6 +11,11 @@
 <p class="text-sm text-muted-400 mb-5 max-w-3xl">
   Each sport has an auto-ranked hot list. Open a sport to drag-and-drop the
   top {{ top_n }}, browse the leaderboard, hide matches, or clear overrides.
+  <span class="block mt-1 text-meta text-muted-500">
+    The "active" count is every candidate the parser sees.
+    <code class="font-mono">/hot/&lt;sport&gt;.png</code> renders <code class="font-mono">limit=N</code>
+    (default 5, max 50) — UFC / boxing accept the full board if you ask for it.
+  </span>
 </p>
 
 <div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">

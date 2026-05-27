@@ -43,7 +43,25 @@
             {% endif %}
           </td>
           <td class="px-5 py-3 text-zinc-300">
-            {% if c.mode == 'auto' %}—{% else %}{{ match_counts[c.slug] }}{% endif %}
+            {% if c.mode == 'auto' %}
+              —
+            {% else %}
+              {% set stats = manual_stats.get(c.slug) %}
+              <div class="flex items-center gap-2 min-w-0">
+                <span>{{ match_counts[c.slug] }}</span>
+                {% if stats and stats.will_render_blank %}
+                  <span class="text-[10px] px-1.5 py-0.5 rounded bg-red-900/40 text-red-200 ring-1 ring-red-700/50"
+                        title="No renderable matches — PNG returns a 1×1 transparent. {{ stats.synthetic }} hidden as synthetic, {{ stats.inactive }} inactive (dropped from feed).">
+                    PNG empty
+                  </span>
+                {% elif stats and (stats.synthetic or stats.inactive) %}
+                  <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-900/40 text-amber-200 ring-1 ring-amber-700/50"
+                        title="{{ stats.renderable }} of {{ stats.total }} will render. {{ stats.synthetic }} hidden as synthetic, {{ stats.inactive }} inactive.">
+                    {{ stats.renderable }}/{{ stats.total }} live
+                  </span>
+                {% endif %}
+              </div>
+            {% endif %}
           </td>
           <td class="px-5 py-3">
             {% if c.enabled %}
@@ -70,12 +88,11 @@
     </table>
   {% else %}
     <div class="px-5 py-20 text-center text-muted-500 text-sm">
-      <div class="text-5xl mb-3 opacity-30">🚀</div>
       <div class="text-zinc-300 mb-1">No campaigns yet</div>
       <div class="text-xs">Create your first dynamic URL to start sending live odds in emails.</div>
       <a href="/admin/campaigns/new"
          class="inline-block mt-5 bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold text-sm px-4 py-2 rounded-lg">
-        + Create your first campaign
+        Create your first campaign
       </a>
     </div>
   {% endif %}

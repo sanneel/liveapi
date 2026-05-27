@@ -1,5 +1,21 @@
 {# HTMX partial: search results in the match picker. #}
-{# Expects: results (list of Match), slug. #}
+{# Expects: results (list of Match), slug, include_synthetic (bool). #}
+
+<div class="px-4 py-2 text-meta text-muted-500 flex items-center justify-between border-b border-ink-600/40 bg-ink-900/50">
+  <span>
+    {% if results %}
+      <span class="text-zinc-300 font-medium">{{ results|length }}</span>
+      result{{ '' if results|length == 1 else 's' }}
+    {% else %}
+      No matches
+    {% endif %}
+    {% if include_synthetic %}
+      <span class="ml-2 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30 text-[10px] uppercase tracking-wide">
+        incl. virtual / replays
+      </span>
+    {% endif %}
+  </span>
+</div>
 
 {% if results %}
   <ul class="divide-y divide-ink-600">
@@ -11,6 +27,9 @@
           <span class="text-[9px] font-bold text-red-300 bg-red-900/40 px-1.5 py-0.5 rounded">LIVE</span>
         {% else %}
           <span class="text-[9px] text-blue-300 bg-blue-900/40 px-1.5 py-0.5 rounded">PRE</span>
+        {% endif %}
+        {% if m.is_synthetic %}
+          <span class="text-[9px] font-semibold text-amber-300 bg-amber-900/30 px-1.5 py-0.5 rounded ring-1 ring-amber-700/40" title="Virtual / replay / esports inventory">SYN</span>
         {% endif %}
 
         <div class="flex-1 min-w-0">
@@ -25,7 +44,7 @@
         {% if not preview_mode %}
           <button type="button" onclick="addMatch('{{ m.event_id }}')"
                   class="text-xs bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold px-2.5 py-1 rounded">
-            + Add
+            Add
           </button>
         {% endif %}
       </li>
@@ -34,6 +53,8 @@
 {% else %}
   <div class="px-5 py-10 text-center text-muted-500 text-xs">
     No matches found.<br>
-    <span class="text-muted-600">Try a different search term, or wait for the parser to fetch fresh data.</span>
+    <span class="text-muted-600">
+      Try a different search term{% if not include_synthetic %}, or toggle <em class="text-zinc-300">Show virtual / replays</em> if you specifically want synthetic inventory{% endif %}.
+    </span>
   </div>
 {% endif %}

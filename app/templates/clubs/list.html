@@ -17,10 +17,12 @@
 {% block content %}
 
 <p class="text-sm text-muted-400 mb-5 max-w-3xl">
-  Clubs are auto-discovered by the parser: every team slug seen in a match feed
-  becomes a permanent <code class="font-mono text-brand-400">/club/&lt;slug&gt;.png</code>.
-  You can also create a club manually (above) to seed a slug before the parser sees it,
-  and use the per-club edit page to set a fallback message or hide the opponent's logo.
+  Clubs are created here manually. Every club gets a permanent
+  <code class="font-mono text-brand-400">/club/&lt;slug&gt;.png</code> that
+  renders the team's next upcoming match — the slug must match a team's
+  <code class="font-mono">home_slug</code> / <code class="font-mono">away_slug</code>
+  as the parser sees it on jugabet.cl. The per-club edit page can hide the
+  opponent's logo for fan-base creative.
 </p>
 
 <form id="create-club-form"
@@ -132,9 +134,8 @@
         No clubs matched "{{ q }}".
         <br><a href="/admin/clubs" class="text-brand-400 hover:text-brand-300">Clear search</a>
       {% else %}
-        <div class="text-4xl mb-3 opacity-30">🪂</div>
         <div class="text-zinc-300 mb-1">No clubs yet</div>
-        <div class="text-xs">Clubs appear here automatically once the parser starts seeing matches with team slugs.</div>
+        <div class="text-xs">Click "Create club" above to add your first club slug. Slugs must match team slugs the parser sees in jugabet.cl feeds.</div>
       {% endif %}
     </div>
   {% endif %}

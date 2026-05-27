@@ -92,12 +92,40 @@ class HotEngine:
             events.append(d)
 
         tz = get_settings().forced_timezone
-        scored = run_scoring(events, self.sport, limit + CANDIDATE_HEADROOM, tz)
+        # When a league filter is active, candidates already belong to one
+        # tournament — tell the scorer to skip its cross-tournament
+        # diversity caps so `?limit=N` actually returns N matches.
+        scored = run_scoring(
+            events,
+            self.sport,
+            limit + CANDIDATE_HEADROOM,
+            tz,
+            single_league=bool(self.league),
+        )
         auto_ordered = [
             by_id[e["event_id"]]
             for e in scored
             if e.get("event_id") in by_id
         ]
+        # Fallback: if the scorer rejected every candidate (e.g. UFC fights
+        # scheduled past the horizon, or a sport without 1×2 odds), we still
+        # have an unscored pool of real active matches. Returning [] here
+        # makes /hot/{sport}.png render a blank 1×1 while the admin
+        # leaderboard happily lists those matches via its own fallback.
+        # Use the candidate set in upcoming-time order so the public surface
+        # behaves like a "next N upcoming" view rather than a hard 404.
+        if not auto_ordered:
+            from datetime import datetime
+            def _key(m: Match) -> tuple:
+                # Earliest upcoming first; matches with no start_time sort last.
+                start = m.start_time_utc or datetime.max
+                return (start, m.event_id)
+            auto_ordered = sorted(candidates, key=_key)
+            logger.info(
+                f"hot_engine fallback for sport={self.sport}: "
+                f"scorer rejected all {len(candidates)} candidates, "
+                f"returning time-ordered raw matches"
+            )
 
         # Build slot map from positional pins. Drop pins that point outside
         # [1, limit] or to events the candidate set doesn't have.

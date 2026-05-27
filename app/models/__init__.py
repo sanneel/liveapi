@@ -6,6 +6,7 @@ from .campaign import Campaign
 from .campaign_hit import CampaignHit
 from .campaign_match import CampaignMatch
 from .club import Club
+from .cube_override import CubeOverride
 from .hot_boost import HotBoost
 from .hot_override import HotOverrideConfig, HotOverrideMatch
 from .match import Match
@@ -18,6 +19,7 @@ __all__ = [
     "CampaignHit",
     "CampaignMatch",
     "Club",
+    "CubeOverride",
     "HotBoost",
     "HotOverrideConfig",
     "HotOverrideMatch",

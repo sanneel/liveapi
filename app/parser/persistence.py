@@ -19,7 +19,6 @@ from typing import Any, Dict, Iterable, List, Set, Tuple
 
 from ..database import db_session
 from ..logging_config import get_logger
-from ..repositories.club_repo import ClubRepository
 from ..repositories.match_repo import MatchRepository
 from ..services import png_cache
 from ..config import get_settings
@@ -68,32 +67,43 @@ def persist_feed_results(
     """
     started = time.monotonic()
     n_expired = 0
-    # Bug 3: overlay feeds (e.g. football world-cup/Chile filter URLs) re-scrape
-    # events already covered by the canonical (sport,prematch|live) feeds. Skip
-    # the DB write to avoid 3-way upsert races on the same event_id; the
-    # in-memory _state still holds the parsed events for legacy endpoints.
-    if mode not in ("live", "prematch"):
-        elapsed_ms = int((time.monotonic() - started) * 1000)
-        logger.info(
-            f"persisted {sport}/{mode}: skipped DB upsert (overlay feed) "
-            f"events={len(events)} duration_ms={elapsed_ms}"
-        )
-        _invalidate_post_parse(sport, _slugs_in_events(events))
-        return 0, 0
+    is_overlay = mode not in ("live", "prematch")
+    db_mode = "prematch" if mode.startswith("prematch") else ("live" if mode.startswith("live") else mode)
     try:
         with db_session() as session:
             repo = MatchRepository(session)
-            n_upserted = repo.bulk_upsert(events, sport, mode)
-            active_ids = [str(e.get("event_id")) for e in events if e.get("event_id")]
-            n_deactivated = repo.deactivate_stale(sport, mode, active_ids)
+            n_upserted = repo.bulk_upsert(events, sport, db_mode)
+            # Feed-based deactivation policy:
+            #   * overlays never deactivate (they're partial views)
+            #   * LIVE feeds never deactivate either — Jugabet's
+            #     /<sport>/live/1 only shows a paginated subset and which
+            #     matches appear rotates constantly. Using "missing from
+            #     feed" as a deactivation signal here flickers real live
+            #     matches in and out. `deactivate_expired` (12h after
+            #     start_time_utc) is the safety net that cleans up
+            #     genuinely-finished live matches.
+            #   * PREMATCH feeds run deactivate_stale with the 30-min
+            #     grace window from MatchRepository; that catches
+            #     legitimately-cancelled fixtures while staying robust
+            #     against page-1 rotation.
+            if is_overlay or db_mode == "live":
+                n_deactivated = 0
+            else:
+                active_ids = [str(e.get("event_id")) for e in events if e.get("event_id")]
+                n_deactivated = repo.deactivate_stale(sport, db_mode, active_ids)
             n_expired = _maybe_run_expiry(session, get_settings())
-            n_clubs = _auto_attach_clubs(session, events)
 
         elapsed_ms = int((time.monotonic() - started) * 1000)
+        print(
+            f"[DB] Persisted {sport}/{mode}: upserted={n_upserted} "
+            f"deactivated={n_deactivated} expired={n_expired} "
+            f"duration_ms={elapsed_ms}",
+            flush=True
+        )
         logger.info(
             f"persisted {sport}/{mode}: upserted={n_upserted} "
             f"deactivated={n_deactivated} expired={n_expired} "
-            f"clubs_new={n_clubs} duration_ms={elapsed_ms}"
+            f"duration_ms={elapsed_ms}"
         )
 
         # Drop any rendered PNG that could now be stale. Cheap — the caches
@@ -104,7 +114,8 @@ def persist_feed_results(
 
         return n_upserted, n_deactivated
 
-    except Exception:
+    except Exception as e:
+        print(f"[DB] [ERROR] persist_feed_results failed for {sport}/{mode}: {e}", flush=True)
         logger.exception(f"persist_feed_results failed for {sport}/{mode}")
         return 0, 0
 
@@ -130,22 +141,13 @@ def _invalidate_post_parse(sport: str, touched_slugs: Set[str]) -> None:
         # Themed cubes are sport-scoped (all current themes filter football).
         # Cheapest correct behavior: wipe the whole cube namespace whenever
         # the cube's sport refreshed. Theme registry is small (<10 entries)
-        # so this stays O(1) effectively.
+        # so this stays O(1) effectively. Wipe both the main face cache
+        # (`cube:{slug}`) AND the odds face cache (`cube_odds:{slug}`).
         if sport == "football":
             png_cache.invalidate_prefix("cube:")
+            png_cache.invalidate_prefix("cube_odds:")
     except Exception:
         logger.exception("post-parse hot/club cache invalidation failed")
 
 
-def _auto_attach_clubs(session, events) -> int:
-    """Insert-only club rows for every (home_slug, home_name) and
-    (away_slug, away_name) pair observed in this feed cycle.
-
-    First observation wins (`ClubRepository.ensure` is INSERT OR IGNORE).
-    Wrapped so any failure here cannot break the parser's primary write
-    path — failures are logged and counted as zero.
-
-    NOTE: Auto-creation is disabled as clubs must be created manually.
-    """
-    return 0
 

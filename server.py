@@ -14,6 +14,33 @@ import time
 # Without this, a Playwright Node-subprocess death silently kills uvicorn
 # with no diagnostic. Writes to stderr.
 _faulthandler.enable(_sys.stderr)
+
+# Catch uncaught exceptions in background threads. Without this, an EPIPE
+# bubbling out of Playwright's internal IPC thread is logged via Python's
+# default `sys.excepthook`, which writes to a stderr that may already be
+# closed by then — so it disappears silently and looks like a clean
+# process exit. Print to plain stdout with flush so the diagnostic
+# survives even when the process is moments from death.
+def _thread_excepthook(args) -> None:
+    import traceback as _tb
+    msg = "".join(_tb.format_exception(args.exc_type, args.exc_value, args.exc_traceback))
+    try:
+        print(
+            f"[THREAD-CRASH] thread={args.thread.name if args.thread else '?'}\n{msg}",
+            flush=True,
+        )
+    except Exception:
+        pass
+
+
+threading.excepthook = _thread_excepthook
+
+try:
+    _sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
+    _sys.stderr.reconfigure(encoding="utf-8", errors="backslashreplace")
+except Exception:
+    pass
+
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
@@ -40,6 +67,7 @@ from app.routes.admin_views import router as admin_views_router
 from app.routes.admin_api import router as admin_api_router
 from app.routes.admin_campaigns import router as admin_campaigns_router
 from app.routes.admin_clubs import router as admin_clubs_router
+from app.routes.admin_cube import router as admin_cube_router
 from app.routes.admin_hot import router as admin_hot_router
 from app.routes.admin_hot_override import router as admin_hot_override_router
 from app.routes.admin_logs import router as admin_logs_router
@@ -55,6 +83,7 @@ from app.middleware.security import SameOriginUnsafeMethodMiddleware, SecurityHe
 from app.routes.public_render import flush_hit_buffer
 
 logger = get_logger("server")
+parser_logger = get_logger("app.parser.server")
 
 # Rate-limiting (slowapi)
 from slowapi.errors import RateLimitExceeded
@@ -68,6 +97,17 @@ REFRESH_SECONDS = SETTINGS.parser_refresh_seconds
 TIMEOUT_MS = SETTINGS.parser_timeout_ms
 WAIT_SELECTOR = "div.event-card"
 JS_SETTLE_MS = SETTINGS.parser_js_settle_ms
+
+# Shorter ceilings for the two waits INSIDE a page fetch that block the
+# pw-worker queue when a page legitimately has no events (off-hours live
+# pages, empty sport markets). The PARSER_TIMEOUT_MS=30000 default makes
+# every empty page eat 60s+ of queue time, behind which 13 other feeds
+# wait. These caps keep an empty page to ~12s instead of ~60s so the
+# single worker actually drains 16 URLs per cycle on a high-latency
+# (VPN) link. `page.goto` still uses the full TIMEOUT_MS — only the
+# in-page event/odds waits are capped.
+SELECTOR_WAIT_MS = min(TIMEOUT_MS, 8000)
+ODDS_WAIT_MS = min(TIMEOUT_MS, 5000)
 
 # Base domain for relative URLs (/static/... and /events/...)
 SITE_BASE = "https://jugabet.cl"
@@ -86,6 +126,11 @@ app = FastAPI(
     redoc_url=None if SETTINGS.is_production() else "/redoc",
     openapi_url=None if SETTINGS.is_production() else "/openapi.json",
 )
+
+# Validate production security settings
+if SETTINGS.is_production():
+    SETTINGS.validate_production()
+
 
 allowed_hosts = SETTINGS.allowed_host_list()
 if allowed_hosts and "*" not in allowed_hosts:
@@ -129,6 +174,7 @@ app.include_router(admin_clubs_router)       # /api/admin/clubs/*  (Phase A JSON
 app.include_router(admin_logs_router)
 app.include_router(admin_campaigns_router)   # /admin/campaigns/* + campaign builder APIs
 app.include_router(admin_hot_router)         # /admin/hot + legacy hot override UI APIs
+app.include_router(admin_cube_router)        # /admin/cube + /api/admin/cube/* override APIs
 app.include_router(admin_views_router)       # /admin (dashboard), /admin/matches
 app.include_router(admin_api_router)
 app.include_router(public_hot_router)        # /hot, /hot/{sport}, /hot/{sport}.png
@@ -172,8 +218,18 @@ FEEDS: Dict[Tuple[str, str], str] = {
     # downstream filters look for `mode IN ('live','prematch')`, so overlay
     # modes get the `prematch_` prefix and DB writes are skipped for them
     # (see persistence.persist_feed_results).
-    ("football", "prematch_mundial"): "https://jugabet.cl/football/all/1?tournaments=c19cb5ffb4404c31b869b53dd90161de",
-    ("football", "prematch_chile"): "https://jugabet.cl/football/all/1?tournaments=fc7f16ba2ec24f528179d20490404fb5,013358a438324b18975b19aeef58684f",
+    ("football", "prematch_leagues_1"): "https://jugabet.cl/football/all/1?tournaments=fc7f16ba2ec24f528179d20490404fb5,013358a438324b18975b19aeef58684f,ddccbf1be9ef4c8195ae4645d793899f",
+    ("football", "prematch_leagues_2"): "https://jugabet.cl/football/all/1?tournaments=607f74ae5f454fd9ab623c4dea0b6efe,28327faaa572400890d37048f3c93471,5216b26a50e947948e547c75254e6ac0",
+    ("football", "prematch_leagues_3"): "https://jugabet.cl/football/all/1?tournaments=254e4ecf1eb84a73b37b9cedffac646d,0f7c91bcf24e4d62a76e7d9d3fee8177,966112317e2c4ee28d5a36df840662d6",
+    ("football", "prematch_leagues_4"): "https://jugabet.cl/football/all/1?tournaments=3a963f83fe5440d58aac9a36dbe6ac2e,4230df881fd14f319c5499c86a7e647d,c19cb5ffb4404c31b869b53dd90161de",
+    # Dedicated single-tournament feed for the FIFA World Cup 2026
+    # tournament filter. The combined `prematch_leagues_4` feed only
+    # surfaced ~5 matches from this filter when bundled with two other
+    # tournament UUIDs (Jugabet caps the rendered list). A dedicated
+    # feed against the same UUID alone returns the tournament's full
+    # match list, which keeps the WC cube's auto-rank pool deep enough
+    # to fill all 3 slots even after pins are applied.
+    ("football", "prematch_worldcup_2026"): "https://jugabet.cl/football/all/1?tournaments=c19cb5ffb4404c31b869b53dd90161de",
 }
 
 
@@ -737,6 +793,19 @@ from concurrent.futures import Future as _Future
 _pw_jobs: "_queue.Queue[Tuple[str, _Future]]" = _queue.Queue()
 _pw_worker_started = False
 _pw_worker_lock = threading.Lock()
+_pw_worker_thread: Optional[threading.Thread] = None
+# Watchdog uses this to detect a wedged worker: if the queue depth is
+# non-zero AND nothing has dequeued for longer than PW_WORKER_STALL_SECONDS,
+# the worker is presumed dead and a new one is started in its place.
+#
+# MUST be > per-fetch deadline. A single slow prematch fetch (full
+# adaptive scroll + odds XHR + JS settle) can legitimately run for 60-90s,
+# and `fetch_rendered_html` waits up to 600s on the Future. If the
+# threshold is shorter, a slow-but-alive worker gets respawned while it's
+# still running — two pw-worker threads then race `sync_playwright().start()`
+# and EPIPE the Node driver, reproducing the original BUG-01 crash.
+_pw_last_dequeue_at: float = 0.0
+_pw_worker_stall_seconds = 900.0
 
 
 def _pw_worker_loop() -> None:
@@ -745,40 +814,108 @@ def _pw_worker_loop() -> None:
     Pops (url, future) jobs off the queue, runs the fetch, sets the result
     (or exception) on the future. Restarts Playwright in-place if the
     Node driver dies between jobs.
+
+    Robustness goal: even a Chromium / Node-driver crash MUST stay
+    contained in this loop. Without that, a foreign-thread EPIPE inside
+    Playwright's IPC layer bubbles out of the Python interpreter and
+    kills uvicorn (the original BUG-01 footprint). We catch BaseException
+    around every Playwright touchpoint and force a full pw + browser tear
+    down on any failure so the next job starts from a clean slate.
     """
+    import traceback as _traceback
+
     pw = None
     browser = None
+
+    def _shutdown_pw() -> None:
+        """Force-tear-down both browser AND pw. A broken Node driver requires
+        restarting Playwright, not just the browser context."""
+        nonlocal pw, browser
+        try:
+            if browser is not None:
+                browser.close()
+        except BaseException:
+            pass
+        browser = None
+        try:
+            if pw is not None:
+                pw.stop()
+        except BaseException:
+            pass
+        pw = None
 
     def _ensure_browser():
         nonlocal pw, browser
         if pw is None:
+            print("[BROWSER] initializing sync_playwright()...", flush=True)
+            parser_logger.info("pw-worker: initializing sync_playwright...")
             pw = sync_playwright().start()
+            print("[BROWSER] sync_playwright started ok", flush=True)
         if browser is None or not browser.is_connected():
             try:
                 if browser is not None:
                     browser.close()
             except Exception:
                 pass
+            print("[BROWSER] launching chromium headless...", flush=True)
+            parser_logger.info("pw-worker: launching chromium headless browser...")
             browser = pw.chromium.launch(headless=True)
+            print("[BROWSER] chromium launched ok", flush=True)
         return browser
 
+    global _pw_last_dequeue_at
+    print("[BROWSER] pw-worker thread entered main loop", flush=True)
     while True:
         url, fut = _pw_jobs.get()
+        _pw_last_dequeue_at = time.monotonic()
         if url is None:  # shutdown sentinel
+            parser_logger.info("pw-worker: received shutdown sentinel, closing browser...")
+            _shutdown_pw()
             try:
-                if browser is not None:
-                    browser.close()
-                if pw is not None:
-                    pw.stop()
+                fut.set_result(None)
             except Exception:
                 pass
             return
+        # BaseException — not just Exception — because Playwright can raise
+        # GreenletExit / SystemExit / OSError from its IPC thread that we
+        # don't want crashing the worker. KeyboardInterrupt is the one we
+        # still want to propagate; handle it explicitly.
         try:
             br = _ensure_browser()
+            print(f"[BROWSER] Fetching url={url}...", flush=True)
+            parser_logger.info(f"pw-worker: starting fetch for url={url}")
             html, api_data = _do_fetch(br, url)
             fut.set_result((html, api_data))
-        except Exception as e:
-            # Driver may be dead — force reinit on next job.
+            print(f"[BROWSER] Fetch completed successfully for url={url}", flush=True)
+            parser_logger.info(f"pw-worker: fetch completed successfully for url={url}")
+        except KeyboardInterrupt:
+            try:
+                fut.set_exception(KeyboardInterrupt())
+            except Exception:
+                pass
+            _shutdown_pw()
+            raise
+        except BaseException as e:
+            # NEVER call `pw.stop()` from inside the worker loop — it
+            # doesn't synchronously drain pending event emissions on the
+            # Node side and dying CRBrowserContexts will EPIPE the pipe
+            # transport, taking uvicorn with them (the original BUG-01).
+            #
+            # Recovery strategy:
+            #   * transient page/context errors → close `browser`, reuse
+            #     `pw`. Next fetch relaunches Chromium under the same
+            #     driver. Cheap, common path.
+            #   * driver-dead errors (`Connection closed while reading
+            #     from the driver`, `Target browser has been closed`,
+            #     etc) → EXIT THE LOOP. The outer `_pw_worker_loop_safe`
+            #     guard clears `_pw_worker_started` so the feed watchdog
+            #     spawns a fresh worker thread with a fresh `pw`. The
+            #     OS reaps the dead Node subprocess.
+            tb = _traceback.format_exc()
+            print(
+                f"[BROWSER] Fetch failed for url={url}: {type(e).__name__}: {e}\n{tb}",
+                flush=True,
+            )
             try:
                 if browser is not None:
                     browser.close()
@@ -786,20 +923,124 @@ def _pw_worker_loop() -> None:
                 pass
             browser = None
             if isinstance(e, PlaywrightTimeoutError):
-                logger.warning(f"parser: timeout fetching {url}")
+                parser_logger.warning(f"pw-worker: timeout fetching {url}")
             else:
-                logger.exception(f"parser: fetch_rendered_html failed for {url}")
-            fut.set_exception(e)
+                parser_logger.exception(f"pw-worker: fetch failed for {url}")
+            try:
+                fut.set_exception(e if isinstance(e, Exception) else RuntimeError(str(e)))
+            except Exception:
+                pass
+
+            # Detect "driver / pw is dead beyond recovery" and exit the
+            # loop so a fresh worker can take over. Without this, every
+            # subsequent fetch loops forever on the same
+            # "Connection closed while reading from the driver" error.
+            err_text = (str(e) or "").lower()
+            DRIVER_DEAD_SIGNS = (
+                "connection closed while reading from the driver",
+                "browser.launch:",          # any error reaching Chromium
+                "browsertype.launch:",      # specific launch failure
+                "playwright has been closed",
+                "transport endpoint is not connected",
+            )
+            if any(s in err_text for s in DRIVER_DEAD_SIGNS):
+                parser_logger.error(
+                    "pw-worker: driver appears dead (%s) — exiting loop "
+                    "for clean respawn by watchdog",
+                    type(e).__name__,
+                )
+                print(
+                    f"[BROWSER] driver appears dead — exiting loop for respawn",
+                    flush=True,
+                )
+                # Important: do NOT call pw.stop() here. Just abandon
+                # the dead pw reference; the OS will reap the Node
+                # subprocess. pw.stop() would try to flush events
+                # through the dead pipe and EPIPE.
+                return
+
+
+def _pw_worker_loop_safe() -> None:
+    """Outer crash-guard around `_pw_worker_loop`.
+
+    If the loop returns (sentinel / driver-dead) or raises, log loudly
+    so the watchdog can respawn instead of the failure being silent.
+    Without this, a fatal Playwright error would just kill the thread
+    and every feed would block at `fut.result(timeout=600)` with no
+    diagnostic.
+
+    On exit, immediately spawn a successor instead of waiting up to 60s
+    for the feed watchdog to notice — only if it wasn't the shutdown
+    sentinel that asked us to leave.
+    """
+    import traceback as _traceback
+    sentinel_exit = False
+    try:
+        _pw_worker_loop()
+        # _pw_worker_loop returned normally — either shutdown sentinel
+        # or driver-dead bail-out. We can't easily distinguish those two
+        # here, so let `_release_parser_lock_active` decide: if the
+        # parser lock is still held, we're in normal operation and
+        # should respawn. If not, we're shutting down.
+        sentinel_exit = not _PARSER_PID_HELD
+    except BaseException:
+        tb = _traceback.format_exc()
+        print(f"[BROWSER] pw-worker thread CRASHED:\n{tb}", flush=True)
+        parser_logger.error("pw-worker thread crashed:\n%s", tb)
+    finally:
+        global _pw_worker_started
+        with _pw_worker_lock:
+            _pw_worker_started = False
+        if sentinel_exit:
+            print("[BROWSER] pw-worker thread exited (shutdown)", flush=True)
+        else:
+            print(
+                "[BROWSER] pw-worker thread exited; spawning immediate replacement",
+                flush=True,
+            )
+            # Give the OS ~500ms to reap the dead Node subprocess and
+            # release any pipe handles before the new worker calls
+            # `sync_playwright().start()`. Without this, the new
+            # subprocess can occasionally inherit a stale pipe handle
+            # on Windows.
+            time.sleep(0.5)
+            try:
+                _ensure_pw_worker()
+            except Exception:
+                parser_logger.exception(
+                    "pw-worker: immediate respawn failed; "
+                    "feed watchdog will retry within 60s"
+                )
 
 
 def _ensure_pw_worker() -> None:
-    global _pw_worker_started
+    global _pw_worker_started, _pw_worker_thread, _pw_last_dequeue_at
     with _pw_worker_lock:
-        if _pw_worker_started:
+        if _pw_worker_started and _pw_worker_thread is not None and _pw_worker_thread.is_alive():
             return
-        t = threading.Thread(target=_pw_worker_loop, name="pw-worker", daemon=True)
+        t = threading.Thread(target=_pw_worker_loop_safe, name="pw-worker", daemon=True)
         t.start()
+        _pw_worker_thread = t
         _pw_worker_started = True
+        _pw_last_dequeue_at = time.monotonic()
+
+
+def _pw_worker_is_wedged() -> bool:
+    """True if there are jobs queued but the worker hasn't dequeued in a while.
+
+    Returning True triggers a forced respawn from the feed watchdog. Two
+    independent failure modes are covered:
+      * worker thread died silently (handle.is_alive() is False)
+      * worker thread is blocked on a wedged Chromium pipe (queue grows but
+        _pw_last_dequeue_at stays frozen)
+    """
+    t = _pw_worker_thread
+    if t is None or not t.is_alive():
+        return True
+    if _pw_jobs.qsize() == 0:
+        return False
+    age = time.monotonic() - _pw_last_dequeue_at
+    return age > _pw_worker_stall_seconds
 
 
 def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
@@ -825,8 +1066,9 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
                     data = response.json()
                     if isinstance(data, dict):
                         api_data.update(data)
+                        parser_logger.debug(f"pw-worker: intercepted odds data from {response.url}")
                 except Exception:
-                    logger.warning(
+                    parser_logger.warning(
                         f"parser: failed to parse JSON response url={response.url}",
                         exc_info=True,
                     )
@@ -835,21 +1077,30 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
         page.goto(url, wait_until="domcontentloaded", timeout=TIMEOUT_MS)
 
         try:
-            page.wait_for_selector(WAIT_SELECTOR, timeout=TIMEOUT_MS)
+            page.wait_for_selector(WAIT_SELECTOR, timeout=SELECTOR_WAIT_MS)
+            parser_logger.info(f"pw-worker: found selector '{WAIT_SELECTOR}' on page")
         except PlaywrightTimeoutError:
+            # No event-card on the page within the short window — page is
+            # legitimately empty (off-hours live, no markets, etc.). Don't
+            # then wait the full TIMEOUT_MS for an odds XHR that will never
+            # fire: skip straight to read_content with what we have.
+            parser_logger.warning(f"pw-worker: selector '{WAIT_SELECTOR}' not found on {url}")
             pass
 
-        # Bug 4: wait for odds XHR before reading content
+        # Bug 4: wait for odds XHR before reading content. Capped tight so
+        # empty pages don't block the single pw-worker for 30s each.
         try:
+            parser_logger.info(f"pw-worker: waiting for odds responses...")
             with page.expect_response(
                 lambda r: (
                     "by-market-filter" in r.url.lower()
                     or "by-sport-filter" in r.url.lower()
                 ),
-                timeout=TIMEOUT_MS,
+                timeout=ODDS_WAIT_MS,
             ):
                 pass
         except PlaywrightTimeoutError:
+            parser_logger.debug("pw-worker: timeout/no odds response detected during wait window")
             pass
 
 
@@ -858,11 +1109,12 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
         url_lower = url.lower()
         if "prematch" in url_lower or "/all" in url_lower:
             prev_count = -1
-            for _ in range(20):
+            for i in range(20):
                 try:
                     count = page.evaluate(
                         "document.querySelectorAll('div.event-card').length"
                     )
+                    parser_logger.info(f"pw-worker: adaptive scroll check {i+1}/20 - event cards count={count}")
                     if count == prev_count:
                         break
                     prev_count = count
@@ -882,24 +1134,21 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
         try:
             context.close()
         except Exception:
-            logger.warning("parser: context.close() failed", exc_info=True)
+            parser_logger.warning("parser: context.close() failed", exc_info=True)
 
 
 def fetch_rendered_html(url: str) -> Tuple[str, Dict[str, Any]]:
-    """Submit a fetch job to the pw-worker thread and wait for the result.
-
-    Called from N parser threads concurrently; the pw-worker serializes
-    them onto a single Playwright instance. Cycle wall-clock is set by
-    sum-of-fetches rather than max-of-fetches, but eliminates the
-    multi-process Node EPIPE crash that previously killed the whole
-    uvicorn process.
-    """
+    """Submit a fetch job to the pw-worker thread and wait for the result."""
     _ensure_pw_worker()
+    parser_logger.info(f"fetch_rendered_html: queuing job for {url}")
     fut: _Future = _Future()
     _pw_jobs.put((url, fut))
-    # Bound the per-job wait so a stuck worker doesn't pin a parser thread
-    # forever; Playwright's own internal timeouts fire first in normal cases.
-    return fut.result(timeout=TIMEOUT_MS / 1000 * 3 + 30)
+    # Allow for queue depth: up to ~16 URLs × ~30s each worst case +
+    # headroom. This is the deadline before the parser thread gives up,
+    # NOT a per-fetch timeout (Playwright bounds the per-fetch part).
+    res = fut.result(timeout=600)
+    parser_logger.info(f"fetch_rendered_html: job completed for {url}")
+    return res
 
 
 def _looks_like_geo_restriction(html: str) -> bool:
@@ -915,10 +1164,13 @@ def _looks_like_geo_restriction(html: str) -> bool:
 def parse_html(html: str, api_data: Dict[str, Any] = None) -> List[Dict[str, Any]]:
     soup = BeautifulSoup(html, "html.parser")
     events: List[Dict[str, Any]] = []
+    cards = soup.select("div.event-card")
+    parser_logger.info(f"parse_html: found {len(cards)} event-card div elements in the page HTML")
 
-    for card in soup.select("div.event-card"):
+    for card in cards:
         event_id = card.get("data-event-card-id")
         if not event_id:
+            parser_logger.debug("parse_html: event card has no data-event-card-id, skipping")
             continue
 
         # --- event link ---
@@ -980,6 +1232,7 @@ def parse_html(html: str, api_data: Dict[str, Any] = None) -> List[Dict[str, Any
                 away_name = away_name or names[1]
 
         if not home_name or not away_name:
+            parser_logger.warning(f"parse_html: event {event_id} missing home or away competitor name, skipping")
             continue
 
         # --- start time from data-time attribute (ISO datetime, much better than text) ---
@@ -1036,6 +1289,12 @@ def parse_html(html: str, api_data: Dict[str, Any] = None) -> List[Dict[str, Any
                 else:
                     market_odds = {"odds": []}
 
+        parser_logger.info(
+            f"parse_html: parsed match {event_id} | {home_name} vs {away_name} | "
+            f"status={status} | start_time={time_raw} (utc={time_utc}) | "
+            f"tournament={tournament_name} | market_type={market_type}"
+        )
+
         events.append({
             "event_id": str(event_id),
             "href": event_href,
@@ -1050,12 +1309,15 @@ def parse_html(html: str, api_data: Dict[str, Any] = None) -> List[Dict[str, Any
             "market": {"name": market_name_raw, "type": market_type, "odds": market_odds},
         })
 
+    parser_logger.info(f"parse_html: finished parsing events. Count={len(events)}")
     return events
 
 
 def refresh_once(key: Tuple[str, str]) -> None:
     url = FEEDS[key]
     sport, mode = key
+    print(f"[PARSER] Starting refresh for {sport}/{mode}...", flush=True)
+    parser_logger.info(f"refresh_once: starting refresh for feed {key} using url {url}")
 
     _parser_sem.acquire()
     try:
@@ -1078,15 +1340,43 @@ def refresh_once(key: Tuple[str, str]) -> None:
                 },
             )
 
+        # Concise terminal summary: real vs synthetic counts, no per-match
+        # lines (those flood the cmd window — 16 feeds × dozens of matches
+        # each cycle, most of which are virtual/replay/esports inventory
+        # the operator doesn't care about).
+        from app.utils.quality import is_synthetic_tournament as _is_syn
+        n_synthetic = sum(
+            1 for e in data if _is_syn((e.get("tournament") or {}).get("name"))
+        )
+        n_real = len(data) - n_synthetic
+        print(
+            f"[PARSER] Completed {sport}/{mode} | parsed {len(data)} matches "
+            f"({n_real} real, {n_synthetic} synthetic) | committing to DB...",
+            flush=True,
+        )
+        # Per-match detail goes only to the rotating log file — never to
+        # stdout. Operators wanting per-match audit have `logs/app.log`.
+        for e in data:
+            home_name = e.get("competitors", {}).get("home", {}).get("name") or "Unknown"
+            away_name = e.get("competitors", {}).get("away", {}).get("name") or "Unknown"
+            t_name = e.get("tournament", {}).get("name") or "Unknown"
+            event_id = e.get("event_id") or "Unknown"
+            parser_logger.debug(
+                "match %s | %s | %s vs %s",
+                event_id, t_name, home_name, away_name,
+            )
+        parser_logger.info(f"refresh_once: feed {key} finished. Parsed {len(data)} matches. Committing to DB...")
         # ── Dual-write: persist to DB (best-effort, never fails the loop) ──
         try:
             from app.parser.persistence import persist_feed_results
             persist_feed_results(data, sport, mode)
         except Exception:
             # DB layer not yet initialized? Log and continue — legacy system unaffected.
-            logger.exception(f"parser: DB persist failed sport={sport} mode={mode}")
+            parser_logger.exception(f"parser: DB persist failed sport={sport} mode={mode}")
 
     except Exception as e:
+        print(f"[PARSER] Failed refresh for {sport}/{mode}: {e}", flush=True)
+        parser_logger.error(f"refresh_once: feed {key} failed: {e}", exc_info=True)
         with _state_lock:
             prev = _state[key]
             now_epoch = int(time.time())
@@ -1121,6 +1411,25 @@ def refresh_once(key: Tuple[str, str]) -> None:
 STALE_FEED_GRACE_SECONDS = 15 * 60
 
 
+def _refresh_seconds_for(key: Tuple[str, str]) -> int:
+    """Per-feed refresh cadence.
+
+    Live odds change every minute or two on Jugabet's side; the default
+    120s default is too slow for those. Prematch overlays (league filters)
+    re-scrape data already covered by the primary prematch feed, so they
+    can run on a slower cadence and still keep the DB fresh.
+
+    The single pw-worker still serializes fetches, but adjusting the
+    schedule changes WHICH feeds win arbitration when the queue is hot.
+    """
+    sport, mode = key
+    if mode == "live":
+        return max(30, min(REFRESH_SECONDS, 60))
+    if mode.startswith("prematch_leagues"):
+        return max(REFRESH_SECONDS, 240)
+    return REFRESH_SECONDS
+
+
 def refresh_loop(key: Tuple[str, str], initial_delay: float = 0.0) -> None:
     if initial_delay > 0:
         time.sleep(initial_delay)
@@ -1130,6 +1439,7 @@ def refresh_loop(key: Tuple[str, str], initial_delay: float = 0.0) -> None:
     # sports. Now each tick fires REFRESH_SECONDS after the previous tick;
     # if a cycle overruns, the next tick fires immediately and we reset the
     # baseline to avoid death-spiral catch-up.
+    cadence = _refresh_seconds_for(key)
     next_at = time.monotonic()
     while True:
         # Bug 9: refresh_once already swallows fetch/parse exceptions, but a
@@ -1140,7 +1450,7 @@ def refresh_loop(key: Tuple[str, str], initial_delay: float = 0.0) -> None:
             refresh_once(key)
         except Exception:
             logger.exception(f"parser: refresh_loop iteration crashed for {key}")
-        next_at += REFRESH_SECONDS
+        next_at += cadence
         delay = next_at - time.monotonic()
         if delay > 0:
             time.sleep(delay)
@@ -1155,6 +1465,50 @@ def refresh_loop(key: Tuple[str, str], initial_delay: float = 0.0) -> None:
 import atexit
 import os as _os
 from pathlib import Path as _Path
+
+
+def _pid_alive(pid: int) -> bool:
+    """Cross-platform 'is this PID still running?' check.
+
+    On Windows, `os.kill(pid, 0)` is **NOT** a no-op liveness probe — it
+    calls `TerminateProcess(handle, 0)` which kills the target with exit
+    code 0. Calling it on the uvicorn worker's own PID (which is exactly
+    what the `/health` endpoint and `_acquire_parser_lock` do when the
+    pidfile records *our own* pid) silently kills the whole server.
+    Spent hours chasing this; it's the root cause of the recurring
+    "process exits with no traceback, Node EPIPEs after" crash on the
+    Windows dev box.
+
+    Use `OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION)` on Windows —
+    that's a true read-only check. On POSIX, the historical
+    `os.kill(pid, 0)` behavior is the correct one.
+    """
+    if _sys.platform == "win32":
+        import ctypes
+        from ctypes import wintypes
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        kernel32 = ctypes.windll.kernel32
+        OpenProcess = kernel32.OpenProcess
+        OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+        OpenProcess.restype = wintypes.HANDLE
+        CloseHandle = kernel32.CloseHandle
+        CloseHandle.argtypes = [wintypes.HANDLE]
+        h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, int(pid))
+        if not h:
+            return False
+        try:
+            # GetExitCodeProcess returns STILL_ACTIVE (259) for running
+            # procs. We could check that too, but a non-NULL handle from
+            # OpenProcess with PROCESS_QUERY_LIMITED_INFORMATION already
+            # proves the process exists.
+            return True
+        finally:
+            CloseHandle(h)
+    try:
+        _os.kill(int(pid), 0)
+        return True
+    except (ProcessLookupError, PermissionError, OSError):
+        return False
 
 # ── Parser singleton (C1): one parser per host, enforced via pidfile ──
 # Without this, `uvicorn --workers 2+` would spawn duplicate parsers in
@@ -1171,6 +1525,7 @@ def _acquire_parser_lock() -> bool:
     and we reclaim it. Otherwise we refuse to spawn parser threads.
     """
     global _PARSER_PID_HELD
+    print(f"[LOCK] _acquire_parser_lock entered (pid={_os.getpid()})", flush=True)
     _PARSER_PIDFILE.parent.mkdir(parents=True, exist_ok=True)
     my_pid = _os.getpid()
     try:
@@ -1181,20 +1536,23 @@ def _acquire_parser_lock() -> bool:
             _os.close(fd)
         _PARSER_PID_HELD = True
         atexit.register(_release_parser_lock)
+        print(f"[LOCK] new pidfile created for pid={my_pid}", flush=True)
         return True
     except FileExistsError:
-        # Check if the recorded pid is alive
+        print(f"[LOCK] pidfile exists; checking if owner is alive", flush=True)
+        # Check if the recorded pid is alive.
+        # CRITICAL: use _pid_alive(), NOT os.kill(pid, 0). On Windows the
+        # latter calls TerminateProcess(handle, 0) and kills the target,
+        # which here would be either *us* (if the pidfile records our
+        # own pid from a prior failed atexit) or a healthy unrelated
+        # process that just happens to have the recycled pid.
         try:
             existing = int(_PARSER_PIDFILE.read_text().strip())
         except Exception:
             existing = None
-        alive = False
-        if existing:
-            try:
-                _os.kill(existing, 0)
-                alive = True
-            except (ProcessLookupError, PermissionError, OSError):
-                alive = False
+        print(f"[LOCK] existing pid in pidfile = {existing}", flush=True)
+        alive = bool(existing) and _pid_alive(existing)
+        print(f"[LOCK] _pid_alive({existing}) returned {alive}", flush=True)
         if alive and existing != my_pid:
             logger.warning(
                 f"parser singleton: pidfile held by pid={existing}, "
@@ -1268,17 +1626,36 @@ def _spawn_feed_thread(key: Tuple[str, str], initial_delay: float = 0.0) -> None
 def _feed_watchdog_loop() -> None:
     """Re-spawn any feed thread that has died or never produced a first fetch.
 
+    Also revives the pw-worker if it has died or wedged — without this,
+    every feed thread is silently parked on `fut.result(timeout=600)` and
+    the system looks "fine" except no data is ever produced.
+
     A feed is considered dead when EITHER:
       * its thread object is missing or not alive, OR
       * meta.last_success_epoch is None AND the thread has been running for
         more than (3 * REFRESH_SECONDS) seconds (first fetch should have
         completed by then; if not, the thread is probably wedged).
     """
+    global _pw_worker_started
     started_at = time.time()
     grace = REFRESH_SECONDS * 3
     while True:
         time.sleep(60)
         try:
+            # pw-worker health: if dead or wedged, drop the started flag so
+            # _ensure_pw_worker spawns a fresh one. The new worker may then
+            # find a stale browser handle in its own scope and reinit
+            # Playwright from scratch (the loop body already handles that).
+            if _pw_worker_is_wedged():
+                qsize = _pw_jobs.qsize()
+                logger.warning(
+                    f"watchdog: pw-worker appears wedged (qsize={qsize}); "
+                    f"forcing respawn"
+                )
+                with _pw_worker_lock:
+                    _pw_worker_started = False
+                _ensure_pw_worker()
+
             with _state_lock:
                 snap = {k: (s.meta.get("last_success_epoch"),
                             s.meta.get("last_updated_epoch"))
@@ -1306,31 +1683,84 @@ def _feed_watchdog_loop() -> None:
 
 @app.on_event("startup")
 def startup() -> None:
+    # Step-by-step diagnostic prints flush to stdout so we can see exactly
+    # which step the process died on if startup is killed mid-flight.
+    # A single missing marker tells us the failing line.
+    print("[STARTUP] step 1/8: entering startup()", flush=True)
     SETTINGS.validate_production()
+    print("[STARTUP] step 2/8: validate_production ok", flush=True)
     _run_migrations_on_startup()
+    print("[STARTUP] step 3/8: migrations ok", flush=True)
     if not SETTINGS.parser_enabled:
+        print("[STARTUP] parser disabled via settings; no feed threads", flush=True)
         logger.info("parser disabled via settings; not starting feed threads")
         return
     # The parser uses background threads inside THIS process. Without the
     # pidfile guard below, `uvicorn --workers N>1` would spawn one parser
     # per worker. The systemd unit hardcodes `--workers 1`, but the lock is
     # belt-and-braces in case that's ever changed by mistake.
-    if not _acquire_parser_lock():
+    print(f"[STARTUP] step 4/8: acquiring parser lock (pidfile={_PARSER_PIDFILE})", flush=True)
+    lock_ok = _acquire_parser_lock()
+    print(f"[STARTUP] step 5/8: parser lock acquire result={lock_ok}", flush=True)
+    if not lock_ok:
+        print("[STARTUP] another instance holds the parser lock — skipping feed spawn", flush=True)
         return
     # BUG-01 fix: pre-start the dedicated Playwright worker BEFORE any feed
     # thread submits a fetch. Avoids a thundering-herd init race that
     # previously crashed the Node driver with EPIPE.
+    print("[STARTUP] step 6/8: starting pw-worker thread...", flush=True)
     _ensure_pw_worker()
+    print("[STARTUP] step 7/8: pw-worker spawned, scheduling feed threads...", flush=True)
     logger.info(f"parser: spawning {len(FEEDS)} feed threads (pid={_os.getpid()})")
-    for idx, key in enumerate(FEEDS.keys()):
-        _spawn_feed_thread(key, initial_delay=idx * 2.0)
+    # Prioritize important live/league feeds. EVERY key here must exist in
+    # FEEDS — otherwise `refresh_once` raises KeyError every cycle for the
+    # ghost feed forever. ("nba","live") used to be listed here and isn't
+    # a real feed; the resulting thread spammed the log indefinitely.
+    _PRIORITY_FEEDS = {
+        ("football", "live"),
+        ("football", "prematch"),
+        ("football", "prematch_leagues_1"),
+        ("football", "prematch_leagues_2"),
+        ("football", "prematch_leagues_3"),
+        ("football", "prematch_leagues_4"),
+        ("football", "prematch_worldcup_2026"),
+        ("basketball", "live"),
+        ("ufc", "live"),
+    }
+    # Defence in depth: drop any priority entry that isn't in FEEDS.
+    _PRIORITY_FEEDS = {k for k in _PRIORITY_FEEDS if k in FEEDS}
+    # Feed threads for priority feeds start with no delay; others are staggered.
+    # Stagger by 0.5s instead of 2s so the rest of the rotation actually
+    # gets a turn within a reasonable window — 8 staggered feeds at 2s
+    # each = 16s before the last feed even submits its first job.
+    sorted_keys = list(_PRIORITY_FEEDS) + [k for k in FEEDS.keys() if k not in _PRIORITY_FEEDS]
+    for idx, key in enumerate(sorted_keys):
+        delay = 0.0 if key in _PRIORITY_FEEDS else (idx - len(_PRIORITY_FEEDS)) * 0.5
+        _spawn_feed_thread(key, initial_delay=max(0.0, delay))
     # BUG-04: watchdog respawns silently-dead feeds and surfaces stuck ones.
     threading.Thread(target=_feed_watchdog_loop, name="feed-watchdog", daemon=True).start()
+    print(
+        f"[STARTUP] step 8/8: ALL DONE. parser_threads={len(sorted_keys)} "
+        f"pid={_os.getpid()}",
+        flush=True,
+    )
 
 
 @app.on_event("shutdown")
 def shutdown() -> None:
     flush_hit_buffer()
+    # Tell the pw-worker to close its browser + stop Playwright cleanly
+    # BEFORE the process exits. Without this, the Node driver subprocess
+    # gets reaped mid-write and prints a "Unhandled 'error' event / EPIPE"
+    # stack to stderr after the Python process is already gone. Harmless
+    # but it looks exactly like a crash in journalctl. Best-effort: if the
+    # worker is wedged, we still exit; the daemon thread is killed.
+    try:
+        if _pw_worker_started and _pw_worker_thread is not None and _pw_worker_thread.is_alive():
+            _pw_jobs.put((None, _Future()))
+            _pw_worker_thread.join(timeout=3.0)
+    except Exception:
+        parser_logger.warning("shutdown: pw-worker stop failed", exc_info=True)
     _release_parser_lock()
 
 
@@ -1342,22 +1772,29 @@ def football_hot(limit: int = Query(5, ge=1, le=10), debug: int = 0, resp: Respo
     with _state_lock:
         live_state = _state.get(("football", "live"))
         prem_state = _state.get(("football", "prematch"))
-        chile_state = _state.get(("football", "prematch_chile"))
 
         live_events = list(live_state.data) if live_state else []
         prem_events = list(prem_state.data) if prem_state else []
-        chile_events = list(chile_state.data) if chile_state else []
+        
+        leagues_events = []
+        leagues_ok = False
+        for (sport, mode), fstate in _state.items():
+            if sport == "football" and mode.startswith("prematch_leagues"):
+                if fstate:
+                    leagues_events.extend(fstate.data)
+                    if fstate.meta.get("ok"):
+                        leagues_ok = True
 
         ok = bool(
             (live_state and live_state.meta.get("ok"))
             or (prem_state and prem_state.meta.get("ok"))
-            or (chile_state and chile_state.meta.get("ok"))
+            or leagues_ok
         )
 
     # Deduplicate events by event_id
     seen_ids = set()
     combined_events = []
-    for e in (live_events + prem_events + chile_events):
+    for e in (live_events + prem_events + leagues_events):
         eid = e.get("event_id")
         if eid:
             if eid in seen_ids:
@@ -1527,6 +1964,40 @@ def events(sport: str, mode: str, resp: Response) -> Dict[str, Any]:
         return {"meta": dict(st.meta), "events": list(st.data)}
 
 
+def feed_health_snapshot() -> Dict[str, Any]:
+    """Per-feed health snapshot for the admin diagnostics card.
+
+    Returns a stable, JSON-safe dict keyed by 'sport/mode'. Imported by
+    `app/routes/admin_api.py::diagnostics` — keep the shape stable.
+    """
+    import time as _time
+
+    now_epoch = _time.time()
+    out: Dict[str, Any] = {}
+    with _state_lock:
+        for key, state in _state.items():
+            meta = state.meta
+            last_ok = meta.get("last_success_epoch")
+            last_any = meta.get("last_updated_epoch")
+            age_ok = int(now_epoch - last_ok) if last_ok else None
+            age_any = int(now_epoch - last_any) if last_any else None
+            if last_ok and (now_epoch - last_ok) < 2 * REFRESH_SECONDS:
+                health = "ok"
+            elif last_ok and (now_epoch - last_ok) < 6 * REFRESH_SECONDS:
+                health = "stale"
+            else:
+                health = "down"
+            out[f"{key[0]}/{key[1]}"] = {
+                "health": health,
+                "ok": bool(meta.get("ok")),
+                "error": meta.get("error"),
+                "count": int(meta.get("count") or 0),
+                "age_seconds_since_success": age_ok,
+                "age_seconds_since_attempt": age_any,
+            }
+    return out
+
+
 @app.get("/health")
 def health() -> Dict[str, Any]:
     """Detailed health for monitors + deploy verification.
@@ -1559,9 +2030,13 @@ def health() -> Dict[str, Any]:
         "worker_pid": _os.getpid(),
     }
 
-    # Parser singleton state
-    owner_pid = None
-    owner_alive = None
+    # Parser singleton state.
+    # CRITICAL — see _pid_alive(): `os.kill(pid, 0)` on Windows kills the
+    # target instead of probing. /health was inadvertently killing the
+    # uvicorn worker (whose pid IS the parser_owner_pid in single-worker
+    # mode) every time it was hit. Always go through _pid_alive.
+    owner_pid: Optional[int] = None
+    owner_alive: Optional[bool] = None
     try:
         if _PARSER_PIDFILE.exists():
             try:
@@ -1569,11 +2044,7 @@ def health() -> Dict[str, Any]:
             except Exception:
                 owner_pid = None
         if owner_pid:
-            try:
-                _os.kill(owner_pid, 0)
-                owner_alive = True
-            except (ProcessLookupError, PermissionError, OSError):
-                owner_alive = False
+            owner_alive = _pid_alive(owner_pid)
     except Exception:
         pass
     out["parser_owner_pid"] = owner_pid

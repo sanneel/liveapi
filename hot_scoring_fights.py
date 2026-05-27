@@ -430,8 +430,18 @@ def pick_hot(
     timezone: Optional[str] = None,
     debug: bool = False,
     horizon_days: int = 4,
+    single_league: bool = False,
+    single_sport: bool = False,
 ) -> Dict[str, Any]:
     limit = max(1, int(limit))
+    # When the caller already filtered to one tournament, disable the
+    # per-tournament cap so we don't cut below the requested limit.
+    # When the caller has narrowed to a single canonical combat sport
+    # (ufc / mma / boxing), the per-sport cap of 3 makes no sense — every
+    # candidate is in that sport — so disable it too. MAX_PER_SPORT only
+    # exists to balance the fights-union view (ufc+mma+boxing).
+    per_tournament_cap = limit if (single_league or single_sport) else MAX_PER_TOURNAMENT
+    per_sport_cap = limit if single_sport else MAX_PER_SPORT
     tz = ZoneInfo(timezone or FORCED_TIMEZONE)
     now_local = datetime.now(tz)
 
@@ -483,9 +493,9 @@ def pick_hot(
             continue
         if per_fighter.get(a, 0) >= MAX_PER_FIGHTER:
             continue
-        if per_tournament.get(t, 0) >= MAX_PER_TOURNAMENT:
+        if per_tournament.get(t, 0) >= per_tournament_cap:
             continue
-        if per_sport.get(s, 0) >= MAX_PER_SPORT:
+        if per_sport.get(s, 0) >= per_sport_cap:
             continue
 
         per_fighter[h] = per_fighter.get(h, 0) + 1
@@ -512,6 +522,8 @@ def pick_hot(
             "selected": len(selected),
             "timezone": timezone or FORCED_TIMEZONE,
             "horizon_days": horizon_days,
+            "single_league": bool(single_league),
+            "single_sport": bool(single_sport),
         },
         "events": selected,
     }

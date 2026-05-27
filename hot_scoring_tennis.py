@@ -485,13 +485,21 @@ def pick_hot(
     require_min_prematch: int = 2,
     exclude_youth: bool = True,
     debug: bool = False,
+    single_league: bool = False,
 ) -> Dict[str, Any]:
     """
     Returns payload:
       { meta: {...}, events: [...] }
     If debug=True, each event includes: _hot_score, _hot_reasons
+
+    When single_league=True, the per-tournament cap and require_min_prematch
+    swap are disabled so a league-filtered campaign returns up to `limit`
+    matches from the single tournament.
     """
     limit = max(1, min(int(limit), 50))
+    if single_league:
+        max_per_tournament = limit
+        require_min_prematch = 0
 
     tz = ZoneInfo(timezone)
     now_cl = datetime.now(tz=tz)
@@ -601,6 +609,7 @@ def pick_hot(
             "max_per_tournament": max_per_tournament,
             "max_per_team": max_per_team,
             "require_min_prematch": require_min_prematch,
+            "single_league": bool(single_league),
             "debug": bool(debug),
             "candidates_scored": len(scored),
         },
