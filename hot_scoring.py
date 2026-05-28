@@ -18,6 +18,21 @@ from weights_chile_first import (
     LEAGUE_BOOST_PATTERNS,
     TEAM_BOOST_PATTERNS,
 )
+from hot_weights_config import (
+    HORIZON_DAYS as CFG_HORIZON_DAYS,
+    TIME_BOOST_WITHIN_6H,
+    TIME_BOOST_WITHIN_24H,
+    TIME_BOOST_WITHIN_48H,
+    TIME_BOOST_WITHIN_72H,
+    TIME_BOOST_WITHIN_96H,
+    LIVE_BOOST,
+    LIVE_BOOST_REQUIRES_PRIORITY,
+    MAX_LIVE as CFG_MAX_LIVE,
+    MAX_PER_TOURNAMENT as CFG_MAX_PER_TOURNAMENT,
+    MAX_PER_TEAM as CFG_MAX_PER_TEAM,
+    REQUIRE_MIN_PREMATCH as CFG_REQUIRE_MIN_PREMATCH,
+    EXCLUDE_YOUTH as CFG_EXCLUDE_YOUTH,
+)
 
 
 # -------------------------
@@ -231,8 +246,8 @@ def _is_market_1x2(event: Dict[str, Any]) -> bool:
 def compute_score(
     event: Dict[str, Any],
     now_cl: datetime,
-    horizon_days: int = 4,
-    exclude_youth: bool = True,
+    horizon_days: int = CFG_HORIZON_DAYS,
+    exclude_youth: bool = CFG_EXCLUDE_YOUTH,
 ) -> Optional[ScoredEvent]:
     """
     Returns ScoredEvent or None (excluded).
@@ -298,12 +313,15 @@ def compute_score(
         score += ab
         reasons.append(f"TEAM_AWAY({apat})+{ab}")
 
-    # LIVE boost rule (updated):
-    # add +1000 ONLY if we already got points from league or teams
+    # LIVE boost rule (tunable in hot_weights_config.LIVE_BOOST):
+    # When LIVE_BOOST_REQUIRES_PRIORITY=True, only boost live matches that
+    # already earned league/team points — keeps random live games from
+    # outranking a boosted prematch.
     if status == "live":
-        if (league_points + team_points) > 0:
-            score += 1000
-            reasons.append("LIVE(+1000|boosted)")
+        eligible = (league_points + team_points) > 0 if LIVE_BOOST_REQUIRES_PRIORITY else True
+        if eligible:
+            score += LIVE_BOOST
+            reasons.append(f"LIVE(+{LIVE_BOOST}|boosted)")
         else:
             reasons.append("LIVE(+0|no-boost)")
 
@@ -331,16 +349,17 @@ def compute_score(
 
 
 def time_boost(delta: timedelta) -> int:
+    """Time-to-match boost. Buckets are tunable via hot_weights_config."""
     secs = max(0, int(delta.total_seconds()))
     if secs <= 6 * 3600:
-        return 60
+        return TIME_BOOST_WITHIN_6H
     if secs <= 24 * 3600:
-        return 55
+        return TIME_BOOST_WITHIN_24H
     if secs <= 2 * 24 * 3600:
-        return 50
+        return TIME_BOOST_WITHIN_48H
     if secs <= 3 * 24 * 3600:
-        return 45
-    return 35  # up to 4 days (we already excluded > 4)
+        return TIME_BOOST_WITHIN_72H
+    return TIME_BOOST_WITHIN_96H  # up to horizon_days; > horizon already excluded
 
 
 # -------------------------
@@ -352,12 +371,12 @@ def pick_hot(
     events: Iterable[Dict[str, Any]],
     limit: int = 5,
     timezone: str = FORCED_TIMEZONE,
-    horizon_days: int = 4,
-    max_live: int = 2,
-    max_per_tournament: int = 2,
-    max_per_team: int = 1,
-    require_min_prematch: int = 2,
-    exclude_youth: bool = True,
+    horizon_days: int = CFG_HORIZON_DAYS,
+    max_live: int = CFG_MAX_LIVE,
+    max_per_tournament: int = CFG_MAX_PER_TOURNAMENT,
+    max_per_team: int = CFG_MAX_PER_TEAM,
+    require_min_prematch: int = CFG_REQUIRE_MIN_PREMATCH,
+    exclude_youth: bool = CFG_EXCLUDE_YOUTH,
     debug: bool = False,
     single_league: bool = False,
 ) -> Dict[str, Any]:
