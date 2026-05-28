@@ -15,13 +15,22 @@ from PIL import Image, ImageDraw, ImageFont
 
 from ..logging_config import get_logger
 from ..models import Match
+from .logos import get_logo_png_bytes, render_initials_png
 
 logger = get_logger("app.render.cube_odds_render")
 
 _LOGOS = Path(__file__).resolve().parents[2] / "logos"
 _FONT  = Path(__file__).resolve().parents[2] / "fonts" / "Jugabet-BlackItalic.ttf"
 
-# Per-theme config: template image + odds box coordinates (x0,y0,x1,y1)
+LOGO_SIZE = 55   # px — team logo size for worldcup dynamic face
+
+# Per-theme config:
+#   template  – background image path
+#   boxes     – (p1_box, draw_box, p2_box) odds areas (x0,y0,x1,y1)
+#   logo_home – (x, y) top-left corner to paste the home logo (optional)
+#   logo_away – (x, y) top-left corner to paste the away logo (optional)
+#   name_home – (cx, y) center-x, top-y for home team name label (optional)
+#   name_away – (cx, y) center-x, top-y for away team name label (optional)
 _THEME_CONFIG = {
     "ucl": {
         "template": _LOGOS / "182481e1-5e42-4a62-bdd9-dc04c44599c7.jpg",
@@ -30,10 +39,15 @@ _THEME_CONFIG = {
     "worldcup": {
         "template": _LOGOS / "19dfacf6-41c4-43b9-91c7-79c6c2a0226f.jpg",
         "boxes": ((33, 322, 147, 348), (153, 322, 265, 348), (273, 322, 387, 348)),
+        "logo_home": (44,  248),
+        "logo_away": (318, 248),
+        "name_home": (71,  306),
+        "name_away": (345, 306),
     },
 }
 
 ODDS_FONT_SIZE = 16
+NAME_FONT_SIZE = 10
 
 _font_cache: dict = {}
 
@@ -80,8 +94,32 @@ def _parse_odds(match: Match) -> tuple[str, str, str]:
         return "-", "-", "-"
 
 
+def _paste_logo(img: Image.Image, logo_bytes: Optional[bytes], xy: Tuple[int, int]) -> None:
+    if not logo_bytes:
+        return
+    try:
+        logo = Image.open(BytesIO(logo_bytes)).convert("RGBA").resize(
+            (LOGO_SIZE, LOGO_SIZE), Image.Resampling.LANCZOS
+        )
+        img.paste(logo, xy, logo)
+    except Exception:
+        pass
+
+
+def _draw_team_name(
+    draw: ImageDraw.ImageDraw,
+    name: str,
+    cx: int,
+    y: int,
+    font: ImageFont.ImageFont,
+) -> None:
+    bb = draw.textbbox((0, 0), name, font=font)
+    tw = bb[2] - bb[0]
+    draw.text((cx - tw / 2, y), name, font=font, fill=(80, 20, 180, 255))
+
+
 def render_odds_face(match: Optional[Match], theme_slug: str = "ucl") -> bytes:
-    """Composite live odds onto the theme's dynamic template. Returns PNG bytes."""
+    """Composite live odds (and logos when configured) onto the theme's dynamic template."""
     cfg = _THEME_CONFIG.get(theme_slug) or _THEME_CONFIG["ucl"]
     template_path: Path = cfg["template"]
     boxes: Tuple = cfg["boxes"]
@@ -96,6 +134,23 @@ def render_odds_face(match: Optional[Match], theme_slug: str = "ucl") -> bytes:
         out = BytesIO()
         img.convert("RGB").save(out, format="PNG", optimize=True)
         return out.getvalue()
+
+    # Team logos (worldcup only — UCL has logos baked into the template)
+    if "logo_home" in cfg:
+        home_name = (match.home_name or "").strip()
+        away_name = (match.away_name or "").strip()
+        home_bytes = get_logo_png_bytes(match.home_logo) or render_initials_png(home_name, LOGO_SIZE)
+        away_bytes = get_logo_png_bytes(match.away_logo) or render_initials_png(away_name, LOGO_SIZE)
+        _paste_logo(img, home_bytes, cfg["logo_home"])
+        _paste_logo(img, away_bytes, cfg["logo_away"])
+
+        if "name_home" in cfg:
+            d_tmp = ImageDraw.Draw(img)
+            fn = _font(NAME_FONT_SIZE)
+            cx_h, y_h = cfg["name_home"]
+            cx_a, y_a = cfg["name_away"]
+            _draw_team_name(d_tmp, home_name.upper(), cx_h, y_h, fn)
+            _draw_team_name(d_tmp, away_name.upper(), cx_a, y_a, fn)
 
     d = ImageDraw.Draw(img)
     p1, dr, p2 = _parse_odds(match)
