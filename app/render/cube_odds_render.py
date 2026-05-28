@@ -22,7 +22,7 @@ logger = get_logger("app.render.cube_odds_render")
 _LOGOS = Path(__file__).resolve().parents[2] / "logos"
 _FONT  = Path(__file__).resolve().parents[2] / "fonts" / "Jugabet-BlackItalic.ttf"
 
-LOGO_SIZE = 65   # px — team logo size for worldcup dynamic face
+LOGO_SIZE = 72   # px — team logo size for worldcup dynamic face
 
 # Per-theme config:
 #   template    – background image path
@@ -45,10 +45,12 @@ _THEME_CONFIG = {
         "template":   _LOGOS / "19dfacf6-41c4-43b9-91c7-79c6c2a0226f.jpg",
         "boxes":      ((33, 322, 147, 348), (153, 322, 265, 348), (273, 322, 387, 348)),
         "box_colors": (_WHITE, _PURPLE, _WHITE),
-        "logo_home":  (39,  240),
-        "logo_away":  (313, 240),
-        "name_home":  (71,  307),
-        "name_away":  (346, 307),
+        # Logos centered in the left/right halves of the white card, away from VS.
+        # logo_home center at x=100, logo_away center at x=320
+        "logo_home":  (64,  236),
+        "logo_away":  (284, 236),
+        "name_home":  (100, 308),
+        "name_away":  (320, 308),
     },
 }
 
@@ -107,15 +109,27 @@ def _parse_odds(match: Match) -> tuple[str, str, str]:
 
 
 def _paste_logo(img: Image.Image, logo_bytes: Optional[bytes], xy: Tuple[int, int]) -> None:
+    """Crop transparent padding from the source logo, scale to fill LOGO_SIZE
+    preserving aspect ratio, then center it inside the LOGO_SIZE square so
+    rectangular flags don't appear tiny in the corner."""
     if not logo_bytes:
         return
     try:
-        logo = Image.open(BytesIO(logo_bytes)).convert("RGBA").resize(
-            (LOGO_SIZE, LOGO_SIZE), Image.Resampling.LANCZOS
-        )
-        img.paste(logo, xy, logo)
+        logo = Image.open(BytesIO(logo_bytes)).convert("RGBA")
+        # Strip transparent padding so the actual artwork fills LOGO_SIZE.
+        bbox = logo.getbbox()
+        if bbox:
+            logo = logo.crop(bbox)
+        # Preserve aspect ratio so non-square flags don't get stretched.
+        logo.thumbnail((LOGO_SIZE, LOGO_SIZE), Image.Resampling.LANCZOS)
+        # Center inside a transparent LOGO_SIZE×LOGO_SIZE canvas.
+        canvas = Image.new("RGBA", (LOGO_SIZE, LOGO_SIZE), (0, 0, 0, 0))
+        cx = (LOGO_SIZE - logo.width) // 2
+        cy = (LOGO_SIZE - logo.height) // 2
+        canvas.paste(logo, (cx, cy), logo)
+        img.paste(canvas, xy, canvas)
     except Exception:
-        pass
+        logger.exception("cube odds renderer: failed to paste logo")
 
 
 def _draw_team_name(
