@@ -38,14 +38,14 @@ from .hot_engine import HotEngine
 logger = get_logger("app.services.cube_resolver")
 
 
-_WORLDCUP_PRIORITY_COUNTRIES = (
-    "chile",
-    "germany",
-    "brazil",
-    "france",
-    "portugal",
-    "argentina",
-    "spain",
+_WORLDCUP_PRIORITY_COUNTRY_ALIASES = (
+    ("chile",),
+    ("germany", "alemania"),
+    ("brazil", "brasil"),
+    ("france", "francia"),
+    ("portugal",),
+    ("argentina",),
+    ("spain", "espana"),
 )
 
 
@@ -91,7 +91,11 @@ def _worldcup_auto_score(match: Match, now: datetime) -> tuple:
             score += max(0.0, 12.0 + hours)
 
     names = _norm_text(f"{match.home_name} {match.away_name}")
-    country_hits = sum(1 for c in _WORLDCUP_PRIORITY_COUNTRIES if c in names)
+    country_hits = sum(
+        1
+        for aliases in _WORLDCUP_PRIORITY_COUNTRY_ALIASES
+        if any(alias in names for alias in aliases)
+    )
     score += country_hits * 28.0
 
     start = match.start_time_utc or datetime.max
