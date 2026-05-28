@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import faulthandler as _faulthandler
 import json as _json
+import os
 import re
 import sys as _sys
 import threading
@@ -733,6 +734,27 @@ def _parse_odds_from_json(
     return None
 
 
+# Empirical correction for Jugabet's `data-time` HTML attribute.
+#
+# Jugabet emits times like "05/30/2026 16:00:00 +00:00". The "+00:00" label
+# claims UTC, but the value is actually rendered in a UTC-5 timezone
+# (likely the bookmaker's backend server, NOT the Chilean public site's
+# UI). Result: every parsed match time was 5 hours behind reality —
+# e.g. UCL Final "30 may, 17:00 Chile" stored as 16:00 UTC (=> displayed
+# 12:00 Chile). Confirmed by the operator against the live site on
+# 2026-05-28.
+#
+# We can't trust the offset label, so we accept the wall-clock part of
+# the string and add this many hours to get true UTC.
+#
+# Set via env var JUGABET_DATA_TIME_OFFSET_HOURS if Jugabet ever fixes
+# this or changes their backend timezone (e.g., +6 in northern winter
+# if their server crosses a DST boundary we haven't modeled).
+JUGABET_DATA_TIME_OFFSET_HOURS = int(
+    os.environ.get("JUGABET_DATA_TIME_OFFSET_HOURS", "5")
+)
+
+
 def _parse_data_time(data_time: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
     """
     Convert the HTML data-time attribute to (display_string, utc_iso).
@@ -744,7 +766,9 @@ def _parse_data_time(data_time: Optional[str]) -> Tuple[Optional[str], Optional[
     if not data_time:
         return None, None
     try:
-        dt_utc = datetime.strptime(data_time.strip(), "%m/%d/%Y %H:%M:%S %z")
+        dt_parsed = datetime.strptime(data_time.strip(), "%m/%d/%Y %H:%M:%S %z")
+        # See JUGABET_DATA_TIME_OFFSET_HOURS docstring above.
+        dt_utc = dt_parsed + timedelta(hours=JUGABET_DATA_TIME_OFFSET_HOURS)
         dt_cl = dt_utc.astimezone(_CHILE_TZ)
         now_cl = datetime.now(_CHILE_TZ)
         if dt_cl.date() == now_cl.date():

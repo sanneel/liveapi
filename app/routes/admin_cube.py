@@ -225,8 +225,6 @@ def api_cube_leaderboard(
         top_positions = {m.event_id: i for i, m in enumerate(top_matches)}
         pinned_map = override_repo.all_pinned(t.slug)  # {slot: eid}
         suppressed_set = override_repo.all_suppressed(t.slug)
-        # Synthesize a position for each top match — pinned wins, otherwise
-        # the resolver's slot index. This drives the badge in the UI.
         top_rows = []
         for i, m in enumerate(top_matches):
             pinned_here = next(
@@ -236,7 +234,7 @@ def api_cube_leaderboard(
             top_rows.append(
                 _match_row(
                     m,
-                    position=pinned_here if pinned_here is not None else i,
+                    position=pinned_here,
                     suppressed=m.event_id in suppressed_set,
                 )
             )

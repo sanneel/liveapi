@@ -372,6 +372,37 @@ function cubeAdmin() {
       }
     },
 
+    _findMatchById(eventId) {
+      const pools = [this.topMatches, this.candidates, this.searchResults, this.suppressedMatches];
+      for (const pool of pools) {
+        const found = (pool || []).find(m => m && m.event_id === eventId);
+        if (found) return {...found};
+      }
+      return null;
+    },
+
+    _applyOptimisticPin(eventId, slot) {
+      const match = this._findMatchById(eventId);
+      if (!match) return;
+      match.position = slot;
+      match.suppressed = false;
+      const nextTop = [...this.topMatches];
+      for (let i = 0; i < nextTop.length; i++) {
+        if (nextTop[i] && nextTop[i].event_id === eventId) {
+          nextTop[i] = null;
+        }
+      }
+      nextTop[slot] = match;
+      this.topMatches = nextTop;
+      this.candidates = this.candidates.filter(m => m.event_id !== eventId);
+      this.searchResults = this.searchResults.filter(m => m.event_id !== eventId);
+      this.suppressedMatches = this.suppressedMatches.filter(m => m.event_id !== eventId);
+      this.$nextTick(() => {
+        if (window.lucide) lucide.createIcons();
+        this._wireSortables();
+      });
+    },
+
     async _pin(eventId, slot) {
       // Chain onto the write queue so multiple rapid drags don't race.
       // Each pin awaits the previous one's load() before firing.
@@ -387,6 +418,9 @@ function cubeAdmin() {
           if (!r.ok) {
             const body = await r.text();
             throw new Error(`HTTP ${r.status}: ${body}`);
+          }
+          if (slot !== null) {
+            self._applyOptimisticPin(eventId, slot);
           }
           if (slot === null) {
             self._flash(`Unpinned`);

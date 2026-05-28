@@ -23,6 +23,7 @@ matches are dropped from the candidate pool before scoring.
 from __future__ import annotations
 
 from datetime import datetime
+import unicodedata
 from typing import List
 
 from sqlalchemy.orm import Session
@@ -35,6 +36,17 @@ from .cube_themes import CubeTheme, match_in_theme
 from .hot_engine import HotEngine
 
 logger = get_logger("app.services.cube_resolver")
+
+
+_WORLDCUP_PRIORITY_COUNTRIES = (
+    "chile",
+    "germany",
+    "brazil",
+    "france",
+    "portugal",
+    "argentina",
+    "spain",
+)
 
 
 def _has_required_teams(match: Match, required: tuple) -> bool:
@@ -55,6 +67,44 @@ def _sort_live_first(matches: List[Match]) -> List[Match]:
     """Stable sort that promotes live matches to the front while keeping the
     underlying hot-score ordering intact within each bucket."""
     return sorted(matches, key=lambda m: 0 if _is_live(m) else 1)
+
+
+def _norm_text(value: str) -> str:
+    value = unicodedata.normalize("NFKD", value or "")
+    value = "".join(ch for ch in value if not unicodedata.combining(ch))
+    return value.lower()
+
+
+def _worldcup_auto_score(match: Match, now: datetime) -> tuple:
+    """World Cup automation: closest fixtures and priority countries rise,
+    but neither signal is strong enough to erase the existing hot score."""
+    score = float(match.hot_score or 0.0)
+
+    if _is_live(match):
+        score += 120.0
+
+    if match.start_time_utc:
+        hours = (match.start_time_utc - now).total_seconds() / 3600.0
+        if hours >= 0:
+            score += max(0.0, 48.0 - min(hours, 96.0) * 0.5)
+        else:
+            score += max(0.0, 12.0 + hours)
+
+    names = _norm_text(f"{match.home_name} {match.away_name}")
+    country_hits = sum(1 for c in _WORLDCUP_PRIORITY_COUNTRIES if c in names)
+    score += country_hits * 28.0
+
+    start = match.start_time_utc or datetime.max
+    return (-score, start, match.event_id)
+
+
+def _sort_for_theme(matches: List[Match], theme: CubeTheme) -> List[Match]:
+    if theme.slug == "worldcup":
+        now = datetime.utcnow()
+        return sorted(matches, key=lambda m: _worldcup_auto_score(m, now))
+    if theme.prefer_live:
+        return _sort_live_first(matches)
+    return matches
 
 
 def resolve_for_theme(
@@ -100,14 +150,13 @@ def resolve_for_theme(
     # from the cube but still visible on /hot/football.png).
     if suppressed:
         filtered = [m for m in filtered if m.event_id not in suppressed]
-    if theme.prefer_live:
-        filtered = _sort_live_first(filtered)
+    filtered = _sort_for_theme(filtered, theme)
 
     # Assemble the final slot list: pinned slots first, then fill gaps
     # from HotEngine's pre-scored shortlist, then from the raw active
     # in-theme pool if that still wasn't enough.
     auto_iter = iter(filtered)
-    out: List[Match] = []
+    slots: List[Match | None] = [None for _ in range(limit)]
     used_ids: set = set()
     for slot in range(limit):
         if slot in pinned:
@@ -119,7 +168,7 @@ def resolve_for_theme(
                 continue
             m = match_repo.find_by_event_id(eid)
             if m is not None:
-                out.append(m)
+                slots[slot] = m
                 used_ids.add(m.event_id)
                 continue
         # No pin for this slot — pull the next auto-ranked candidate that
@@ -129,7 +178,7 @@ def resolve_for_theme(
                 continue
             if m.event_id in suppressed:
                 continue
-            out.append(m)
+            slots[slot] = m
             used_ids.add(m.event_id)
             break
 
@@ -138,23 +187,28 @@ def resolve_for_theme(
     # pool. Without this, themes with a small candidate count (e.g. the
     # WC group-stage when only ~5 fixtures are scheduled today) leave
     # slots 2/3 permanently empty after slot 1 is pinned.
-    if len(out) < limit:
+    if any(m is None for m in slots):
         extras = match_repo.find_active_by_sport(theme.sport)
         extras = [m for m in extras if match_in_theme(m.tournament_slug, theme)]
         if theme.required_teams:
             extras = [m for m in extras if _has_required_teams(m, theme.required_teams)]
         extras = [m for m in extras if m.event_id not in used_ids]
         extras = [m for m in extras if m.event_id not in suppressed]
-        if theme.prefer_live:
-            extras = _sort_live_first(extras)
-        else:
+        extras = _sort_for_theme(extras, theme)
+        if theme.slug != "worldcup" and not theme.prefer_live:
             extras.sort(key=lambda m: m.last_updated_at or datetime.min, reverse=True)
-        for m in extras:
-            if len(out) >= limit:
+        extra_iter = iter(extras)
+        for i, current in enumerate(slots):
+            if current is not None:
+                continue
+            for m in extra_iter:
+                if m.event_id in used_ids:
+                    continue
+                slots[i] = m
+                used_ids.add(m.event_id)
                 break
-            out.append(m)
-            used_ids.add(m.event_id)
 
+    out = [m for m in slots if m is not None]
     if out:
         return out
 
@@ -167,9 +221,8 @@ def resolve_for_theme(
         raw = [m for m in raw if _has_required_teams(m, theme.required_teams)]
     if suppressed:
         raw = [m for m in raw if m.event_id not in suppressed]
-    if theme.prefer_live:
-        raw = _sort_live_first(raw)
-    else:
+    raw = _sort_for_theme(raw, theme)
+    if theme.slug != "worldcup" and not theme.prefer_live:
         raw.sort(key=lambda m: m.last_updated_at or datetime.min, reverse=True)
     if not raw:
         logger.info(
@@ -198,12 +251,15 @@ def candidates_for_theme(
     raw = [m for m in raw if match_in_theme(m.tournament_slug, theme)]
     if theme.required_teams:
         raw = [m for m in raw if _has_required_teams(m, theme.required_teams)]
-    raw.sort(
-        key=lambda m: (
-            -(m.hot_score if m.hot_score is not None else -1e9),
-            -(m.last_updated_at.timestamp() if m.last_updated_at else 0),
+    if theme.slug == "worldcup":
+        raw = _sort_for_theme(raw, theme)
+    else:
+        raw.sort(
+            key=lambda m: (
+                -(m.hot_score if m.hot_score is not None else -1e9),
+                -(m.last_updated_at.timestamp() if m.last_updated_at else 0),
+            )
         )
-    )
-    if theme.prefer_live:
-        raw = _sort_live_first(raw)
+        if theme.prefer_live:
+            raw = _sort_live_first(raw)
     return raw[: max(1, int(limit or 50))]
