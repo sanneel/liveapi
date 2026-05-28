@@ -163,7 +163,7 @@ def cube_odds_png(theme: str, request: Request, slot: int = 0) -> Response:
         match = matches[slot] if slot < len(matches) else None
 
     try:
-        png = render_odds_face(match)
+        png = render_odds_face(match, theme_slug=t.slug)
     except Exception:
         logger.exception(f"cube odds render failed theme={t.slug} slot={slot}")
         return _png_response(_TRANSPARENT_PNG_1X1, cache_status="ERROR", status_code=500)
