@@ -22,7 +22,7 @@ logger = get_logger("app.render.cube_odds_render")
 _LOGOS = Path(__file__).resolve().parents[2] / "logos"
 _FONT  = Path(__file__).resolve().parents[2] / "fonts" / "Jugabet-BlackItalic.ttf"
 
-LOGO_SIZE = 84   # px — team logo size for worldcup dynamic face
+LOGO_SIZE = 70   # px — team logo size for worldcup dynamic face
 
 # Per-theme config:
 #   template    – background image path
@@ -45,12 +45,12 @@ _THEME_CONFIG = {
         "template":   _LOGOS / "19dfacf6-41c4-43b9-91c7-79c6c2a0226f.jpg",
         "boxes":      ((33, 322, 147, 348), (153, 322, 265, 348), (273, 322, 387, 348)),
         "box_colors": (_WHITE, _PURPLE, _WHITE),
-        # Logos centered over the p1/p2 odds boxes (center x = 90 and 330),
-        # vertically centered with the VS text (center y ≈ 277).
-        # No team-name labels — the flag already identifies the team and the
-        # extra label only steals vertical space from the logo.
-        "logo_home":  (48, 235),
-        "logo_away":  (288, 235),
+        # Logos centered horizontally over the p1/p2 odds boxes (center x = 90, 330).
+        # Names just below the logo, leaving ~3px gap before the odds boxes.
+        "logo_home":  (55, 238),
+        "logo_away":  (295, 238),
+        "name_home":  (90,  310),
+        "name_away":  (330, 310),
     },
 }
 
