@@ -22,7 +22,7 @@ logger = get_logger("app.render.cube_odds_render")
 _LOGOS = Path(__file__).resolve().parents[2] / "logos"
 _FONT  = Path(__file__).resolve().parents[2] / "fonts" / "Jugabet-BlackItalic.ttf"
 
-LOGO_SIZE = 72   # px — team logo size for worldcup dynamic face
+LOGO_SIZE = 84   # px — team logo size for worldcup dynamic face
 
 # Per-theme config:
 #   template    – background image path
@@ -45,12 +45,12 @@ _THEME_CONFIG = {
         "template":   _LOGOS / "19dfacf6-41c4-43b9-91c7-79c6c2a0226f.jpg",
         "boxes":      ((33, 322, 147, 348), (153, 322, 265, 348), (273, 322, 387, 348)),
         "box_colors": (_WHITE, _PURPLE, _WHITE),
-        # Logos centered in the left/right halves of the white card, away from VS.
-        # logo_home center at x=100, logo_away center at x=320
-        "logo_home":  (64,  236),
-        "logo_away":  (284, 236),
-        "name_home":  (100, 308),
-        "name_away":  (320, 308),
+        # Logos centered over the p1/p2 odds boxes (center x = 90 and 330),
+        # vertically centered with the VS text (center y ≈ 277).
+        # No team-name labels — the flag already identifies the team and the
+        # extra label only steals vertical space from the logo.
+        "logo_home":  (48, 235),
+        "logo_away":  (288, 235),
     },
 }
 
@@ -109,24 +109,27 @@ def _parse_odds(match: Match) -> tuple[str, str, str]:
 
 
 def _paste_logo(img: Image.Image, logo_bytes: Optional[bytes], xy: Tuple[int, int]) -> None:
-    """Crop transparent padding from the source logo, scale to fill LOGO_SIZE
-    preserving aspect ratio, then center it inside the LOGO_SIZE square so
-    rectangular flags don't appear tiny in the corner."""
+    """Crop transparent padding from the source logo, scale (up or down) to
+    fill LOGO_SIZE preserving aspect ratio, then center it inside the
+    LOGO_SIZE square so rectangular flags don't appear tiny in the corner.
+
+    PIL's `Image.thumbnail` only DOWNSCALES, so for small source logos we
+    must compute the scale factor explicitly and use `resize`."""
     if not logo_bytes:
         return
     try:
         logo = Image.open(BytesIO(logo_bytes)).convert("RGBA")
-        # Strip transparent padding so the actual artwork fills LOGO_SIZE.
         bbox = logo.getbbox()
         if bbox:
             logo = logo.crop(bbox)
-        # Preserve aspect ratio so non-square flags don't get stretched.
-        logo.thumbnail((LOGO_SIZE, LOGO_SIZE), Image.Resampling.LANCZOS)
+        # Scale to fit LOGO_SIZE on the limiting axis, preserving aspect.
+        scale = min(LOGO_SIZE / logo.width, LOGO_SIZE / logo.height)
+        new_w = max(1, int(round(logo.width * scale)))
+        new_h = max(1, int(round(logo.height * scale)))
+        logo = logo.resize((new_w, new_h), Image.Resampling.LANCZOS)
         # Center inside a transparent LOGO_SIZE×LOGO_SIZE canvas.
         canvas = Image.new("RGBA", (LOGO_SIZE, LOGO_SIZE), (0, 0, 0, 0))
-        cx = (LOGO_SIZE - logo.width) // 2
-        cy = (LOGO_SIZE - logo.height) // 2
-        canvas.paste(logo, (cx, cy), logo)
+        canvas.paste(logo, ((LOGO_SIZE - new_w) // 2, (LOGO_SIZE - new_h) // 2), logo)
         img.paste(canvas, xy, canvas)
     except Exception:
         logger.exception("cube odds renderer: failed to paste logo")
