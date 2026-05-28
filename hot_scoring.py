@@ -32,6 +32,7 @@ from hot_weights_config import (
     MAX_PER_TEAM as CFG_MAX_PER_TEAM,
     REQUIRE_MIN_PREMATCH as CFG_REQUIRE_MIN_PREMATCH,
     EXCLUDE_YOUTH as CFG_EXCLUDE_YOUTH,
+    TEMPORARY_BOOSTS as CFG_TEMPORARY_BOOSTS,
 )
 
 
@@ -217,6 +218,62 @@ class ScoredEvent:
     reasons: List[str]
 
 
+def _parse_boost_dt(value: Optional[str], now_cl: datetime) -> Optional[datetime]:
+    """Parse a "YYYY-MM-DD HH:MM" string into an aware datetime in now_cl's tz.
+
+    Empty / missing string -> None (meaning "no bound on this side").
+    Unparseable string -> None (fail-open so a typo never crashes scoring).
+    """
+    if not value:
+        return None
+    s = str(value).strip()
+    if not s:
+        return None
+    for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%d"):
+        try:
+            dt = datetime.strptime(s, fmt)
+            return dt.replace(tzinfo=now_cl.tzinfo)
+        except ValueError:
+            continue
+    return None
+
+
+def active_temporary_boosts(
+    now_cl: datetime,
+) -> Tuple[List[Tuple[str, int]], List[Tuple[str, int]]]:
+    """Return (league_boosts, team_boosts) currently active at now_cl.
+
+    Each item is (pattern, points). Boosts outside their [start, end] window
+    are skipped, which is how reverting/expiry happens automatically.
+    """
+    league: List[Tuple[str, int]] = []
+    team: List[Tuple[str, int]] = []
+
+    for raw in CFG_TEMPORARY_BOOSTS or []:
+        try:
+            pattern = str(raw.get("pattern") or "").strip()
+            points = int(raw.get("points") or 0)
+        except (AttributeError, TypeError, ValueError):
+            continue
+        if not pattern or points == 0:
+            continue
+
+        start = _parse_boost_dt(raw.get("start"), now_cl)
+        end = _parse_boost_dt(raw.get("end"), now_cl)
+        if start is not None and now_cl < start:
+            continue
+        if end is not None and now_cl > end:
+            continue
+
+        target = str(raw.get("target") or "league").strip().lower()
+        if target == "team":
+            team.append((pattern, points))
+        else:
+            league.append((pattern, points))
+
+    return league, team
+
+
 def is_excluded_tournament(tournament_name: str, exclude_youth: bool = True) -> bool:
     nt = normalize(tournament_name)
     for p in EXCLUDE_TOURNAMENT_PATTERNS:
@@ -312,6 +369,25 @@ def compute_score(
         team_points += ab
         score += ab
         reasons.append(f"TEAM_AWAY({apat})+{ab}")
+
+    # Temporary / time-limited boosts (hot_weights_config.TEMPORARY_BOOSTS).
+    # Active windows only — expired/future entries are ignored, which is how
+    # they "revert" themselves without a code change.
+    tmp_league, tmp_team = active_temporary_boosts(now_cl)
+    for pat, pts in tmp_league:
+        if contains_pattern(tournament, pat):
+            league_points += pts
+            score += pts
+            reasons.append(f"TMP_LEAGUE({pat}){pts:+d}")
+    for pat, pts in tmp_team:
+        if contains_pattern(home, pat):
+            team_points += pts
+            score += pts
+            reasons.append(f"TMP_TEAM_HOME({pat}){pts:+d}")
+        if contains_pattern(away, pat):
+            team_points += pts
+            score += pts
+            reasons.append(f"TMP_TEAM_AWAY({pat}){pts:+d}")
 
     # LIVE boost rule (tunable in hot_weights_config.LIVE_BOOST):
     # When LIVE_BOOST_REQUIRES_PRIORITY=True, only boost live matches that
