@@ -39,7 +39,7 @@ _THEME_CONFIG = {
     "ucl": {
         "template":   _LOGOS / "182481e1-5e42-4a62-bdd9-dc04c44599c7.jpg",
         "boxes":      ((32, 322, 145, 347), (152, 322, 264, 347), (272, 322, 385, 347)),
-        "box_colors": (_WHITE, _PURPLE, _WHITE),
+        "box_colors": (_PURPLE, _PURPLE, _PURPLE),
     },
     "worldcup": {
         "template":   _LOGOS / "19dfacf6-41c4-43b9-91c7-79c6c2a0226f.jpg",
