@@ -22,27 +22,33 @@ logger = get_logger("app.render.cube_odds_render")
 _LOGOS = Path(__file__).resolve().parents[2] / "logos"
 _FONT  = Path(__file__).resolve().parents[2] / "fonts" / "Jugabet-BlackItalic.ttf"
 
-LOGO_SIZE = 55   # px — team logo size for worldcup dynamic face
+LOGO_SIZE = 65   # px — team logo size for worldcup dynamic face
 
 # Per-theme config:
-#   template  – background image path
-#   boxes     – (p1_box, draw_box, p2_box) odds areas (x0,y0,x1,y1)
-#   logo_home – (x, y) top-left corner to paste the home logo (optional)
-#   logo_away – (x, y) top-left corner to paste the away logo (optional)
-#   name_home – (cx, y) center-x, top-y for home team name label (optional)
-#   name_away – (cx, y) center-x, top-y for away team name label (optional)
+#   template    – background image path
+#   boxes       – (p1_box, draw_box, p2_box) odds areas (x0,y0,x1,y1)
+#   box_colors  – text fill per box: white on purple, dark on white middle
+#   logo_home   – (x, y) top-left corner to paste the home logo (optional)
+#   logo_away   – (x, y) top-left corner to paste the away logo (optional)
+#   name_home   – (cx, y) center-x, top-y for home team name label (optional)
+#   name_away   – (cx, y) center-x, top-y for away team name label (optional)
+_WHITE  = (255, 255, 255, 255)
+_PURPLE = (80,  20,  180, 255)
+
 _THEME_CONFIG = {
     "ucl": {
-        "template": _LOGOS / "182481e1-5e42-4a62-bdd9-dc04c44599c7.jpg",
-        "boxes": ((32, 322, 145, 347), (152, 322, 264, 347), (272, 322, 385, 347)),
+        "template":   _LOGOS / "182481e1-5e42-4a62-bdd9-dc04c44599c7.jpg",
+        "boxes":      ((32, 322, 145, 347), (152, 322, 264, 347), (272, 322, 385, 347)),
+        "box_colors": (_WHITE, _PURPLE, _WHITE),
     },
     "worldcup": {
-        "template": _LOGOS / "19dfacf6-41c4-43b9-91c7-79c6c2a0226f.jpg",
-        "boxes": ((33, 322, 147, 348), (153, 322, 265, 348), (273, 322, 387, 348)),
-        "logo_home": (44,  248),
-        "logo_away": (318, 248),
-        "name_home": (71,  306),
-        "name_away": (345, 306),
+        "template":   _LOGOS / "19dfacf6-41c4-43b9-91c7-79c6c2a0226f.jpg",
+        "boxes":      ((33, 322, 147, 348), (153, 322, 265, 348), (273, 322, 387, 348)),
+        "box_colors": (_WHITE, _PURPLE, _WHITE),
+        "logo_home":  (39,  240),
+        "logo_away":  (313, 240),
+        "name_home":  (71,  307),
+        "name_away":  (346, 307),
     },
 }
 
@@ -68,14 +74,20 @@ def _text_size(draw: ImageDraw.ImageDraw, text: str, font) -> tuple:
     return int(bb[2] - bb[0]), int(bb[3] - bb[1])
 
 
-def _draw_center(draw: ImageDraw.ImageDraw, box: tuple, text: str, font) -> None:
+def _draw_center(
+    draw: ImageDraw.ImageDraw,
+    box: tuple,
+    text: str,
+    font: ImageFont.ImageFont,
+    fill: tuple = _PURPLE,
+) -> None:
     x0, y0, x1, y1 = box
     tw, th = _text_size(draw, text, font)
     draw.text(
         (x0 + (x1 - x0 - tw) / 2, y0 + (y1 - y0 - th) / 2),
         text,
         font=font,
-        fill=(80, 20, 180, 255),
+        fill=fill,
     )
 
 
@@ -155,10 +167,11 @@ def render_odds_face(match: Optional[Match], theme_slug: str = "ucl") -> bytes:
     d = ImageDraw.Draw(img)
     p1, dr, p2 = _parse_odds(match)
     fo = _font(ODDS_FONT_SIZE)
+    colors = cfg.get("box_colors", (_PURPLE, _PURPLE, _PURPLE))
 
-    _draw_center(d, boxes[0], p1, fo)
-    _draw_center(d, boxes[1], dr, fo)
-    _draw_center(d, boxes[2], p2, fo)
+    _draw_center(d, boxes[0], p1, fo, colors[0])
+    _draw_center(d, boxes[1], dr, fo, colors[1])
+    _draw_center(d, boxes[2], p2, fo, colors[2])
 
     out = BytesIO()
     img.convert("RGB").save(out, format="PNG", optimize=True)
