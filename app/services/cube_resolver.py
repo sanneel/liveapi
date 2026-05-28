@@ -123,11 +123,10 @@ def resolve_for_theme(
       5. If theme.prefer_live=True, stable-sort the survivor list so live
          matches come first (their hot-score ordering is preserved within
          the live bucket and within the prematch bucket).
-      6. Fill the output slots: pinned events take their slot first; the
-         auto-ranked list fills the rest. Pinned events that aren't in
-         the auto-ranked list are looked up directly so a pin still works
-         when the scorer dropped the event (missing odds, wrong market,
-         outside horizon, etc.).
+      6. Fill the output slots: active pinned events take their slot first;
+         the auto-ranked list fills the rest. If a pinned event has finished
+         and is no longer active, the pin is cleared and the slot returns to
+         the automated leaderboard.
       7. Fall back to raw active rows in the theme if everything came back
          empty so the cube doesn't go silent.
     """
@@ -167,10 +166,14 @@ def resolve_for_theme(
                 # was almost certainly suppress).
                 continue
             m = match_repo.find_by_event_id(eid)
-            if m is not None:
+            if m is not None and m.is_active:
                 slots[slot] = m
                 used_ids.add(m.event_id)
                 continue
+            # Pins are temporary overrides, not permanent campaign picks.
+            # Once the parser marks a match inactive/finished, free the slot
+            # so the always-on leaderboard can promote the next best match.
+            override_repo.set_position(theme.slug, eid, None, by="system")
         # No pin for this slot — pull the next auto-ranked candidate that
         # we haven't already used and isn't suppressed.
         for m in auto_iter:

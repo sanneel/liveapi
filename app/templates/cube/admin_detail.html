@@ -392,14 +392,23 @@ function cubeAdmin() {
           nextTop[i] = null;
         }
       }
-      nextTop[slot] = match;
+      // Force Alpine to recreate the slot item. Sortable mutates the DOM
+      // directly; if Alpine's state already says "this slot has a match",
+      // setting the same truthy slot again can leave the visible <li>
+      // missing until a browser refresh.
+      nextTop[slot] = null;
       this.topMatches = nextTop;
       this.candidates = this.candidates.filter(m => m.event_id !== eventId);
       this.searchResults = this.searchResults.filter(m => m.event_id !== eventId);
       this.suppressedMatches = this.suppressedMatches.filter(m => m.event_id !== eventId);
       this.$nextTick(() => {
-        if (window.lucide) lucide.createIcons();
-        this._wireSortables();
+        const filledTop = [...this.topMatches];
+        filledTop[slot] = match;
+        this.topMatches = filledTop;
+        this.$nextTick(() => {
+          if (window.lucide) lucide.createIcons();
+          this._wireSortables();
+        });
       });
     },
 
@@ -409,6 +418,9 @@ function cubeAdmin() {
       const self = this;
       const job = self._writeQueue.then(async () => {
         try {
+          if (slot !== null) {
+            self._applyOptimisticPin(eventId, slot);
+          }
           const r = await fetch(`/api/admin/cube/${self.theme}/pin/${encodeURIComponent(eventId)}`, {
             method: 'POST',
             credentials: 'same-origin',
@@ -418,9 +430,6 @@ function cubeAdmin() {
           if (!r.ok) {
             const body = await r.text();
             throw new Error(`HTTP ${r.status}: ${body}`);
-          }
-          if (slot !== null) {
-            self._applyOptimisticPin(eventId, slot);
           }
           if (slot === null) {
             self._flash(`Unpinned`);
