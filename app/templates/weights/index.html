@@ -23,11 +23,11 @@
   </div>
 
   <p class="text-sm text-muted-400 mb-5 max-w-3xl">
-    Each row adds (or subtracts) points when its pattern matches a match.
+    Each row adds (or subtracts) points when its name matches a match.
     <b>League</b> matches the tournament name, <b>Team</b> matches either side,
-    <b>Keyword</b> matches anywhere (tournament + both teams). Leave the dates
-    empty for a permanent weight, or set an <b>end</b> date for a temporary
-    boost that reverts itself.
+    <b>Keyword</b> matches anywhere (tournament + both teams). Use a negative
+    number to push a match down (e.g. <code class="font-mono">Junior = -200</code>).
+    Edits save automatically.
     <span x-show="!managed" class="block mt-1 text-meta text-amber-400">
       This sport isn't wired to DB weights yet — its scorer still uses its
       static file. Football is fully managed.
@@ -38,36 +38,26 @@
   <div class="bg-ink-850 border border-ink-600 rounded-xl p-4 mb-6">
     <div class="text-label uppercase text-muted-400 mb-3">Add weight</div>
     <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-      <div class="md:col-span-2">
+      <div class="md:col-span-3">
         <label class="block text-meta text-muted-500 mb-1">Type</label>
         <select x-model="form.kind" class="w-full bg-ink-900 border border-ink-600 rounded px-2 py-1.5 text-sm text-zinc-100">
           <template x-for="k in kinds" :key="k"><option :value="k" x-text="k"></option></template>
         </select>
       </div>
-      <div class="md:col-span-4">
-        <label class="block text-meta text-muted-500 mb-1">Pattern</label>
-        <input x-model="form.pattern" placeholder="e.g. argentina liga profesional"
+      <div class="md:col-span-5">
+        <label class="block text-meta text-muted-500 mb-1">Name / pattern</label>
+        <input x-model="form.pattern" placeholder="e.g. argentina liga profesional" @keydown.enter="create()"
                class="w-full bg-ink-900 border border-ink-600 rounded px-2 py-1.5 text-sm text-zinc-100">
       </div>
-      <div class="md:col-span-1">
+      <div class="md:col-span-2">
         <label class="block text-meta text-muted-500 mb-1">Points</label>
-        <input x-model.number="form.points" type="number" placeholder="50"
+        <input x-model.number="form.points" type="number" placeholder="50" @keydown.enter="create()"
                class="w-full bg-ink-900 border border-ink-600 rounded px-2 py-1.5 text-sm text-zinc-100 tabular-nums">
       </div>
       <div class="md:col-span-2">
-        <label class="block text-meta text-muted-500 mb-1">Start (optional)</label>
-        <input x-model="form.starts_at" type="datetime-local"
-               class="w-full bg-ink-900 border border-ink-600 rounded px-2 py-1.5 text-sm text-zinc-100">
-      </div>
-      <div class="md:col-span-2">
-        <label class="block text-meta text-muted-500 mb-1">End (optional)</label>
-        <input x-model="form.ends_at" type="datetime-local"
-               class="w-full bg-ink-900 border border-ink-600 rounded px-2 py-1.5 text-sm text-zinc-100">
-      </div>
-      <div class="md:col-span-1">
         <button @click="create()" :disabled="busy"
                 class="w-full bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold px-3 py-1.5 rounded text-sm disabled:opacity-50">
-          Add
+          Add weight
         </button>
       </div>
     </div>
@@ -87,9 +77,8 @@
         <thead class="text-meta uppercase text-muted-500 bg-ink-900/40">
           <tr>
             <th class="text-left px-3 py-2 font-medium">Type</th>
-            <th class="text-left px-3 py-2 font-medium">Pattern</th>
+            <th class="text-left px-3 py-2 font-medium">Name / pattern</th>
             <th class="text-right px-3 py-2 font-medium">Points</th>
-            <th class="text-left px-3 py-2 font-medium">Window</th>
             <th class="text-center px-3 py-2 font-medium">On</th>
             <th class="px-3 py-2"></th>
           </tr>
@@ -112,15 +101,9 @@
                        class="w-20 text-right bg-transparent border border-transparent hover:border-ink-600 focus:border-brand-500 rounded px-1.5 py-1 tabular-nums"
                        :class="w.points < 0 ? 'text-red-400' : 'text-emerald-300'">
               </td>
-              <td class="px-3 py-1.5 text-meta text-muted-400">
-                <span x-show="!w.starts_at && !w.ends_at" class="text-muted-600">always</span>
-                <span x-show="w.starts_at || w.ends_at">
-                  <span x-text="w.starts_at || '…'"></span> → <span x-text="w.ends_at || '…'"></span>
-                </span>
-              </td>
               <td class="px-3 py-1.5 text-center">
                 <input type="checkbox" x-model="w.enabled" @change="save(w)"
-                       class="accent-brand-500 w-4 h-4 align-middle">
+                       class="accent-brand-500 w-4 h-4 align-middle" title="Enable / disable">
               </td>
               <td class="px-3 py-1.5 text-right">
                 <button @click="remove(w)" class="text-muted-500 hover:text-red-400" title="Delete">
@@ -130,7 +113,7 @@
             </tr>
           </template>
           <tr x-show="weights.length === 0">
-            <td colspan="6" class="px-3 py-6 text-center text-muted-500 italic">No weights yet.</td>
+            <td colspan="5" class="px-3 py-6 text-center text-muted-500 italic">No weights yet.</td>
           </tr>
         </tbody>
       </table>
@@ -188,7 +171,7 @@ function weightsPage(sport, sports, kinds, topN) {
     sport, sports, kinds, topN,
     weights: [], managed: true, filter: '',
     board: [], boardBusy: false, busy: false,
-    form: { kind: 'league', pattern: '', points: null, starts_at: '', ends_at: '' },
+    form: { kind: 'league', pattern: '', points: null },
 
     async init() {
       await this.load();
@@ -223,7 +206,7 @@ function weightsPage(sport, sports, kinds, topN) {
           body: JSON.stringify(this.form),
         });
         if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
-        this.form = { kind: 'league', pattern: '', points: null, starts_at: '', ends_at: '' };
+        this.form = { kind: 'league', pattern: '', points: null };
         await this.load();
         toast({ msg: 'Weight added', kind: 'success' });
       } catch (e) { toast({ msg: 'Add failed: ' + e.message, kind: 'error' }); }
@@ -236,7 +219,6 @@ function weightsPage(sport, sports, kinds, topN) {
           method: 'PUT', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             kind: w.kind, pattern: w.pattern, points: w.points, enabled: w.enabled,
-            starts_at: w.starts_at || '', ends_at: w.ends_at || '',
           }),
         });
         if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
