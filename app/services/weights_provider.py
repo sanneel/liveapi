@@ -93,18 +93,31 @@ def seed_rows_from_static(sport: str) -> List[dict]:
     return rows
 
 
-def _ensure_seeded(sport: str) -> None:
-    """Seed the sport's weights from static once, if its slice is empty."""
+def ensure_seeded(sport: str) -> int:
+    """Seed the sport's weights from static once, if its slice is empty.
+
+    Idempotent — does nothing if the sport already has rows or has no static
+    seed source. Returns the number of rows inserted. Safe to call from the
+    admin list endpoint so simply opening the Weights page populates the
+    table the first time, without waiting for a scoring cycle.
+    """
     if sport not in _SEED_SOURCES:
-        return
+        return 0
     with db_session() as session:
         repo = HotWeightRepository(session)
         if repo.count_for_sport(sport) > 0:
-            return
+            return 0
         rows = seed_rows_from_static(sport)
-        if rows:
-            repo.bulk_seed(sport, rows, by="seed:static")
-            logger.info(f"weights_provider: seeded {len(rows)} weights for {sport}")
+        if not rows:
+            return 0
+        inserted = repo.bulk_seed(sport, rows, by="seed:static")
+        logger.info(f"weights_provider: seeded {inserted} weights for {sport}")
+        return inserted
+
+
+def _ensure_seeded(sport: str) -> None:
+    """Backwards-compatible internal alias used by the scoring load path."""
+    ensure_seeded(sport)
 
 
 def _is_active(row, now: datetime) -> bool:

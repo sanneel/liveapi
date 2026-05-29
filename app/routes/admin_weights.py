@@ -135,6 +135,9 @@ def weights_page(
 @router.get("/api/admin/weights/{sport}")
 def api_list(sport: str, user: User = Depends(require_login)) -> Dict[str, Any]:
     sport = _validate_sport(sport)
+    # Populate the table from the static weights file the first time this
+    # sport is viewed, so the list isn't empty before any scoring cycle runs.
+    weights_provider.ensure_seeded(sport)
     with db_session() as session:
         rows = HotWeightRepository(session).list_for_sport(sport)
         data = [_serialize(r) for r in rows]
