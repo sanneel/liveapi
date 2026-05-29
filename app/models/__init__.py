@@ -9,6 +9,7 @@ from .club import Club
 from .cube_override import CubeOverride
 from .hot_boost import HotBoost
 from .hot_override import HotOverrideConfig, HotOverrideMatch
+from .hot_weight import HotWeight
 from .match import Match
 from .user import User
 
@@ -23,6 +24,7 @@ __all__ = [
     "HotBoost",
     "HotOverrideConfig",
     "HotOverrideMatch",
+    "HotWeight",
     "Match",
     "User",
 ]

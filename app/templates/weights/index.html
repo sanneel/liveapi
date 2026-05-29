@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% block title %}Weights · Jugabet Admin{% endblock %}
+{% block page_title %}Scoring Weights{% endblock %}
+
+{% block page_actions %}
+  <span class="text-xs text-muted-500">Edit how matches earn hot points.</span>
+{% endblock %}
+
+{% block content %}
+<div x-data="weightsPage('{{ sport }}', {{ sports|tojson }}, {{ kinds|tojson }}, {{ top_n }})"
+     x-init="init()" x-cloak class="max-w-5xl mx-auto">
+
+  {# ── Sport tabs ── #}
+  <div class="flex flex-wrap gap-1.5 mb-5">
+    <template x-for="s in sports" :key="s">
+      <a :href="'/admin/weights?sport=' + s"
+         class="px-3 py-1.5 rounded-md text-sm capitalize border"
+         :class="s === sport
+            ? 'bg-brand-500 text-ink-950 border-brand-500 font-semibold'
+            : 'bg-ink-800 text-muted-300 border-ink-600 hover:text-zinc-100'"
+         x-text="s"></a>
+    </template>
+  </div>
+
+  <p class="text-sm text-muted-400 mb-5 max-w-3xl">
+    Each row adds (or subtracts) points when its pattern matches a match.
+    <b>League</b> matches the tournament name, <b>Team</b> matches either side,
+    <b>Keyword</b> matches anywhere (tournament + both teams). Leave the dates
+    empty for a permanent weight, or set an <b>end</b> date for a temporary
+    boost that reverts itself.
+    <span x-show="!managed" class="block mt-1 text-meta text-amber-400">
+      This sport isn't wired to DB weights yet — its scorer still uses its
+      static file. Football is fully managed.
+    </span>
+  </p>
+
+  {# ── Add weight ── #}
+  <div class="bg-ink-850 border border-ink-600 rounded-xl p-4 mb-6">
+    <div class="text-label uppercase text-muted-400 mb-3">Add weight</div>
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
+      <div class="md:col-span-2">
+        <label class="block text-meta text-muted-500 mb-1">Type</label>
+        <select x-model="form.kind" class="w-full bg-ink-900 border border-ink-600 rounded px-2 py-1.5 text-sm text-zinc-100">
+          <template x-for="k in kinds" :key="k"><option :value="k" x-text="k"></option></template>
+        </select>
+      </div>
+      <div class="md:col-span-4">
+        <label class="block text-meta text-muted-500 mb-1">Pattern</label>
+        <input x-model="form.pattern" placeholder="e.g. argentina liga profesional"
+               class="w-full bg-ink-900 border border-ink-600 rounded px-2 py-1.5 text-sm text-zinc-100">
+      </div>
+      <div class="md:col-span-1">
+        <label class="block text-meta text-muted-500 mb-1">Points</label>
+        <input x-model.number="form.points" type="number" placeholder="50"
+               class="w-full bg-ink-900 border border-ink-600 rounded px-2 py-1.5 text-sm text-zinc-100 tabular-nums">
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-meta text-muted-500 mb-1">Start (optional)</label>
+        <input x-model="form.starts_at" type="datetime-local"
+               class="w-full bg-ink-900 border border-ink-600 rounded px-2 py-1.5 text-sm text-zinc-100">
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-meta text-muted-500 mb-1">End (optional)</label>
+        <input x-model="form.ends_at" type="datetime-local"
+               class="w-full bg-ink-900 border border-ink-600 rounded px-2 py-1.5 text-sm text-zinc-100">
+      </div>
+      <div class="md:col-span-1">
+        <button @click="create()" :disabled="busy"
+                class="w-full bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold px-3 py-1.5 rounded text-sm disabled:opacity-50">
+          Add
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {# ── Weights table ── #}
+  <div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden mb-8">
+    <div class="px-4 py-2.5 border-b border-ink-600 flex items-center justify-between">
+      <span class="text-label uppercase text-muted-400">
+        Weights (<span x-text="weights.length"></span>)
+      </span>
+      <input x-model="filter" placeholder="filter…"
+             class="bg-ink-900 border border-ink-600 rounded px-2 py-1 text-xs text-zinc-100 w-40">
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="text-meta uppercase text-muted-500 bg-ink-900/40">
+          <tr>
+            <th class="text-left px-3 py-2 font-medium">Type</th>
+            <th class="text-left px-3 py-2 font-medium">Pattern</th>
+            <th class="text-right px-3 py-2 font-medium">Points</th>
+            <th class="text-left px-3 py-2 font-medium">Window</th>
+            <th class="text-center px-3 py-2 font-medium">On</th>
+            <th class="px-3 py-2"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-ink-700/60">
+          <template x-for="w in filtered()" :key="w.id">
+            <tr class="hover:bg-ink-800/40" :class="!w.enabled && 'opacity-50'">
+              <td class="px-3 py-1.5">
+                <select x-model="w.kind" @change="save(w)"
+                        class="bg-ink-900 border border-ink-600 rounded px-1.5 py-1 text-xs text-zinc-100">
+                  <template x-for="k in kinds" :key="k"><option :value="k" x-text="k"></option></template>
+                </select>
+              </td>
+              <td class="px-3 py-1.5">
+                <input x-model="w.pattern" @change="save(w)"
+                       class="w-full bg-transparent border border-transparent hover:border-ink-600 focus:border-brand-500 rounded px-1.5 py-1 text-zinc-100">
+              </td>
+              <td class="px-3 py-1.5 text-right">
+                <input x-model.number="w.points" @change="save(w)" type="number"
+                       class="w-20 text-right bg-transparent border border-transparent hover:border-ink-600 focus:border-brand-500 rounded px-1.5 py-1 tabular-nums"
+                       :class="w.points < 0 ? 'text-red-400' : 'text-emerald-300'">
+              </td>
+              <td class="px-3 py-1.5 text-meta text-muted-400">
+                <span x-show="!w.starts_at && !w.ends_at" class="text-muted-600">always</span>
+                <span x-show="w.starts_at || w.ends_at">
+                  <span x-text="w.starts_at || '…'"></span> → <span x-text="w.ends_at || '…'"></span>
+                </span>
+              </td>
+              <td class="px-3 py-1.5 text-center">
+                <input type="checkbox" x-model="w.enabled" @change="save(w)"
+                       class="accent-brand-500 w-4 h-4 align-middle">
+              </td>
+              <td class="px-3 py-1.5 text-right">
+                <button @click="remove(w)" class="text-muted-500 hover:text-red-400" title="Delete">
+                  <i data-lucide="trash-2" class="!w-4 !h-4"></i>
+                </button>
+              </td>
+            </tr>
+          </template>
+          <tr x-show="weights.length === 0">
+            <td colspan="6" class="px-3 py-6 text-center text-muted-500 italic">No weights yet.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# ── Leaderboard ── #}
+  <div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">
+    <div class="px-4 py-2.5 border-b border-ink-600 flex items-center justify-between">
+      <span class="text-label uppercase text-muted-400">Top {{ top_n }} by points (live)</span>
+      <button @click="loadBoard()" :disabled="boardBusy"
+              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-meta text-muted-300 border border-ink-600 hover:bg-ink-800 hover:text-zinc-100">
+        <i data-lucide="refresh-cw" class="!w-3.5 !h-3.5"></i> Recompute
+      </button>
+    </div>
+    <ul class="divide-y divide-ink-700/60">
+      <template x-for="r in board" :key="r.event_id">
+        <li class="px-4 py-3">
+          <div class="flex items-center gap-3 cursor-pointer" @click="r._open = !r._open">
+            <span class="text-num text-muted-500 w-6 tabular-nums" x-text="r.rank"></span>
+            <div class="min-w-0 flex-1">
+              <div class="text-zinc-100 truncate">
+                <span x-text="r.home_name"></span> <span class="text-muted-500">vs</span> <span x-text="r.away_name"></span>
+                <span class="ml-2 text-meta px-1.5 py-0.5 rounded"
+                      :class="r.status === 'live' ? 'bg-red-900/40 text-red-300' : 'bg-ink-700 text-muted-300'"
+                      x-text="r.status"></span>
+              </div>
+              <div class="text-meta text-muted-500 truncate" x-text="r.tournament_name"></div>
+            </div>
+            <span class="text-num text-brand-400 tabular-nums" x-text="r.score"></span>
+            <i data-lucide="chevron-down" class="!w-4 !h-4 text-muted-500 transition-transform"
+               :class="r._open && 'rotate-180'"></i>
+          </div>
+          <div x-show="r._open" x-transition class="mt-2 ml-9 flex flex-wrap gap-1.5">
+            <template x-for="reason in r.reasons" :key="reason">
+              <span class="text-meta font-mono px-1.5 py-0.5 rounded bg-ink-900 border border-ink-700 text-muted-300" x-text="reason"></span>
+            </template>
+            <span x-show="!r.reasons || r.reasons.length === 0" class="text-meta text-muted-600 italic">no weighted reasons</span>
+          </div>
+        </li>
+      </template>
+      <li x-show="board.length === 0" class="px-4 py-6 text-center text-muted-500 italic">
+        <span x-show="!boardBusy">No scored matches.</span>
+        <span x-show="boardBusy">Computing…</span>
+      </li>
+    </ul>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function weightsPage(sport, sports, kinds, topN) {
+  return {
+    sport, sports, kinds, topN,
+    weights: [], managed: true, filter: '',
+    board: [], boardBusy: false, busy: false,
+    form: { kind: 'league', pattern: '', points: null, starts_at: '', ends_at: '' },
+
+    async init() {
+      await this.load();
+      await this.loadBoard();
+    },
+
+    filtered() {
+      const f = this.filter.trim().toLowerCase();
+      if (!f) return this.weights;
+      return this.weights.filter(w =>
+        (w.pattern || '').toLowerCase().includes(f) || (w.kind || '').includes(f));
+    },
+
+    async load() {
+      try {
+        const res = await fetch(`/api/admin/weights/${this.sport}`);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        this.weights = (data.weights || []).map(w => ({ ...w }));
+        this.managed = data.managed;
+        this.$nextTick(() => window.lucide && lucide.createIcons());
+      } catch (e) { toast({ msg: 'Load failed: ' + e.message, kind: 'error' }); }
+    },
+
+    async create() {
+      if (!this.form.pattern.trim()) { toast({ msg: 'Pattern required', kind: 'error' }); return; }
+      if (this.form.points === null || this.form.points === '') { toast({ msg: 'Points required', kind: 'error' }); return; }
+      this.busy = true;
+      try {
+        const res = await fetch(`/api/admin/weights/${this.sport}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.form),
+        });
+        if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+        this.form = { kind: 'league', pattern: '', points: null, starts_at: '', ends_at: '' };
+        await this.load();
+        toast({ msg: 'Weight added', kind: 'success' });
+      } catch (e) { toast({ msg: 'Add failed: ' + e.message, kind: 'error' }); }
+      finally { this.busy = false; }
+    },
+
+    async save(w) {
+      try {
+        const res = await fetch(`/api/admin/weights/${this.sport}/${w.id}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            kind: w.kind, pattern: w.pattern, points: w.points, enabled: w.enabled,
+            starts_at: w.starts_at || '', ends_at: w.ends_at || '',
+          }),
+        });
+        if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+        toast({ msg: 'Saved', kind: 'success' });
+      } catch (e) { toast({ msg: 'Save failed: ' + e.message, kind: 'error' }); await this.load(); }
+    },
+
+    async remove(w) {
+      if (!confirm(`Delete weight "${w.pattern}" (${w.points})?`)) return;
+      try {
+        const res = await fetch(`/api/admin/weights/${this.sport}/${w.id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+        this.weights = this.weights.filter(x => x.id !== w.id);
+        toast({ msg: 'Deleted', kind: 'success' });
+      } catch (e) { toast({ msg: 'Delete failed: ' + e.message, kind: 'error' }); }
+    },
+
+    async loadBoard() {
+      this.boardBusy = true;
+      try {
+        const res = await fetch(`/api/admin/weights/${this.sport}/leaderboard?limit=${this.topN}`);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        this.board = (data.rows || []).map(r => ({ ...r, _open: false }));
+        this.$nextTick(() => window.lucide && lucide.createIcons());
+      } catch (e) { toast({ msg: 'Leaderboard failed: ' + e.message, kind: 'error' }); }
+      finally { this.boardBusy = false; }
+    },
+  };
+}
+</script>
+{% endblock %}

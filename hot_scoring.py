@@ -32,7 +32,6 @@ from hot_weights_config import (
     MAX_PER_TEAM as CFG_MAX_PER_TEAM,
     REQUIRE_MIN_PREMATCH as CFG_REQUIRE_MIN_PREMATCH,
     EXCLUDE_YOUTH as CFG_EXCLUDE_YOUTH,
-    TEMPORARY_BOOSTS as CFG_TEMPORARY_BOOSTS,
 )
 
 
@@ -218,60 +217,26 @@ class ScoredEvent:
     reasons: List[str]
 
 
-def _parse_boost_dt(value: Optional[str], now_cl: datetime) -> Optional[datetime]:
-    """Parse a "YYYY-MM-DD HH:MM" string into an aware datetime in now_cl's tz.
+def _football_weights() -> Tuple[
+    List[Tuple[str, int]], List[Tuple[str, int]], List[Tuple[str, int]]
+]:
+    """Return (league, team, word) weight lists for football scoring.
 
-    Empty / missing string -> None (meaning "no bound on this side").
-    Unparseable string -> None (fail-open so a typo never crashes scoring).
+    Reads the admin-editable DB weights (`hot_weight` table) via the weights
+    provider, which seeds itself from the static lists below the first time.
+    Falls back to the static module lists if the provider/DB is unavailable
+    (e.g. running the scorer in isolation or in a test), so this module stays
+    importable and deterministic without a database.
     """
-    if not value:
-        return None
-    s = str(value).strip()
-    if not s:
-        return None
-    for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%d"):
-        try:
-            dt = datetime.strptime(s, fmt)
-            return dt.replace(tzinfo=now_cl.tzinfo)
-        except ValueError:
-            continue
-    return None
+    try:
+        from app.services.weights_provider import get_weights
 
-
-def active_temporary_boosts(
-    now_cl: datetime,
-) -> Tuple[List[Tuple[str, int]], List[Tuple[str, int]]]:
-    """Return (league_boosts, team_boosts) currently active at now_cl.
-
-    Each item is (pattern, points). Boosts outside their [start, end] window
-    are skipped, which is how reverting/expiry happens automatically.
-    """
-    league: List[Tuple[str, int]] = []
-    team: List[Tuple[str, int]] = []
-
-    for raw in CFG_TEMPORARY_BOOSTS or []:
-        try:
-            pattern = str(raw.get("pattern") or "").strip()
-            points = int(raw.get("points") or 0)
-        except (AttributeError, TypeError, ValueError):
-            continue
-        if not pattern or points == 0:
-            continue
-
-        start = _parse_boost_dt(raw.get("start"), now_cl)
-        end = _parse_boost_dt(raw.get("end"), now_cl)
-        if start is not None and now_cl < start:
-            continue
-        if end is not None and now_cl > end:
-            continue
-
-        target = str(raw.get("target") or "league").strip().lower()
-        if target == "team":
-            team.append((pattern, points))
-        else:
-            league.append((pattern, points))
-
-    return league, team
+        ws = get_weights("football")
+        if ws.league or ws.team or ws.word:
+            return list(ws.league), list(ws.team), list(ws.word)
+    except Exception:
+        pass
+    return list(LEAGUE_BOOST_PATTERNS), list(TEAM_BOOST_PATTERNS), []
 
 
 def is_excluded_tournament(tournament_name: str, exclude_youth: bool = True) -> bool:
@@ -344,9 +309,12 @@ def compute_score(
 
     status = event.get("status")  # already based on score presence
 
+    # Admin-editable weights (DB-backed; falls back to static lists).
+    league_patterns, team_patterns, word_patterns = _football_weights()
+
     # League boost: best tier + additive modifiers
     league_points = 0
-    lb_total, lb_matched = sum_matching_weights(tournament, LEAGUE_BOOST_PATTERNS)
+    lb_total, lb_matched = sum_matching_weights(tournament, league_patterns)
     if lb_total:
         league_points += lb_total
         score += lb_total
@@ -358,43 +326,36 @@ def compute_score(
     home = ((event.get("competitors") or {}).get("home") or {}).get("name") or ""
     away = ((event.get("competitors") or {}).get("away") or {}).get("name") or ""
 
-    hb, hpat = first_matching_weight(home, TEAM_BOOST_PATTERNS)
+    hb, hpat = first_matching_weight(home, team_patterns)
     if hb:
         team_points += hb
         score += hb
-        reasons.append(f"TEAM_HOME({hpat})+{hb}")
+        reasons.append(f"TEAM_HOME({hpat}){hb:+d}")
 
-    ab, apat = first_matching_weight(away, TEAM_BOOST_PATTERNS)
+    ab, apat = first_matching_weight(away, team_patterns)
     if ab:
         team_points += ab
         score += ab
-        reasons.append(f"TEAM_AWAY({apat})+{ab}")
+        reasons.append(f"TEAM_AWAY({apat}){ab:+d}")
 
-    # Temporary / time-limited boosts (hot_weights_config.TEMPORARY_BOOSTS).
-    # Active windows only — expired/future entries are ignored, which is how
-    # they "revert" themselves without a code change.
-    tmp_league, tmp_team = active_temporary_boosts(now_cl)
-    for pat, pts in tmp_league:
-        if contains_pattern(tournament, pat):
-            league_points += pts
-            score += pts
-            reasons.append(f"TMP_LEAGUE({pat}){pts:+d}")
-    for pat, pts in tmp_team:
-        if contains_pattern(home, pat):
-            team_points += pts
-            score += pts
-            reasons.append(f"TMP_TEAM_HOME({pat}){pts:+d}")
-        if contains_pattern(away, pat):
-            team_points += pts
-            score += pts
-            reasons.append(f"TMP_TEAM_AWAY({pat}){pts:+d}")
+    # Keyword ('word') weights — generic catch-all matched against the
+    # tournament name + both team names. Each matching keyword counts once.
+    word_points = 0
+    if word_patterns:
+        haystack = f"{tournament} {home} {away}"
+        nt = normalize(haystack)
+        for pat, w in word_patterns:
+            if normalize(pat) in nt:
+                word_points += w
+                score += w
+                reasons.append(f"WORD({pat}){w:+d}")
 
     # LIVE boost rule (tunable in hot_weights_config.LIVE_BOOST):
     # When LIVE_BOOST_REQUIRES_PRIORITY=True, only boost live matches that
     # already earned league/team points — keeps random live games from
     # outranking a boosted prematch.
     if status == "live":
-        eligible = (league_points + team_points) > 0 if LIVE_BOOST_REQUIRES_PRIORITY else True
+        eligible = (league_points + team_points + word_points) > 0 if LIVE_BOOST_REQUIRES_PRIORITY else True
         if eligible:
             score += LIVE_BOOST
             reasons.append(f"LIVE(+{LIVE_BOOST}|boosted)")

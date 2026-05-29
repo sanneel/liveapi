@@ -59,46 +59,7 @@ REQUIRE_MIN_PREMATCH: int = 2
 # When True, U19/U20/U21/U23/sub/juvenil matches are dropped.
 EXCLUDE_YOUTH: bool = True
 
-
-# ─── Temporary / time-limited boosts ─────────────────────────────────────
-# Add extra points to a LEAGUE or a TEAM for a limited time window, then have
-# it expire automatically. This is on TOP of the permanent weights that live
-# in `weights_chile_first.py` — it does not replace them.
-#
-# How to use:
-#   1. Add a dict to TEMPORARY_BOOSTS below.
-#   2. Push + pull + restart (same as any other weight change).
-#   3. While "now" (Chile time) is between start and end, the points apply.
-#   4. To REVERT: either delete the row, or just wait — after `end` it stops
-#      counting on its own. No code change needed to expire.
-#
-# Fields per entry:
-#   target  : "league" or "team"   (what the pattern is matched against)
-#   pattern : substring matched against the tournament name (league) or the
-#             home/away team name (team). Accent/case-insensitive, same
-#             matching rules as the permanent weight patterns.
-#   points  : integer bonus to add while active (can be negative to demote).
-#   start   : "YYYY-MM-DD HH:MM" in Chile time. Use "" for "active immediately".
-#   end     : "YYYY-MM-DD HH:MM" in Chile time. Use "" for "never expires".
-#   note    : optional free-text reminder of why you added it.
-#
-# Examples (commented out — copy, edit, uncomment):
-# TEMPORARY_BOOSTS = [
-#     {
-#         "target": "league",
-#         "pattern": "copa libertadores",
-#         "points": 200,
-#         "start": "2026-05-28 00:00",
-#         "end":   "2026-06-04 23:59",
-#         "note":  "knockout week — push Libertadores to the top",
-#     },
-#     {
-#         "target": "team",
-#         "pattern": "colo colo",
-#         "points": 150,
-#         "start": "",                 # active right now
-#         "end":   "2026-06-01 23:59", # auto-reverts after this
-#         "note":  "derby hype",
-#     },
-# ]
-TEMPORARY_BOOSTS: list[dict] = []
+# NOTE: Per-league / per-team point weights (including TEMPORARY, time-limited
+# boosts) are no longer configured here. They live in the DB `hot_weight`
+# table and are managed from the admin "Weights" page (/admin/weights), which
+# supports an optional start/end window so a boost expires on its own.

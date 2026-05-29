@@ -72,6 +72,7 @@ from app.routes.admin_cube import router as admin_cube_router
 from app.routes.admin_hot import router as admin_hot_router
 from app.routes.admin_hot_override import router as admin_hot_override_router
 from app.routes.admin_logs import router as admin_logs_router
+from app.routes.admin_weights import router as admin_weights_router
 from app.routes.public_club import router as public_club_router
 from app.routes.public_cube import router as public_cube_router
 from app.routes.public_hot import router as public_hot_router
@@ -175,6 +176,7 @@ app.include_router(admin_clubs_router)       # /api/admin/clubs/*  (Phase A JSON
 app.include_router(admin_logs_router)
 app.include_router(admin_campaigns_router)   # /admin/campaigns/* + campaign builder APIs
 app.include_router(admin_hot_router)         # /admin/hot + legacy hot override UI APIs
+app.include_router(admin_weights_router)     # /admin/weights + weights CRUD + leaderboard APIs
 app.include_router(admin_cube_router)        # /admin/cube + /api/admin/cube/* override APIs
 app.include_router(admin_views_router)       # /admin (dashboard), /admin/matches
 app.include_router(admin_api_router)
