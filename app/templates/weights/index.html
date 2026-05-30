@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block content %}
-<div x-data="weightsPage('{{ sport }}', {{ sports|tojson }}, {{ kinds|tojson }}, {{ top_n }})"
+<div x-data='weightsPage("{{ sport }}", {{ sports|tojson }}, {{ kinds|tojson }}, {{ top_n }})'
      x-init="init()" x-cloak class="max-w-5xl mx-auto">
 
   {# ── Sport tabs ── #}
