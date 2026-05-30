@@ -3,7 +3,7 @@
 {% block page_title %}Scoring Weights{% endblock %}
 
 {% block page_actions %}
-  <span class="text-xs text-muted-500">Edit how matches earn hot points.</span>
+  <span class="text-xs text-muted-500">Tune how matches earn hot points.</span>
 {% endblock %}
 
 {% block content %}
@@ -11,116 +11,162 @@
      x-init="init()" x-cloak class="max-w-5xl mx-auto">
 
   {# ── Sport tabs ── #}
-  <div class="flex flex-wrap gap-1.5 mb-5">
+  <div class="flex flex-wrap gap-1.5 mb-4">
     <template x-for="s in sports" :key="s">
       <a :href="'/admin/weights?sport=' + s"
-         class="px-3 py-1.5 rounded-md text-sm capitalize border"
+         class="px-3 py-1.5 rounded-md text-sm capitalize border transition"
          :class="s === sport
             ? 'bg-brand-500 text-ink-950 border-brand-500 font-semibold'
-            : 'bg-ink-800 text-muted-300 border-ink-600 hover:text-zinc-100'"
+            : 'bg-ink-800 text-muted-300 border-ink-600 hover:text-zinc-100 hover:border-ink-500'"
          x-text="s"></a>
     </template>
   </div>
 
-  <p class="text-sm text-muted-400 mb-5 max-w-3xl">
-    Each row adds (or subtracts) points when its name matches a match.
-    <b>League</b> matches the tournament name, <b>Team</b> matches either side,
-    <b>Keyword</b> matches anywhere (tournament + both teams). Use a negative
-    number to push a match down (e.g. <code class="font-mono">Junior = -200</code>).
-    Edits save automatically.
+  {# ── Help line ── #}
+  <p class="text-sm text-muted-400 mb-5 max-w-3xl leading-relaxed">
+    Each row adds (or subtracts) points when its name matches a live match.
+    <span class="text-sky-300 font-medium">League</span> matches the tournament,
+    <span class="text-emerald-300 font-medium">Team</span> matches either side,
+    <span class="text-violet-300 font-medium">Keyword</span> matches anywhere. Use a
+    negative number to bury a match (e.g. <code class="font-mono text-zinc-300">Junior = -200</code>).
+    Edits go live within ~15&nbsp;seconds — no restart.
     <span x-show="!managed" class="block mt-1 text-meta text-amber-400">
-      This sport isn't wired to DB weights yet — its scorer still uses its
-      static file. Football is fully managed.
+      Note: this sport keeps a few fixed structural bonuses in code (e.g. combo /
+      promotion bonuses) on top of these editable weights.
     </span>
   </p>
 
   {# ── Add weight ── #}
   <div class="bg-ink-850 border border-ink-600 rounded-xl p-4 mb-6">
     <div class="text-label uppercase text-muted-400 mb-3">Add weight</div>
-    <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-      <div class="md:col-span-3">
+    <div class="flex flex-col md:flex-row md:items-end gap-3">
+      {# segmented kind selector #}
+      <div>
         <label class="block text-meta text-muted-500 mb-1">Type</label>
-        <select x-model="form.kind" class="w-full bg-ink-900 border border-ink-600 rounded px-2 py-1.5 text-sm text-zinc-100">
-          <option value="league">League (tournament)</option>
-          <option value="team">Team (either side)</option>
-          <option value="word">Keyword (anywhere)</option>
-        </select>
+        <div class="inline-flex rounded-lg border border-ink-600 bg-ink-900 p-0.5">
+          <button type="button" @click="form.kind = 'league'"
+            class="px-3 py-1.5 rounded-md text-sm transition"
+            :class="form.kind === 'league' ? 'bg-sky-500/20 text-sky-200 font-semibold ring-1 ring-sky-500/40' : 'text-muted-400 hover:text-zinc-100'">League</button>
+          <button type="button" @click="form.kind = 'team'"
+            class="px-3 py-1.5 rounded-md text-sm transition"
+            :class="form.kind === 'team' ? 'bg-emerald-500/20 text-emerald-200 font-semibold ring-1 ring-emerald-500/40' : 'text-muted-400 hover:text-zinc-100'">Team</button>
+          <button type="button" @click="form.kind = 'word'"
+            class="px-3 py-1.5 rounded-md text-sm transition"
+            :class="form.kind === 'word' ? 'bg-violet-500/20 text-violet-200 font-semibold ring-1 ring-violet-500/40' : 'text-muted-400 hover:text-zinc-100'">Keyword</button>
+        </div>
       </div>
-      <div class="md:col-span-5">
+      <div class="flex-1">
         <label class="block text-meta text-muted-500 mb-1">Name / pattern</label>
         <input x-model="form.pattern" placeholder="e.g. argentina liga profesional" @keydown.enter="create()"
-               class="w-full bg-ink-900 border border-ink-600 rounded px-2 py-1.5 text-sm text-zinc-100">
+               class="w-full bg-ink-900 border border-ink-600 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:border-brand-500 focus:outline-none">
       </div>
-      <div class="md:col-span-2">
+      <div class="w-full md:w-28">
         <label class="block text-meta text-muted-500 mb-1">Points</label>
         <input x-model.number="form.points" type="number" placeholder="50" @keydown.enter="create()"
-               class="w-full bg-ink-900 border border-ink-600 rounded px-2 py-1.5 text-sm text-zinc-100 tabular-nums">
+               class="w-full bg-ink-900 border border-ink-600 rounded-lg px-3 py-2 text-sm text-zinc-100 tabular-nums focus:border-brand-500 focus:outline-none">
       </div>
-      <div class="md:col-span-2">
-        <button @click="create()" :disabled="busy"
-                class="w-full bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold px-3 py-1.5 rounded text-sm disabled:opacity-50">
-          Add weight
-        </button>
-      </div>
+      <button @click="create()" :disabled="busy"
+              class="inline-flex items-center justify-center gap-1.5 bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold px-4 py-2 rounded-lg text-sm disabled:opacity-50 transition">
+        <i data-lucide="plus" class="!w-4 !h-4"></i> Add
+      </button>
     </div>
   </div>
 
   {# ── Weights table ── #}
   <div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden mb-8">
-    <div class="px-4 py-2.5 border-b border-ink-600 flex items-center justify-between">
-      <span class="text-label uppercase text-muted-400">
-        Weights (<span x-text="weights.length"></span>)
-      </span>
-      <input x-model="filter" placeholder="filter…"
-             class="bg-ink-900 border border-ink-600 rounded px-2 py-1 text-xs text-zinc-100 w-40">
+    <div class="px-4 py-3 border-b border-ink-600 flex flex-wrap items-center gap-3 justify-between">
+      {# kind filter chips with live counts #}
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button @click="kindFilter = 'all'"
+          class="px-2.5 py-1 rounded-full text-meta border transition"
+          :class="kindFilter === 'all' ? 'bg-ink-700 text-zinc-100 border-ink-500' : 'text-muted-400 border-ink-600 hover:text-zinc-100'">
+          All <span class="tabular-nums opacity-70" x-text="counts().all"></span>
+        </button>
+        <template x-for="k in ['league','team','word']" :key="k">
+          <button @click="kindFilter = k"
+            class="px-2.5 py-1 rounded-full text-meta border transition inline-flex items-center gap-1.5"
+            :class="kindFilter === k ? kindMeta[k].chipOn : 'text-muted-400 border-ink-600 hover:text-zinc-100'">
+            <span class="w-1.5 h-1.5 rounded-full" :class="kindMeta[k].dot"></span>
+            <span x-text="kindMeta[k].label"></span>
+            <span class="tabular-nums opacity-70" x-text="counts()[k]"></span>
+          </button>
+        </template>
+      </div>
+      <div class="relative">
+        <i data-lucide="search" class="!w-3.5 !h-3.5 text-muted-500 absolute left-2.5 top-1/2 -translate-y-1/2"></i>
+        <input x-model="filter" placeholder="filter…"
+               class="bg-ink-900 border border-ink-600 rounded-lg pl-8 pr-2 py-1.5 text-xs text-zinc-100 w-44 focus:border-brand-500 focus:outline-none">
+      </div>
     </div>
-    <div class="overflow-x-auto">
+
+    <div class="max-h-[520px] overflow-y-auto">
       <table class="w-full text-sm">
-        <thead class="text-meta uppercase text-muted-500 bg-ink-900/40">
+        <thead class="text-meta uppercase text-muted-500 bg-ink-900 sticky top-0 z-10">
           <tr>
-            <th class="text-left px-3 py-2 font-medium">Type</th>
+            <th class="text-left px-4 py-2 font-medium">Type</th>
             <th class="text-left px-3 py-2 font-medium">Name / pattern</th>
             <th class="text-right px-3 py-2 font-medium">Points</th>
             <th class="text-center px-3 py-2 font-medium">On</th>
-            <th class="px-3 py-2"></th>
+            <th class="px-3 py-2 w-10"></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-ink-700/60">
           <template x-for="w in filtered()" :key="w.id">
-            <tr class="hover:bg-ink-800/40" :class="!w.enabled && 'opacity-50'">
-              <td class="px-3 py-1.5">
+            <tr class="group hover:bg-ink-800/40 transition" :class="!w.enabled && 'opacity-45'">
+              <td class="px-4 py-1.5">
                 <select x-model="w.kind" @change="save(w)"
-                        class="bg-ink-900 border border-ink-600 rounded px-1.5 py-1 text-xs text-zinc-100">
-                  <option value="league">league</option>
-                  <option value="team">team</option>
-                  <option value="word">word</option>
+                        class="bg-transparent border-0 rounded px-1 py-1 text-xs font-medium cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-500"
+                        :class="kindMeta[w.kind] ? kindMeta[w.kind].text : 'text-zinc-300'">
+                  <option value="league" class="bg-ink-900 text-zinc-100">League</option>
+                  <option value="team" class="bg-ink-900 text-zinc-100">Team</option>
+                  <option value="word" class="bg-ink-900 text-zinc-100">Keyword</option>
                 </select>
               </td>
               <td class="px-3 py-1.5">
                 <input x-model="w.pattern" @change="save(w)"
-                       class="w-full bg-transparent border border-transparent hover:border-ink-600 focus:border-brand-500 rounded px-1.5 py-1 text-zinc-100">
+                       class="w-full bg-transparent border border-transparent hover:border-ink-600 focus:border-brand-500 rounded px-2 py-1 text-zinc-100 focus:outline-none">
               </td>
-              <td class="px-3 py-1.5 text-right">
+              <td class="px-3 py-1.5 text-right whitespace-nowrap">
                 <input x-model.number="w.points" @change="save(w)" type="number"
-                       class="w-20 text-right bg-transparent border border-transparent hover:border-ink-600 focus:border-brand-500 rounded px-1.5 py-1 tabular-nums"
+                       class="w-20 text-right bg-transparent border border-transparent hover:border-ink-600 focus:border-brand-500 rounded px-2 py-1 tabular-nums focus:outline-none"
                        :class="w.points < 0 ? 'text-red-400' : 'text-emerald-300'">
+                <i data-lucide="check" x-show="w._saved" x-transition.opacity
+                   class="!w-3.5 !h-3.5 text-emerald-400 inline-block align-middle ml-1"></i>
               </td>
               <td class="px-3 py-1.5 text-center">
-                <input type="checkbox" x-model="w.enabled" @change="save(w)"
-                       class="accent-brand-500 w-4 h-4 align-middle" title="Enable / disable">
+                <button @click="w.enabled = !w.enabled; save(w)"
+                        class="relative inline-flex h-5 w-9 items-center rounded-full transition"
+                        :class="w.enabled ? 'bg-brand-500' : 'bg-ink-600'"
+                        :title="w.enabled ? 'Enabled — click to disable' : 'Disabled — click to enable'">
+                  <span class="inline-block h-4 w-4 transform rounded-full bg-white transition"
+                        :class="w.enabled ? 'translate-x-4' : 'translate-x-0.5'"></span>
+                </button>
               </td>
               <td class="px-3 py-1.5 text-right">
-                <button @click="remove(w)" class="text-muted-500 hover:text-red-400" title="Delete">
+                <button @click="remove(w)"
+                        class="text-muted-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition"
+                        title="Delete">
                   <i data-lucide="trash-2" class="!w-4 !h-4"></i>
                 </button>
               </td>
             </tr>
           </template>
           <tr x-show="weights.length === 0">
-            <td colspan="5" class="px-3 py-6 text-center text-muted-500 italic">No weights yet.</td>
+            <td colspan="5" class="px-3 py-10 text-center text-muted-500 italic">No weights yet — add one above.</td>
+          </tr>
+          <tr x-show="weights.length > 0 && filtered().length === 0">
+            <td colspan="5" class="px-3 py-10 text-center text-muted-500 italic">No weights match this filter.</td>
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <div class="px-4 py-2 border-t border-ink-600 text-meta text-muted-500 flex items-center justify-between">
+      <span>Showing <span class="text-muted-300 tabular-nums" x-text="filtered().length"></span>
+        of <span class="text-muted-300 tabular-nums" x-text="weights.length"></span></span>
+      <span class="inline-flex items-center gap-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> live — edits affect scoring
+      </span>
     </div>
   </div>
 
@@ -129,15 +175,17 @@
     <div class="px-4 py-2.5 border-b border-ink-600 flex items-center justify-between">
       <span class="text-label uppercase text-muted-400">Top {{ top_n }} by points (live)</span>
       <button @click="loadBoard()" :disabled="boardBusy"
-              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-meta text-muted-300 border border-ink-600 hover:bg-ink-800 hover:text-zinc-100">
-        <i data-lucide="refresh-cw" class="!w-3.5 !h-3.5"></i> Recompute
+              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-meta text-muted-300 border border-ink-600 hover:bg-ink-800 hover:text-zinc-100 disabled:opacity-50 transition">
+        <i data-lucide="refresh-cw" class="!w-3.5 !h-3.5" :class="boardBusy && 'animate-spin'"></i> Recompute
       </button>
     </div>
     <ul class="divide-y divide-ink-700/60">
       <template x-for="r in board" :key="r.event_id">
         <li class="px-4 py-3">
           <div class="flex items-center gap-3 cursor-pointer" @click="r._open = !r._open">
-            <span class="text-num text-muted-500 w-6 tabular-nums" x-text="r.rank"></span>
+            <span class="flex items-center justify-center w-6 h-6 rounded-full text-num tabular-nums shrink-0"
+                  :class="r.rank <= 3 ? medalClass(r.rank) : 'text-muted-500'"
+                  x-text="r.rank"></span>
             <div class="min-w-0 flex-1">
               <div class="text-zinc-100 truncate">
                 <span x-text="r.home_name"></span> <span class="text-muted-500">vs</span> <span x-text="r.away_name"></span>
@@ -147,8 +195,8 @@
               </div>
               <div class="text-meta text-muted-500 truncate" x-text="r.tournament_name"></div>
             </div>
-            <span class="text-num text-brand-400 tabular-nums" x-text="r.score"></span>
-            <i data-lucide="chevron-down" class="!w-4 !h-4 text-muted-500 transition-transform"
+            <span class="text-num tabular-nums px-2 py-0.5 rounded-md bg-brand-500/15 text-brand-300 font-semibold shrink-0" x-text="r.score"></span>
+            <i data-lucide="chevron-down" class="!w-4 !h-4 text-muted-500 transition-transform shrink-0"
                :class="r._open && 'rotate-180'"></i>
           </div>
           <div x-show="r._open" x-transition class="mt-2 ml-9 flex flex-wrap gap-1.5">
@@ -159,7 +207,7 @@
           </div>
         </li>
       </template>
-      <li x-show="board.length === 0" class="px-4 py-6 text-center text-muted-500 italic">
+      <li x-show="board.length === 0" class="px-4 py-8 text-center text-muted-500 italic">
         <span x-show="!boardBusy">No scored matches.</span>
         <span x-show="boardBusy">Computing…</span>
       </li>
@@ -173,20 +221,44 @@
 function weightsPage(sport, sports, kinds, topN) {
   return {
     sport, sports, kinds, topN,
-    weights: [], managed: true, filter: '',
+    weights: [], managed: true, filter: '', kindFilter: 'all',
     board: [], boardBusy: false, busy: false,
     form: { kind: 'league', pattern: '', points: null },
+    kindMeta: {
+      league: { label: 'League',  text: 'text-sky-300',     dot: 'bg-sky-400',
+                chipOn: 'bg-sky-500/15 text-sky-200 border-sky-500/40' },
+      team:   { label: 'Team',     text: 'text-emerald-300', dot: 'bg-emerald-400',
+                chipOn: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/40' },
+      word:   { label: 'Keyword',  text: 'text-violet-300',  dot: 'bg-violet-400',
+                chipOn: 'bg-violet-500/15 text-violet-200 border-violet-500/40' },
+    },
 
     async init() {
       await this.load();
       await this.loadBoard();
     },
 
+    counts() {
+      const c = { all: this.weights.length, league: 0, team: 0, word: 0 };
+      for (const w of this.weights) if (c[w.kind] !== undefined) c[w.kind]++;
+      return c;
+    },
+
     filtered() {
       const f = this.filter.trim().toLowerCase();
-      if (!f) return this.weights;
-      return this.weights.filter(w =>
-        (w.pattern || '').toLowerCase().includes(f) || (w.kind || '').includes(f));
+      return this.weights.filter(w => {
+        if (this.kindFilter !== 'all' && w.kind !== this.kindFilter) return false;
+        if (!f) return true;
+        return (w.pattern || '').toLowerCase().includes(f) || (w.kind || '').includes(f);
+      });
+    },
+
+    medalClass(rank) {
+      return {
+        1: 'bg-amber-400/20 text-amber-300 font-bold',
+        2: 'bg-zinc-300/20 text-zinc-200 font-bold',
+        3: 'bg-orange-700/30 text-orange-300 font-bold',
+      }[rank] || 'text-muted-500';
     },
 
     async load() {
@@ -194,7 +266,7 @@ function weightsPage(sport, sports, kinds, topN) {
         const res = await fetch(`/api/admin/weights/${this.sport}`);
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
-        this.weights = (data.weights || []).map(w => ({ ...w }));
+        this.weights = (data.weights || []).map(w => ({ ...w, _saved: false }));
         this.managed = data.managed;
         this.$nextTick(() => window.lucide && lucide.createIcons());
       } catch (e) { toast({ msg: 'Load failed: ' + e.message, kind: 'error' }); }
@@ -210,8 +282,12 @@ function weightsPage(sport, sports, kinds, topN) {
           body: JSON.stringify(this.form),
         });
         if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
-        this.form = { kind: 'league', pattern: '', points: null };
+        const kept = this.form.kind;
+        this.form = { kind: kept, pattern: '', points: null };
         await this.load();
+        // Keep the new row visible: if a kind filter is active and hides it,
+        // switch to that kind. Leave "All" untouched.
+        if (this.kindFilter !== 'all' && this.kindFilter !== kept) this.kindFilter = kept;
         toast({ msg: 'Weight added', kind: 'success' });
       } catch (e) { toast({ msg: 'Add failed: ' + e.message, kind: 'error' }); }
       finally { this.busy = false; }
@@ -226,7 +302,8 @@ function weightsPage(sport, sports, kinds, topN) {
           }),
         });
         if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
-        toast({ msg: 'Saved', kind: 'success' });
+        w._saved = true;
+        setTimeout(() => { w._saved = false; }, 1200);
       } catch (e) { toast({ msg: 'Save failed: ' + e.message, kind: 'error' }); await this.load(); }
     },
 
