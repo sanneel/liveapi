@@ -191,6 +191,16 @@ _STATIC_DIR = _P(__file__).resolve().parent / "app" / "static"
 if _STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
 
+
+@app.get("/robots.txt", include_in_schema=False)
+def robots_txt() -> Response:
+    """Keep crawlers out of the admin panel and JSON APIs. The stronger
+    guarantee is the `X-Robots-Tag: noindex` header set on /admin responses
+    (see SecurityHeadersMiddleware); this just stops polite crawlers up front."""
+    body = "User-agent: *\nDisallow: /admin/\nDisallow: /api/\n"
+    return Response(content=body, media_type="text/plain")
+
+
 FEEDS: Dict[Tuple[str, str], str] = {
     ("football", "prematch"): "https://jugabet.cl/football/prematch/1",
     ("football", "live"): "https://jugabet.cl/football/live/1",

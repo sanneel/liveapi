@@ -19,7 +19,6 @@ from __future__ import annotations
 from typing import Callable, Optional
 
 from fastapi import HTTPException, Request, status
-from fastapi.responses import RedirectResponse
 
 from ..database import db_session
 from ..logging_config import get_logger
@@ -86,13 +85,17 @@ def current_user(request: Request) -> Optional[User]:
 
 
 def require_login(request: Request) -> User:
-    """Require a valid logged-in user. Raises a redirect to /admin/login otherwise."""
+    """Require a valid logged-in user, else return 404.
+
+    We deliberately return 404 (not a 307 redirect to /admin/login) for
+    unauthenticated requests so anonymous probes can't enumerate which admin
+    paths are real — every protected path looks equally non-existent. The login
+    page at /admin/login is a separate public route and stays reachable, so
+    operators simply start there.
+    """
     user = _user_from_request(request)
     if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_307_TEMPORARY_REDIRECT,
-            headers={"Location": f"/admin/login?next={request.url.path}"},
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
     request.state.current_user = user
     return user
 

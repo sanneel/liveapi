@@ -34,6 +34,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        # Keep the admin panel out of search indexes — this is the header that
+        # actually prevents indexing (robots.txt only blocks crawling, and a
+        # disallowed URL can still surface in results). Admin pages already
+        # require auth, so this is defense-in-depth.
+        if request.url.path.startswith(("/admin", "/api/admin")):
+            response.headers.setdefault("X-Robots-Tag", "noindex, nofollow, noarchive")
         response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
         response.headers.setdefault("Cross-Origin-Resource-Policy", "same-site")
         # `unsafe-eval` is required by:
