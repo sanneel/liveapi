@@ -326,6 +326,28 @@ def close_game_bonus(home: Any, away: Any) -> int:
         return 25
     return 0
 
+def _basketball_weights() -> Tuple[
+    List[Tuple[str, int]], List[Tuple[str, int]], List[Tuple[str, int]]
+]:
+    """Return (league, team, word) weight lists for basketball scoring.
+
+    Reads the admin-editable DB weights (`hot_weight` table) via the weights
+    provider, which seeds itself from the static lists the first time. Falls
+    back to the static module lists if the provider/DB is unavailable (e.g.
+    running the scorer in isolation or in a test), so this module stays
+    importable and deterministic without a database.
+    """
+    try:
+        from app.services.weights_provider import get_weights
+
+        ws = get_weights("basketball")
+        if ws.league or ws.team or ws.word:
+            return list(ws.league), list(ws.team), list(ws.word)
+    except Exception:
+        pass
+    return list(LEAGUE_BOOST_PATTERNS), list(TEAM_BOOST_PATTERNS), []
+
+
 def compute_score(
     event: Dict[str, Any],
     now_cl: datetime,
@@ -362,22 +384,36 @@ def compute_score(
 
     status = (event.get("status") or "").strip().lower()  # "live" | "prematch"
 
+    # Admin-editable weights (DB-backed; falls back to static lists).
+    league_patterns, team_patterns, word_patterns = _basketball_weights()
+
     # League boosts
-    league_points, lb_matched = sum_matching_weights(tournament, LEAGUE_BOOST_PATTERNS)
+    league_points, lb_matched = sum_matching_weights(tournament, league_patterns)
     if league_points:
         score += league_points
         for pat, w in lb_matched:
             reasons.append(f"LEAGUE({pat}){w:+d}")
 
     # Team boosts
-    hb, hpat = first_matching_weight(home, TEAM_BOOST_PATTERNS)
+    hb, hpat = first_matching_weight(home, team_patterns)
     if hb:
         score += hb
         reasons.append(f"TEAM_HOME({hpat})+{hb}")
-    ab, apat = first_matching_weight(away, TEAM_BOOST_PATTERNS)
+    ab, apat = first_matching_weight(away, team_patterns)
     if ab:
         score += ab
         reasons.append(f"TEAM_AWAY({apat})+{ab}")
+
+    # Keyword ('word') weights — admin-added catch-all matched against the
+    # tournament name + both team names. Each matching keyword counts once.
+    word_points = 0
+    if word_patterns:
+        nt = normalize(f"{tournament} {home} {away}")
+        for pat, w in word_patterns:
+            if normalize(pat) in nt:
+                word_points += w
+                score += w
+                reasons.append(f"WORD({pat}){w:+d}")
 
     # Odds
     ob = odds_balance_bonus(p1, p2)
@@ -405,7 +441,7 @@ def compute_score(
             reasons.append(f"CLOSE+{cb}")
 
         # LIVE boost: тільки якщо є реальна релевантність (NBA / топ-ліга / топ-команди)
-        if (league_points + hb + ab) > 0:
+        if (league_points + hb + ab + word_points) > 0:
             score += 140
             reasons.append("LIVE_TOP(+140)")
         else:
@@ -425,7 +461,7 @@ def compute_score(
         reasons.append(f"TIME+{tb}")
 
         # Prematch base only if relevance exists
-        if (league_points + hb + ab) > 0:
+        if (league_points + hb + ab + word_points) > 0:
             score += 40
             reasons.append("PRE_BASE(+40|relevance_ok)")
 

@@ -339,6 +339,28 @@ def set_drama_bonus(set_no: Optional[int], sets_home: Any, sets_away: Any) -> in
     return 0
 
 
+def _tennis_weights() -> Tuple[
+    List[Tuple[str, int]], List[Tuple[str, int]], List[Tuple[str, int]]
+]:
+    """Return (league, player, word) weight lists for tennis scoring.
+
+    Reads the admin-editable DB weights (`hot_weight` table) via the weights
+    provider, which seeds itself from the static lists the first time. Falls
+    back to the static module lists if the provider/DB is unavailable (e.g.
+    running the scorer in isolation or in a test), so this module stays
+    importable and deterministic without a database.
+    """
+    try:
+        from app.services.weights_provider import get_weights
+
+        ws = get_weights("tennis")
+        if ws.league or ws.team or ws.word:
+            return list(ws.league), list(ws.team), list(ws.word)
+    except Exception:
+        pass
+    return list(LEAGUE_BOOST_PATTERNS), list(TEAM_BOOST_PATTERNS), []
+
+
 def compute_score(
     event: Dict[str, Any],
     now_cl: datetime,
@@ -373,9 +395,12 @@ def compute_score(
 
     status = event.get("status")  # "live" or "prematch" (in your feed)
 
+    # Admin-editable weights (DB-backed; falls back to static lists).
+    league_patterns, team_patterns, word_patterns = _tennis_weights()
+
     # League/tournament boosts (additive for tennis)
     league_points = 0
-    lb_total, lb_matched = sum_matching_weights(tournament, LEAGUE_BOOST_PATTERNS)
+    lb_total, lb_matched = sum_matching_weights(tournament, league_patterns)
     if lb_total:
         league_points += lb_total
         score += lb_total
@@ -387,17 +412,28 @@ def compute_score(
     home = ((event.get("competitors") or {}).get("home") or {}).get("name") or ""
     away = ((event.get("competitors") or {}).get("away") or {}).get("name") or ""
 
-    hb, hpat = first_matching_weight(home, TEAM_BOOST_PATTERNS)
+    hb, hpat = first_matching_weight(home, team_patterns)
     if hb:
         player_points += hb
         score += hb
         reasons.append(f"PLAYER_HOME({hpat})+{hb}")
 
-    ab, apat = first_matching_weight(away, TEAM_BOOST_PATTERNS)
+    ab, apat = first_matching_weight(away, team_patterns)
     if ab:
         player_points += ab
         score += ab
         reasons.append(f"PLAYER_AWAY({apat})+{ab}")
+
+    # Keyword ('word') weights — admin-added catch-all matched against the
+    # tournament name + both player names. Each matching keyword counts once.
+    word_points = 0
+    if word_patterns:
+        nt = normalize(f"{tournament} {home} {away}")
+        for pat, w in word_patterns:
+            if normalize(pat) in nt:
+                word_points += w
+                score += w
+                reasons.append(f"WORD({pat}){w:+d}")
 
     # Odds: balance + heavy favorite penalty (applies to both prematch & live)
     ob = odds_balance_bonus(p1, p2)
@@ -437,7 +473,7 @@ def compute_score(
                 reasons.append(f"HEAVY_FAV{hp:+d}{'|clutch_half' if is_super_clutch else ''}")
 
         # Base live boost ONLY if tournament or players give relevance
-        if (league_points + player_points) > 0:
+        if (league_points + player_points + word_points) > 0:
             score += 300
             reasons.append("LIVE_BASE(+300|relevance_ok)")
         else:

@@ -126,7 +126,12 @@ _SEED_SOURCES: Dict[str, Tuple[str, Tuple[_SeedSpec, ...]]] = {
 # i.e. where an admin edit changes scoring within one cache TTL. Sports that
 # are seeded but NOT here are editable for visibility only — their scorer still
 # uses the static file — and the UI surfaces that distinction.
-_MANAGED_SPORTS = frozenset({"football"})
+#
+# football / basketball / tennis share the same (league, team, word) model and
+# read their weights through get_weights(). cybersport and the fight sports use
+# a richer tier/bonus model that doesn't map onto the flat weight table, so they
+# stay display-only until their scorers are reworked.
+_MANAGED_SPORTS = frozenset({"football", "basketball", "tennis"})
 
 # Mapping keys that are catch-all sentinels in the static files, not real
 # patterns worth showing as editable rows.
