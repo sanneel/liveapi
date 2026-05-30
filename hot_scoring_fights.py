@@ -261,36 +261,96 @@ def is_hard_excluded(event: Dict[str, Any], now_local: datetime, horizon_days: i
 # -------------------------
 # Weights
 # -------------------------
+def _best_weight(text: str, patterns: List[Tuple[str, int]]) -> int:
+    """Points of the highest-value weight whose pattern appears in `text`."""
+    nt = normalize(text)
+    for pat, w in patterns:
+        if normalize(pat) in nt:
+            return int(w)
+    return 0
+
+
+def _sum_weights(text: str, patterns: List[Tuple[str, int]]) -> int:
+    """Sum of every matching weight (featured + tier add together)."""
+    nt = normalize(text)
+    total = 0
+    for pat, w in patterns:
+        if normalize(pat) in nt:
+            total += int(w)
+    return total
+
+
+def _fights_static_weights() -> Tuple[
+    List[Tuple[str, int]], List[Tuple[str, int]], List[Tuple[str, int]]
+]:
+    """Rebuild (league, team, word) weight lists from the static module — used
+    as a fallback when the DB provider is unavailable (tests / isolation)."""
+    league = (
+        [(p, TOURNAMENT_TIER1_BONUS) for p in TIER1_TOURNAMENT_PATTERNS]
+        + [(p, TOURNAMENT_TIER2_BONUS) for p in TIER2_TOURNAMENT_PATTERNS]
+        + [(p, FEATURED_TOURNAMENT_BONUS) for p in FEATURED_TOURNAMENT_PATTERNS]
+    )
+    team = (
+        [(p, CHILE_FIGHTER_BONUS) for p in CHILE_FIGHTERS]
+        + [(p, LATAM_FIGHTER_BONUS) for p in LATAM_FIGHTERS]
+        + [(p, GLOBAL_FIGHT_STAR_BONUS) for p in GLOBAL_FIGHT_STARS]
+    )
+    word = [(s, int(w)) for s, w in SPORT_BASE_WEIGHTS.items() if s != "other"]
+    return league, team, word
+
+
+def _fights_weights(sport: str) -> Tuple[
+    List[Tuple[str, int]], List[Tuple[str, int]], List[Tuple[str, int]]
+]:
+    """Admin-editable (league, team, word) weights for one combat sport.
+
+    The fight scorer covers ufc / mma / boxing, each of which is an independent
+    editable slice; we read the slice matching the event's sport so an edit to
+    e.g. boxing only affects boxing. Falls back to the shared static lists if
+    the provider/DB is unavailable.
+    """
+    slug = sport if sport in ("ufc", "mma", "boxing") else "ufc"
+    try:
+        from app.services.weights_provider import get_weights
+
+        ws = get_weights(slug)
+        if ws.league or ws.team or ws.word:
+            return list(ws.league), list(ws.team), list(ws.word)
+    except Exception:
+        pass
+    return _fights_static_weights()
+
+
 def sport_weight(event: Dict[str, Any]) -> int:
     s = sport_name(event)
-    base = int(SPORT_BASE_WEIGHTS.get(s, SPORT_BASE_WEIGHTS.get("other", 0)))
+    _, _, word = _fights_weights(s)
+    word_points = {normalize(p): int(w) for p, w in word}
+    base = word_points.get(normalize(s))
+    if base is None:
+        base = int(SPORT_BASE_WEIGHTS.get(s, SPORT_BASE_WEIGHTS.get("other", 0)))
     if s == "ufc":
         base += int(UFC_PROMOTION_BONUS)
     return base
 
 
 def tournament_weight(event: Dict[str, Any]) -> int:
-    t_name = tournament_name(event)
-
-    score = 0
-
-    if contains_any(t_name, FEATURED_TOURNAMENT_PATTERNS):
-        score += FEATURED_TOURNAMENT_BONUS
-
-    if contains_any(t_name, TIER1_TOURNAMENT_PATTERNS):
-        score += TOURNAMENT_TIER1_BONUS
-    elif contains_any(t_name, TIER2_TOURNAMENT_PATTERNS):
-        score += TOURNAMENT_TIER2_BONUS
-    elif contains_any(t_name, TIER3_TOURNAMENT_PATTERNS):
-        score += TOURNAMENT_TIER3_BONUS
-
-    return score
+    # Featured + tier weights add together (seeded from the static tiers, so
+    # scoring is unchanged until an admin edits a row).
+    league, _, _ = _fights_weights(sport_name(event))
+    return _sum_weights(tournament_name(event), league)
 
 
 def fighter_weight(event: Dict[str, Any]) -> int:
     h = home_name(event)
     a = away_name(event)
 
+    # Per-fighter points come from the editable table now (seeded from the
+    # Chile / LATAM / global-star lists). Each side adds its own value.
+    _, team, _ = _fights_weights(sport_name(event))
+    score = _best_weight(h, team) + _best_weight(a, team)
+
+    # Bucket membership is still needed for the "both sides" combo bonuses,
+    # which have no per-name representation and stay fixed in code.
     h_chile = contains_any(h, CHILE_FIGHTERS)
     a_chile = contains_any(a, CHILE_FIGHTERS)
 
@@ -299,23 +359,6 @@ def fighter_weight(event: Dict[str, Any]) -> int:
 
     h_global = contains_any(h, GLOBAL_FIGHT_STARS)
     a_global = contains_any(a, GLOBAL_FIGHT_STARS)
-
-    score = 0
-
-    if h_chile:
-        score += CHILE_FIGHTER_BONUS
-    if a_chile:
-        score += CHILE_FIGHTER_BONUS
-
-    if h_latam:
-        score += LATAM_FIGHTER_BONUS
-    if a_latam:
-        score += LATAM_FIGHTER_BONUS
-
-    if h_global:
-        score += GLOBAL_FIGHT_STAR_BONUS
-    if a_global:
-        score += GLOBAL_FIGHT_STAR_BONUS
 
     if h_chile and a_chile:
         score += BOTH_CHILE_FIGHTERS_BONUS

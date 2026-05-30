@@ -182,37 +182,80 @@ def is_hard_excluded(event: Dict[str, Any]) -> bool:
 # -------------------------
 # Weight helpers
 # -------------------------
+def _best_weight(text: str, patterns: List[Tuple[str, int]]) -> int:
+    """Points of the highest-value weight whose pattern appears in `text`.
+
+    Patterns arrive sorted by points desc, so the first textual match is the
+    best one — this reproduces the old "best tier wins" behaviour.
+    """
+    nt = normalize(text)
+    for pat, w in patterns:
+        if normalize(pat) in nt:
+            return int(w)
+    return 0
+
+
+def _cybersport_static_weights() -> Tuple[
+    List[Tuple[str, int]], List[Tuple[str, int]], List[Tuple[str, int]]
+]:
+    """Rebuild (league, team, word) weight lists from the static module — used
+    as a fallback when the DB provider is unavailable (tests / isolation)."""
+    league = (
+        [(p, TOURNAMENT_TIER1_BONUS) for p in TIER1_TOURNAMENT_PATTERNS]
+        + [(p, TOURNAMENT_TIER2_BONUS) for p in TIER2_TOURNAMENT_PATTERNS]
+        + [(p, TOURNAMENT_TIER3_PENALTY) for p in TIER3_TOURNAMENT_PATTERNS]
+    )
+    team = (
+        [(p, POPULAR_TEAM_BONUS) for p in POPULAR_TEAMS]
+        + [(p, LATAM_TEAM_BONUS) for p in LATAM_TEAMS]
+    )
+    word = [(g, int(w)) for g, w in GAME_WEIGHTS.items() if g != "other"]
+    return league, team, word
+
+
+def _cybersport_weights() -> Tuple[
+    List[Tuple[str, int]], List[Tuple[str, int]], List[Tuple[str, int]]
+]:
+    """Admin-editable (league, team, word) weights for cybersport.
+
+    Reads the DB provider (seeded from the static lists the first time); falls
+    back to the static lists if the provider/DB is unavailable, so this module
+    stays importable and deterministic without a database.
+    """
+    try:
+        from app.services.weights_provider import get_weights
+
+        ws = get_weights("cybersport")
+        if ws.league or ws.team or ws.word:
+            return list(ws.league), list(ws.team), list(ws.word)
+    except Exception:
+        pass
+    return _cybersport_static_weights()
+
+
 def game_weight(event: Dict[str, Any]) -> int:
     game = detect_game(tournament_name(event))
+    _, _, word = _cybersport_weights()
+    word_points = {normalize(p): int(w) for p, w in word}
+    val = word_points.get(normalize(game))
+    if val is not None:
+        return val
+    # Detected game not in the editable table (e.g. "other") -> static default.
     return int(GAME_WEIGHTS.get(game, GAME_WEIGHTS.get("other", 0)))
 
 
 def tournament_weight(event: Dict[str, Any]) -> int:
-    if is_tier1_tournament(event):
-        return TOURNAMENT_TIER1_BONUS
-
-    if is_tier2_tournament(event):
-        return TOURNAMENT_TIER2_BONUS
-
-    if is_tier3_tournament(event):
-        return TOURNAMENT_TIER3_PENALTY
-
-    return 0
+    # Best matching tournament weight (table seeded from the tier lists, so a
+    # Tier-1 event still scores its Tier-1 value until an admin edits it).
+    league, _, _ = _cybersport_weights()
+    return _best_weight(tournament_name(event), league)
 
 
 def team_weight(event: Dict[str, Any]) -> int:
-    h = home_name(event)
-    a = away_name(event)
-
-    score = 0
-
-    if contains_any(h, POPULAR_TEAMS) or contains_any(a, POPULAR_TEAMS):
-        score += POPULAR_TEAM_BONUS
-
-    if contains_any(h, LATAM_TEAMS) or contains_any(a, LATAM_TEAMS):
-        score += LATAM_TEAM_BONUS
-
-    return score
+    # Each recognised side now contributes its own editable weight. (Previously
+    # one shared popular/LATAM bonus applied once even if both sides matched.)
+    _, team, _ = _cybersport_weights()
+    return _best_weight(home_name(event), team) + _best_weight(away_name(event), team)
 
 
 def academy_penalty(event: Dict[str, Any]) -> int:
