@@ -124,7 +124,7 @@
 
 {# ── Toast ── #}
 <div x-data="{ msg: '', kind: 'info', show: false }"
-     x-on:toast.window="msg = $event.detail?.msg ?? $event.detail; kind = $event.detail?.kind || 'info'; show = true; clearTimeout($el._t); $el._t = setTimeout(() => show = false, 2500)"
+     x-on:toast.window="msg = $event.detail?.msg ?? $event.detail; kind = $event.detail?.kind || 'info'; show = true; clearTimeout($el._t); $el._t = setTimeout(() => show = false, kind === 'error' ? 4000 : 2500)"
      x-show="show" x-transition.opacity
      class="fixed bottom-5 right-5 max-w-sm px-4 py-2.5 rounded-md text-body shadow-pop z-40
             border bg-ink-800"

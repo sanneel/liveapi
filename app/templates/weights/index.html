@@ -281,7 +281,15 @@ function weightsPage(sport, sports, kinds, topN) {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(this.form),
         });
-        if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+        // Handle duplicate explicitly — don't let json() swallow the error.
+        if (res.status === 409) {
+          toast({ msg: `"${this.form.pattern}" already exists as a ${this.form.kind} weight.`, kind: 'error' });
+          return;
+        }
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.detail || `Server error (${res.status})`);
+        }
         const kept = this.form.kind;
         this.form = { kind: kept, pattern: '', points: null };
         await this.load();
@@ -303,7 +311,7 @@ function weightsPage(sport, sports, kinds, topN) {
         });
         if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
         w._saved = true;
-        setTimeout(() => { w._saved = false; }, 1200);
+        setTimeout(() => { w._saved = false; }, 2500);
       } catch (e) { toast({ msg: 'Save failed: ' + e.message, kind: 'error' }); await this.load(); }
     },
 
