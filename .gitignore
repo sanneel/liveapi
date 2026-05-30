@@ -39,6 +39,10 @@ venv_win/
 build/
 dist/
 
+# Node / Tailwind build tooling (the built CSS in app/static IS committed)
+node_modules/
+_verify_css.py
+
 # Local debug output
 debug_output.html
 api_urls_discovered.json

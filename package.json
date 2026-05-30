@@ -1,0 +1,14 @@
+{
+  "name": "jugabet-admin-css",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Build tooling for the self-hosted admin Tailwind CSS bundle (replaces the runtime Play CDN).",
+  "scripts": {
+    "build:css": "tailwindcss -c tailwind.config.js -i app/static/tw-input.css -o app/static/admin.tw.css --minify",
+    "watch:css": "tailwindcss -c tailwind.config.js -i app/static/tw-input.css -o app/static/admin.tw.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.10",
+    "tailwindcss": "^3.4.17"
+  }
+}

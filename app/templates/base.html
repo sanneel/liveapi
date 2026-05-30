@@ -5,56 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Jugabet Admin{% endblock %}</title>
 
-  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            // Surface scale — flat, neutral, no opacity stacking.
-            // 950 = page background; 900 = first surface; 800 = elevated; 700 = hover; 600 = subtle border.
-            ink: { 950: '#06080F', 900: '#0A0D17', 850: '#0F131F', 800: '#141826', 700: '#1A1F2E', 600: '#262C3D', 500: '#3A4258' },
-            // Brand reserved for primary CTAs + slug links ONLY. Not backgrounds, not borders.
-            brand: { 400: '#D7F340', 500: '#C2E325', 600: '#A6C311' },
-            // Muted/text scale.
-            muted: { 300: '#94A0B5', 400: '#6B7891', 500: '#4A556B', 600: '#363F52' },
-          },
-          fontFamily: {
-            sans: ['"Inter"', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
-            mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
-          },
-          fontSize: {
-            'label': ['11px', { lineHeight: '14px', letterSpacing: '0.06em' }],
-            'meta':  ['12px', { lineHeight: '16px' }],
-            'body':  ['13px', { lineHeight: '18px' }],
-            'h-sm':  ['14px', { lineHeight: '20px', fontWeight: '600' }],
-            'h-md':  ['16px', { lineHeight: '22px', fontWeight: '600' }],
-            'h-lg':  ['18px', { lineHeight: '24px', fontWeight: '600' }],
-            'h-xl':  ['22px', { lineHeight: '28px', fontWeight: '600' }],
-            'num':   ['24px', { lineHeight: '28px', fontWeight: '600' }],
-          },
-          borderRadius: {
-            DEFAULT: '6px',
-            'md':    '6px',
-            'lg':    '8px',
-            'xl':    '10px',
-          },
-          boxShadow: {
-            'card': '0 1px 0 0 rgba(255,255,255,0.02) inset, 0 1px 3px 0 rgba(0,0,0,0.4)',
-            'pop':  '0 4px 12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)',
-          },
-        }
-      }
-    }
-  </script>
+  <!-- Pre-built Tailwind bundle — replaces the runtime Play CDN (which
+       recompiled all CSS in-browser on every page load). Rebuild after
+       changing template classes with: npm run build:css -->
+  <link rel="stylesheet" href="/static/admin.tw.css">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script defer src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script defer src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
   <link rel="stylesheet" href="/static/admin.css">
   <style>

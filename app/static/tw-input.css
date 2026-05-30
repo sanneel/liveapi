@@ -1,0 +1,6 @@
+/* Tailwind entry for the pre-built admin bundle (app/static/admin.tw.css).
+   The custom base styles (scrollbars, focus ring, x-cloak) stay inline in
+   base.html since they are plain CSS, not Tailwind. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
