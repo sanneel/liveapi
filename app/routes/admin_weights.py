@@ -24,6 +24,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.exc import IntegrityError
 
 from ..auth.dependencies import require_login, require_role
 from ..config import get_settings
@@ -187,8 +188,8 @@ def api_create(
             )
         except ValueError as exc:
             raise HTTPException(400, str(exc))
-        except Exception:
-            # Most likely the (sport, kind, pattern) unique constraint.
+        except IntegrityError:
+            # The (sport, kind, pattern) unique constraint.
             raise HTTPException(409, "A weight with this kind + pattern already exists.")
         LogRepository(session).record(
             "weights.create",
@@ -238,8 +239,11 @@ def api_update(
             raise HTTPException(404, "Weight not found for this sport.")
         try:
             row = repo.update(weight_id, by=user.username, **fields)
+            session.flush()  # surface the unique-constraint violation here, as 409
         except ValueError as exc:
             raise HTTPException(400, str(exc))
+        except IntegrityError:
+            raise HTTPException(409, "A weight with this kind + pattern already exists.")
         LogRepository(session).record(
             "weights.update",
             username=user.username,
