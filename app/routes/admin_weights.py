@@ -329,6 +329,11 @@ def api_leaderboard(
     rows: List[Dict[str, Any]] = []
     for rank, e in enumerate(scored[:limit], start=1):
         m = by_id.get(e.get("event_id"))
+        # football/basketball/tennis expose `_hot_score` + `_hot_reasons`;
+        # cybersport/fights use `_score` and carry no per-weight reasons.
+        score = e.get("_hot_score")
+        if score is None:
+            score = e.get("_score")
         rows.append({
             "rank": rank,
             "event_id": e.get("event_id"),
@@ -336,7 +341,7 @@ def api_leaderboard(
             "away_name": m.away_name if m else (e.get("competitors", {}).get("away", {}) or {}).get("name"),
             "tournament_name": m.tournament_name if m else (e.get("tournament", {}) or {}).get("name"),
             "status": e.get("status"),
-            "score": e.get("_hot_score"),
+            "score": score,
             "reasons": e.get("_hot_reasons") or [],
         })
 

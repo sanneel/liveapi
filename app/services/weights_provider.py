@@ -36,6 +36,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
+from sqlalchemy.exc import IntegrityError
+
 from ..database import db_session
 from ..logging_config import get_logger
 from ..repositories.hot_weight_repo import HotWeightRepository
@@ -234,16 +236,23 @@ def ensure_seeded(sport: str) -> int:
     """
     if sport not in _SEED_SOURCES:
         return 0
-    with db_session() as session:
-        repo = HotWeightRepository(session)
-        if repo.count_for_sport(sport) > 0:
-            return 0
-        rows = seed_rows_from_static(sport)
-        if not rows:
-            return 0
-        inserted = repo.bulk_seed(sport, rows, by="seed:static")
-        logger.info(f"weights_provider: seeded {inserted} weights for {sport}")
-        return inserted
+    try:
+        with db_session() as session:
+            repo = HotWeightRepository(session)
+            if repo.count_for_sport(sport) > 0:
+                return 0
+            rows = seed_rows_from_static(sport)
+            if not rows:
+                return 0
+            inserted = repo.bulk_seed(sport, rows, by="seed:static")
+            logger.info(f"weights_provider: seeded {inserted} weights for {sport}")
+            return inserted
+    except IntegrityError:
+        # Another thread/worker seeded this sport at the same moment (first
+        # access after deploy races the first scoring cycle). The rows exist
+        # now, so this is a harmless no-op rather than a 500.
+        logger.info(f"weights_provider: {sport} seeded concurrently — skipping")
+        return 0
 
 
 def _ensure_seeded(sport: str) -> None:
