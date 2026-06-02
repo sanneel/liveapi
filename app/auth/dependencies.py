@@ -17,6 +17,7 @@ A user with role X also satisfies require_role(Y) where Y ≤ X.
 from __future__ import annotations
 
 from typing import Callable, Optional
+from urllib.parse import quote
 
 from fastapi import HTTPException, Request, status
 
@@ -84,18 +85,70 @@ def current_user(request: Request) -> Optional[User]:
     return user
 
 
-def require_login(request: Request) -> User:
-    """Require a valid logged-in user, else return 404.
+def _wants_html(request: Request) -> bool:
+    """True for a top-level browser navigation (Accept: text/html), as opposed
+    to a same-page fetch/XHR API call (Accept: */* or application/json)."""
+    return "text/html" in request.headers.get("accept", "").lower()
 
-    We deliberately return 404 (not a 307 redirect to /admin/login) for
-    unauthenticated requests so anonymous probes can't enumerate which admin
-    paths are real — every protected path looks equally non-existent. The login
-    page at /admin/login is a separate public route and stays reachable, so
-    operators simply start there.
+
+def _login_redirect_url(request: Request) -> str:
+    """`/admin/login?next=<the path they were trying to reach>` so re-login
+    lands the operator back where they were."""
+    nxt = request.url.path
+    if request.url.query:
+        nxt = f"{nxt}?{request.url.query}"
+    return f"/admin/login?next={quote(nxt, safe='')}"
+
+
+def _auth_challenge(request: Request) -> HTTPException:
+    """Decide how to reject an unauthenticated request.
+
+    Two very different callers reach this branch, and conflating them is what
+    made the admin portal look "crashed":
+
+    * A drive-by scanner / crawler with **no session cookie at all** — keep the
+      admin surface invisible to them: every protected path returns a flat 404,
+      exactly as before (commit 762763a), so they can't enumerate real routes.
+
+    * A real operator whose **session cookie is present but expired/invalid**
+      (the access token lapsed mid-shift). They already know these paths exist,
+      so a 404 only looks like a broken portal — a raw `{"detail":"Not Found"}`
+      wall on every page and a cryptic "Load failed: Not Found" on every save.
+      Instead:
+        - a full-page navigation (Accept: text/html) → 303 to /admin/login so
+          they simply re-authenticate and return to where they were;
+        - an API/fetch call → 401 `session_expired`, which the SPA turns into a
+          clear notice + redirect rather than a confusing 404.
+
+    The discriminator is **cookie presence**: anonymous scanners carry no
+    cookie (→ 404), so the anti-enumeration guarantee is preserved for the only
+    traffic it was meant to protect against.
+    """
+    if not request.cookies.get(COOKIE_NAME):
+        return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+    if _wants_html(request):
+        return HTTPException(
+            status_code=status.HTTP_303_SEE_OTHER,
+            detail="Session expired",
+            headers={"Location": _login_redirect_url(request)},
+        )
+    return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="session_expired")
+
+
+def require_login(request: Request) -> User:
+    """Require a valid logged-in user.
+
+    * No session cookie → 404 (anonymous probe; admin surface stays invisible).
+    * Expired/invalid session cookie → 303 redirect to /admin/login for browser
+      navigations, or 401 `session_expired` for API/fetch calls.
+    * Valid → returns the User.
+
+    See `_auth_challenge` for why the no-cookie and stale-cookie cases differ.
+    The login page at /admin/login is a separate public route.
     """
     user = _user_from_request(request)
     if user is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+        raise _auth_challenge(request)
     request.state.current_user = user
     return user
 

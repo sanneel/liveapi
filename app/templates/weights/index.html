@@ -261,9 +261,22 @@ function weightsPage(sport, sports, kinds, topN) {
       }[rank] || 'text-muted-500';
     },
 
+    // The admin session (60-min access token) can lapse mid-edit. The API then
+    // answers 401 `session_expired` (see app/auth/dependencies.py). Turn that
+    // into a clear notice + bounce to login instead of a cryptic error toast.
+    // Returns true when it handled an expiry, so callers can stop early.
+    _expired(res) {
+      if (res.status !== 401) return false;
+      toast({ msg: 'Session expired — taking you to the login page…', kind: 'error' });
+      const next = encodeURIComponent(location.pathname + location.search);
+      setTimeout(() => { window.location.href = '/admin/login?next=' + next; }, 900);
+      return true;
+    },
+
     async load() {
       try {
         const res = await fetch(`/api/admin/weights/${this.sport}`);
+        if (this._expired(res)) return;
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
         this.weights = (data.weights || []).map(w => ({ ...w, _saved: false }));
@@ -281,6 +294,7 @@ function weightsPage(sport, sports, kinds, topN) {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(this.form),
         });
+        if (this._expired(res)) return;
         // Handle duplicate explicitly — don't let json() swallow the error.
         if (res.status === 409) {
           toast({ msg: `"${this.form.pattern}" already exists as a ${this.form.kind} weight.`, kind: 'error' });
@@ -309,6 +323,7 @@ function weightsPage(sport, sports, kinds, topN) {
             kind: w.kind, pattern: w.pattern, points: w.points, enabled: w.enabled,
           }),
         });
+        if (this._expired(res)) return;
         if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
         w._saved = true;
         setTimeout(() => { w._saved = false; }, 2500);
@@ -319,6 +334,7 @@ function weightsPage(sport, sports, kinds, topN) {
       if (!confirm(`Delete weight "${w.pattern}" (${w.points})?`)) return;
       try {
         const res = await fetch(`/api/admin/weights/${this.sport}/${w.id}`, { method: 'DELETE' });
+        if (this._expired(res)) return;
         if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
         this.weights = this.weights.filter(x => x.id !== w.id);
         toast({ msg: 'Deleted', kind: 'success' });
@@ -329,6 +345,7 @@ function weightsPage(sport, sports, kinds, topN) {
       this.boardBusy = true;
       try {
         const res = await fetch(`/api/admin/weights/${this.sport}/leaderboard?limit=${this.topN}`);
+        if (this._expired(res)) return;
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
         this.board = (data.rows || []).map(r => ({ ...r, _open: false }));

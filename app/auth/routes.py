@@ -114,7 +114,13 @@ def login_submit(
     response.set_cookie(
         key=COOKIE_NAME,
         value=token,
-        max_age=settings.jwt_access_expire_minutes * 60,
+        # The cookie deliberately OUTLIVES the access token. The token inside
+        # still expires after jwt_access_expire_minutes (so this does not extend
+        # access — an expired token grants nothing), but keeping the cookie
+        # around lets require_login tell "operator whose session lapsed" apart
+        # from "anonymous probe with no cookie" and send the former to the login
+        # page instead of a raw 404 wall. See app/auth/dependencies.py.
+        max_age=settings.jwt_refresh_expire_days * 24 * 60 * 60,
         httponly=True,
         secure=settings.cookie_secure,
         samesite=settings.cookie_samesite,
