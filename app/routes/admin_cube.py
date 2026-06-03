@@ -430,6 +430,94 @@ def api_cube_pin(
     }
 
 
+@router.post("/api/admin/cube/{theme}/reorder")
+@limiter.limit("60/minute")
+def api_cube_reorder(
+    theme: str,
+    request: Request,
+    body: dict = Body(...),
+    user: User = Depends(require_role("editor")),
+) -> Dict[str, Any]:
+    """Pin several events to specific slots atomically — used for slot↔slot
+    SWAPS.
+
+    Body: ``{"pins": [{"event_id": "...", "position": 0}, ...]}``.
+
+    Doing a swap as two sequential /pin calls is racy: the first pin's
+    `clear_position_at_slot` bumps the other event to auto before the second
+    pin lands, so the two never cleanly trade places. Here every target slot
+    is vacated first, then every event is pinned, inside one locked
+    transaction. Slots NOT listed keep their current pin/auto state, so
+    untouched slots still auto-rank.
+    """
+    t = _validate_theme(theme)
+    slot_count = _max_match_slots(t)
+
+    raw_pins = body.get("pins")
+    if not isinstance(raw_pins, list) or not raw_pins:
+        raise HTTPException(400, "pins must be a non-empty list")
+    if len(raw_pins) > slot_count:
+        raise HTTPException(400, f"at most {slot_count} pins")
+
+    pins: List[Any] = []  # (event_id, position) after validation
+    seen_positions: set = set()
+    seen_events: set = set()
+    for p in raw_pins:
+        eid = str((p or {}).get("event_id") or "").strip()
+        if not eid:
+            raise HTTPException(400, "each pin needs an event_id")
+        try:
+            pos = int(p.get("position"))
+        except (TypeError, ValueError):
+            raise HTTPException(400, "each pin needs an integer position")
+        if not (0 <= pos < slot_count):
+            raise HTTPException(400, f"position must be 0..{slot_count - 1}")
+        if pos in seen_positions:
+            raise HTTPException(400, "two pins target the same slot")
+        if eid in seen_events:
+            raise HTTPException(400, "the same event is pinned twice")
+        seen_positions.add(pos)
+        seen_events.add(eid)
+        pins.append((eid, pos))
+
+    lock = _REORDER_LOCKS[t.slug]
+    if not lock.acquire(timeout=_REORDER_TIMEOUT_SEC):
+        raise HTTPException(
+            409, f"Another change on cube {t.slug} is in progress; retry shortly."
+        )
+    try:
+        with db_session() as session:
+            match_repo = MatchRepository(session)
+            override_repo = CubeOverrideRepository(session)
+            for eid, _pos in pins:
+                if match_repo.find_by_event_id(eid) is None:
+                    raise HTTPException(404, f"Match not in DB: {eid}")
+            # Vacate every target slot first (so a swap can't leave two events
+            # sharing one slot), then assign the new pins.
+            for eid, pos in pins:
+                override_repo.clear_position_at_slot(t.slug, pos, except_event_id=eid)
+            for eid, pos in pins:
+                override_repo.set_position(t.slug, eid, pos, by=user.username)
+                # Pinning implies un-suppressing, same as the single-pin path.
+                override_repo.set_suppress(t.slug, eid, False, by=user.username)
+            LogRepository(session).record(
+                "cube.reorder",
+                username=user.username,
+                target=t.slug,
+                payload={"pins": [{"event_id": e, "position": p} for e, p in pins]},
+                ip=_client_ip(request),
+            )
+    finally:
+        lock.release()
+
+    _invalidate_theme_cache(t.slug)
+    return {
+        "ok": True,
+        "cube": t.slug,
+        "pins": [{"event_id": e, "position": p} for e, p in pins],
+    }
+
+
 @router.post("/api/admin/cube/{theme}/suppress/{event_id}")
 @limiter.limit("60/minute")
 def api_cube_suppress(

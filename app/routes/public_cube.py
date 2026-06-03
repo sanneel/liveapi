@@ -19,12 +19,14 @@ from __future__ import annotations
 import hashlib
 import json as _json
 from dataclasses import asdict
+from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from PIL import Image
 
 from ..database import db_session
 from ..logging_config import get_logger
@@ -70,7 +72,11 @@ def _png_response(
     etag: str = "",
 ) -> Response:
     headers = {
-        "Cache-Control": "public, max-age=30, stale-while-revalidate=60",
+        # Short stale window so an admin pin/swap shows up promptly instead of
+        # the previous match lingering on screen (the "Brazil for 2s, then
+        # France" flash). The server-side png_cache still absorbs render load;
+        # this only governs how long clients may reuse a now-stale image.
+        "Cache-Control": "public, max-age=15, stale-while-revalidate=15",
         "X-Cache": cache_status,
     }
     if etag:
@@ -173,6 +179,44 @@ def cube_odds_png(theme: str, request: Request, slot: int = 0) -> Response:
     if request.headers.get("if-none-match") == etag:
         return Response(status_code=304, headers={"ETag": etag})
     return _png_response(png, cache_status="MISS", etag=etag)
+
+
+# Static face — a fully transparent 420×380 placeholder. The partner cube
+# pairs this (the campaign drops its own generic-message art here) with the
+# dynamic odds face at /cube/{theme}/odds.png, so we deliberately ship
+# transparency rather than a baked-in Jugabet promo image.
+_STATIC_FACE_W, _STATIC_FACE_H = 420, 380
+_static_face_png: Optional[bytes] = None
+
+
+def _transparent_static_face() -> bytes:
+    global _static_face_png
+    if _static_face_png is None:
+        buf = BytesIO()
+        Image.new("RGBA", (_STATIC_FACE_W, _STATIC_FACE_H), (0, 0, 0, 0)).save(
+            buf, format="PNG", optimize=True
+        )
+        _static_face_png = buf.getvalue()
+    return _static_face_png
+
+
+@router.get("/cube/{theme}/static.png")
+@limiter.limit("600/minute")
+def cube_static_png(theme: str, request: Request) -> Response:
+    """Transparent placeholder for the cube's STATIC face (420×380).
+
+    The campaign overlays its own generic-message image on this face, so we
+    serve pure transparency — no Jugabet branding bleeds through. Its companion
+    is the dynamic, auto-updating match + odds face at /cube/{theme}/odds.png.
+    """
+    t = get_theme(theme)
+    if t is None:
+        raise HTTPException(404, f"Unknown cube theme: {theme}")
+    png = _transparent_static_face()
+    etag = _etag(png)
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers={"ETag": etag})
+    return _png_response(png, cache_status="STATIC", etag=etag)
 
 
 @router.get("/cube/{theme}", response_class=HTMLResponse)

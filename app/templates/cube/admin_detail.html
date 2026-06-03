@@ -35,8 +35,9 @@
     Drag a match into a slot to pin it. Drag a pinned match out of its slot
     (into the candidate pool, search results, or another slot) to move it.
     Drop a pinned match back into the pool to unpin it.
-    Open <a href="/cube/{{ theme.slug }}.png" target="_blank" class="underline">/cube/{{ theme.slug }}.png</a>
-    to preview the current state.
+    Open <a href="/cube/{{ theme.slug }}.png" target="_blank" class="underline"
+       onclick="this.href='/cube/{{ theme.slug }}.png?t=' + Date.now()">/cube/{{ theme.slug }}.png</a>
+    to preview the current state (opens a fresh, un-cached render).
   </p>
 
   <!-- ═══════════════════════════════════════════════════════════════════
@@ -447,6 +448,37 @@ function cubeAdmin() {
       return job;
     },
 
+    async _swap(eidA, slotA, eidB, slotB) {
+      // Atomic two-event swap via /reorder so we never leave both events
+      // briefly fighting for one slot (which two sequential /pin calls do).
+      // Relies on load() to repaint from server truth — no optimistic
+      // mutation, which keeps the slot DOM clean after the SortableJS move.
+      const self = this;
+      const job = self._writeQueue.then(async () => {
+        try {
+          const r = await fetch(`/api/admin/cube/${self.theme}/reorder`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pins: [
+              { event_id: eidA, position: slotA },
+              { event_id: eidB, position: slotB },
+            ] }),
+          });
+          if (!r.ok) {
+            const body = await r.text();
+            throw new Error(`HTTP ${r.status}: ${body}`);
+          }
+          self._flash(`Swapped slots ${slotB + 1} ↔ ${slotA + 1}`);
+        } catch (e) {
+          self.error = `Swap failed: ${e.message}`;
+        }
+        await self.load();
+      });
+      self._writeQueue = job.catch(() => {});
+      return job;
+    },
+
     _wireSortables() {
       // Tear down any sortables from the previous render.
       for (const s of this._sortables) {
@@ -497,11 +529,23 @@ function cubeAdmin() {
           onAdd: function (evt) {
             const eid = evt.item.dataset.eventId;
             const slot = parseInt(evt.to.dataset.slot, 10);
+            const fromRaw = evt.from.dataset.slot;
             // Remove the Sortable-moved DOM node FIRST so Alpine's next
             // render is the only authority on what's visible in this slot.
             undoVisualMove(evt);
             if (!eid || isNaN(slot)) return;
-            self._pin(eid, slot);
+            const fromSlot = (fromRaw !== undefined && fromRaw !== '')
+              ? parseInt(fromRaw, 10) : null;
+            const occupant = self.topMatches[slot];
+            // Slot → slot drop onto an already-filled slot = SWAP the two
+            // (both get pinned). Untouched slots keep auto-ranking. Any other
+            // drop (from the pool, or onto an empty slot) is a plain pin.
+            if (fromSlot !== null && !isNaN(fromSlot) && fromSlot !== slot
+                && occupant && occupant.event_id && occupant.event_id !== eid) {
+              self._swap(eid, slot, occupant.event_id, fromSlot);
+            } else {
+              self._pin(eid, slot);
+            }
           },
         }));
       }
