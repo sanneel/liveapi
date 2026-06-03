@@ -85,10 +85,10 @@
   {# ── Mode-specific panels ── #}
   <div id="panel-auto" class="bg-ink-850 border border-ink-600 rounded-xl p-5">
     <label class="block text-xs uppercase tracking-wider text-muted-400 mb-1.5">League / Tournament</label>
-    <select id="league-select" name="league"
-            class="w-full bg-ink-700 border border-ink-600 text-zinc-100 rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
-      <option value="">All leagues in sport</option>
-    </select>
+    <input id="league-select" name="league" list="league-options" autocomplete="off"
+           placeholder="All leagues in sport — type to search…"
+           class="w-full bg-ink-700 border border-ink-600 text-zinc-100 rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500"/>
+    <datalist id="league-options"></datalist>
     <p id="league-hint" class="text-xs text-muted-500 mt-1"></p>
   </div>
 
@@ -122,7 +122,8 @@
   const titleInput = document.getElementById('title-input');
   const slugInput = document.getElementById('slug-input');
   const sportSelect = document.getElementById('sport-select');
-  const leagueSelect = document.getElementById('league-select');
+  const leagueInput = document.getElementById('league-select');
+  const leagueOptions = document.getElementById('league-options');
   const leagueHint = document.getElementById('league-hint');
   const urlPreview = document.getElementById('url-preview');
   const submitBtn = document.getElementById('submit-btn');
@@ -145,24 +146,22 @@
   function refreshLeagueOptions() {
     const sport = sportSelect.value;
     const list = TOURNAMENTS[sport] || [];
-    // Preserve "All leagues" + repopulate from current sport
-    leagueSelect.innerHTML = '';
-    const allOpt = document.createElement('option');
-    allOpt.value = '';
-    allOpt.textContent = 'All leagues in sport';
-    leagueSelect.appendChild(allOpt);
+    // Leagues are sport-specific: a value picked for the previous sport is
+    // meaningless here, so reset the field, then repopulate the <datalist>
+    // the search input matches against.
+    leagueInput.value = '';
+    leagueOptions.innerHTML = '';
     list.forEach(t => {
       const o = document.createElement('option');
       o.value = t;
-      o.textContent = t;
-      leagueSelect.appendChild(o);
+      leagueOptions.appendChild(o);
     });
     if (list.length === 0) {
       leagueHint.textContent =
-        `No active ${sport} matches yet. The dropdown fills automatically as the parser sees them. Saving with "All leagues" works now.`;
+        `No active ${sport} matches yet. The list fills automatically as the parser sees them. Saving with "All leagues" (blank) works now.`;
     } else {
       leagueHint.textContent =
-        `${list.length} tournaments currently active for ${sport}. Leave blank to rank across all of them.`;
+        `${list.length} tournaments active for ${sport}. Type to search, or leave blank to rank across all of them.`;
     }
   }
 

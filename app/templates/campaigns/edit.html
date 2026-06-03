@@ -98,12 +98,15 @@
         {% if campaign.mode == 'auto' %}
           <div>
             <label class="block text-xs uppercase text-muted-400 mb-1">League / Tournament</label>
-            <select name="league" class="w-full bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
-              <option value="">All leagues in sport</option>
+            <input name="league" list="league-options" autocomplete="off"
+                   value="{{ campaign.league or '' }}"
+                   placeholder="All leagues in sport — type to search…"
+                   class="w-full bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"/>
+            <datalist id="league-options">
               {% for t in tournaments %}
-                <option value="{{ t }}" {% if campaign.league == t %}selected{% endif %}>{{ t }}</option>
+                <option value="{{ t }}"></option>
               {% endfor %}
-            </select>
+            </datalist>
           </div>
         {% endif %}
 
