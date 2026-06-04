@@ -12,6 +12,14 @@ UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 # campaigns + clubs + Phase 3 hot dashboard mutation endpoints.
 CSRF_PROTECTED_PREFIXES = ("/admin", "/api/admin", "/api/hot", "/manual")
 
+# Public render endpoints are designed to be embedded on third-party sites —
+# ad creatives, partner pages, Google Ad Manager. They expose no sensitive
+# data, so they must opt out of the same-site Cross-Origin-Resource-Policy
+# lock; otherwise a cross-origin <img>/<iframe> (e.g. a GAM creative pulling
+# /cube/worldcup/odds.png) is blocked by the browser. Everything else stays
+# same-site.
+PUBLIC_EMBED_PREFIXES = ("/cube", "/r/", "/hot", "/render", "/club")
+
 
 def _origin_from_request(request: Request) -> str:
     proto = request.headers.get("x-forwarded-proto") or request.url.scheme
@@ -41,7 +49,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         if request.url.path.startswith(("/admin", "/api/admin")):
             response.headers.setdefault("X-Robots-Tag", "noindex, nofollow, noarchive")
         response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
-        response.headers.setdefault("Cross-Origin-Resource-Policy", "same-site")
+        # Embeddable public render endpoints get cross-origin so third-party
+        # sites (Google Ad Manager etc.) can load them; all else stays same-site.
+        corp = (
+            "cross-origin"
+            if request.url.path.startswith(PUBLIC_EMBED_PREFIXES)
+            else "same-site"
+        )
+        response.headers.setdefault("Cross-Origin-Resource-Policy", corp)
         # `unsafe-eval` is required by:
         #   - Alpine.js: compiles every x-show/x-text/x-model/etc. directive
         #     into a runtime Function() — without it, every binding silently
