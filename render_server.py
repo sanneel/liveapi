@@ -176,15 +176,28 @@ def _score_text(event: Dict[str, Any]) -> str:
     return f"{h}:{a}"
 
 
-def _odds_values(event: Dict[str, Any]) -> Tuple[str, str, str]:
+def _odds_pills(event: Dict[str, Any]) -> List[str]:
+    """Odds to render as pills, adapting to the market shape so a 2-way fixture
+    mixed into a campaign (e.g. a basketball game in a football campaign) shows
+    its real odds instead of three blank dashes:
+
+      * 1x2 (home / draw / away)   -> [p1, draw, p2]   (3 pills)
+      * winner / 2-way (home/away) -> [p1, p2]         (2 pills)
+
+    A draw price is what distinguishes a 3-way market; without one we render the
+    two-pill layout the basketball/tennis renderers already use.
+    """
     market = event.get("market") or {}
-    odds = (market.get("odds") or {}) if (market.get("type") == "1x2") else {}
+    odds = market.get("odds") or {}
 
     def f(x: Any) -> str:
         s = _txt(x)
         return s if s else "-"
 
-    return f(odds.get("p1")), f(odds.get("draw")), f(odds.get("p2"))
+    has_draw = (market.get("type") == "1x2") or (_txt(odds.get("draw")) != "")
+    if has_draw:
+        return [f(odds.get("p1")), f(odds.get("draw")), f(odds.get("p2"))]
+    return [f(odds.get("p1")), f(odds.get("p2"))]
 
 
 # ---------- Logo cache (anti-DDOS) ----------
@@ -644,17 +657,17 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
             vs_y = int(baseline_y - (font_vs.size * 0.60))
             d.text((center_x - vw / 2, vs_y), vs_txt, fill=accent, font=font_vs)
 
-        p1, dr, p2 = _odds_values(ev)
-        vals = [p1, dr, p2]
+        vals = _odds_pills(ev)
+        n = len(vals)  # 3 for 1x2, 2 for a 2-way market (basketball, tennis…)
 
         pill_y0 = y0 + 192
         pill_h = 54
         pill_gap = 14
         total_w = (x1 - x0) - 44
-        pill_w = int((total_w - 2 * pill_gap) / 3)
+        pill_w = int((total_w - (n - 1) * pill_gap) / n)
 
         start_x = x0 + 22
-        for j in range(3):
+        for j in range(n):
             px0 = start_x + j * (pill_w + pill_gap)
             px1 = px0 + pill_w
             _rounded_rect(
