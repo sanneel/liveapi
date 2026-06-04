@@ -45,7 +45,7 @@ except Exception:
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
-from urllib.parse import quote as _url_quote
+from urllib.parse import quote as _url_quote, unquote as _url_unquote
 from zoneinfo import ZoneInfo
 
 from bs4 import BeautifulSoup
@@ -338,6 +338,25 @@ def make_abs_url(href_or_src: Optional[str]) -> Optional[str]:
     if s.startswith("/"):
         return SITE_BASE + s
     return s
+
+
+def _title_from_slug(slug: Optional[str]) -> Optional[str]:
+    if not slug:
+        return None
+    text = _url_unquote(str(slug)).replace("-", " ").replace("_", " ")
+    return " ".join(part.capitalize() for part in text.split()) or None
+
+
+def _event_parts_from_href(href: Optional[str]) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    """Return (event_id, home_slug, away_slug) from /events/home_away_123."""
+    if not href:
+        return None, None, None
+    path = _url_unquote(str(href).split("?", 1)[0].rstrip("/"))
+    m = re.search(r"/events/([^/_]+(?:-[^/_]+)*)_([^/_]+(?:-[^/_]+)*)_(\d+)$", path)
+    if not m:
+        return None, None, None
+    home_slug, away_slug, event_id = m.group(1), m.group(2), m.group(3)
+    return event_id, home_slug, away_slug
 
 
 def clone_events_with_sport(events: List[Dict[str, Any]], sport: str) -> List[Dict[str, Any]]:
@@ -829,6 +848,30 @@ def _parse_data_time(data_time: Optional[str]) -> Tuple[Optional[str], Optional[
         return None, None
 
 
+def _parse_epoch_time(epoch_raw: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
+    if not epoch_raw:
+        return None, None
+    try:
+        dt_utc = datetime.fromtimestamp(int(str(epoch_raw).strip()), tz=ZoneInfo("UTC"))
+        dt_cl = dt_utc.astimezone(_CHILE_TZ)
+        now_cl = datetime.now(_CHILE_TZ)
+        if dt_cl.date() == now_cl.date():
+            display = f"Hoy, {dt_cl.strftime('%H:%M')}"
+        elif dt_cl.date() == (now_cl + timedelta(days=1)).date():
+            display = f"MaÃ±ana, {dt_cl.strftime('%H:%M')}"
+        elif dt_cl.year != now_cl.year:
+            display = (
+                f"{dt_cl.day} {_MONTHS_ES[dt_cl.month - 1]} {dt_cl.year}, "
+                f"{dt_cl.strftime('%H:%M')}"
+            )
+        else:
+            display = f"{dt_cl.day} {_MONTHS_ES[dt_cl.month - 1]}, {dt_cl.strftime('%H:%M')}"
+        return display, dt_utc.isoformat()
+    except Exception:
+        logger.warning("parser: failed to parse epoch time %r", epoch_raw, exc_info=True)
+        return None, None
+
+
 # BUG-01/DEVOPS-02 root cause: the previous thread-local Playwright design
 # spawned one Node-driver subprocess per parser thread. When 14+ threads
 # raced to call `sync_playwright().start()` near-simultaneously, the Node
@@ -842,7 +885,7 @@ def _parse_data_time(data_time: Optional[str]) -> Tuple[Optional[str], Optional[
 # threads never touch Playwright directly. Eliminates the multi-process
 # race AND keeps the browser-reuse perf win from C4.
 import queue as _queue
-from concurrent.futures import Future as _Future
+from concurrent.futures import Future as _Future, TimeoutError as _FutureTimeout
 
 _pw_jobs: "_queue.Queue[Tuple[str, _Future]]" = _queue.Queue()
 _pw_worker_started = False
@@ -860,6 +903,20 @@ _pw_worker_thread: Optional[threading.Thread] = None
 # and EPIPE the Node driver, reproducing the original BUG-01 crash.
 _pw_last_dequeue_at: float = 0.0
 _pw_worker_stall_seconds = 900.0
+_pw_fetches_since_browser_recycle = 0
+_pw_browser_recycle_after_fetches = 50
+_pw_active_job_url: Optional[str] = None
+_pw_active_job_started_at: float = 0.0
+_pw_jobs_enqueued = 0
+_pw_jobs_completed = 0
+_pw_jobs_failed = 0
+
+# When Jugabet soft-blocks this host, feeds fetch quickly but parse zero usable
+# matches. Back off per feed so the parser does not burn CPU/RAM hammering the
+# same blocked pages while still preserving last-known DB data.
+_soft_block_backoff_seconds = 15 * 60
+_feed_backoff_until: Dict[Tuple[str, str], float] = {}
+_feed_backoff_lock = threading.Lock()
 
 
 def _pw_worker_loop() -> None:
@@ -877,6 +934,10 @@ def _pw_worker_loop() -> None:
     down on any failure so the next job starts from a clean slate.
     """
     import traceback as _traceback
+
+    global _pw_fetches_since_browser_recycle
+    global _pw_active_job_url, _pw_active_job_started_at
+    global _pw_jobs_completed, _pw_jobs_failed
 
     pw = None
     browser = None
@@ -938,6 +999,8 @@ def _pw_worker_loop() -> None:
             except Exception:
                 pass
             return
+        _pw_active_job_url = url
+        _pw_active_job_started_at = time.monotonic()
         # BaseException — not just Exception — because Playwright can raise
         # GreenletExit / SystemExit / OSError from its IPC thread that we
         # don't want crashing the worker. KeyboardInterrupt is the one we
@@ -948,13 +1011,32 @@ def _pw_worker_loop() -> None:
             parser_logger.info(f"pw-worker: starting fetch for url={url}")
             html, api_data = _do_fetch(br, url)
             fut.set_result((html, api_data))
+            _pw_jobs_completed += 1
+            _pw_fetches_since_browser_recycle += 1
             print(f"[BROWSER] Fetch completed successfully for url={url}", flush=True)
             parser_logger.info(f"pw-worker: fetch completed successfully for url={url}")
+            if _pw_fetches_since_browser_recycle >= _pw_browser_recycle_after_fetches:
+                parser_logger.info(
+                    "pw-worker: recycling chromium after %s successful fetches",
+                    _pw_fetches_since_browser_recycle,
+                )
+                print(
+                    f"[BROWSER] recycling chromium after {_pw_fetches_since_browser_recycle} fetches",
+                    flush=True,
+                )
+                try:
+                    if browser is not None:
+                        browser.close()
+                except Exception:
+                    parser_logger.warning("pw-worker: browser recycle close failed", exc_info=True)
+                browser = None
+                _pw_fetches_since_browser_recycle = 0
         except KeyboardInterrupt:
             try:
                 fut.set_exception(KeyboardInterrupt())
             except Exception:
                 pass
+            _pw_jobs_failed += 1
             _shutdown_pw()
             raise
         except BaseException as e:
@@ -992,6 +1074,7 @@ def _pw_worker_loop() -> None:
                 fut.set_exception(e if isinstance(e, Exception) else RuntimeError(str(e)))
             except Exception:
                 pass
+            _pw_jobs_failed += 1
 
             # Detect "driver / pw is dead beyond recovery" and exit the
             # loop so a fresh worker can take over. Without this, every
@@ -1020,6 +1103,9 @@ def _pw_worker_loop() -> None:
                 # subprocess. pw.stop() would try to flush events
                 # through the dead pipe and EPIPE.
                 return
+        finally:
+            _pw_active_job_url = None
+            _pw_active_job_started_at = 0.0
 
 
 def _pw_worker_loop_safe() -> None:
@@ -1213,6 +1299,22 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
 
         page.wait_for_timeout(JS_SETTLE_MS)
         html = page.content()
+        try:
+            rendered_cards = page.locator("div.event-card").evaluate_all(
+                "(cards) => cards.map((card) => card.outerHTML)"
+            )
+            if rendered_cards:
+                html = (
+                    "<html><body>"
+                    + "\n".join(str(card) for card in rendered_cards)
+                    + "</body></html>"
+                )
+                parser_logger.info(
+                    "pw-worker: serialized %s Playwright-visible event cards",
+                    len(rendered_cards),
+                )
+        except Exception:
+            parser_logger.warning("parser: failed to serialize rendered event cards", exc_info=True)
         if _looks_like_geo_restriction(html):
             raise RuntimeError(
                 "Jugabet geo restriction page returned; use a Chile egress IP/proxy"
@@ -1227,16 +1329,74 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
 
 def fetch_rendered_html(url: str) -> Tuple[str, Dict[str, Any]]:
     """Submit a fetch job to the pw-worker thread and wait for the result."""
+    global _pw_jobs_enqueued
     _ensure_pw_worker()
-    parser_logger.info(f"fetch_rendered_html: queuing job for {url}")
+    q_before = _pw_jobs.qsize()
+    _pw_jobs_enqueued += 1
+    parser_logger.info(
+        "fetch_rendered_html: queuing job for %s (queue_before=%s, enqueued=%s)",
+        url,
+        q_before,
+        _pw_jobs_enqueued,
+    )
     fut: _Future = _Future()
     _pw_jobs.put((url, fut))
     # Allow for queue depth: up to ~16 URLs × ~30s each worst case +
     # headroom. This is the deadline before the parser thread gives up,
     # NOT a per-fetch timeout (Playwright bounds the per-fetch part).
-    res = fut.result(timeout=600)
+    try:
+        res = fut.result(timeout=600)
+    except _FutureTimeout as e:
+        active_age = (
+            time.monotonic() - _pw_active_job_started_at
+            if _pw_active_job_started_at
+            else None
+        )
+        parser_logger.error(
+            "fetch_rendered_html: timed out waiting for %s "
+            "(queue_size=%s, active_url=%s, active_age=%s)",
+            url,
+            _pw_jobs.qsize(),
+            _pw_active_job_url,
+            round(active_age, 1) if active_age is not None else None,
+        )
+        raise RuntimeError(
+            "Playwright queue timed out after 600s waiting for "
+            f"{url}; active_url={_pw_active_job_url}; "
+            f"active_age_seconds={round(active_age, 1) if active_age is not None else None}; "
+            f"queue_size={_pw_jobs.qsize()}"
+        ) from e
     parser_logger.info(f"fetch_rendered_html: job completed for {url}")
     return res
+
+
+def _set_feed_backoff(key: Tuple[str, str], seconds: int, reason: str) -> None:
+    until = time.monotonic() + max(1, seconds)
+    with _feed_backoff_lock:
+        _feed_backoff_until[key] = until
+    parser_logger.warning(
+        "parser: backing off feed %s for %ss (%s)",
+        key,
+        seconds,
+        reason,
+    )
+
+
+def _clear_feed_backoff(key: Tuple[str, str]) -> None:
+    with _feed_backoff_lock:
+        _feed_backoff_until.pop(key, None)
+
+
+def _feed_backoff_remaining(key: Tuple[str, str]) -> float:
+    with _feed_backoff_lock:
+        until = _feed_backoff_until.get(key)
+    if not until:
+        return 0.0
+    remaining = until - time.monotonic()
+    if remaining <= 0:
+        _clear_feed_backoff(key)
+        return 0.0
+    return remaining
 
 
 def _looks_like_geo_restriction(html: str) -> bool:
@@ -1256,16 +1416,21 @@ def parse_html(html: str, api_data: Dict[str, Any] = None) -> List[Dict[str, Any
     parser_logger.info(f"parse_html: found {len(cards)} event-card div elements in the page HTML")
 
     for card in cards:
-        event_id = card.get("data-event-card-id")
-        if not event_id:
-            parser_logger.debug("parse_html: event card has no data-event-card-id, skipping")
-            continue
-
         # --- event link ---
         a_el = card.select_one('a[data-id="event-card"]')
         if a_el is None:
+            a_el = card.select_one('a.event-card__additional-info[href*="/events/"]')
+        if a_el is None:
+            a_el = card.select_one('a[href*="/events/"]')
+        if a_el is None:
             a_el = card.find_parent("a", attrs={"data-id": "event-card"})
         event_href = make_abs_url(a_el.get("href") if a_el else None)
+        href_event_id, href_home_slug, href_away_slug = _event_parts_from_href(event_href)
+
+        event_id = card.get("data-event-card-id") or href_event_id
+        if not event_id:
+            parser_logger.debug("parse_html: event card has no event id, skipping")
+            continue
 
         # --- status from data-event-stage attribute (most reliable source) ---
         status = (card.get("data-event-stage") or "").strip().lower()
@@ -1303,6 +1468,15 @@ def parse_html(html: str, api_data: Dict[str, Any] = None) -> List[Dict[str, Any
             except Exception:
                 pass
 
+        if href_home_slug and not home_slug:
+            home_slug = href_home_slug
+            home_name = home_name or _title_from_slug(home_slug)
+            home_logo = home_logo or LOGO_URL.format(slug=_url_quote(home_slug, safe=""))
+        if href_away_slug and not away_slug:
+            away_slug = href_away_slug
+            away_name = away_name or _title_from_slug(away_slug)
+            away_logo = away_logo or LOGO_URL.format(slug=_url_quote(away_slug, safe=""))
+
         # fallback: old CSS class text parsing
         if not home_name or not away_name:
             blocks = card.select("div.competitors__competitor")
@@ -1329,6 +1503,10 @@ def parse_html(html: str, api_data: Dict[str, Any] = None) -> List[Dict[str, Any
         time_el = card.select_one("[data-time]")
         if time_el and time_el.get("data-time"):
             time_raw, time_utc = _parse_data_time(time_el.get("data-time"))
+        elif card.select_one("app-time-status[time]"):
+            time_raw, time_utc = _parse_epoch_time(
+                card.select_one("app-time-status[time]").get("time")
+            )
         else:
             # fallback: read text from time-status paragraph
             p_time = card.select_one("p.time-status")
@@ -1406,6 +1584,20 @@ def refresh_once(key: Tuple[str, str]) -> None:
     sport, mode = key
     print(f"[PARSER] Starting refresh for {sport}/{mode}...", flush=True)
     parser_logger.info(f"refresh_once: starting refresh for feed {key} using url {url}")
+    attempt_epoch = int(time.time())
+    with _state_lock:
+        prev = _state[key]
+        prev.meta = {
+            **prev.meta,
+            "ok": False,
+            "error": "refresh in progress",
+            "last_attempt_epoch": attempt_epoch,
+            "source_url": url,
+            "sport": sport,
+            "mode": mode,
+            "timezone": FORCED_TIMEZONE,
+        }
+        _state[key] = prev
 
     _parser_sem.acquire()
     try:
@@ -1434,6 +1626,8 @@ def refresh_once(key: Tuple[str, str]) -> None:
                 f"refresh_once: feed {key} produced 0 matches ({reason}); marking "
                 f"degraded, keeping last-known data, skipping DB write"
             )
+            if not api_data:
+                _set_feed_backoff(key, _soft_block_backoff_seconds, reason)
             with _state_lock:
                 prev = _state[key]
                 prev_success = prev.meta.get("last_success_epoch") or 0
@@ -1445,6 +1639,7 @@ def refresh_once(key: Tuple[str, str]) -> None:
                     "ok": False,
                     "error": reason,
                     "empty": True,
+                    "last_attempt_epoch": attempt_epoch,
                     "last_updated_epoch": now_epoch,
                     "last_success_epoch": prev_success,
                     "source_url": url,
@@ -1456,12 +1651,15 @@ def refresh_once(key: Tuple[str, str]) -> None:
                 _state[key] = prev
             return
 
+        _clear_feed_backoff(key)
+
         with _state_lock:
             _state[key] = FeedState(
                 data=data,
                 meta={
                     "ok": True,
                     "error": None,
+                    "last_attempt_epoch": attempt_epoch,
                     "last_updated_epoch": now_epoch,
                     "last_success_epoch": now_epoch,
                     "source_url": url,
@@ -1509,6 +1707,14 @@ def refresh_once(key: Tuple[str, str]) -> None:
     except Exception as e:
         print(f"[PARSER] Failed refresh for {sport}/{mode}: {e}", flush=True)
         parser_logger.error(f"refresh_once: feed {key} failed: {e}", exc_info=True)
+        err_text = str(e).lower()
+        if (
+            "geo restriction" in err_text
+            or "soft-block" in err_text
+            or "timeout" in err_text
+            or "target closed" in err_text
+        ):
+            _set_feed_backoff(key, _soft_block_backoff_seconds, str(e))
         with _state_lock:
             prev = _state[key]
             now_epoch = int(time.time())
@@ -1524,6 +1730,7 @@ def refresh_once(key: Tuple[str, str]) -> None:
             prev.meta = {
                 "ok": False,
                 "error": str(e),
+                "last_attempt_epoch": attempt_epoch,
                 "last_updated_epoch": now_epoch,
                 "last_success_epoch": last_success,
                 "source_url": url,
@@ -1579,6 +1786,16 @@ def refresh_loop(key: Tuple[str, str], initial_delay: float = 0.0) -> None:
         # protocol error escaping the inner handler) would kill the thread
         # silently. Wrap the loop body so the thread can't die.
         try:
+            backoff_remaining = _feed_backoff_remaining(key)
+            if backoff_remaining > 0:
+                logger.warning(
+                    "parser: skipping feed %s for %.0fs due to upstream backoff",
+                    key,
+                    backoff_remaining,
+                )
+                time.sleep(min(backoff_remaining, cadence))
+                next_at = time.monotonic()
+                continue
             refresh_once(key)
         except Exception:
             logger.exception(f"parser: refresh_loop iteration crashed for {key}")
@@ -2181,6 +2398,27 @@ def health() -> Dict[str, Any]:
         pass
     out["parser_owner_pid"] = owner_pid
     out["parser_owner_alive"] = owner_alive
+    worker_alive = bool(_pw_worker_thread and _pw_worker_thread.is_alive())
+    active_age = (
+        time.monotonic() - _pw_active_job_started_at
+        if _pw_active_job_started_at
+        else None
+    )
+    last_dequeue_age = (
+        time.monotonic() - _pw_last_dequeue_at
+        if _pw_last_dequeue_at
+        else None
+    )
+    out["parser_worker"] = {
+        "alive": worker_alive,
+        "queue_size": _pw_jobs.qsize(),
+        "active_url": _pw_active_job_url,
+        "active_age_seconds": int(active_age) if active_age is not None else None,
+        "last_dequeue_age_seconds": int(last_dequeue_age) if last_dequeue_age is not None else None,
+        "jobs_enqueued": _pw_jobs_enqueued,
+        "jobs_completed": _pw_jobs_completed,
+        "jobs_failed": _pw_jobs_failed,
+    }
 
     # Parser freshness via DB
     try:
@@ -2215,8 +2453,10 @@ def health() -> Dict[str, Any]:
             feeds[f"{key[0]}/{key[1]}"] = {
                 "ok": bool(meta.get("ok")),
                 "error": meta.get("error"),
+                "last_attempt_epoch": meta.get("last_attempt_epoch"),
                 "last_updated_epoch": meta.get("last_updated_epoch"),
                 "count": meta.get("count", 0),
+                "backoff_remaining_seconds": int(_feed_backoff_remaining(key)),
             }
     out["feeds"] = feeds
     out["refresh_seconds"] = REFRESH_SECONDS
