@@ -100,24 +100,6 @@ TIMEOUT_MS = SETTINGS.parser_timeout_ms
 WAIT_SELECTOR = "div.event-card"
 JS_SETTLE_MS = SETTINGS.parser_js_settle_ms
 
-
-def _parser_proxy() -> Optional[Dict[str, str]]:
-    """Playwright proxy config from settings, or None when PARSER_PROXY is unset.
-
-    Routes the parser's browser through a (residential Chile) proxy so jugabet
-    doesn't soft-block our datacenter egress IP. No-op — direct egress — when
-    PARSER_PROXY is empty, so this is safe to ship before a proxy is wired up.
-    """
-    server = (SETTINGS.parser_proxy or "").strip()
-    if not server:
-        return None
-    cfg: Dict[str, str] = {"server": server}
-    if SETTINGS.parser_proxy_username:
-        cfg["username"] = SETTINGS.parser_proxy_username
-    if SETTINGS.parser_proxy_password:
-        cfg["password"] = SETTINGS.parser_proxy_password
-    return cfg
-
 # Shorter ceilings for the two waits INSIDE a page fetch that block the
 # pw-worker queue when a page legitimately has no events (off-hours live
 # pages, empty sport markets). The PARSER_TIMEOUT_MS=30000 default makes
@@ -973,15 +955,8 @@ def _pw_worker_loop() -> None:
             except Exception:
                 pass
             print("[BROWSER] launching chromium headless...", flush=True)
-            _proxy = _parser_proxy()
             _launch_kwargs: Dict[str, Any] = {"headless": True}
-            if _proxy:
-                _launch_kwargs["proxy"] = _proxy
-                parser_logger.info(
-                    f"pw-worker: launching chromium headless via proxy {_proxy['server']}"
-                )
-            else:
-                parser_logger.info("pw-worker: launching chromium headless browser (direct egress)...")
+            parser_logger.info("pw-worker: launching chromium headless browser (direct egress)...")
             browser = pw.chromium.launch(**_launch_kwargs)
             print("[BROWSER] chromium launched ok", flush=True)
         return browser
@@ -1317,7 +1292,7 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
             parser_logger.warning("parser: failed to serialize rendered event cards", exc_info=True)
         if _looks_like_geo_restriction(html):
             raise RuntimeError(
-                "Jugabet geo restriction page returned; use a Chile egress IP/proxy"
+                "Jugabet geo restriction page returned from this server egress"
             )
         return html, api_data
     finally:
