@@ -495,7 +495,11 @@ def api_picker_search(
         c = CampaignRepository(session).find_by_slug(slug)
         if not c:
             raise HTTPException(404)
-        effective_sport = sport or c.sport
+        # `sport="all"` searches every sport so a manual campaign can combine
+        # fixtures from different sports (e.g. football + basketball) into one
+        # PNG. Empty/absent falls back to the campaign's own sport, so existing
+        # behaviour is unchanged.
+        effective_sport = None if sport == "all" else (sport or c.sport)
         repo = MatchRepository(session)
         results = repo.search(
             query=q or None,

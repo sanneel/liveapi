@@ -243,13 +243,25 @@
 
         <div class="p-4 border-b border-ink-600 space-y-2"
              hx-get="/api/admin/campaigns/{{ campaign.slug }}/picker"
-             hx-trigger="keyup changed delay:250ms from:input[name='q'], change from:select[name='tournament'], change delay:250ms from:input[name='team'], change from:input[name='include_synthetic'], load"
-             hx-include="input[name='q'], select[name='tournament'], input[name='team'], input[name='include_synthetic']:checked"
+             hx-trigger="keyup changed delay:250ms from:input[name='q'], change from:select[name='sport'], change from:select[name='tournament'], change delay:250ms from:input[name='team'], change from:input[name='include_synthetic'], load"
+             hx-include="input[name='q'], select[name='sport'], select[name='tournament'], input[name='team'], input[name='include_synthetic']:checked"
              hx-target="#picker-results">
           <input type="text" name="q"
                  placeholder="Search team or league…"
                  class="w-full bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"/>
           <div class="grid grid-cols-2 gap-2">
+            {# Sport selector — defaults to this campaign's sport. Switch it (or
+               pick "All sports") to add fixtures from other sports to the same
+               PNG, e.g. combine football + basketball. The league list below
+               stays scoped to the campaign's own sport, so for cross-sport
+               picks search by team / keyword with "All leagues" selected. #}
+            <select name="sport"
+                    class="bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-xs focus:border-brand-500 focus:outline-none">
+              {% for s in valid_sports %}
+                <option value="{{ s }}" {% if s == campaign.sport %}selected{% endif %}>{{ s|capitalize }}</option>
+              {% endfor %}
+              <option value="all">All sports</option>
+            </select>
             <select name="tournament"
                     class="bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-xs focus:border-brand-500 focus:outline-none">
               <option value="">All leagues</option>
@@ -257,10 +269,10 @@
                 <option value="{{ t }}">{{ t }}</option>
               {% endfor %}
             </select>
-            <input type="text" name="team"
-                   placeholder="Team slug or name…"
-                   class="bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-xs focus:border-brand-500 focus:outline-none"/>
           </div>
+          <input type="text" name="team"
+                 placeholder="Team slug or name…"
+                 class="w-full bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-xs focus:border-brand-500 focus:outline-none"/>
           <label class="flex items-center gap-2 text-[11px] text-muted-400 select-none cursor-pointer mt-1">
             <input type="checkbox" name="include_synthetic" value="1"
                    class="accent-brand-500"/>
