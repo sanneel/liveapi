@@ -1123,6 +1123,23 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
 
         def handle_response(response):
             url_lower = response.url.lower()
+            # [TEMP DIAGNOSTIC — safe to remove] Print every JSON/API XHR the
+            # browser sees (url + status + body length) to stdout
+            # (-> app.stdout.log), so we can read jugabet's CURRENT odds
+            # endpoint directly and tell "they moved the endpoint" apart from
+            # "IP soft-block". No behavior change; logs only.
+            try:
+                _ct = (response.headers or {}).get("content-type", "")
+                if ("json" in _ct) or any(
+                    _s in url_lower for _s in ("filter", "odds", "market", "graphql", "/api")
+                ):
+                    try:
+                        _blen = len(response.body() or b"")
+                    except Exception:
+                        _blen = -1
+                    print(f"[XHR] {response.status} len={_blen} {response.url}", flush=True)
+            except Exception:
+                pass
             if "by-market-filter" in url_lower or "by-sport-filter" in url_lower:
                 try:
                     data = response.json()
