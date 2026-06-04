@@ -40,6 +40,16 @@ class Settings(BaseSettings):
     parser_enabled: bool = True
     parser_max_concurrency: int = 8
 
+    # Optional egress proxy for the Playwright parser. Jugabet soft-blocks
+    # datacenter IPs (odds XHRs come back HTTP 200 with an empty `{}` body),
+    # so route the browser through a residential Chile proxy to dodge it.
+    # Empty = direct egress (no proxy). Examples:
+    #   PARSER_PROXY=http://host:port   or   socks5://host:port
+    # Credentials can be inline in the URL or split into the two vars below.
+    parser_proxy: str = ""
+    parser_proxy_username: str = ""
+    parser_proxy_password: str = ""
+
     # ── Match lifecycle ──────────────────────────────────────────────
     # Hours after start_time_utc a match is considered expired. Was 6,
     # which was too tight for: UFC events (5-6h cards), Champions League

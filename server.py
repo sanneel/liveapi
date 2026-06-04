@@ -100,6 +100,24 @@ TIMEOUT_MS = SETTINGS.parser_timeout_ms
 WAIT_SELECTOR = "div.event-card"
 JS_SETTLE_MS = SETTINGS.parser_js_settle_ms
 
+
+def _parser_proxy() -> Optional[Dict[str, str]]:
+    """Playwright proxy config from settings, or None when PARSER_PROXY is unset.
+
+    Routes the parser's browser through a (residential Chile) proxy so jugabet
+    doesn't soft-block our datacenter egress IP. No-op — direct egress — when
+    PARSER_PROXY is empty, so this is safe to ship before a proxy is wired up.
+    """
+    server = (SETTINGS.parser_proxy or "").strip()
+    if not server:
+        return None
+    cfg: Dict[str, str] = {"server": server}
+    if SETTINGS.parser_proxy_username:
+        cfg["username"] = SETTINGS.parser_proxy_username
+    if SETTINGS.parser_proxy_password:
+        cfg["password"] = SETTINGS.parser_proxy_password
+    return cfg
+
 # Shorter ceilings for the two waits INSIDE a page fetch that block the
 # pw-worker queue when a page legitimately has no events (off-hours live
 # pages, empty sport markets). The PARSER_TIMEOUT_MS=30000 default makes
@@ -894,8 +912,16 @@ def _pw_worker_loop() -> None:
             except Exception:
                 pass
             print("[BROWSER] launching chromium headless...", flush=True)
-            parser_logger.info("pw-worker: launching chromium headless browser...")
-            browser = pw.chromium.launch(headless=True)
+            _proxy = _parser_proxy()
+            _launch_kwargs: Dict[str, Any] = {"headless": True}
+            if _proxy:
+                _launch_kwargs["proxy"] = _proxy
+                parser_logger.info(
+                    f"pw-worker: launching chromium headless via proxy {_proxy['server']}"
+                )
+            else:
+                parser_logger.info("pw-worker: launching chromium headless browser (direct egress)...")
+            browser = pw.chromium.launch(**_launch_kwargs)
             print("[BROWSER] chromium launched ok", flush=True)
         return browser
 
@@ -1100,9 +1126,18 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
             if "by-market-filter" in url_lower or "by-sport-filter" in url_lower:
                 try:
                     data = response.json()
-                    if isinstance(data, dict):
+                    if isinstance(data, dict) and data:
                         api_data.update(data)
                         parser_logger.debug(f"pw-worker: intercepted odds data from {response.url}")
+                    elif isinstance(data, dict):
+                        # HTTP 200 with an empty `{}` odds body is jugabet's
+                        # anti-bot soft-block signature (datacenter IP). Surface
+                        # it; refresh_once treats a cycle with no odds as degraded
+                        # rather than committing a silent zero.
+                        parser_logger.warning(
+                            f"parser: empty odds body (HTTP {response.status}) from "
+                            f"{response.url} — possible anti-bot soft-block"
+                        )
                 except Exception:
                     parser_logger.warning(
                         f"parser: failed to parse JSON response url={response.url}",
@@ -1359,6 +1394,50 @@ def refresh_once(key: Tuple[str, str]) -> None:
     try:
         html, api_data = fetch_rendered_html(url)
         data = parse_html(html, api_data)
+        now_epoch = int(time.time())
+        matches_n = len(data)
+
+        if matches_n == 0:
+            # Fetched, but nothing real came back. This is how an anti-bot
+            # soft-block (empty odds XHR -> 0 matches) or a dead feed surfaces:
+            # DO NOT claim ok or advance freshness, and DO NOT write to the DB
+            # — a transient block must never deactivate/wipe rows (the 12h
+            # deactivate_expired net still cleans up genuinely-finished
+            # matches). Keep last-known data until the stale grace lapses.
+            reason = (
+                "empty odds response (possible anti-bot soft-block)"
+                if not api_data
+                else "0 matches parsed"
+            )
+            print(
+                f"[PARSER] {sport}/{mode}: 0 matches ({reason}) — degraded, DB left unchanged",
+                flush=True,
+            )
+            parser_logger.warning(
+                f"refresh_once: feed {key} produced 0 matches ({reason}); marking "
+                f"degraded, keeping last-known data, skipping DB write"
+            )
+            with _state_lock:
+                prev = _state[key]
+                prev_success = prev.meta.get("last_success_epoch") or 0
+                data_after = prev.data
+                if prev_success and (now_epoch - prev_success) > STALE_FEED_GRACE_SECONDS:
+                    data_after = []
+                prev.data = data_after
+                prev.meta = {
+                    "ok": False,
+                    "error": reason,
+                    "empty": True,
+                    "last_updated_epoch": now_epoch,
+                    "last_success_epoch": prev_success,
+                    "source_url": url,
+                    "count": len(data_after),
+                    "sport": sport,
+                    "mode": mode,
+                    "timezone": FORCED_TIMEZONE,
+                }
+                _state[key] = prev
+            return
 
         with _state_lock:
             _state[key] = FeedState(
@@ -1366,10 +1445,10 @@ def refresh_once(key: Tuple[str, str]) -> None:
                 meta={
                     "ok": True,
                     "error": None,
-                    "last_updated_epoch": int(time.time()),
-                    "last_success_epoch": int(time.time()),
+                    "last_updated_epoch": now_epoch,
+                    "last_success_epoch": now_epoch,
                     "source_url": url,
-                    "count": len(data),
+                    "count": matches_n,
                     "sport": sport,
                     "mode": mode,
                     "timezone": FORCED_TIMEZONE,
@@ -2125,6 +2204,24 @@ def health() -> Dict[str, Any]:
     out["feeds"] = feeds
     out["refresh_seconds"] = REFRESH_SECONDS
     out["timezone"] = FORCED_TIMEZONE
+
+    # Degraded detection: the parser can be "running" yet producing nothing
+    # (anti-bot soft-block -> every feed empty), which used to still report
+    # ok=true while the UI froze. Flag it so monitors actually fire and the
+    # JSON matches the UI:
+    #   * every feed has 0 matches (strong soft-block signal), or
+    #   * no match row has been touched in well over a cycle (freshness frozen).
+    degraded_reasons: List[str] = []
+    if feeds and all((f.get("count") or 0) == 0 for f in feeds.values()):
+        degraded_reasons.append("all parser feeds empty (possible anti-bot soft-block)")
+    _fresh = out.get("parser_freshness_seconds")
+    if _fresh is not None and _fresh > 6 * REFRESH_SECONDS:
+        degraded_reasons.append(f"parser freshness {_fresh}s exceeds {6 * REFRESH_SECONDS}s")
+    if degraded_reasons:
+        overall_ok = False
+        out["degraded"] = True
+        out["degraded_reasons"] = degraded_reasons
+
     out["ok"] = overall_ok
     return out
 
