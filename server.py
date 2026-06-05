@@ -1347,18 +1347,19 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
         # We wait up to 20s for p.outcome__odd to appear; if it shows up we know
         # SSE data arrived and odds are now in the DOM. If it times out either
         # SSE is blocked for this IP or the page has no markets.
-        _ODDS_DOM_WAIT_MS = 20_000
-        odds_in_dom = False
+        # Wait for the Centrifugo WebSocket to start delivering odds — v2 pushes
+        # them a few seconds after the cards subscribe. Poll up to 12s and break
+        # as soon as the first odds arrive (far faster than the old 20s wait for
+        # a DOM element v2 never renders). More odds keep arriving on the scroll.
         if cards_found:
-            try:
-                page.wait_for_selector("p.outcome__odd", timeout=_ODDS_DOM_WAIT_MS)
-                odds_in_dom = True
-                parser_logger.info("pw-worker: odds found in DOM via SSE (p.outcome__odd visible)")
-            except PlaywrightTimeoutError:
-                parser_logger.warning(
-                    "pw-worker: no p.outcome__odd after %dms — SSE may be blocked for this IP "
-                    "or page has no markets; reading HTML anyway", _ODDS_DOM_WAIT_MS,
-                )
+            for _ in range(24):  # 24 * 500ms = 12s cap, early-return on first odds
+                if ws_outcomes_by_event:
+                    break
+                page.wait_for_timeout(500)
+            print(
+                f"[PARSER] WS odds: {len(ws_outcomes_by_event)} events after first wait ({url})",
+                flush=True,
+            )
 
         # Also wait for XHR odds response (legacy path — still try it).
         try:
@@ -1415,8 +1416,9 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
         # parse_html can attach them. {event_id: {outcomeType: price}}.
         page.wait_for_timeout(max(JS_SETTLE_MS, 3000))
         if ws_outcomes_by_event:
-            parser_logger.info(
-                "pw-worker: collected WS odds for %d events", len(ws_outcomes_by_event)
+            print(
+                f"[PARSER] WS odds: collected {len(ws_outcomes_by_event)} events total ({url})",
+                flush=True,
             )
             for _eid, _outs in ws_outcomes_by_event.items():
                 _cur = api_data.get(_eid)
@@ -1425,7 +1427,7 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
                 else:
                     api_data[_eid] = {"ws_outcomes": _outs}
         else:
-            parser_logger.info("pw-worker: no WS odds captured for %s", url)
+            print(f"[PARSER] WS odds: NONE captured ({url})", flush=True)
 
         html = page.content()
         try:
