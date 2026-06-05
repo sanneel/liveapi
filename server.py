@@ -1276,6 +1276,12 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
         # event: outcomeType 0=home, 1=draw, 3=away (per /api/v1/sport/layout
         # selectionIds [0,1,3]). Keyed by eventId, which parse_html extracts
         # from the card, so the odds attach straight onto each match.
+        # Collect result-market outcomes grouped BY MARKET, so two different
+        # markets (e.g. 1X2 vs draw-no-bet, both marketType==2) can't collide on
+        # outcomeType and scramble the odds (the 8.50/1.14/7.50 bug). Shape:
+        #   {eventId: {marketId: {"mt": marketType, "outs": {0|1|3: price}}}}
+        # Reduced to one market per event after the fetch (see below).
+        _ws_collected: Dict[str, Dict[str, Dict[str, Any]]] = {}
         ws_outcomes_by_event: Dict[str, Dict[int, Any]] = {}
 
         def _on_ws(ws):
@@ -1294,14 +1300,22 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
                         co = _json.loads(line)["push"]["pub"]["data"]["data"]["customizedOutcome"]
                     except Exception:
                         continue
-                    if not isinstance(co, dict) or co.get("marketType") != 2:
+                    if not isinstance(co, dict):
+                        continue
+                    ot = co.get("outcomeType")
+                    if ot not in (0, 1, 3):           # home/draw/away result selections only
                         continue
                     eid = str(co.get("eventId") or "").strip()
-                    ot = co.get("outcomeType")
+                    mid = str(co.get("marketId") or "").strip()
                     price = co.get("price")
-                    if not eid or ot is None or price is None or not co.get("isOpen", True):
+                    if not eid or not mid or price is None or not co.get("isOpen", True):
                         continue
-                    ws_outcomes_by_event.setdefault(eid, {})[ot] = price
+                    ev = _ws_collected.setdefault(eid, {})
+                    mk = ev.get(mid)
+                    if mk is None:
+                        mk = {"mt": co.get("marketType"), "outs": {}}
+                        ev[mid] = mk
+                    mk["outs"][ot] = price           # latest price wins
             try:
                 ws.on("framereceived", _on_frame)
             except Exception:
@@ -1353,11 +1367,11 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
         # a DOM element v2 never renders). More odds keep arriving on the scroll.
         if cards_found:
             for _ in range(24):  # 24 * 500ms = 12s cap, early-return on first odds
-                if ws_outcomes_by_event:
+                if _ws_collected:
                     break
                 page.wait_for_timeout(500)
             print(
-                f"[PARSER] WS odds: {len(ws_outcomes_by_event)} events after first wait ({url})",
+                f"[PARSER] WS odds: {len(_ws_collected)} events after first wait ({url})",
                 flush=True,
             )
 
@@ -1415,6 +1429,18 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
         # the scroll, then fold them into api_data keyed by event_id so
         # parse_html can attach them. {event_id: {outcomeType: price}}.
         page.wait_for_timeout(max(JS_SETTLE_MS, 3000))
+
+        # Reduce the per-market collection to ONE result market per event: among
+        # markets that carry both home(0) and away(3), prefer a full 1X2 (has a
+        # draw=1), then marketType==2, then the most outcomes. Map 0=p1, 1=draw,
+        # 3=p2 downstream in parse_html.
+        for _eid, _markets in _ws_collected.items():
+            _cands = [m for m in _markets.values() if 0 in m["outs"] and 3 in m["outs"]]
+            if not _cands:
+                continue
+            _best = max(_cands, key=lambda m: (1 in m["outs"], m.get("mt") == 2, len(m["outs"])))
+            ws_outcomes_by_event[_eid] = _best["outs"]
+
         if ws_outcomes_by_event:
             print(
                 f"[PARSER] WS odds: collected {len(ws_outcomes_by_event)} events total ({url})",
