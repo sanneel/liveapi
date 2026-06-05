@@ -1544,7 +1544,13 @@ def parse_html(html: str, api_data: Dict[str, Any] = None) -> List[Dict[str, Any
         away_score = to_int_or_none(away_score_el.get_text(" ", strip=True) if away_score_el else None)
 
         # --- market + odds ---
-        market_name_el = card.select_one('[data-lineup-id="market-name"]')
+        # Angular v2 removed data-lineup-id attributes. Try multiple selectors.
+        market_name_el = (
+            card.select_one('[data-lineup-id="market-name"]')
+            or card.select_one('.event-card__market-name')
+            or card.select_one('[class*="market-name"]')
+            or card.select_one('[class*="market__name"]')
+        )
         market_name_raw = market_name_el.get_text(" ", strip=True) if market_name_el else None
         market_type = _detect_market_type(market_name_raw)
 
@@ -1553,9 +1559,14 @@ def parse_html(html: str, api_data: Dict[str, Any] = None) -> List[Dict[str, Any
             market_odds = _parse_odds_from_json(event_id, market_type, api_data, home_name, away_name)
 
         if market_odds is None:
-            market_container = card.select_one('div.event-card__market [data-lineup-id="market-container"]')
-            if market_container is None:
-                market_container = card.select_one('[data-lineup-id="market-container"]')
+            # Try all known market container selectors (Angular v2 dropped data-lineup-id).
+            market_container = (
+                card.select_one('div.event-card__market [data-lineup-id="market-container"]')
+                or card.select_one('[data-lineup-id="market-container"]')
+                or card.select_one('div.event-card__market')
+                or card.select_one('[class*="event-card__market"]')
+                or card.select_one('[class*="market-container"]')
+            )
 
             if market_type == "1x2":
                 market_odds = _parse_1x2(market_container, home_name, away_name)
@@ -1575,6 +1586,53 @@ def parse_html(html: str, api_data: Dict[str, Any] = None) -> List[Dict[str, Any
                     }
                 else:
                     market_odds = {"odds": []}
+
+            # Last-resort: if we still have no useful odds, scan the card
+            # directly for outcome elements (Angular v2 may have removed all
+            # container wrapper elements that the selectors above rely on).
+            # Infer market type from outcome count: 3→1x2, 2→winner, other→raw.
+            _needs_fallback = (
+                not market_odds
+                or (isinstance(market_odds, dict) and not any(
+                    market_odds.get(k) for k in ("p1", "p2", "draw", "over", "under", "odds")
+                ))
+            )
+            if _needs_fallback:
+                _direct_outcomes = card.select("div.outcome, button.outcome")
+                _direct_odds = []
+                _direct_names = []
+                for _o in _direct_outcomes:
+                    _classes = _o.get("class") or []
+                    if "outcome--title" in _classes:
+                        continue
+                    _odd_el = _o.select_one("p.outcome__odd")
+                    _desc_el = _o.select_one("p.outcome__description, span.outcome__description")
+                    _odd_val = _odd_el.get_text(" ", strip=True).replace("\xa0", " ") if _odd_el else None
+                    _desc_val = _desc_el.get_text(" ", strip=True) if _desc_el else None
+                    if _odd_val:
+                        _direct_odds.append(_odd_val)
+                        _direct_names.append(_desc_val)
+                if _direct_odds:
+                    parser_logger.info(
+                        "parse_html: direct-outcome fallback for %s: found %d outcomes %s",
+                        event_id, len(_direct_odds), _direct_odds,
+                    )
+                if len(_direct_odds) == 3:
+                    # 1x2 — home / draw / away (positional)
+                    _p1, _draw, _p2 = _direct_odds[0], _direct_odds[1], _direct_odds[2]
+                    # If middle cell name is NOT draw-like, swap draw and p2
+                    if _direct_names[1] and not _is_draw_name(_direct_names[1]):
+                        _draw, _p2 = None, _direct_odds[2]
+                    market_odds = {"p1": _p1, "draw": _draw, "p2": _p2, "more_odds": False}
+                    if market_type == "unknown":
+                        market_type = "1x2"
+                elif len(_direct_odds) == 2:
+                    market_odds = {"p1": _direct_odds[0], "p2": _direct_odds[1], "more_odds": False}
+                    if market_type == "unknown":
+                        market_type = "winner"
+                elif len(_direct_odds) >= 1:
+                    market_odds = {"odds": _direct_odds[:10]}
+
 
         parser_logger.info(
             f"parse_html: parsed match {event_id} | {home_name} vs {away_name} | "
