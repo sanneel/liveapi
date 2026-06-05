@@ -84,6 +84,7 @@ from app.logging_config import get_logger
 from app.middleware.security import SameOriginUnsafeMethodMiddleware, SecurityHeadersMiddleware
 from app.routes.public_render import flush_hit_buffer
 from app.parser.extra_feeds import build_extra_feed_map
+from app.parser.embedded_odds import fetch_embedded_odds
 
 logger = get_logger("server")
 parser_logger = get_logger("app.parser.server")
@@ -1506,16 +1507,38 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
         # parse_html can attach them. {event_id: {outcomeType: price}}.
         page.wait_for_timeout(max(JS_SETTLE_MS, 3000))
 
+        # Embedded SSR odds: jugabet ships the full 1X2 result-market odds as
+        # inline JSON in the server HTML. Prematch prices NEVER come over the WS
+        # (it is a live-only update channel), so this HTTP read is the only
+        # reliable source for prematch / World Cup / campaign odds — and it also
+        # back-fills live matches the WS scroll missed. Seed from here; the WS
+        # reduce below overrides per-outcome with fresher live prices.
+        try:
+            _ssr_odds = fetch_embedded_odds(url)
+            for _eid, _outs in _ssr_odds.items():
+                ws_outcomes_by_event[str(_eid)] = dict(_outs)
+            if _ssr_odds:
+                print(
+                    f"[PARSER] SSR odds: {len(_ssr_odds)} events from embedded JSON ({url})",
+                    flush=True,
+                )
+        except Exception:
+            parser_logger.warning("parser: embedded SSR odds failed", exc_info=True)
+
         # Reduce the per-market collection to ONE result market per event: among
         # markets that carry both home(0) and away(3), prefer a full 1X2 (has a
         # draw=1), then marketType==2, then the most outcomes. Map 0=p1, 1=draw,
-        # 3=p2 downstream in parse_html.
+        # 3=p2 downstream in parse_html. Merge onto the SSR seed per-outcome so
+        # fresher live WS prices win while the SSR draw survives if the WS market
+        # is only 2-way.
         for _eid, _markets in _ws_collected.items():
             _cands = [m for m in _markets.values() if 0 in m["outs"] and 3 in m["outs"]]
             if not _cands:
                 continue
             _best = max(_cands, key=lambda m: (1 in m["outs"], m.get("mt") == 2, len(m["outs"])))
-            ws_outcomes_by_event[_eid] = _best["outs"]
+            _merged = dict(ws_outcomes_by_event.get(_eid, {}))
+            _merged.update(_best["outs"])
+            ws_outcomes_by_event[_eid] = _merged
 
         if ws_outcomes_by_event:
             print(
