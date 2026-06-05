@@ -28,8 +28,10 @@ TIME_BOOST_WITHIN_96H: int = 35
 
 # ─── Live boost ──────────────────────────────────────────────────────────
 # Bonus added to a match's score when it's currently being played.
-# Default 1000 effectively pins any boosted live match above every prematch.
-LIVE_BOOST: int = 1000
+# Set to 0 by operator request: a live match should NOT auto-pin above
+# prematch — ranking is driven by league/team/word relevance, not by the
+# match merely being in-play. Raise this if you want live games to surface.
+LIVE_BOOST: int = 0
 
 # When True, the LIVE_BOOST is only applied if the match already earned
 # points from a league or team boost. This prevents a random Estonian
