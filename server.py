@@ -121,6 +121,9 @@ LOGO_URL = "https://jugabet.cl/static/iolite/icons/{slug}.webp"
 
 _CHILE_TZ = ZoneInfo(FORCED_TIMEZONE)
 _MONTHS_ES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"]
+# Single source of truth for the "tomorrow" label so the two time paths can't
+# diverge again (the epoch path had drifted to a double-encoded variant).
+_TOMORROW_LABEL = "Mañana"
 # ====================
 
 app = FastAPI(
@@ -820,7 +823,7 @@ def _parse_data_time(data_time: Optional[str]) -> Tuple[Optional[str], Optional[
         if dt_cl.date() == now_cl.date():
             display = f"Hoy, {dt_cl.strftime('%H:%M')}"
         elif dt_cl.date() == (now_cl + timedelta(days=1)).date():
-            display = f"Mañana, {dt_cl.strftime('%H:%M')}"
+            display = f"{_TOMORROW_LABEL}, {dt_cl.strftime('%H:%M')}"
         else:
             # Bug 11: append year when crossing the year boundary so a Jan 2
             # fixture viewed on Dec 30 doesn't display ambiguously as "2 ene".
@@ -849,13 +852,19 @@ def _parse_epoch_time(epoch_raw: Optional[str]) -> Tuple[Optional[str], Optional
     if not epoch_raw:
         return None, None
     try:
-        dt_utc = datetime.fromtimestamp(int(str(epoch_raw).strip()), tz=ZoneInfo("UTC"))
+        # Same backend −5h skew as the data-time attr (see
+        # JUGABET_DATA_TIME_OFFSET_HOURS): the epoch jugabet emits is computed
+        # from a UTC-5 wall clock, so apply the SAME correction here — otherwise
+        # app-time-status cards (the v2 prematch path) land 5 hours early.
+        dt_utc = datetime.fromtimestamp(
+            int(str(epoch_raw).strip()), tz=ZoneInfo("UTC")
+        ) + timedelta(hours=JUGABET_DATA_TIME_OFFSET_HOURS)
         dt_cl = dt_utc.astimezone(_CHILE_TZ)
         now_cl = datetime.now(_CHILE_TZ)
         if dt_cl.date() == now_cl.date():
             display = f"Hoy, {dt_cl.strftime('%H:%M')}"
         elif dt_cl.date() == (now_cl + timedelta(days=1)).date():
-            display = f"MaÃ±ana, {dt_cl.strftime('%H:%M')}"
+            display = f"{_TOMORROW_LABEL}, {dt_cl.strftime('%H:%M')}"
         elif dt_cl.year != now_cl.year:
             display = (
                 f"{dt_cl.day} {_MONTHS_ES[dt_cl.month - 1]} {dt_cl.year}, "
