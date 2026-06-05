@@ -69,6 +69,20 @@ def main() -> None:
 
         page.on("websocket", on_ws)
 
+        # Capture the REQUEST bodies of the odds-subscription endpoints so we can
+        # replicate them (subscribe all event ids -> server pushes all odds).
+        reqs = []
+
+        def on_req(req):
+            u = req.url
+            if "reactive-outcomes" in u or "by-market-filter" in u or "/markets" in u:
+                try:
+                    reqs.append({"method": req.method, "url": u, "post": (req.post_data or "")[:1800]})
+                except Exception:
+                    pass
+
+        page.on("request", on_req)
+
         try:
             page.goto(URL, wait_until="domcontentloaded", timeout=45000)
         except Exception as e:
@@ -122,6 +136,11 @@ def main() -> None:
     for t in timeline:
         nz = {k: v for k, v in t["odds"].items() if isinstance(v, int) and v > 0}
         print(f"  +{t['sec']:>2}s : {nz if nz else '(none)'}")
+    print("\n=== odds-subscription REQUEST bodies (replicate these to subscribe all) ===")
+    for r in reqs[:12]:
+        print(f"\n--- {r['method']} {r['url']}")
+        print("post:", r["post"])
+
     print("\n=== WebSocket frames (sent = subscriptions, recv = pushes) ===")
     print(json.dumps(ws_frames[:40], indent=2, ensure_ascii=False)[:5000])
     print("\n=== match-card HTML ===")
