@@ -84,7 +84,7 @@ from app.logging_config import get_logger
 from app.middleware.security import SameOriginUnsafeMethodMiddleware, SecurityHeadersMiddleware
 from app.routes.public_render import flush_hit_buffer
 from app.parser.extra_feeds import build_extra_feed_map
-from app.parser.embedded_odds import fetch_embedded_odds
+from app.parser.embedded_odds import fetch_embedded
 
 logger = get_logger("server")
 parser_logger = get_logger("app.parser.server")
@@ -1523,9 +1523,17 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
         # back-fills live matches the WS scroll missed. Seed from here; the WS
         # reduce below overrides per-outcome with fresher live prices.
         try:
-            _ssr_odds = fetch_embedded_odds(url)
+            _ssr_odds, _ssr_tids = fetch_embedded(url)
             for _eid, _outs in _ssr_odds.items():
                 ws_outcomes_by_event[str(_eid)] = dict(_outs)
+            # Stash each event's tournament UUID so parse_html can attach it to
+            # the match (powers the priority odds lane's league lookups).
+            for _eid, _tid in _ssr_tids.items():
+                _cur = api_data.get(_eid)
+                if isinstance(_cur, dict):
+                    _cur["tournament_id"] = _tid
+                else:
+                    api_data[_eid] = {"tournament_id": _tid}
             if _ssr_odds:
                 print(
                     f"[PARSER] SSR odds: {len(_ssr_odds)} events from embedded JSON ({url})",
@@ -1921,12 +1929,15 @@ def parse_html(html: str, api_data: Dict[str, Any] = None) -> List[Dict[str, Any
             f"tournament={tournament_name} | market_type={market_type}"
         )
 
+        _ev_meta = api_data.get(event_id) if (api_data and event_id) else None
+        _tournament_id = _ev_meta.get("tournament_id") if isinstance(_ev_meta, dict) else None
+
         events.append({
             "event_id": str(event_id),
             "href": event_href,
             "status": status,
             "time": {"raw": time_raw, "utc": time_utc},
-            "tournament": {"name": tournament_name},
+            "tournament": {"name": tournament_name, "id": _tournament_id},
             "competitors": {
                 "home": {"name": home_name, "logo": home_logo, "slug": home_slug},
                 "away": {"name": away_name, "logo": away_logo, "slug": away_slug},

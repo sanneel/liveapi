@@ -18,7 +18,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.parser.embedded_odds import extract_result_outcomes, find_events_array
+from app.parser.embedded_odds import extract_result_outcomes, find_events_array, parse_events
 
 
 def _outcome(eid, type_, price, original, market_key=(1, 2, 0, "null", "null"), with_type=True):
@@ -135,6 +135,11 @@ def main() -> None:
 
     # the over/under (non-result) market must NOT leak a 1.90 into home
     assert mex[0] == 1.43, "result-market filter failed (total market leaked)"
+
+    # parse_events returns the same odds plus tournament UUIDs in one pass
+    odds2, tids = parse_events(html)
+    assert odds2 == odds, "parse_events odds disagree with extract_result_outcomes"
+    assert tids.get("15069103") == "c19cb5ffb4404", f"mexico tournament id wrong: {tids}"
 
     # empty / garbage inputs are safe
     assert extract_result_outcomes("") == {}

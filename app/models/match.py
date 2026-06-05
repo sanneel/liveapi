@@ -43,6 +43,9 @@ class Match(Base):
     # Normalized form of tournament_name. Auto campaigns filter on this so
     # feed casing/accent variation doesn't silently break league pinning.
     tournament_slug = Column(String, nullable=True, index=True)
+    # Jugabet's tournament UUID (from the SSR events JSON). Lets the priority
+    # odds parser fetch a featured match's league overlay directly.
+    tournament_id = Column(String, nullable=True, index=True)
     href = Column(String, nullable=True)
 
     # ── time ──

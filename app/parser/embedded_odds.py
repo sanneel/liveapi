@@ -20,7 +20,7 @@ import html as _html
 import json
 import re
 import urllib.request
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from ..logging_config import get_logger
 
@@ -121,53 +121,73 @@ def _market_outcomes(market: dict) -> Dict[int, float]:
     return outs
 
 
-def extract_result_outcomes(html: str) -> Dict[str, Dict[int, float]]:
-    """``{eventId: {0: home, 1: draw, 3: away}}`` for each event's primary
-    match-result market — works for every sport.
+def parse_events(html: str) -> Tuple[Dict[str, Dict[int, float]], Dict[str, str]]:
+    """One pass over the embedded events array → (result odds, tournament ids).
 
-    football is 1X2 (types 0/1/3); all other sports are 2-way winner/moneyline
-    (types 0/3, no draw). For each event we take the primary market carrying
-    both home(0) and away(3), preferring a 3-way (with a draw) over a 2-way when
-    both exist. Best-effort: returns ``{}`` if the blob is absent/unparseable.
+    odds: ``{eventId: {0: home, 1: draw, 3: away}}`` for each event's primary
+          match-result market (1X2 for football, 2-way winner for other sports).
+    tids: ``{eventId: tournamentId}`` — jugabet's tournament UUID per event.
+
+    For each event the primary market is the one carrying both home(0) and
+    away(3), preferring a 3-way (with a draw) over a 2-way when both exist.
+    Best-effort: returns ``({}, {})`` if the blob is absent/unparseable.
     """
-    out: Dict[str, Dict[int, float]] = {}
+    odds: Dict[str, Dict[int, float]] = {}
+    tids: Dict[str, str] = {}
     try:
         events = find_events_array(html)
     except Exception:
         logger.warning("embedded_odds: events array scan failed", exc_info=True)
-        return out
+        return odds, tids
     for ev in events:
         if not isinstance(ev, dict):
             continue
         eid = str(ev.get("id") or ev.get("eventId") or "").strip()
+        if not eid:
+            continue
         markets = ev.get("markets")
-        if not eid or not isinstance(markets, list):
-            continue
-        candidates = []
-        for m in markets:
-            outs = _market_outcomes(m)
-            if 0 in outs and 3 in outs:  # needs both home and away
-                candidates.append(outs)
-        if not candidates:
-            continue
-        # prefer a 3-way (1X2) market over a 2-way when both are present
-        out[eid] = next((c for c in candidates if 1 in c), candidates[0])
-    return out
+        if isinstance(markets, list):
+            candidates = []
+            for m in markets:
+                outs = _market_outcomes(m)
+                if 0 in outs and 3 in outs:  # needs both home and away
+                    candidates.append(outs)
+            if candidates:
+                odds[eid] = next((c for c in candidates if 1 in c), candidates[0])
+        tour = ev.get("tournament")
+        if isinstance(tour, dict) and tour.get("id"):
+            tids[eid] = str(tour["id"])
+    return odds, tids
 
 
-def fetch_embedded_odds(url: str) -> Dict[str, Dict[int, float]]:
-    """HTTP GET ``url`` and extract result-market odds from its SSR HTML.
+def extract_result_outcomes(html: str) -> Dict[str, Dict[int, float]]:
+    """``{eventId: {0: home, 1: draw, 3: away}}`` — primary market odds only."""
+    return parse_events(html)[0]
 
-    Best-effort: returns ``{}`` on any network/parse error so the caller can
-    treat it as optional enrichment over the existing WS path.
-    """
+
+def _get_html(url: str) -> Optional[str]:
     try:
         req = urllib.request.Request(
             url, headers={"User-Agent": _UA, "Accept-Language": "es-CL"}
         )
         with urllib.request.urlopen(req, timeout=_GET_TIMEOUT_S) as r:
-            html = r.read().decode("utf-8", "ignore")
+            return r.read().decode("utf-8", "ignore")
     except Exception:
         logger.warning("embedded_odds: GET failed for %s", url, exc_info=True)
-        return {}
-    return extract_result_outcomes(html)
+        return None
+
+
+def fetch_embedded(url: str) -> Tuple[Dict[str, Dict[int, float]], Dict[str, str]]:
+    """HTTP GET ``url`` → (result odds, tournament ids) from its SSR HTML.
+
+    Best-effort: returns ``({}, {})`` on any network/parse error.
+    """
+    html = _get_html(url)
+    if html is None:
+        return {}, {}
+    return parse_events(html)
+
+
+def fetch_embedded_odds(url: str) -> Dict[str, Dict[int, float]]:
+    """Back-compat: HTTP GET ``url`` and return just the result-market odds."""
+    return fetch_embedded(url)[0]

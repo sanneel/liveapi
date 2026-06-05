@@ -133,6 +133,7 @@ class MatchRepository:
         # value so a feed cycle that lost the JSON doesn't wipe them.
         match.home_slug = (home.get("slug") or "").strip() or match.home_slug
         match.away_slug = (away.get("slug") or "").strip() or match.away_slug
+        match.tournament_id = tournament.get("id") or match.tournament_id
         new_tournament_name = tournament.get("name") or match.tournament_name
         if new_tournament_name != match.tournament_name:
             match.tournament_name = new_tournament_name
