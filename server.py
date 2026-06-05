@@ -1422,6 +1422,20 @@ def parse_html(html: str, api_data: Dict[str, Any] = None) -> List[Dict[str, Any
     cards = soup.select("div.event-card")
     parser_logger.info(f"parse_html: found {len(cards)} event-card div elements in the page HTML")
 
+    # One-time debug dump: write first card's raw HTML to /tmp so we can
+    # inspect the current odds DOM structure without stopping the service.
+    # Self-limits: only writes when file absent. Delete the file to refresh.
+    _CARD_DEBUG_FILE = "/tmp/jugabet_first_card.html"
+    if cards:
+        import os as _os
+        if not _os.path.exists(_CARD_DEBUG_FILE):
+            try:
+                with open(_CARD_DEBUG_FILE, "w", encoding="utf-8") as _f:
+                    _f.write(str(cards[0]))
+                parser_logger.info("parse_html: wrote first card HTML to %s", _CARD_DEBUG_FILE)
+            except Exception:
+                pass
+
     for card in cards:
         # --- event link ---
         a_el = card.select_one('a[data-id="event-card"]')
