@@ -206,6 +206,95 @@ def parser_feeds_page(
     )
 
 
+def _live_parse_snapshot():
+    """Read the parser's live-bearing feeds + the live games being tracked.
+
+    Returns (feeds, live_by_league):
+      feeds          per live-bearing feed: sport, mode, url, ok, count, age_sec
+      live_by_league active in-play matches grouped by tournament
+    A feed "carries live" if its mode is live OR it is a tournament overlay
+    (/all/?tournaments=...) — overlays serve both live and prematch.
+    """
+    import time as _time
+
+    feeds: list = []
+    try:
+        import server as _server  # already-loaded main module
+
+        feed_map = dict(getattr(_server, "FEEDS", {}) or {})
+        state = getattr(_server, "_state", {}) or {}
+        lock = getattr(_server, "_state_lock", None)
+        now = _time.time()
+
+        meta_snap: dict = {}
+        if lock is not None:
+            with lock:
+                for key, st in state.items():
+                    meta_snap[key] = dict(getattr(st, "meta", {}) or {})
+
+        for key, url in feed_map.items():
+            sport, mode = key
+            url = str(url)
+            carries_live = (mode == "live") or ("tournaments=" in url) or ("/all/" in url)
+            if not carries_live:
+                continue
+            meta = meta_snap.get(key, {})
+            last_ok = meta.get("last_success_epoch") or 0
+            feeds.append(
+                {
+                    "sport": sport,
+                    "mode": mode,
+                    "url": meta.get("source_url") or url,
+                    "ok": bool(meta.get("ok")),
+                    "count": int(meta.get("count") or 0),
+                    "age_sec": int(now - last_ok) if last_ok else None,
+                    "error": None if meta.get("ok") else meta.get("error"),
+                }
+            )
+        feeds.sort(key=lambda r: (r["sport"], r["mode"], r["url"]))
+    except Exception:
+        feeds = []
+
+    live_by_league: list = []
+    with db_session() as session:
+        rows = (
+            session.query(Match.sport, Match.tournament_name, func.count(Match.event_id))
+            .filter(Match.is_active.is_(True))
+            .filter(Match.status == "live")
+            .filter(Match.is_synthetic.is_(False))
+            .group_by(Match.sport, Match.tournament_name)
+            .order_by(func.count(Match.event_id).desc())
+            .all()
+        )
+        live_by_league = [
+            {"sport": sp, "league": tn or "—", "count": int(c)} for sp, tn, c in rows
+        ]
+    return feeds, live_by_league
+
+
+@router.get("/admin/live-parses", response_class=HTMLResponse)
+def live_parses_page(
+    request: Request,
+    user: User = Depends(require_login),
+) -> HTMLResponse:
+    feeds, live_by_league = _live_parse_snapshot()
+    healthy = sum(1 for f in feeds if f["ok"])
+    live_total = sum(row["count"] for row in live_by_league)
+    return templates.TemplateResponse(
+        request,
+        "live_parses.html",
+        {
+            "active_page": "live_parses",
+            "current_user": user,
+            "feeds": feeds,
+            "live_by_league": live_by_league,
+            "healthy": healthy,
+            "feeds_total": len(feeds),
+            "live_total": live_total,
+        },
+    )
+
+
 @router.post("/admin/parser-feeds")
 def parser_feeds_create(
     label: str = Form(...),

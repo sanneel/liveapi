@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Live Parses - Jugabet Admin{% endblock %}
+{% block page_title %}Live Parses{% endblock %}
+
+{% block page_actions %}
+  <a href="/admin/live-parses"
+     class="text-xs bg-ink-700 hover:bg-ink-600 text-zinc-300 px-3 py-1.5 rounded border border-ink-600">
+    Refresh
+  </a>
+  <a href="/admin/parser-feeds"
+     class="text-xs bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold px-3 py-1.5 rounded">
+    + Add a league
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+  <div class="bg-ink-850 border border-ink-600 rounded-xl p-4">
+    <div class="text-xs text-muted-400">Live-bearing feeds</div>
+    <div class="text-2xl font-semibold text-white mt-1">{{ feeds_total }}</div>
+  </div>
+  <div class="bg-ink-850 border border-ink-600 rounded-xl p-4">
+    <div class="text-xs text-muted-400">Feeds healthy</div>
+    <div class="text-2xl font-semibold {% if healthy == feeds_total %}text-emerald-300{% else %}text-amber-300{% endif %} mt-1">
+      {{ healthy }} / {{ feeds_total }}
+    </div>
+  </div>
+  <div class="bg-ink-850 border border-ink-600 rounded-xl p-4">
+    <div class="text-xs text-muted-400">Live matches tracked now</div>
+    <div class="text-2xl font-semibold text-white mt-1">{{ live_total }}</div>
+  </div>
+</div>
+
+<p class="text-xs text-muted-500 mb-4">
+  These are the feeds that pull <span class="text-red-300">live</span> odds — the per-sport live firehose
+  plus any tournament overlay (<span class="font-mono">/all/?tournaments=…</span>), which serve live and
+  prematch for a league. If a league has live games on jugabet but isn't listed below,
+  <a href="/admin/parser-feeds" class="text-brand-400 hover:text-brand-300">add its URL</a>.
+</p>
+
+<div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden mb-8">
+  <div class="px-5 py-4 border-b border-ink-600">
+    <h2 class="text-sm font-semibold text-white">Feeds parsed for live</h2>
+  </div>
+  {% if feeds %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-ink-800 text-xs uppercase tracking-wider text-muted-400">
+          <tr>
+            <th class="px-5 py-3 text-left">Sport</th>
+            <th class="px-5 py-3 text-left">Mode</th>
+            <th class="px-5 py-3 text-left">URL</th>
+            <th class="px-5 py-3 text-right">Matches</th>
+            <th class="px-5 py-3 text-left">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-ink-600">
+          {% for f in feeds %}
+            <tr class="hover:bg-ink-800/40">
+              <td class="px-5 py-3 text-muted-300">{{ f.sport }}</td>
+              <td class="px-5 py-3">
+                <span class="text-xs px-2 py-0.5 rounded-full {% if f.mode == 'live' %}bg-red-900/40 text-red-300{% else %}bg-purple-900/40 text-purple-300{% endif %}">
+                  {{ f.mode }}
+                </span>
+              </td>
+              <td class="px-5 py-3 text-muted-400 font-mono text-xs max-w-md truncate">
+                <a href="{{ f.url }}" target="_blank" class="hover:text-brand-400">{{ f.url }}</a>
+              </td>
+              <td class="px-5 py-3 text-right text-zinc-200">{{ f.count }}</td>
+              <td class="px-5 py-3">
+                {% if f.ok and f.age_sec is not none and f.age_sec < 180 %}
+                  <span class="text-emerald-300">● OK</span>
+                  <span class="text-muted-500 text-xs">· {{ f.age_sec }}s ago</span>
+                {% elif f.ok %}
+                  <span class="text-amber-300">● stale</span>
+                  <span class="text-muted-500 text-xs">· {% if f.age_sec is not none %}{{ f.age_sec }}s ago{% else %}never{% endif %}</span>
+                {% else %}
+                  <span class="text-red-300">● failing</span>
+                  {% if f.error %}<span class="text-muted-500 text-xs">· {{ f.error|truncate(48) }}</span>{% endif %}
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="px-5 py-12 text-center text-muted-500 text-sm">No live-bearing feeds configured.</div>
+  {% endif %}
+</div>
+
+<div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">
+  <div class="px-5 py-4 border-b border-ink-600 flex items-center justify-between">
+    <h2 class="text-sm font-semibold text-white">Live right now, by league</h2>
+    <span class="text-xs text-muted-500">{{ live_by_league|length }} leagues · {{ live_total }} matches</span>
+  </div>
+  {% if live_by_league %}
+    <div class="overflow-x-auto max-h-[28rem] overflow-y-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-ink-800 text-xs uppercase tracking-wider text-muted-400 sticky top-0">
+          <tr>
+            <th class="px-5 py-3 text-left">Sport</th>
+            <th class="px-5 py-3 text-left">League</th>
+            <th class="px-5 py-3 text-right">Live matches</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-ink-600">
+          {% for row in live_by_league %}
+            <tr class="hover:bg-ink-800/40">
+              <td class="px-5 py-3 text-muted-300">{{ row.sport }}</td>
+              <td class="px-5 py-3 text-zinc-200">{{ row.league }}</td>
+              <td class="px-5 py-3 text-right text-zinc-200">{{ row.count }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="px-5 py-12 text-center text-muted-500 text-sm">No live matches being tracked right now.</div>
+  {% endif %}
+</div>
+
+{% endblock %}
