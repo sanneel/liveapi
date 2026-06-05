@@ -68,9 +68,15 @@ SHIM = r"""
 API_HINTS = ("/api", "filter", "odds", "market", "event", "sport",
              "stream", "sse", "graphql", "lineup", "prematch", "live")
 
+# Endpoints whose BODY we dump — this is the v2 odds/market data we must map
+# into the parser.
+KEY_BODY_HINTS = ("by-market-filter", "by-sport-filter", "/markets",
+                  "/sport/layout", "reactive-outcomes", "/outcomes", "/events/")
+
 
 def main() -> None:
     responses = []
+    bodies = []
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         ctx = browser.new_context(
@@ -91,6 +97,14 @@ def main() -> None:
                 if "event-stream" in ct or "json" in ct or any(h in u.lower() for h in API_HINTS):
                     if not any(u.endswith(ext) for ext in (".js", ".css", ".woff", ".woff2", ".png", ".jpg", ".svg")):
                         responses.append({"status": r.status, "ct": ct[:38], "url": u})
+                # Dump the BODY of the odds/market/layout endpoints — that's the
+                # v2 data we need to map into the parser.
+                if any(k in u.lower() for k in KEY_BODY_HINTS):
+                    try:
+                        _txt = r.text()
+                    except Exception as _e:
+                        _txt = f"(body unavailable: {_e})"
+                    bodies.append({"status": r.status, "url": u, "body": (_txt or "")[:6000]})
             except Exception:
                 pass
 
@@ -127,6 +141,11 @@ def main() -> None:
     print(json.dumps(cap.get("sse", []), indent=2, ensure_ascii=False)[:3500])
     print("\n=== fetch errors (Failed to fetch / Cloudflare) ===")
     print(json.dumps(cap.get("errors", []), indent=2, ensure_ascii=False)[:2000])
+    print("\n=== KEY ENDPOINT BODIES (odds / markets / layout) ===")
+    for b in bodies[:8]:
+        print(f"\n--- {b['status']}  {b['url']}")
+        print(b["body"])
+
     print("\n=== sample match-card HTML ===")
     print(card)
 
