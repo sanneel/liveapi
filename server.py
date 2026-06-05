@@ -1227,16 +1227,46 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
         page.on("response", handle_response)
         page.goto(url, wait_until="domcontentloaded", timeout=TIMEOUT_MS)
 
+        # Two-phase Angular-aware wait.
+        #
+        # Jugabet's sport pages use an Angular SPA. After domcontentloaded the
+        # page skeleton is ready almost immediately but the actual event list is
+        # rendered asynchronously inside <app-sport-events-widget>. On a VPS
+        # with a cold Chrome and no cached assets this hydration takes 15-25s.
+        #
+        # Phase 1 – detect the Angular shell (appears in ~2-4s). If it never
+        # appears the page is probably a geo-block or empty layout.
+        # Phase 2 – wait up to 25s for div.event-card inside the widget.
+        #   If Phase 1 found the widget we know Angular is running and we give
+        #   it the full window. If Phase 1 timed out we still try the original
+        #   SELECTOR_WAIT_MS so that empty/geo pages stay fast.
+        _ANGULAR_SHELL_SELECTOR = "app-sport-events-widget"
+        _ANGULAR_SHELL_WAIT_MS  = 8_000    # widget appears fast; short timeout
+        _CARD_HYDRATION_WAIT_MS = 25_000   # cards take 15-25s to render on VPS
+
+        shell_found = False
         try:
-            page.wait_for_selector(WAIT_SELECTOR, timeout=SELECTOR_WAIT_MS)
-            parser_logger.info(f"pw-worker: found selector '{WAIT_SELECTOR}' on page")
+            page.wait_for_selector(_ANGULAR_SHELL_SELECTOR, timeout=_ANGULAR_SHELL_WAIT_MS)
+            shell_found = True
+            parser_logger.info("pw-worker: Angular shell (app-sport-events-widget) found")
         except PlaywrightTimeoutError:
-            # No event-card on the page within the short window — page is
-            # legitimately empty (off-hours live, no markets, etc.). Don't
-            # then wait the full TIMEOUT_MS for an odds XHR that will never
-            # fire: skip straight to read_content with what we have.
-            parser_logger.warning(f"pw-worker: selector '{WAIT_SELECTOR}' not found on {url}")
-            pass
+            parser_logger.warning(
+                "pw-worker: Angular shell not found within %dms on %s",
+                _ANGULAR_SHELL_WAIT_MS, url,
+            )
+
+        card_wait_ms = _CARD_HYDRATION_WAIT_MS if shell_found else SELECTOR_WAIT_MS
+        try:
+            page.wait_for_selector(WAIT_SELECTOR, timeout=card_wait_ms)
+            parser_logger.info(
+                "pw-worker: found selector '%s' on page (shell_found=%s, waited≤%dms)",
+                WAIT_SELECTOR, shell_found, card_wait_ms,
+            )
+        except PlaywrightTimeoutError:
+            parser_logger.warning(
+                "pw-worker: selector '%s' not found after %dms on %s (shell_found=%s)",
+                WAIT_SELECTOR, card_wait_ms, url, shell_found,
+            )
 
         # Bug 4: wait for odds XHR before reading content. Capped tight so
         # empty pages don't block the single pw-worker for 30s each.
