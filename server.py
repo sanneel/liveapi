@@ -1323,6 +1323,25 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
 
         page.on("websocket", _on_ws)
 
+        # The Angular app registers which outcomes it wants odds for by POSTing
+        # their ids to /reactive-outcomes/subscribe. Collect those ids so we can
+        # re-subscribe them ALL at once below and force a full push burst (the
+        # per-scroll subscriptions are sparse — prematch otherwise gets 0 odds).
+        _subscribed_oids: set = set()
+
+        def _on_req(req):
+            try:
+                if "reactive-outcomes/subscribe" in req.url and req.method == "POST":
+                    data = req.post_data
+                    if data:
+                        for oid in (_json.loads(data).get("outcomeIds") or []):
+                            if oid:
+                                _subscribed_oids.add(str(oid))
+            except Exception:
+                pass
+
+        page.on("request", _on_req)
+
         page.goto(url, wait_until="domcontentloaded", timeout=TIMEOUT_MS)
 
         # Two-phase Angular-aware wait.
@@ -1446,6 +1465,30 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
                     break
         except Exception:
             pass
+
+        # Force a full odds burst: re-POST every outcome id the page asked for
+        # in one subscribe call, then wait for the pushes. Gated to prematch/all
+        # feeds — live already streams, so we don't slow it down.
+        if _subscribed_oids and ("prematch" in url_lower or "/all" in url_lower):
+            try:
+                _oids = list(_subscribed_oids)[:800]
+                page.evaluate(
+                    """async (oids) => {
+                        try {
+                            await fetch('/api/v1/reactive-outcomes/subscribe', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                credentials: 'include',
+                                body: JSON.stringify({outcomeIds: oids}),
+                            });
+                        } catch (e) {}
+                    }""",
+                    _oids,
+                )
+                print(f"[PARSER] WS odds: re-subscribed {len(_oids)} outcomes ({url})", flush=True)
+                page.wait_for_timeout(6000)
+            except Exception:
+                pass
 
         # Give the WebSocket a moment to push odds for the cards revealed by
         # the scroll, then fold them into api_data keyed by event_id so
