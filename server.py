@@ -1425,6 +1425,28 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
                 except Exception:
                     break
 
+        # Now scroll back through the loaded cards in small steps so each one
+        # passes through the viewport and subscribes to its WS odds. v2
+        # subscribes on intersection, so the scrollTo(bottom) jumps above skip
+        # the middle cards — the reason big prematch pages returned 0 odds.
+        try:
+            page.evaluate("window.scrollTo(0, 0)")
+            page.wait_for_timeout(400)
+            _last_n, _stale = len(_ws_collected), 0
+            for _ in range(60):  # ~viewport steps, bounded ≈15s, early-exit below
+                page.mouse.wheel(0, 650)
+                page.wait_for_timeout(250)
+                _n = len(_ws_collected)
+                _stale = 0 if _n != _last_n else _stale + 1
+                _last_n = _n
+                _bottom = page.evaluate(
+                    "(window.innerHeight + Math.ceil(window.scrollY)) >= (document.body.scrollHeight - 4)"
+                )
+                if _bottom and _stale >= 4:
+                    break
+        except Exception:
+            pass
+
         # Give the WebSocket a moment to push odds for the cards revealed by
         # the scroll, then fold them into api_data keyed by event_id so
         # parse_html can attach them. {event_id: {outcomeType: price}}.
