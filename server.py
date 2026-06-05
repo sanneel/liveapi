@@ -1486,7 +1486,18 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
                     _oids,
                 )
                 print(f"[PARSER] WS odds: re-subscribed {len(_oids)} outcomes ({url})", flush=True)
-                page.wait_for_timeout(6000)
+                # Adaptive wait: big feeds push their burst staggered over many
+                # seconds, so keep collecting until it plateaus (no new odds for
+                # ~3s), capped ~16s — instead of a fixed window that catches only
+                # the first few of a 177-outcome burst.
+                _prev_c, _stall_c = len(_ws_collected), 0
+                for _ in range(32):
+                    page.wait_for_timeout(500)
+                    _now_c = len(_ws_collected)
+                    if _now_c != _prev_c:
+                        _prev_c, _stall_c = _now_c, 0
+                    elif (_stall_c := _stall_c + 1) >= 6:  # ~3s no growth
+                        break
             except Exception:
                 pass
 
