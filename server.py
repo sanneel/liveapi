@@ -83,6 +83,7 @@ from app.config import get_settings
 from app.logging_config import get_logger
 from app.middleware.security import SameOriginUnsafeMethodMiddleware, SecurityHeadersMiddleware
 from app.routes.public_render import flush_hit_buffer
+from app.parser.extra_feeds import build_extra_feed_map
 
 logger = get_logger("server")
 parser_logger = get_logger("app.parser.server")
@@ -244,6 +245,7 @@ FEEDS: Dict[Tuple[str, str], str] = {
     # to fill all 3 slots even after pins are applied.
     ("football", "prematch_worldcup_2026"): "https://jugabet.cl/football/all/1?tournaments=c19cb5ffb4404c31b869b53dd90161de",
 }
+FEEDS.update(build_extra_feed_map())
 
 
 @dataclass
@@ -1761,6 +1763,11 @@ def refresh_loop(key: Tuple[str, str], initial_delay: float = 0.0) -> None:
         # protocol error escaping the inner handler) would kill the thread
         # silently. Wrap the loop body so the thread can't die.
         try:
+            if key not in FEEDS:
+                logger.info("parser: feed %s removed from rotation; thread idling", key)
+                time.sleep(cadence)
+                next_at = time.monotonic()
+                continue
             backoff_remaining = _feed_backoff_remaining(key)
             if backoff_remaining > 0:
                 logger.warning(
@@ -1945,6 +1952,55 @@ def _spawn_feed_thread(key: Tuple[str, str], initial_delay: float = 0.0) -> None
     t.start()
     with _feed_threads_lock:
         _feed_threads[key] = t
+
+
+def sync_extra_parser_feeds() -> Dict[str, Any]:
+    """Reload admin-managed feed links and start any new parser threads."""
+    extra = build_extra_feed_map()
+    extra_keys = set(extra.keys())
+    existing_extra_keys = {key for key in FEEDS if "_extra_" in key[1]}
+    added: List[str] = []
+    removed: List[str] = []
+
+    for key in existing_extra_keys - extra_keys:
+        FEEDS.pop(key, None)
+        removed.append(f"{key[0]}/{key[1]}")
+        with _state_lock:
+            _state.pop(key, None)
+        _clear_feed_backoff(key)
+
+    for key, url in extra.items():
+        is_new = key not in FEEDS
+        FEEDS[key] = url
+        with _state_lock:
+            if key not in _state:
+                _state[key] = FeedState(
+                    data=[],
+                    meta={
+                        "ok": False,
+                        "error": "not loaded yet",
+                        "last_updated_epoch": None,
+                        "last_success_epoch": None,
+                        "source_url": url,
+                        "count": 0,
+                        "sport": key[0],
+                        "mode": key[1],
+                        "timezone": FORCED_TIMEZONE,
+                    },
+                )
+            else:
+                _state[key].meta["source_url"] = url
+        if is_new and _PARSER_PID_HELD:
+            _spawn_feed_thread(key, initial_delay=0.0)
+            added.append(f"{key[0]}/{key[1]}")
+
+    parser_logger.info(
+        "parser: synced extra feeds added=%s removed=%s total=%s",
+        added,
+        removed,
+        len(extra),
+    )
+    return {"added": added, "removed": removed, "total": len(extra)}
 
 
 def _feed_watchdog_loop() -> None:

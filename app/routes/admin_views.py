@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Form, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
@@ -24,9 +24,10 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import func
 
-from ..auth.dependencies import require_login
+from ..auth.dependencies import require_login, require_role
 from ..database import db_session
 from ..models import Campaign, Club, HotBoost, Match, User
+from ..parser.extra_feeds import add_extra_feed, delete_extra_feed, load_extra_feeds
 from ..repositories.match_repo import MatchRepository
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -174,6 +175,60 @@ def matches_list(
 
 
 # Convenience redirect: bare /admin/ → /admin
+def _sync_live_parser_feeds() -> None:
+    try:
+        import server as _server  # type: ignore
+
+        sync = getattr(_server, "sync_extra_parser_feeds", None)
+        if callable(sync):
+            sync()
+    except Exception:
+        pass
+
+
+@router.get("/admin/parser-feeds", response_class=HTMLResponse)
+def parser_feeds_page(
+    request: Request,
+    saved: int = 0,
+    deleted: int = 0,
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request,
+        "parser_feeds.html",
+        {
+            "active_page": "parser_feeds",
+            "current_user": user,
+            "feeds": load_extra_feeds(),
+            "saved": bool(saved),
+            "deleted": bool(deleted),
+        },
+    )
+
+
+@router.post("/admin/parser-feeds")
+def parser_feeds_create(
+    label: str = Form(...),
+    sport: str = Form(...),
+    mode: str = Form(...),
+    url: str = Form(...),
+    user: User = Depends(require_role("editor")),
+) -> RedirectResponse:
+    add_extra_feed(label=label, sport=sport, mode=mode, url=url)
+    _sync_live_parser_feeds()
+    return RedirectResponse("/admin/parser-feeds?saved=1", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/admin/parser-feeds/{feed_id}/delete")
+def parser_feeds_delete(
+    feed_id: str,
+    user: User = Depends(require_role("editor")),
+) -> RedirectResponse:
+    delete_extra_feed(feed_id)
+    _sync_live_parser_feeds()
+    return RedirectResponse("/admin/parser-feeds?deleted=1", status_code=status.HTTP_303_SEE_OTHER)
+
+
 @router.get("/admin/")
 def admin_trailing_slash() -> RedirectResponse:
     return RedirectResponse(url="/admin")
