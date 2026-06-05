@@ -306,6 +306,29 @@ class MatchRepository:
         result = self.session.execute(stmt)
         return int(result.rowcount or 0)
 
+    def deactivate_synthetic_not_seen(self, minutes: int = 45) -> int:
+        """Reap active *synthetic* (virtual/esports/replay) matches not seen
+        in any feed within `minutes`.
+
+        Virtual inventory is streamed as "live" with no start_time_utc, so it
+        falls through both existing reapers: deactivate_stale exempts live
+        feeds, and deactivate_expired needs a start_time. Left alone it grows
+        without bound (observed: 15k+ active synthetic football rows drowning
+        the scoring pool). A virtual match runs only minutes, so anything not
+        re-seen for `minutes` has certainly ended. Scoped to is_synthetic so a
+        transient real-feed outage can never drop a genuine fixture.
+        """
+        cutoff = datetime.utcnow() - timedelta(minutes=minutes)
+        stmt = (
+            update(Match)
+            .where(Match.is_active.is_(True))
+            .where(Match.is_synthetic.is_(True))
+            .where(Match.last_updated_at < cutoff)
+            .values(is_active=False, last_updated_at=datetime.utcnow())
+        )
+        result = self.session.execute(stmt)
+        return int(result.rowcount or 0)
+
     # ─── reads ────────────────────────────────────────────────────────
     def find_by_event_id(self, event_id: str) -> Optional[Match]:
         return self.session.get(Match, event_id)

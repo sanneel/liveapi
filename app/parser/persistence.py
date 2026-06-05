@@ -32,6 +32,13 @@ _EXPIRY_INTERVAL_SECONDS = 300.0
 _expiry_lock = threading.Lock()
 _last_expiry_at: float = 0.0
 
+# Virtual/esports inventory streams as "live" with no start_time, so it
+# escapes both deactivate_stale (live-exempt) and deactivate_expired
+# (start_time-based) and piles up forever. Reap any synthetic row not seen
+# in a feed for this long; a virtual match runs only minutes, so this is
+# safely above one full parser cycle.
+_SYNTHETIC_REAP_MINUTES = 45
+
 
 def _maybe_run_expiry(session, settings) -> int:
     global _last_expiry_at
@@ -41,7 +48,15 @@ def _maybe_run_expiry(session, settings) -> int:
             return 0
         _last_expiry_at = now
     repo = MatchRepository(session)
-    return repo.deactivate_expired(settings.match_deactivate_after_hours)
+    n_expired = repo.deactivate_expired(settings.match_deactivate_after_hours)
+    n_reaped = repo.deactivate_synthetic_not_seen(_SYNTHETIC_REAP_MINUTES)
+    if n_reaped:
+        print(
+            f"[DB] Reaped {n_reaped} stale synthetic matches "
+            f"(not seen in {_SYNTHETIC_REAP_MINUTES}m)",
+            flush=True,
+        )
+    return n_expired
 
 
 def _slugs_in_events(events: Iterable[Dict[str, Any]]) -> Set[str]:
