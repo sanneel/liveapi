@@ -39,6 +39,14 @@ _last_expiry_at: float = 0.0
 # safely above one full parser cycle.
 _SYNTHETIC_REAP_MINUTES = 45
 
+# Prematch deactivation is centralized here (NOT per-feed). A single feed's page
+# is a partial view; using "missing from this page" as the signal reaped real
+# World Cup / league / campaign fixtures (all mode='prematch', owned by sibling
+# overlay feeds) on page-1 rotation or a one-cycle overlay stall. Keying off
+# last_updated_at means a match kept alive by ANY feed survives. 90m ≈ 9 cycles
+# of slack; deactivate_expired (12h after start) still backstops finished games.
+_PREMATCH_NOT_SEEN_MINUTES = 90
+
 
 def _maybe_run_expiry(session, settings) -> int:
     global _last_expiry_at
@@ -49,7 +57,14 @@ def _maybe_run_expiry(session, settings) -> int:
         _last_expiry_at = now
     repo = MatchRepository(session)
     n_expired = repo.deactivate_expired(settings.match_deactivate_after_hours)
+    n_stale = repo.deactivate_not_seen(_PREMATCH_NOT_SEEN_MINUTES, modes=("prematch",))
     n_reaped = repo.deactivate_synthetic_not_seen(_SYNTHETIC_REAP_MINUTES)
+    if n_stale:
+        print(
+            f"[DB] Reaped {n_stale} prematch matches not seen in "
+            f"{_PREMATCH_NOT_SEEN_MINUTES}m",
+            flush=True,
+        )
     if n_reaped:
         print(
             f"[DB] Reaped {n_reaped} stale synthetic matches "
@@ -82,30 +97,21 @@ def persist_feed_results(
     """
     started = time.monotonic()
     n_expired = 0
-    is_overlay = mode not in ("live", "prematch")
     db_mode = "prematch" if mode.startswith("prematch") else ("live" if mode.startswith("live") else mode)
     try:
         with db_session() as session:
             repo = MatchRepository(session)
             n_upserted = repo.bulk_upsert(events, sport, db_mode)
-            # Feed-based deactivation policy:
-            #   * overlays never deactivate (they're partial views)
-            #   * LIVE feeds never deactivate either — Jugabet's
-            #     /<sport>/live/1 only shows a paginated subset and which
-            #     matches appear rotates constantly. Using "missing from
-            #     feed" as a deactivation signal here flickers real live
-            #     matches in and out. `deactivate_expired` (12h after
-            #     start_time_utc) is the safety net that cleans up
-            #     genuinely-finished live matches.
-            #   * PREMATCH feeds run deactivate_stale with the 30-min
-            #     grace window from MatchRepository; that catches
-            #     legitimately-cancelled fixtures while staying robust
-            #     against page-1 rotation.
-            if is_overlay or db_mode == "live":
-                n_deactivated = 0
-            else:
-                active_ids = [str(e.get("event_id")) for e in events if e.get("event_id")]
-                n_deactivated = repo.deactivate_stale(sport, db_mode, active_ids)
+            # Deactivation is NOT per-feed. A feed's page is only a partial,
+            # rotating view; using "missing from this page" as the signal
+            # flickered real matches — most damagingly the firehose
+            # (mode='prematch') reaping World Cup / league / campaign fixtures
+            # that are also mode='prematch' but owned by sibling overlay feeds.
+            # Instead every feed just upserts (refreshing last_updated_at), and
+            # the gated reapers in _maybe_run_expiry drop only matches not seen
+            # by ANY feed for a generous window. A match kept alive by any feed
+            # can never be dropped on rotation or a one-cycle overlay stall.
+            n_deactivated = 0
             n_expired = _maybe_run_expiry(session, get_settings())
 
         elapsed_ms = int((time.monotonic() - started) * 1000)

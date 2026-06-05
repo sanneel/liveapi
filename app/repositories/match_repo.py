@@ -329,6 +329,34 @@ class MatchRepository:
         result = self.session.execute(stmt)
         return int(result.rowcount or 0)
 
+    def deactivate_not_seen(
+        self, minutes: int, modes: Optional[Iterable[str]] = None
+    ) -> int:
+        """Deactivate active matches not upserted by ANY feed within `minutes`.
+
+        This is the safe replacement for the per-feed ``deactivate_stale``.
+        ``deactivate_stale`` keyed off one feed's page membership, so the
+        firehose (``/football/prematch/1``) could reap World Cup / league /
+        campaign fixtures — they share ``mode='prematch'`` but live in sibling
+        overlay feeds — whenever an overlay stalled or a match rotated off
+        page 1. Keying purely off ``last_updated_at`` means a match kept alive
+        by *any* feed survives; only fixtures genuinely gone from every feed for
+        ``minutes`` are dropped. ``deactivate_expired`` (start_time-based) is
+        still the backstop for finished games.
+        """
+        cutoff = datetime.utcnow() - timedelta(minutes=minutes)
+        stmt = (
+            update(Match)
+            .where(Match.is_active.is_(True))
+            .where(Match.is_synthetic.is_(False))
+            .where(Match.last_updated_at < cutoff)
+        )
+        if modes:
+            stmt = stmt.where(Match.mode.in_(list(modes)))
+        stmt = stmt.values(is_active=False, last_updated_at=datetime.utcnow())
+        result = self.session.execute(stmt)
+        return int(result.rowcount or 0)
+
     # ─── reads ────────────────────────────────────────────────────────
     def find_by_event_id(self, event_id: str) -> Optional[Match]:
         return self.session.get(Match, event_id)
