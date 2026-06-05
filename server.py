@@ -653,6 +653,18 @@ def _parse_total(market_container) -> Dict[str, Optional[str]]:
     return {"line": best.get("line"), "over": best.get("over"), "under": best.get("under"), "more_odds": False}
 
 
+def _fmt_odd(value: Any) -> Optional[str]:
+    """Format a numeric odds price (e.g. 1.31) as a 2-decimal string for the
+    renderers; pass clean strings through; None for missing."""
+    if value is None:
+        return None
+    try:
+        return f"{float(value):.2f}"
+    except (TypeError, ValueError):
+        s = str(value).strip()
+        return s or None
+
+
 def _parse_odds_from_json(
     event_id: str,
     market_type: str,
@@ -1257,6 +1269,46 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
         """
         page.add_init_script(_SSE_SHIM)
 
+        # Jugabet v2 streams live odds over a Centrifugo WebSocket
+        # (wss://.../realtime/connection/websocket) on a per-user "web_outcomes_*"
+        # channel — NOT the DOM, NOT SSE. Listen to the socket the Angular app
+        # opens and collect the result market's outcomes (marketType == 2) per
+        # event: outcomeType 0=home, 1=draw, 3=away (per /api/v1/sport/layout
+        # selectionIds [0,1,3]). Keyed by eventId, which parse_html extracts
+        # from the card, so the odds attach straight onto each match.
+        ws_outcomes_by_event: Dict[str, Dict[int, Any]] = {}
+
+        def _on_ws(ws):
+            def _on_frame(payload):
+                try:
+                    text = payload if isinstance(payload, str) else payload.decode("utf-8", "ignore")
+                except Exception:
+                    return
+                if "customizedOutcome" not in text:
+                    return
+                for line in text.split("\n"):
+                    line = line.strip()
+                    if not line or '"push"' not in line:
+                        continue
+                    try:
+                        co = _json.loads(line)["push"]["pub"]["data"]["data"]["customizedOutcome"]
+                    except Exception:
+                        continue
+                    if not isinstance(co, dict) or co.get("marketType") != 2:
+                        continue
+                    eid = str(co.get("eventId") or "").strip()
+                    ot = co.get("outcomeType")
+                    price = co.get("price")
+                    if not eid or ot is None or price is None or not co.get("isOpen", True):
+                        continue
+                    ws_outcomes_by_event.setdefault(eid, {})[ot] = price
+            try:
+                ws.on("framereceived", _on_frame)
+            except Exception:
+                pass
+
+        page.on("websocket", _on_ws)
+
         page.goto(url, wait_until="domcontentloaded", timeout=TIMEOUT_MS)
 
         # Two-phase Angular-aware wait.
@@ -1358,7 +1410,23 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
                 except Exception:
                     break
 
-        page.wait_for_timeout(JS_SETTLE_MS)
+        # Give the WebSocket a moment to push odds for the cards revealed by
+        # the scroll, then fold them into api_data keyed by event_id so
+        # parse_html can attach them. {event_id: {outcomeType: price}}.
+        page.wait_for_timeout(max(JS_SETTLE_MS, 3000))
+        if ws_outcomes_by_event:
+            parser_logger.info(
+                "pw-worker: collected WS odds for %d events", len(ws_outcomes_by_event)
+            )
+            for _eid, _outs in ws_outcomes_by_event.items():
+                _cur = api_data.get(_eid)
+                if isinstance(_cur, dict):
+                    _cur["ws_outcomes"] = _outs
+                else:
+                    api_data[_eid] = {"ws_outcomes": _outs}
+        else:
+            parser_logger.info("pw-worker: no WS odds captured for %s", url)
+
         html = page.content()
         try:
             rendered_cards = page.locator("div.event-card").evaluate_all(
@@ -1611,7 +1679,28 @@ def parse_html(html: str, api_data: Dict[str, Any] = None) -> List[Dict[str, Any
         market_type = _detect_market_type(market_name_raw)
 
         market_odds = None
-        if api_data and event_id:
+        # Jugabet v2: the result-market odds come from the Centrifugo WebSocket,
+        # collected in _do_fetch as api_data[event_id]["ws_outcomes"] =
+        # {0: home, 1: draw, 3: away} (selection ids per /api/v1/sport/layout).
+        # Build the market straight from that — authoritative over the DOM.
+        _ev = api_data.get(event_id) if (api_data and event_id) else None
+        _ws_out = _ev.get("ws_outcomes") if isinstance(_ev, dict) else None
+        if _ws_out:
+            _p1 = _ws_out.get(0)
+            _draw = _ws_out.get(1)
+            _p2 = _ws_out.get(3)
+            if _p1 is not None or _p2 is not None:
+                if _draw is not None:
+                    market_odds = {
+                        "p1": _fmt_odd(_p1), "draw": _fmt_odd(_draw),
+                        "p2": _fmt_odd(_p2), "more_odds": False,
+                    }
+                    market_type = "1x2"
+                else:
+                    market_odds = {"p1": _fmt_odd(_p1), "p2": _fmt_odd(_p2), "more_odds": False}
+                    market_type = "winner"
+
+        if market_odds is None and api_data and event_id:
             market_odds = _parse_odds_from_json(event_id, market_type, api_data, home_name, away_name)
 
         if market_odds is None:
