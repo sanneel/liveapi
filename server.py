@@ -1225,24 +1225,44 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
                     )
 
         page.on("response", handle_response)
+
+        # Inject EventSource interceptor BEFORE page load so we capture every
+        # SSE message Jugabet pushes (Jugabet v2 delivers odds via SSE, not XHR).
+        # We override window.EventSource to proxy all messages into
+        # window._sseMessages[], which we read back via page.evaluate() after
+        # the page has settled.
+        _SSE_SHIM = """
+        (function() {
+            if (window._sseShimInstalled) return;
+            window._sseShimInstalled = true;
+            window._sseMessages = [];
+            const OrigES = window.EventSource;
+            if (!OrigES) return;
+            window.EventSource = function(url, opts) {
+                const es = new OrigES(url, opts);
+                const capture = (e) => {
+                    try { window._sseMessages.push({url: url, data: e.data, type: e.type}); }
+                    catch(ex) {}
+                };
+                es.addEventListener('message', capture);
+                es.onmessage = es.onmessage;  // keep existing handler
+                // Also capture named event types Jugabet might use
+                ['odds','update','outcome','market','event'].forEach(t => {
+                    es.addEventListener(t, capture);
+                });
+                return es;
+            };
+            Object.assign(window.EventSource, OrigES);
+        })();
+        """
+        page.add_init_script(_SSE_SHIM)
+
         page.goto(url, wait_until="domcontentloaded", timeout=TIMEOUT_MS)
 
         # Two-phase Angular-aware wait.
-        #
-        # Jugabet's sport pages use an Angular SPA. After domcontentloaded the
-        # page skeleton is ready almost immediately but the actual event list is
-        # rendered asynchronously inside <app-sport-events-widget>. On a VPS
-        # with a cold Chrome and no cached assets this hydration takes 15-25s.
-        #
-        # Phase 1 – detect the Angular shell (appears in ~2-4s). If it never
-        # appears the page is probably a geo-block or empty layout.
-        # Phase 2 – wait up to 25s for div.event-card inside the widget.
-        #   If Phase 1 found the widget we know Angular is running and we give
-        #   it the full window. If Phase 1 timed out we still try the original
-        #   SELECTOR_WAIT_MS so that empty/geo pages stay fast.
         _ANGULAR_SHELL_SELECTOR = "app-sport-events-widget"
-        _ANGULAR_SHELL_WAIT_MS  = 8_000    # widget appears fast; short timeout
-        _CARD_HYDRATION_WAIT_MS = 25_000   # cards take 15-25s to render on VPS
+        _ANGULAR_SHELL_WAIT_MS  = 8_000
+        _CARD_HYDRATION_WAIT_MS = 25_000
 
         shell_found = False
         try:
@@ -1256,22 +1276,41 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
             )
 
         card_wait_ms = _CARD_HYDRATION_WAIT_MS if shell_found else SELECTOR_WAIT_MS
+        cards_found = False
         try:
             page.wait_for_selector(WAIT_SELECTOR, timeout=card_wait_ms)
+            cards_found = True
             parser_logger.info(
-                "pw-worker: found selector '%s' on page (shell_found=%s, waited≤%dms)",
+                "pw-worker: found selector '%s' (shell_found=%s, waited≤%dms)",
                 WAIT_SELECTOR, shell_found, card_wait_ms,
             )
         except PlaywrightTimeoutError:
             parser_logger.warning(
-                "pw-worker: selector '%s' not found after %dms on %s (shell_found=%s)",
-                WAIT_SELECTOR, card_wait_ms, url, shell_found,
+                "pw-worker: selector '%s' not found after %dms on %s",
+                WAIT_SELECTOR, card_wait_ms, url,
             )
 
-        # Bug 4: wait for odds XHR before reading content. Capped tight so
-        # empty pages don't block the single pw-worker for 30s each.
+        # Phase 3 — wait for odds to be populated in the DOM.
+        # Jugabet v2 uses SSE (EventSource) to push odds after cards render.
+        # We wait up to 20s for p.outcome__odd to appear; if it shows up we know
+        # SSE data arrived and odds are now in the DOM. If it times out either
+        # SSE is blocked for this IP or the page has no markets.
+        _ODDS_DOM_WAIT_MS = 20_000
+        odds_in_dom = False
+        if cards_found:
+            try:
+                page.wait_for_selector("p.outcome__odd", timeout=_ODDS_DOM_WAIT_MS)
+                odds_in_dom = True
+                parser_logger.info("pw-worker: odds found in DOM via SSE (p.outcome__odd visible)")
+            except PlaywrightTimeoutError:
+                parser_logger.warning(
+                    "pw-worker: no p.outcome__odd after %dms — SSE may be blocked for this IP "
+                    "or page has no markets; reading HTML anyway", _ODDS_DOM_WAIT_MS,
+                )
+
+        # Also wait for XHR odds response (legacy path — still try it).
         try:
-            parser_logger.info(f"pw-worker: waiting for odds responses...")
+            parser_logger.info("pw-worker: waiting for odds XHR responses...")
             with page.expect_response(
                 lambda r: (
                     "by-market-filter" in r.url.lower()
@@ -1281,12 +1320,27 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
             ):
                 pass
         except PlaywrightTimeoutError:
-            parser_logger.debug("pw-worker: timeout/no odds response detected during wait window")
-            pass
+            parser_logger.debug("pw-worker: timeout/no odds XHR response")
 
+        # Collect any SSE messages captured by the shim.
+        try:
+            sse_msgs = page.evaluate("window._sseMessages || []")
+            if sse_msgs:
+                parser_logger.info(
+                    "pw-worker: captured %d SSE messages from EventSource shim", len(sse_msgs)
+                )
+                for msg in sse_msgs:
+                    try:
+                        import json as _json_sse
+                        data = _json_sse.loads(msg.get("data") or "{}")
+                        if isinstance(data, dict) and data:
+                            api_data.update(data)
+                    except Exception:
+                        pass
+        except Exception:
+            parser_logger.debug("pw-worker: SSE shim read failed (non-fatal)", exc_info=True)
 
-        # Bug 6: adaptive scroll — keep paging until the event-card count
-        # plateaus, bounded at 20 iterations.
+        # Bug 6: adaptive scroll — keep paging until the event-card count plateaus.
         url_lower = url.lower()
         if "prematch" in url_lower or "/all" in url_lower:
             prev_count = -1
@@ -1295,7 +1349,7 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
                     count = page.evaluate(
                         "document.querySelectorAll('div.event-card').length"
                     )
-                    parser_logger.info(f"pw-worker: adaptive scroll check {i+1}/20 - event cards count={count}")
+                    parser_logger.info(f"pw-worker: adaptive scroll {i+1}/20 cards={count}")
                     if count == prev_count:
                         break
                     prev_count = count
@@ -1332,6 +1386,8 @@ def _do_fetch(browser, url: str) -> Tuple[str, Dict[str, Any]]:
             context.close()
         except Exception:
             parser_logger.warning("parser: context.close() failed", exc_info=True)
+
+
 
 
 def fetch_rendered_html(url: str) -> Tuple[str, Dict[str, Any]]:
