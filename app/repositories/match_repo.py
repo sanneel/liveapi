@@ -47,7 +47,20 @@ class MatchRepository:
 
     @staticmethod
     def _odds_to_json(odds: Any) -> Optional[str]:
-        if not odds:
+        if not isinstance(odds, dict) or not odds:
+            return None
+        # Treat "no real odds" (e.g. {"odds": []} or all dashes) as None, so an
+        # empty pass from one feed doesn't wipe the odds another feed already
+        # set — matches aggregate odds across feeds (broad prematch list vs the
+        # league overlays, which cover the same fixtures with better odds).
+        def _val(v: Any) -> bool:
+            return v not in (None, "", "-")
+        has_real = (
+            _val(odds.get("p1")) or _val(odds.get("p2")) or _val(odds.get("draw"))
+            or _val(odds.get("over")) or _val(odds.get("under"))
+            or any(_val(x) for x in (odds.get("odds") or []))
+        )
+        if not has_real:
             return None
         try:
             return json.dumps(odds, ensure_ascii=False)
@@ -141,11 +154,13 @@ class MatchRepository:
 
         match.home_score = score.get("home") if score.get("home") is not None else match.home_score
         match.away_score = score.get("away") if score.get("away") is not None else match.away_score
-        match.market_type = market.get("type") or match.market_type
-        match.market_name = market.get("name") or match.market_name
-
+        # Only update the market (type/name/odds) when this feed actually
+        # carries odds for the match, so an empty pass doesn't wipe — or
+        # mislabel as "unknown" — the market another feed already set.
         new_odds = self._odds_to_json(market.get("odds"))
         if new_odds is not None:
+            match.market_type = market.get("type") or match.market_type
+            match.market_name = market.get("name") or match.market_name
             match.odds_json = new_odds
 
         match.is_active = True
