@@ -1,4 +1,4 @@
-"""Parse 1X2 result-market odds embedded as JSON in jugabet's SSR HTML.
+"""Parse match-result odds (1X2 / 2-way winner) embedded as JSON in jugabet's SSR HTML.
 
 Jugabet (GR8 Tech ULTIM8 / Angular) ships the full events payload — teams,
 kickoff and result-market odds — as an inline JSON array in the server-rendered
@@ -96,45 +96,19 @@ def find_events_array(html: str) -> List[dict]:
     return best
 
 
-def _iter_outcomes(obj):
-    """Yield every dict carrying both eventId and price (i.e. an outcome)."""
-    if isinstance(obj, dict):
-        if "eventId" in obj and "price" in obj:
-            yield obj
-        for v in obj.values():
-            yield from _iter_outcomes(v)
-    elif isinstance(obj, list):
-        for v in obj:
-            yield from _iter_outcomes(v)
+def _market_outcomes(market: dict) -> Dict[int, float]:
+    """Match-result outcomes (``{0: home, 1: draw, 3: away}``) of one market.
 
-
-def _is_result_outcome(o: dict) -> bool:
-    """True for outcomes of the 1X2 result market (marketKey[1:3]==[2,0])."""
-    mk = o.get("marketKey")
-    if isinstance(mk, list) and len(mk) >= 3 and mk[1] == 2 and mk[2] == 0:
-        return True
-    return "_2_0_-_1_-_-" in str(o.get("marketItemId") or "")
-
-
-def extract_result_outcomes(html: str) -> Dict[str, Dict[int, float]]:
-    """``{eventId: {0: home, 1: draw, 3: away}}`` for the 1X2 result market.
-
-    Best-effort: returns ``{}`` if the blob is absent or unparseable so callers
-    can treat it as optional enrichment over the existing WS path.
+    Restricted to the match-result selection ids 0/1/3; totals (4/5),
+    handicaps, etc. are ignored. The home outcome may omit ``type`` -> 0.
     """
-    out: Dict[str, Dict[int, float]] = {}
-    try:
-        events = find_events_array(html)
-    except Exception:
-        logger.warning("embedded_odds: events array scan failed", exc_info=True)
-        return out
-    for o in _iter_outcomes(events):
-        if not _is_result_outcome(o):
+    outs: Dict[int, float] = {}
+    if not isinstance(market, dict):
+        return outs
+    for o in market.get("outcomes") or []:
+        if not isinstance(o, dict):
             continue
-        eid = str(o.get("eventId") or "").strip()
-        if not eid:
-            continue
-        t = o.get("type", 0)  # the home outcome omits `type` -> 0
+        t = o.get("type", 0)
         if t not in (0, 1, 3):
             continue
         try:
@@ -143,7 +117,41 @@ def extract_result_outcomes(html: str) -> Dict[str, Dict[int, float]]:
             continue
         if price <= _MIN_VALID_ODD:
             continue
-        out.setdefault(eid, {})[t] = price
+        outs[t] = price
+    return outs
+
+
+def extract_result_outcomes(html: str) -> Dict[str, Dict[int, float]]:
+    """``{eventId: {0: home, 1: draw, 3: away}}`` for each event's primary
+    match-result market — works for every sport.
+
+    football is 1X2 (types 0/1/3); all other sports are 2-way winner/moneyline
+    (types 0/3, no draw). For each event we take the primary market carrying
+    both home(0) and away(3), preferring a 3-way (with a draw) over a 2-way when
+    both exist. Best-effort: returns ``{}`` if the blob is absent/unparseable.
+    """
+    out: Dict[str, Dict[int, float]] = {}
+    try:
+        events = find_events_array(html)
+    except Exception:
+        logger.warning("embedded_odds: events array scan failed", exc_info=True)
+        return out
+    for ev in events:
+        if not isinstance(ev, dict):
+            continue
+        eid = str(ev.get("id") or ev.get("eventId") or "").strip()
+        markets = ev.get("markets")
+        if not eid or not isinstance(markets, list):
+            continue
+        candidates = []
+        for m in markets:
+            outs = _market_outcomes(m)
+            if 0 in outs and 3 in outs:  # needs both home and away
+                candidates.append(outs)
+        if not candidates:
+            continue
+        # prefer a 3-way (1X2) market over a 2-way when both are present
+        out[eid] = next((c for c in candidates if 1 in c), candidates[0])
     return out
 
 

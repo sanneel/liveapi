@@ -85,7 +85,24 @@ def _build_html() -> str:
             }
         ],
     }
-    events = json.dumps([mexico, canada], ensure_ascii=False)
+    # 2-way winner (tennis/basketball/fights): types 0 and 3, no draw.
+    tennis = {
+        "id": "17004991",
+        "competitors": [
+            {"id": "1", "name": "Arnaldi"},
+            {"id": "2", "name": "Cobolli"},
+        ],
+        "markets": [
+            {
+                "name": "Winner",
+                "outcomes": [
+                    _outcome("17004991", 0, 3.05, 3.00, market_key=(1, 1, 0, "null", "null"), with_type=False),
+                    _outcome("17004991", 3, 1.44, 1.43, market_key=(1, 1, 0, "null", "null")),
+                ],
+            }
+        ],
+    }
+    events = json.dumps([mexico, canada, tennis], ensure_ascii=False)
     return (
         "<!doctype html><html><head><script>window.menu="
         + noise
@@ -100,16 +117,21 @@ def main() -> None:
     html = _build_html()
 
     events = find_events_array(html)
-    assert isinstance(events, list) and len(events) == 2, f"expected 2 events, got {events!r}"
+    assert isinstance(events, list) and len(events) == 3, f"expected 3 events, got {events!r}"
 
     odds = extract_result_outcomes(html)
-    assert set(odds) == {"15069103", "16226843"}, f"event ids wrong: {set(odds)}"
+    assert set(odds) == {"15069103", "16226843", "17004991"}, f"event ids wrong: {set(odds)}"
 
     mex = odds["15069103"]
     assert mex == {0: 1.43, 1: 4.46, 3: 8.55}, f"mexico odds wrong: {mex}"
 
     can = odds["16226843"]
     assert can == {0: 1.80, 1: 3.74, 3: 4.57}, f"canada odds wrong: {can}"
+
+    # 2-way winner: only home(0) + away(3), no draw key
+    ten = odds["17004991"]
+    assert ten == {0: 3.05, 3: 1.44}, f"tennis 2-way odds wrong: {ten}"
+    assert 1 not in ten, "2-way market must not invent a draw"
 
     # the over/under (non-result) market must NOT leak a 1.90 into home
     assert mex[0] == 1.43, "result-market filter failed (total market leaked)"
