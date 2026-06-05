@@ -77,6 +77,7 @@ KEY_BODY_HINTS = ("by-market-filter", "by-sport-filter", "/markets",
 def main() -> None:
     responses = []
     bodies = []
+    ws_frames = []
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         ctx = browser.new_context(
@@ -109,6 +110,23 @@ def main() -> None:
                 pass
 
         page.on("response", on_resp)
+
+        # v2 streams live odds over a "reactive-outcomes" push channel — capture
+        # the WebSocket frames (that's where the odds values are).
+        def on_ws(ws):
+            try:
+                ws_frames.append({"ev": "open", "url": ws.url})
+                def on_recv(payload):
+                    try:
+                        if sum(1 for x in ws_frames if x.get("ev") == "recv") < 25:
+                            ws_frames.append({"ev": "recv", "url": ws.url, "data": str(payload)[:1200]})
+                    except Exception:
+                        pass
+                ws.on("framereceived", on_recv)
+            except Exception:
+                pass
+
+        page.on("websocket", on_ws)
         try:
             page.goto(URL, wait_until="domcontentloaded", timeout=45000)
         except Exception as e:
@@ -127,8 +145,26 @@ def main() -> None:
             " { try { m=Math.max(m, document.querySelectorAll(s).length); } catch(e){} } return m; }"
         )
         card = page.evaluate(
-            "() => { for (const s of ['app-event-card','[data-lineup-id]','[class*=event-card]','[class*=eventCard]'])"
-            " { const el=document.querySelector(s); if (el) return s+' :: '+el.outerHTML.slice(0,2500); } return '(no card matched)'; }"
+            """() => {
+                const odd = document.querySelector('p.outcome__odd');
+                if (odd) {
+                  let el = odd;
+                  for (let i = 0; i < 7 && el.parentElement; i++) el = el.parentElement;
+                  return 'ODDS_IN_DOM count=' + document.querySelectorAll('p.outcome__odd').length
+                         + '\\n' + el.outerHTML.slice(0, 3500);
+                }
+                const sels = ['app-event-card','[class*=event-card]','[class*=eventCard]',
+                              '[class*=event-row]','[class*=eventRow]','[class*=sportsEvent]'];
+                for (const s of sels) {
+                  for (const c of document.querySelectorAll(s)) {
+                    const cls = (typeof c.className === 'string') ? c.className : '';
+                    if (cls.includes('chip') || cls.includes('filter')) continue;
+                    if ((c.innerText || '').trim().length > 8)
+                      return 'NO_ODDS_IN_DOM sel=' + s + '\\n' + c.outerHTML.slice(0, 3500);
+                  }
+                }
+                return 'NO_ODDS_IN_DOM and no match-card matched';
+            }"""
         )
         browser.close()
 
@@ -141,6 +177,9 @@ def main() -> None:
     print(json.dumps(cap.get("sse", []), indent=2, ensure_ascii=False)[:3500])
     print("\n=== fetch errors (Failed to fetch / Cloudflare) ===")
     print(json.dumps(cap.get("errors", []), indent=2, ensure_ascii=False)[:2000])
+    print("\n=== WEBSOCKET frames (reactive-outcomes odds?) ===")
+    print(json.dumps(ws_frames[:30], indent=2, ensure_ascii=False)[:4500])
+
     print("\n=== KEY ENDPOINT BODIES (odds / markets / layout) ===")
     for b in bodies[:8]:
         print(f"\n--- {b['status']}  {b['url']}")
