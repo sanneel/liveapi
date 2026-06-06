@@ -20,7 +20,7 @@ import re
 import threading
 import time
 from collections import defaultdict
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Tuple
 
 from ..database import db_session
 from ..logging_config import get_logger
@@ -91,17 +91,19 @@ def _overlay_url(sport: str, tid: str) -> str:
     return f"{_SITE}/{sport}/all/1?tournaments={tid}"
 
 
-def refresh_once() -> int:
+def refresh_once() -> Tuple[int, int]:
     """One pass: GET each featured league overlay, update existing odds.
 
     One URL per tournament (jugabet caps multi-tournament rendered lists, so a
-    dedicated single-tournament URL is the reliable form). Returns the number of
-    matches whose odds were refreshed.
+    dedicated single-tournament URL is the reliable form). Returns
+    (matches_updated, leagues_fetched).
     """
     by_sport = collect_priority_tids()
     updated = 0
+    leagues = 0
     for sport, tids in by_sport.items():
         for tid in sorted(tids):
+            leagues += 1
             odds, _ = fetch_embedded(_overlay_url(sport, tid))
             if not odds:
                 continue
@@ -113,18 +115,18 @@ def refresh_once() -> int:
                             updated += 1
             except Exception:
                 logger.exception("priority_odds: persist failed for %s/%s", sport, tid)
-    return updated
+    return updated, leagues
 
 
 def _loop() -> None:
-    logger.info("priority_odds: loop started (interval=%ss)", PRIORITY_INTERVAL_SECONDS)
+    print("[PRIORITY] odds lane started", flush=True)
     while True:
         started = time.monotonic()
         try:
-            n = refresh_once()
-            if n:
-                print(f"[PRIORITY] refreshed odds for {n} featured matches", flush=True)
-        except Exception:
+            n, leagues = refresh_once()
+            print(f"[PRIORITY] cycle: leagues={leagues} odds_updated={n}", flush=True)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[PRIORITY] cycle ERROR: {exc!r}", flush=True)
             logger.exception("priority_odds: refresh_once crashed")
         elapsed = time.monotonic() - started
         time.sleep(max(5.0, PRIORITY_INTERVAL_SECONDS - elapsed))

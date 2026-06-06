@@ -321,18 +321,14 @@ class MatchRepository:
             return []
 
     def reactivate_protected(self) -> int:
-        """Re-activate any campaign/hot-pinned match that was deactivated.
-        Heals rows the reaper removed before the exemption existed."""
-        prot = self.protected_event_ids()
-        if not prot:
-            return 0
-        stmt = (
-            update(Match)
-            .where(Match.is_active.is_(False))
-            .where(Match.event_id.in_(prot))
-            .values(is_active=True, last_updated_at=datetime.utcnow())
-        )
-        return int(self.session.execute(stmt).rowcount or 0)
+        """No-op kept for older callers.
+
+        Campaign/hot selections are protected from feed-gap reaping in
+        deactivate_not_seen(), but they must not be resurrected forever. Finished
+        or expired matches should go inactive so public renders and leaderboards
+        can drop them naturally.
+        """
+        return 0
 
     def deactivate_expired(self, hours: int = 6) -> int:
         """Mark matches whose scheduled start was more than `hours` ago as inactive."""
@@ -343,9 +339,6 @@ class MatchRepository:
             .where(Match.start_time_utc.is_not(None))
             .where(Match.start_time_utc < cutoff)
         )
-        prot = self.protected_event_ids()
-        if prot:
-            stmt = stmt.where(Match.event_id.not_in(prot))
         stmt = stmt.values(is_active=False, last_updated_at=datetime.utcnow())
         result = self.session.execute(stmt)
         return int(result.rowcount or 0)
@@ -540,6 +533,7 @@ class MatchRepository:
         self,
         sport: Optional[str] = None,
         include_synthetic: bool = False,
+        include_inactive: bool = False,
     ) -> List[str]:
         """Distinct tournament names of active matches, ordered alphabetically.
         Used to populate league-filter dropdowns in the admin picker.
@@ -548,11 +542,9 @@ class MatchRepository:
         admins don't even see it in the league dropdown. Caller can opt
         in for the "show synthetic" toggle.
         """
-        q = (
-            self.session.query(Match.tournament_name)
-            .filter(Match.is_active.is_(True))
-            .filter(Match.tournament_name.is_not(None))
-        )
+        q = self.session.query(Match.tournament_name).filter(Match.tournament_name.is_not(None))
+        if not include_inactive:
+            q = q.filter(Match.is_active.is_(True))
         if not include_synthetic:
             q = q.filter(Match.is_synthetic.is_(False))
         if sport:

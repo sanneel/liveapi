@@ -83,13 +83,14 @@ def main() -> None:
     assert is_active("stale_syn") is True, "synthetic reaped by wrong reaper"
     assert is_active("camp_pm") is True, "campaign-pinned match wrongly reaped"
 
-    # reactivation heals a pinned match that was already inactive
+    # protected rows are not resurrected forever; an expired/finished selected
+    # match must stay inactive so public renders and leaderboards can drop it.
     session.get(Match, "camp_pm").is_active = False
     session.commit()
     healed = MatchRepository(session).reactivate_protected()
     session.commit()
-    assert healed == 1, f"expected 1 healed, got {healed}"
-    assert is_active("camp_pm") is True, "reactivate_protected did not heal pinned match"
+    assert healed == 0, f"expected no resurrection, got {healed}"
+    assert is_active("camp_pm") is False, "reactivate_protected resurrected a pinned match"
 
     print("OK: deactivate_not_seen + campaign exemption passed all assertions")
 

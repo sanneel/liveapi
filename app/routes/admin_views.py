@@ -15,6 +15,8 @@ Auth, audit log, RBAC, and the public render endpoints all remain.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Optional
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -127,6 +129,7 @@ def matches_list(
     sport: str = "",
     status: str = "",
     tournament: str = "",
+    include_inactive: int = 0,
     include_synthetic: int = 0,
     page: int = 1,
     user: User = Depends(require_login),
@@ -134,6 +137,7 @@ def matches_list(
     page = max(1, page)
     per_page = 25
     offset = (page - 1) * per_page
+    show_inactive = bool(include_inactive)
     show_synth = bool(include_synthetic)
 
     with db_session() as session:
@@ -146,11 +150,14 @@ def matches_list(
             limit=per_page + 1,
             offset=offset,
             include_synthetic=show_synth,
+            include_inactive=show_inactive,
         )
         has_next = len(matches) > per_page
         matches = matches[:per_page]
         tournaments = repo.list_tournaments(
-            sport=sport or None, include_synthetic=show_synth
+            sport=sport or None,
+            include_synthetic=show_synth,
+            include_inactive=show_inactive,
         )
         total_active = repo.count_active()
 
@@ -164,6 +171,7 @@ def matches_list(
             "sport": sport,
             "status": status,
             "tournament": tournament,
+            "include_inactive": show_inactive,
             "include_synthetic": show_synth,
             "tournaments": tournaments,
             "total_active": total_active,
@@ -175,15 +183,16 @@ def matches_list(
 
 
 # Convenience redirect: bare /admin/ → /admin
-def _sync_live_parser_feeds() -> None:
+def _sync_live_parser_feeds() -> Optional[str]:
     try:
         import server as _server  # type: ignore
 
         sync = getattr(_server, "sync_extra_parser_feeds", None)
         if callable(sync):
             sync()
-    except Exception:
-        pass
+        return None
+    except Exception as exc:
+        return f"Parser link saved, but live parser sync failed: {exc}"
 
 
 @router.get("/admin/parser-feeds", response_class=HTMLResponse)
@@ -191,6 +200,7 @@ def parser_feeds_page(
     request: Request,
     saved: int = 0,
     deleted: int = 0,
+    sync_error: str = "",
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
     return templates.TemplateResponse(
@@ -202,6 +212,7 @@ def parser_feeds_page(
             "feeds": load_extra_feeds(),
             "saved": bool(saved),
             "deleted": bool(deleted),
+            "sync_error": sync_error,
         },
     )
 
@@ -304,8 +315,14 @@ def parser_feeds_create(
     user: User = Depends(require_role("editor")),
 ) -> RedirectResponse:
     add_extra_feed(label=label, sport=sport, mode=mode, url=url)
-    _sync_live_parser_feeds()
-    return RedirectResponse("/admin/parser-feeds?saved=1", status_code=status.HTTP_303_SEE_OTHER)
+    sync_error = _sync_live_parser_feeds()
+    qs = {"saved": "1"}
+    if sync_error:
+        qs["sync_error"] = sync_error
+    return RedirectResponse(
+        f"/admin/parser-feeds?{urlencode(qs)}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
 
 
 @router.post("/admin/parser-feeds/{feed_id}/delete")
@@ -314,8 +331,14 @@ def parser_feeds_delete(
     user: User = Depends(require_role("editor")),
 ) -> RedirectResponse:
     delete_extra_feed(feed_id)
-    _sync_live_parser_feeds()
-    return RedirectResponse("/admin/parser-feeds?deleted=1", status_code=status.HTTP_303_SEE_OTHER)
+    sync_error = _sync_live_parser_feeds()
+    qs = {"deleted": "1"}
+    if sync_error:
+        qs["sync_error"] = sync_error
+    return RedirectResponse(
+        f"/admin/parser-feeds?{urlencode(qs)}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
 
 
 @router.get("/admin/")

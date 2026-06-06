@@ -21,6 +21,11 @@
     Parser link removed from the extra-feed list.
   </div>
 {% endif %}
+{% if sync_error %}
+  <div class="mb-4 border border-red-700/60 bg-red-950/30 text-red-200 text-sm px-4 py-3 rounded-lg">
+    {{ sync_error }}
+  </div>
+{% endif %}
 
 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
   <form method="post" action="/admin/parser-feeds"

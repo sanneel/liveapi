@@ -54,13 +54,20 @@
   </div>
 
   <label class="md:col-span-12 flex items-center gap-2 text-xs text-muted-400 select-none">
+    <input type="checkbox" name="include_inactive" value="1"
+           {% if include_inactive %}checked{% endif %}
+           class="rounded border-ink-600 bg-ink-700 text-brand-500 focus:ring-brand-500" />
+    <span>Show inactive matches (dropped from parser feed or expired)</span>
+  </label>
+
+  <label class="md:col-span-12 flex items-center gap-2 text-xs text-muted-400 select-none">
     <input type="checkbox" name="include_synthetic" value="1"
            {% if include_synthetic %}checked{% endif %}
            class="rounded border-ink-600 bg-ink-700 text-brand-500 focus:ring-brand-500" />
     <span>Show virtual / replay / esports inventory (hidden by default)</span>
   </label>
 
-  {% if q or sport or status or tournament or include_synthetic %}
+  {% if q or sport or status or tournament or include_inactive or include_synthetic %}
     <div class="md:col-span-12 -mt-1">
       <a href="/admin/matches" class="text-xs text-muted-400 hover:text-zinc-200 underline">Clear all filters</a>
     </div>
@@ -152,11 +159,11 @@
     <div>Page {{ page }}</div>
     <div class="flex gap-2">
       {% if page > 1 %}
-        <a href="?q={{ q }}&sport={{ sport }}&tournament={{ tournament }}&status={{ status }}{% if include_synthetic %}&include_synthetic=1{% endif %}&page={{ page - 1 }}"
+        <a href="?q={{ q }}&sport={{ sport }}&tournament={{ tournament }}&status={{ status }}{% if include_inactive %}&include_inactive=1{% endif %}{% if include_synthetic %}&include_synthetic=1{% endif %}&page={{ page - 1 }}"
            class="px-3 py-1.5 bg-ink-700 border border-ink-600 rounded hover:bg-ink-600">← Previous</a>
       {% endif %}
       {% if has_next %}
-        <a href="?q={{ q }}&sport={{ sport }}&tournament={{ tournament }}&status={{ status }}{% if include_synthetic %}&include_synthetic=1{% endif %}&page={{ page + 1 }}"
+        <a href="?q={{ q }}&sport={{ sport }}&tournament={{ tournament }}&status={{ status }}{% if include_inactive %}&include_inactive=1{% endif %}{% if include_synthetic %}&include_synthetic=1{% endif %}&page={{ page + 1 }}"
            class="px-3 py-1.5 bg-ink-700 border border-ink-600 rounded hover:bg-ink-600">Next →</a>
       {% endif %}
     </div>
