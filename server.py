@@ -85,6 +85,7 @@ from app.middleware.security import SameOriginUnsafeMethodMiddleware, SecurityHe
 from app.routes.public_render import flush_hit_buffer
 from app.parser.extra_feeds import build_extra_feed_map
 from app.parser.embedded_odds import fetch_embedded
+from app.parser.priority_odds import start_priority_odds_thread
 
 logger = get_logger("server")
 parser_logger = get_logger("app.parser.server")
@@ -2513,6 +2514,10 @@ def startup() -> None:
         _spawn_feed_thread(key, initial_delay=max(0.0, delay))
     # BUG-04: watchdog respawns silently-dead feeds and surfaces stuck ones.
     threading.Thread(target=_feed_watchdog_loop, name="feed-watchdog", daemon=True).start()
+    # Priority odds lane: lightweight HTTP loop that keeps featured leagues
+    # (campaign / hot / World Cup) odds live without Playwright, so featured
+    # matches stay fresh even when the heavy browser feeds are failing.
+    start_priority_odds_thread()
     print(
         f"[STARTUP] step 8/8: ALL DONE. parser_threads={len(sorted_keys)} "
         f"pid={_os.getpid()}",

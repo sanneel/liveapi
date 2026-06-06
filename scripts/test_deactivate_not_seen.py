@@ -23,6 +23,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.models import Campaign, HotBoost
+from app.models.campaign_match import CampaignMatch
 from app.models.match import Match
 from app.repositories.match_repo import MatchRepository
 
@@ -47,7 +49,8 @@ def _mk(eid, mode, mins_ago, synthetic=False, active=True):
 
 def main() -> None:
     engine = create_engine("sqlite:///:memory:")
-    Match.__table__.create(bind=engine)
+    for model in (Match, Campaign, CampaignMatch, HotBoost):
+        model.__table__.create(bind=engine)
     session = sessionmaker(bind=engine)()
 
     session.add_all([
@@ -58,7 +61,11 @@ def main() -> None:
         _mk("stale_live", "live", 600),                 # survives (mode filter)
         _mk("stale_syn", "prematch", 600, synthetic=True),  # survives (synthetic excl.)
         _mk("already_off", "prematch", 600, active=False),  # ignored
+        _mk("camp_pm", "prematch", 600),                # stale BUT pinned -> survives
     ])
+    # pin camp_pm to an enabled campaign
+    session.add(Campaign(slug="wc", title="WC", sport="football", mode="manual", enabled=True))
+    session.add(CampaignMatch(campaign_slug="wc", event_id="camp_pm"))
     session.commit()
 
     n = MatchRepository(session).deactivate_not_seen(WINDOW_MIN, modes=("prematch",))
@@ -74,8 +81,17 @@ def main() -> None:
     assert is_active("edge_in_pm") is False, "95m prematch not reaped"
     assert is_active("stale_live") is True, "live reaped (rotation flicker risk)"
     assert is_active("stale_syn") is True, "synthetic reaped by wrong reaper"
+    assert is_active("camp_pm") is True, "campaign-pinned match wrongly reaped"
 
-    print("OK: deactivate_not_seen passed all assertions")
+    # reactivation heals a pinned match that was already inactive
+    session.get(Match, "camp_pm").is_active = False
+    session.commit()
+    healed = MatchRepository(session).reactivate_protected()
+    session.commit()
+    assert healed == 1, f"expected 1 healed, got {healed}"
+    assert is_active("camp_pm") is True, "reactivate_protected did not heal pinned match"
+
+    print("OK: deactivate_not_seen + campaign exemption passed all assertions")
 
 
 if __name__ == "__main__":

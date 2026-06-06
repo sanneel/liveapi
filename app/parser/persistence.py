@@ -56,6 +56,11 @@ def _maybe_run_expiry(session, settings) -> int:
             return 0
         _last_expiry_at = now
     repo = MatchRepository(session)
+    # Heal first: a campaign/hot-pinned match wrongly deactivated earlier (e.g.
+    # while its feed was failing) comes back before any reaper runs this cycle.
+    n_healed = repo.reactivate_protected()
+    if n_healed:
+        print(f"[DB] Reactivated {n_healed} campaign/hot-pinned matches", flush=True)
     n_expired = repo.deactivate_expired(settings.match_deactivate_after_hours)
     n_stale = repo.deactivate_not_seen(_PREMATCH_NOT_SEEN_MINUTES, modes=("prematch",))
     n_reaped = repo.deactivate_synthetic_not_seen(_SYNTHETIC_REAP_MINUTES)

@@ -22,7 +22,8 @@ from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from ..logging_config import get_logger
-from ..models import Match
+from ..models import Campaign, HotBoost, Match
+from ..models.campaign_match import CampaignMatch
 from ..utils.quality import is_synthetic_tournament
 from ..utils.slugify import slugify_league
 
@@ -294,6 +295,45 @@ class MatchRepository:
         result = self.session.execute(stmt)
         return int(result.rowcount or 0)
 
+    def protected_event_ids(self) -> List[str]:
+        """event_ids that must NEVER be auto-deactivated: a match pinned to an
+        enabled campaign or pinned into the hot list. Losing one of these breaks
+        a live campaign/hot slot, so the reapers always skip them."""
+        try:
+            ids = {
+                r[0]
+                for r in (
+                    self.session.query(CampaignMatch.event_id)
+                    .join(Campaign, Campaign.slug == CampaignMatch.campaign_slug)
+                    .filter(Campaign.enabled.is_(True))
+                    .all()
+                )
+            }
+            ids |= {
+                r[0]
+                for r in self.session.query(HotBoost.event_id)
+                .filter(HotBoost.position.is_not(None))
+                .all()
+            }
+            return [i for i in ids if i]
+        except Exception:
+            logger.warning("protected_event_ids query failed", exc_info=True)
+            return []
+
+    def reactivate_protected(self) -> int:
+        """Re-activate any campaign/hot-pinned match that was deactivated.
+        Heals rows the reaper removed before the exemption existed."""
+        prot = self.protected_event_ids()
+        if not prot:
+            return 0
+        stmt = (
+            update(Match)
+            .where(Match.is_active.is_(False))
+            .where(Match.event_id.in_(prot))
+            .values(is_active=True, last_updated_at=datetime.utcnow())
+        )
+        return int(self.session.execute(stmt).rowcount or 0)
+
     def deactivate_expired(self, hours: int = 6) -> int:
         """Mark matches whose scheduled start was more than `hours` ago as inactive."""
         cutoff = datetime.utcnow() - timedelta(hours=hours)
@@ -302,8 +342,11 @@ class MatchRepository:
             .where(Match.is_active.is_(True))
             .where(Match.start_time_utc.is_not(None))
             .where(Match.start_time_utc < cutoff)
-            .values(is_active=False, last_updated_at=datetime.utcnow())
         )
+        prot = self.protected_event_ids()
+        if prot:
+            stmt = stmt.where(Match.event_id.not_in(prot))
+        stmt = stmt.values(is_active=False, last_updated_at=datetime.utcnow())
         result = self.session.execute(stmt)
         return int(result.rowcount or 0)
 
@@ -354,9 +397,47 @@ class MatchRepository:
         )
         if modes:
             stmt = stmt.where(Match.mode.in_(list(modes)))
+        prot = self.protected_event_ids()
+        if prot:
+            stmt = stmt.where(Match.event_id.not_in(prot))
         stmt = stmt.values(is_active=False, last_updated_at=datetime.utcnow())
         result = self.session.execute(stmt)
         return int(result.rowcount or 0)
+
+    def update_result_odds(self, event_id: str, outcomes: Dict[int, float]) -> bool:
+        """Refresh ONLY the result-market odds of an existing match.
+
+        Used by the priority odds parser (browserless HTTP). Maps
+        {0:home, 1:draw, 3:away} -> the same {p1, draw, p2} JSON the normal
+        upsert writes, via _odds_to_json for identical validation/format. Does
+        NOT create matches and never touches teams/time/score. Returns True if a
+        row existed and was updated.
+        """
+        match = self.session.get(Match, str(event_id))
+        if match is None:
+            return False
+        p1, draw, p2 = outcomes.get(0), outcomes.get(1), outcomes.get(3)
+
+        def _fmt(v):
+            try:
+                return f"{float(v):.2f}"
+            except (TypeError, ValueError):
+                return None
+
+        if draw is not None:
+            odds = {"p1": _fmt(p1), "draw": _fmt(draw), "p2": _fmt(p2), "more_odds": False}
+            market_type = "1x2"
+        else:
+            odds = {"p1": _fmt(p1), "p2": _fmt(p2), "more_odds": False}
+            market_type = "winner"
+
+        new_json = self._odds_to_json(odds)
+        if new_json is None:
+            return False
+        match.market_type = market_type
+        match.odds_json = new_json
+        match.last_updated_at = datetime.utcnow()
+        return True
 
     # ─── reads ────────────────────────────────────────────────────────
     def find_by_event_id(self, event_id: str) -> Optional[Match]:
