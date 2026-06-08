@@ -15,7 +15,7 @@ Auth, audit log, RBAC, and the public render endpoints all remain.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, Request, status
@@ -31,6 +31,11 @@ from ..database import db_session
 from ..models import Campaign, Club, HotBoost, Match, User
 from ..parser.extra_feeds import add_extra_feed, delete_extra_feed, load_extra_feeds
 from ..repositories.match_repo import MatchRepository
+from ..services.journey_cloner_runner import (
+    missing_templates,
+    run_journey_cloner,
+    template_status,
+)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -302,6 +307,98 @@ def live_parses_page(
             "healthy": healthy,
             "feeds_total": len(feeds),
             "live_total": live_total,
+        },
+    )
+
+
+@router.get("/admin/journey-cloner", response_class=HTMLResponse)
+def journey_cloner_page(
+    request: Request,
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request,
+        "journey_cloner.html",
+        {
+            "active_page": "journey_cloner",
+            "current_user": user,
+            "template_status": template_status(),
+            "selected_types": ["followup", "bfr", "two_hours", "aft"],
+            "dry_run": True,
+            "result": None,
+            "error": "",
+            "form": {},
+        },
+    )
+
+
+@router.post("/admin/journey-cloner", response_class=HTMLResponse)
+def journey_cloner_run(
+    request: Request,
+    token: str = Form(""),
+    home: str = Form(...),
+    away: str = Form(...),
+    date: str = Form(...),
+    chile_time: str = Form(...),
+    code: str = Form(...),
+    types: List[str] = Form(["followup", "bfr", "two_hours", "aft"]),
+    dry_run: Optional[str] = Form(None),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    selected_types = [t for t in types if t in {"followup", "bfr", "two_hours", "aft"}]
+    is_dry_run = bool(dry_run)
+    form = {
+        "home": home,
+        "away": away,
+        "date": date,
+        "chile_time": chile_time,
+        "code": code,
+    }
+    error = ""
+    result = None
+
+    if not selected_types:
+        error = "Select at least one draft type."
+    elif not is_dry_run and not token.strip():
+        error = "Bearer token is required when dry run is unchecked."
+    else:
+        missing = missing_templates(selected_types)
+        if missing:
+            error = "Missing templates: " + ", ".join(f"templates/{m}.json" for m in missing)
+
+    if not error:
+        try:
+            exit_code, output, display_cmd = run_journey_cloner(
+                token=token,
+                home=home,
+                away=away,
+                code=code,
+                date=date,
+                chile_time=chile_time,
+                selected_types=selected_types,
+                dry_run=is_dry_run,
+            )
+            result = {
+                "exit_code": exit_code,
+                "output": output,
+                "command": display_cmd,
+                "ok": exit_code == 0,
+            }
+        except Exception as exc:
+            error = str(exc)
+
+    return templates.TemplateResponse(
+        request,
+        "journey_cloner.html",
+        {
+            "active_page": "journey_cloner",
+            "current_user": user,
+            "template_status": template_status(),
+            "selected_types": selected_types,
+            "dry_run": is_dry_run,
+            "result": result,
+            "error": error,
+            "form": form,
         },
     )
 

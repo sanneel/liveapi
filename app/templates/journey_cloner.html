@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Journey Cloner - Jugabet Admin{% endblock %}
+{% block page_title %}Journey Cloner{% endblock %}
+
+{% block page_actions %}
+  <a href="/admin/journey-cloner"
+     class="text-xs bg-ink-700 hover:bg-ink-600 text-zinc-300 px-3 py-1.5 rounded border border-ink-600">
+    Clear
+  </a>
+{% endblock %}
+
+{% block content %}
+
+{% if error %}
+  <div class="mb-4 border border-red-700/60 bg-red-950/30 text-red-200 text-sm px-4 py-3 rounded-lg">
+    {{ error }}
+  </div>
+{% endif %}
+
+{% if result %}
+  <div class="mb-4 border {% if result.ok %}border-emerald-700/60 bg-emerald-950/30 text-emerald-200{% else %}border-red-700/60 bg-red-950/30 text-red-200{% endif %} text-sm px-4 py-3 rounded-lg">
+    {% if result.ok %}Journey cloner finished successfully.{% else %}Journey cloner exited with code {{ result.exit_code }}.{% endif %}
+  </div>
+{% endif %}
+
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+  <form method="post" action="/admin/journey-cloner"
+        class="xl:col-span-1 bg-ink-850 border border-ink-600 rounded-xl p-5 space-y-4">
+    <div>
+      <h2 class="text-sm font-semibold text-white">Create Drafts</h2>
+      <p class="text-xs text-muted-500 mt-1">Build Journey Builder drafts from the stored templates.</p>
+    </div>
+
+    <label class="block">
+      <span class="block text-xs text-muted-400 mb-1.5">Bearer token</span>
+      <input name="token" type="password" autocomplete="off" placeholder="Required for real creation"
+             class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
+    </label>
+
+    <div class="grid grid-cols-2 gap-3">
+      <label class="block">
+        <span class="block text-xs text-muted-400 mb-1.5">Home club</span>
+        <input name="home" required value="{{ form.home or '' }}" placeholder="Colo Colo"
+               class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
+      </label>
+      <label class="block">
+        <span class="block text-xs text-muted-400 mb-1.5">Away club</span>
+        <input name="away" required value="{{ form.away or '' }}" placeholder="Audax"
+               class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
+      </label>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <label class="block">
+        <span class="block text-xs text-muted-400 mb-1.5">Date</span>
+        <input name="date" type="date" required value="{{ form.date or '' }}"
+               class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
+      </label>
+      <label class="block">
+        <span class="block text-xs text-muted-400 mb-1.5">Chile time</span>
+        <input name="chile_time" type="time" required value="{{ form.chile_time or '' }}"
+               class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
+      </label>
+    </div>
+
+    <label class="block">
+      <span class="block text-xs text-muted-400 mb-1.5">Promocode</span>
+      <input name="code" required value="{{ form.code or '' }}" placeholder="VAMOSBULLA"
+             class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 uppercase focus:outline-none focus:border-brand-500">
+    </label>
+
+    <div>
+      <span class="block text-xs text-muted-400 mb-1.5">Draft types</span>
+      <div class="grid grid-cols-2 gap-2">
+        {% set labels = {'followup':'FollowUp','bfr':'BFR','two_hours':'2H','aft':'AFT'} %}
+        {% for t in ['followup','bfr','two_hours','aft'] %}
+          <label class="flex items-center gap-2 bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-sm text-zinc-200">
+            <input type="checkbox" name="types" value="{{ t }}" {% if t in selected_types %}checked{% endif %}>
+            <span>{{ labels[t] }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <label class="flex items-center gap-2 bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-sm text-zinc-200">
+      <input type="checkbox" name="dry_run" value="1" {% if dry_run %}checked{% endif %}>
+      <span>Dry run only</span>
+    </label>
+
+    <button class="w-full bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold text-sm px-4 py-2 rounded-lg">
+      Run journey cloner
+    </button>
+  </form>
+
+  <div class="xl:col-span-2 space-y-6">
+    <div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-ink-600 flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-white">Template Status</h2>
+        <span class="text-xs text-muted-500">journey-cloner/templates</span>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-5">
+        {% set labels = {'followup':'FollowUp','bfr':'BFR','two_hours':'2H','aft':'AFT'} %}
+        {% for key, exists in template_status.items() %}
+          <div class="bg-ink-800 border border-ink-600 rounded-lg px-4 py-3">
+            <div class="text-sm text-zinc-200">{{ labels.get(key, key) }}</div>
+            <div class="text-xs mt-1 {% if exists %}text-emerald-300{% else %}text-red-300{% endif %}">
+              {% if exists %}template ready{% else %}missing {{ key }}.json{% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% if result %}
+      <div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">
+        <div class="px-5 py-4 border-b border-ink-600">
+          <h2 class="text-sm font-semibold text-white">Run Output</h2>
+        </div>
+        <div class="p-5 space-y-4">
+          <div>
+            <div class="text-xs text-muted-400 mb-1">Command</div>
+            <pre class="bg-ink-950 border border-ink-600 rounded-lg p-3 text-xs text-muted-300 overflow-x-auto whitespace-pre-wrap">{{ result.command }}</pre>
+          </div>
+          <div>
+            <div class="text-xs text-muted-400 mb-1">Output</div>
+            <pre class="bg-ink-950 border border-ink-600 rounded-lg p-3 text-xs text-zinc-200 overflow-x-auto whitespace-pre-wrap max-h-[32rem]">{{ result.output }}</pre>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="bg-ink-850 border border-ink-600 rounded-xl p-5">
+        <h2 class="text-sm font-semibold text-white mb-2">Before Running</h2>
+        <div class="space-y-2 text-xs text-muted-400 leading-relaxed">
+          <p>Keep dry run enabled first. Dry runs generate JSON under <span class="font-mono text-muted-300">journey-cloner/out</span> and do not call the Journey Builder API.</p>
+          <p>For real creation, paste a fresh bearer token and uncheck dry run.</p>
+          <p>Copied fetch bodies should be extracted into <span class="font-mono text-muted-300">journey-cloner/templates</span> before using this page.</p>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
