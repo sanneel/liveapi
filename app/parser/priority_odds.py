@@ -92,11 +92,16 @@ def _overlay_url(sport: str, tid: str) -> str:
 
 
 def refresh_once() -> Tuple[int, int]:
-    """One pass: GET each featured league overlay, update existing odds.
+    """One pass: GET each featured league overlay, update odds AND keep-alive.
 
     One URL per tournament (jugabet caps multi-tournament rendered lists, so a
-    dedicated single-tournament URL is the reliable form). Returns
-    (matches_updated, leagues_fetched).
+    dedicated single-tournament URL is the reliable form). Besides refreshing
+    odds, this is the reliable *keep-alive* for featured matches: the overlay's
+    embedded JSON lists every event on the page (``event_ids`` below) even when
+    a fixture has no odds yet, so we bump their ``last_updated_at`` so the
+    main parser's flaky browser discovery can't let them age out of the
+    ``deactivate_not_seen`` window (the "World Cup match vanished" bug).
+    Returns (matches_updated, leagues_fetched).
     """
     by_sport = collect_priority_tids()
     updated = 0
@@ -104,12 +109,17 @@ def refresh_once() -> Tuple[int, int]:
     for sport, tids in by_sport.items():
         for tid in sorted(tids):
             leagues += 1
-            odds, _ = fetch_embedded(_overlay_url(sport, tid))
-            if not odds:
+            odds, event_tids = fetch_embedded(_overlay_url(sport, tid))
+            # event_tids maps every event on the page -> its tournament id,
+            # so its keys are the full "seen on this overlay" set, including
+            # oddsless upcoming fixtures that `odds` omits.
+            seen_ids = list(event_tids.keys()) or list(odds.keys())
+            if not seen_ids:
                 continue
             try:
                 with db_session() as s:
                     repo = MatchRepository(s)
+                    repo.touch_seen(seen_ids)
                     for eid, outcomes in odds.items():
                         if repo.update_result_odds(eid, outcomes):
                             updated += 1

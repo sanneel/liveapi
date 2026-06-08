@@ -16,13 +16,13 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from ..logging_config import get_logger
-from ..models import Campaign, HotBoost, Match
+from ..models import Campaign, CubeOverride, HotBoost, Match
 from ..models.campaign_match import CampaignMatch
 from ..utils.quality import is_synthetic_tournament
 from ..utils.slugify import slugify_league
@@ -296,9 +296,18 @@ class MatchRepository:
         return int(result.rowcount or 0)
 
     def protected_event_ids(self) -> List[str]:
-        """event_ids that must NEVER be auto-deactivated: a match pinned to an
-        enabled campaign or pinned into the hot list. Losing one of these breaks
-        a live campaign/hot slot, so the reapers always skip them."""
+        """event_ids that must NEVER be auto-deactivated by the feed-gap reaper.
+
+        A match is protected when it is pinned to an enabled campaign, pinned
+        into the hot list, OR pinned into a themed cube (e.g. the World Cup
+        cube). Losing any of these breaks a live, operator-chosen slot.
+
+        The cube case is the one that bit us: the World Cup tournament is fed by
+        a single dedicated Playwright feed, so a >90m browser gap let
+        ``deactivate_not_seen`` mark a cube-pinned WC match inactive — and the
+        cube resolver then permanently cleared the pin. Including cube pins here
+        keeps them alive across feed gaps; only ``deactivate_expired`` (start
+        time elapsed) can still retire a genuinely-finished pinned match."""
         try:
             ids = {
                 r[0]
@@ -313,6 +322,12 @@ class MatchRepository:
                 r[0]
                 for r in self.session.query(HotBoost.event_id)
                 .filter(HotBoost.position.is_not(None))
+                .all()
+            }
+            ids |= {
+                r[0]
+                for r in self.session.query(CubeOverride.event_id)
+                .filter(CubeOverride.position.is_not(None))
                 .all()
             }
             return [i for i in ids if i]
@@ -396,6 +411,53 @@ class MatchRepository:
         stmt = stmt.values(is_active=False, last_updated_at=datetime.utcnow())
         result = self.session.execute(stmt)
         return int(result.rowcount or 0)
+
+    def touch_seen(
+        self, event_ids: Iterable[str], reactivate: bool = True
+    ) -> Tuple[int, int]:
+        """Record that a feed just saw these matches, WITHOUT a full upsert.
+
+        The discovery (Playwright) feed for a niche tournament like the World
+        Cup is unreliable, but the browserless priority-odds lane GETs that
+        tournament's overlay every ~45s and already knows every event_id on the
+        page (``fetch_embedded`` returns them via its ``tids`` map even when an
+        event carries no odds yet). Bumping ``last_updated_at`` for those rows
+        keeps the whole featured pool — pinned and auto-ranked alike — out of
+        the ``deactivate_not_seen`` window regardless of browser health.
+
+        With ``reactivate`` (default), a match wrongly reaped during a browser
+        gap is healed: if the source still lists it on the *prematch* overlay it
+        is a real upcoming fixture, so we flip it back active. Guarded to
+        non-synthetic rows that have not yet kicked off, so a finished or
+        synthetic match is never resurrected (``deactivate_expired`` still
+        backstops anything past its start time).
+
+        Returns ``(touched, reactivated)``.
+        """
+        ids = [str(e) for e in event_ids if e]
+        if not ids:
+            return 0, 0
+        now = datetime.utcnow()
+        touched = self.session.execute(
+            update(Match)
+            .where(Match.event_id.in_(ids))
+            .where(Match.is_active.is_(True))
+            .values(last_updated_at=now)
+        ).rowcount or 0
+        reactivated = 0
+        if reactivate:
+            reactivated = self.session.execute(
+                update(Match)
+                .where(Match.event_id.in_(ids))
+                .where(Match.is_active.is_(False))
+                .where(Match.is_synthetic.is_(False))
+                .where(
+                    (Match.start_time_utc.is_(None))
+                    | (Match.start_time_utc > now)
+                )
+                .values(is_active=True, last_updated_at=now)
+            ).rowcount or 0
+        return int(touched), int(reactivated)
 
     def update_result_odds(self, event_id: str, outcomes: Dict[int, float]) -> bool:
         """Refresh ONLY the result-market odds of an existing match.

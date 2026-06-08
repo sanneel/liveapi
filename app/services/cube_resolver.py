@@ -158,6 +158,7 @@ def resolve_for_theme(
     # Assemble the final slot list: pinned slots first, then fill gaps
     # from HotEngine's pre-scored shortlist, then from the raw active
     # in-theme pool if that still wasn't enough.
+    now = datetime.utcnow()
     auto_iter = iter(filtered)
     slots: List[Match | None] = [None for _ in range(limit)]
     used_ids: set = set()
@@ -174,10 +175,18 @@ def resolve_for_theme(
                 slots[slot] = m
                 used_ids.add(m.event_id)
                 continue
-            # Pins are temporary overrides, not permanent campaign picks.
-            # Once the parser marks a match inactive/finished, free the slot
-            # so the always-on leaderboard can promote the next best match.
-            override_repo.set_position(theme.slug, eid, None, by="system")
+            # Pin points at a match that's currently inactive or gone. Only
+            # RELEASE the pin when the match is genuinely finished — gone from
+            # the DB entirely, or inactive AND already past kickoff. A flaky
+            # browser feed can briefly deactivate an *upcoming* fixture; that
+            # transient gap must NOT cost the operator their pin (the "World
+            # Cup pin vanished" bug). When we keep the pin but can't render it
+            # this cycle, the slot falls through to auto-rank below.
+            finished = m is None or (
+                m.start_time_utc is not None and m.start_time_utc < now
+            )
+            if finished:
+                override_repo.set_position(theme.slug, eid, None, by="system")
         # No pin for this slot — pull the next auto-ranked candidate that
         # we haven't already used and isn't suppressed.
         for m in auto_iter:
