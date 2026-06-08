@@ -303,7 +303,7 @@ def prepare_body(
 
     body = deep_replace(body, replacements)
 
-    body["journeyName"] = f"Copy of {clean_name}"
+    body["journeyName"] = clean_name
     body["reservedJourneyId"] = reserved_id
     set_raw_info(body, "journeyName", clean_name)
 
