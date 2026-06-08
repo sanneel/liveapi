@@ -38,6 +38,7 @@ venv_win/
 *.egg-info/
 build/
 dist/
+/journey-cloner.zip
 
 # Node / Tailwind build tooling (the built CSS in app/static IS committed)
 node_modules/

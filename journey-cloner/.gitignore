@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+
+raw_fetches/*
+!raw_fetches/.gitkeep
+
+templates/*
+!templates/.gitkeep
+
+out/*
+!out/.gitkeep
+
+__pycache__/
+*.py[cod]
