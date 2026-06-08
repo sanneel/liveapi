@@ -22,6 +22,16 @@
     {% if result.ok %}Journey cloner finished successfully.{% else %}Journey cloner exited with code {{ result.exit_code }}.{% endif %}
   </div>
 {% endif %}
+{% if template_saved %}
+  <div class="mb-4 border border-emerald-700/60 bg-emerald-950/30 text-emerald-200 text-sm px-4 py-3 rounded-lg">
+    {{ template_saved }}
+  </div>
+{% endif %}
+{% if template_error %}
+  <div class="mb-4 border border-red-700/60 bg-red-950/30 text-red-200 text-sm px-4 py-3 rounded-lg">
+    {{ template_error }}
+  </div>
+{% endif %}
 
 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
   <form method="post" action="/admin/journey-cloner"
@@ -93,6 +103,29 @@
   </form>
 
   <div class="xl:col-span-2 space-y-6">
+    <form method="post" action="/admin/journey-cloner/templates"
+          class="bg-ink-850 border border-ink-600 rounded-xl p-5 space-y-4">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <h2 class="text-sm font-semibold text-white">Save Template</h2>
+          <p class="text-xs text-muted-500 mt-1">Paste Chrome DevTools Copy-as-fetch for POST /journey-drafts.</p>
+        </div>
+        <select name="template_type"
+                class="bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
+          <option value="followup">FollowUp</option>
+          <option value="bfr">BFR</option>
+          <option value="two_hours">2H</option>
+          <option value="aft">AFT</option>
+        </select>
+      </div>
+      <textarea name="fetch_text" required rows="8"
+                placeholder="fetch('https://.../journey-drafts', { ... body: '...' })"
+                class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-xs font-mono rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500"></textarea>
+      <button class="bg-ink-700 hover:bg-ink-600 border border-ink-600 text-zinc-200 font-semibold text-sm px-4 py-2 rounded-lg">
+        Save selected template
+      </button>
+    </form>
+
     <div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">
       <div class="px-5 py-4 border-b border-ink-600 flex items-center justify-between">
         <h2 class="text-sm font-semibold text-white">Template Status</h2>

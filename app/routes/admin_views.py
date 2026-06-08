@@ -34,6 +34,7 @@ from ..repositories.match_repo import MatchRepository
 from ..services.journey_cloner_runner import (
     missing_templates,
     run_journey_cloner,
+    save_template_from_fetch,
     template_status,
 )
 
@@ -314,6 +315,8 @@ def live_parses_page(
 @router.get("/admin/journey-cloner", response_class=HTMLResponse)
 def journey_cloner_page(
     request: Request,
+    template_saved: str = "",
+    template_error: str = "",
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
     return templates.TemplateResponse(
@@ -327,6 +330,8 @@ def journey_cloner_page(
             "dry_run": True,
             "result": None,
             "error": "",
+            "template_saved": template_saved,
+            "template_error": template_error,
             "form": {},
         },
     )
@@ -398,7 +403,43 @@ def journey_cloner_run(
             "dry_run": is_dry_run,
             "result": result,
             "error": error,
+            "template_saved": "",
+            "template_error": "",
             "form": form,
+        },
+    )
+
+
+@router.post("/admin/journey-cloner/templates", response_class=HTMLResponse)
+def journey_cloner_save_template(
+    request: Request,
+    template_type: str = Form(...),
+    fetch_text: str = Form(...),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    template_saved = ""
+    template_error = ""
+    try:
+        info = save_template_from_fetch(template_type, fetch_text)
+        name = info.get("journeyName") or template_type
+        template_saved = f"Saved {template_type}.json from template: {name}"
+    except Exception as exc:
+        template_error = str(exc)
+
+    return templates.TemplateResponse(
+        request,
+        "journey_cloner.html",
+        {
+            "active_page": "journey_cloner",
+            "current_user": user,
+            "template_status": template_status(),
+            "selected_types": ["followup", "bfr", "two_hours", "aft"],
+            "dry_run": True,
+            "result": None,
+            "error": "",
+            "template_saved": template_saved,
+            "template_error": template_error,
+            "form": {},
         },
     )
 

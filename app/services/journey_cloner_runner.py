@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import os
+import json
+import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from ..config import BASE_DIR
 
@@ -14,6 +16,40 @@ from ..config import BASE_DIR
 CLONER_DIR = BASE_DIR / "journey-cloner"
 SCRIPT_PATH = CLONER_DIR / "create_journeys.py"
 TEMPLATE_TYPES = ("followup", "bfr", "two_hours", "aft")
+
+
+def extract_body_from_fetch(fetch_text: str) -> Dict[str, Any]:
+    match = re.search(r'"body"\s*:\s*"((?:\\.|[^"\\])*)"', fetch_text, flags=re.DOTALL)
+    if not match:
+        raise ValueError(
+            'Could not find a string field named "body". Paste Chrome DevTools '
+            'Copy as fetch for POST /journey-drafts.'
+        )
+
+    escaped_json_body = '"' + match.group(1) + '"'
+    body_text = json.loads(escaped_json_body)
+    body = json.loads(body_text)
+    if not isinstance(body, dict):
+        raise ValueError("Extracted body is not a JSON object.")
+    return body
+
+
+def save_template_from_fetch(template_type: str, fetch_text: str) -> Dict[str, Any]:
+    if template_type not in TEMPLATE_TYPES:
+        raise ValueError(f"Unknown template type: {template_type}")
+    body = extract_body_from_fetch(fetch_text)
+    output_path = CLONER_DIR / "templates" / f"{template_type}.json"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(body, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return {
+        "path": str(output_path),
+        "journeyName": body.get("journeyName"),
+        "duplicatedFromId": body.get("duplicatedFromId"),
+        "reservedJourneyId": body.get("reservedJourneyId"),
+    }
 
 
 def python_executable() -> str:
