@@ -1,0 +1,925 @@
+{
+  "journeyName": "Copy of JBCL | SP | UDCH vs O'higgin | Promocode - VAMOSBULLA | AFT | 10.06",
+  "brand": "JBCL",
+  "currencyCodes": [
+    "CLP"
+  ],
+  "activities": [
+    {
+      "activityId": "5711de9d-3538-4482-a5a2-3d89d0b85766",
+      "activityName": "notification_center",
+      "activityDisplayName": "On-site messaging",
+      "events": [
+        {
+          "eventName": "NotificationNotSent",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "2ec0fa0a-b810-4f7d-b9ae-da7bc909a93d",
+          "count": 0,
+          "version": 1
+        },
+        {
+          "eventName": "NotificationSent",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "298f7e67-f66e-4cf4-ab00-eef9794ea4f9",
+          "count": 0,
+          "version": 1
+        }
+      ],
+      "eventsHistory": [],
+      "tcGroupEvents": [],
+      "dependencies": [],
+      "dataDependencies": [],
+      "dataKeys": [],
+      "initializationData": {
+        "channel": 1,
+        "category": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "contract": 1,
+        "accountId": "",
+        "languages": [
+          {
+            "languageCode": "es"
+          },
+          {
+            "languageCode": "en"
+          }
+        ],
+        "templates": 1313,
+        "displayData": [
+          "1313. JBCL Custom. Dynamic. CRM. Information. SPORT"
+        ],
+        "deliveryType": "singleChannel",
+        "validityType": "days",
+        "objectForSend": {
+          "metadata": {
+            "utm_source": "boris",
+            "journeyName": "JBCL | SP | UDCH vs Audax | Promocode - XQTANTEMPRANO | AFT | 07.06"
+          },
+          "variables": [
+            {
+              "name": "title-en",
+              "value": "The offers has ended!⏳"
+            },
+            {
+              "name": "caption-en",
+              "value": "Check them out!"
+            },
+            {
+              "name": "description-en",
+              "value": "The promotion closed, but don’t worry—we’ve got plenty of awesome promos waiting for you!"
+            },
+            {
+              "name": "title",
+              "value": "%title-en%"
+            },
+            {
+              "name": "description",
+              "value": "%description-en%"
+            },
+            {
+              "name": "icon-src",
+              "value": "%icon-src%"
+            },
+            {
+              "name": "buttons_1_caption",
+              "value": "%caption-en%"
+            },
+            {
+              "name": "buttons_1_link",
+              "value": "%link%?%$utm_tags%"
+            },
+            {
+              "name": "buttons_1_deeplink",
+              "value": "%deeplink%?%$utm_tags%"
+            },
+            {
+              "name": "buttons_1_highlighted",
+              "value": "True"
+            },
+            {
+              "name": "group",
+              "value": "regular"
+            },
+            {
+              "name": "layout",
+              "value": "1"
+            },
+            {
+              "name": "title-es",
+              "value": "¡Las oferta ha finalizado!"
+            },
+            {
+              "name": "caption-es",
+              "value": "¡Échales un vistazo!"
+            },
+            {
+              "name": "description-es",
+              "value": "La promoción ya cerró, pero no te preocupes, ¡tenemos muchas promos increíbles esperándote!"
+            },
+            {
+              "name": "title",
+              "value": "%title-es%"
+            },
+            {
+              "name": "description",
+              "value": "%description-es%"
+            },
+            {
+              "name": "icon-src",
+              "value": "%icon-src%"
+            },
+            {
+              "name": "buttons_1_caption",
+              "value": "%caption-es%"
+            },
+            {
+              "name": "buttons_1_link",
+              "value": "%link%?%$utm_tags%"
+            },
+            {
+              "name": "buttons_1_deeplink",
+              "value": "%deeplink%?%$utm_tags%"
+            },
+            {
+              "name": "buttons_1_highlighted",
+              "value": "True"
+            },
+            {
+              "name": "group",
+              "value": "regular"
+            },
+            {
+              "name": "layout",
+              "value": "1"
+            },
+            {
+              "name": "link",
+              "value": "https://jugabet.cl/es/promo?%$utm_tags%"
+            },
+            {
+              "name": "deeplink",
+              "value": "link?%$utm_tags%"
+            },
+            {
+              "name": "icon-src",
+              "value": "https://static.contentin.cloud/c93ad623-44ae-40f6-9aa5-b1aef7fd931a/cc4216ba-eb4d-43e7-a74e-885fffa56d36.png"
+            },
+            {
+              "name": "group",
+              "value": "regular"
+            }
+          ],
+          "template_id": 1313,
+          "expire_after": "1.00:00:00.000",
+          "defaultVariables": [],
+          "localizedVariables": []
+        },
+        "singleChannel": {
+          "accordion": {
+            "validList": {
+              "template1313": {
+                "en": true,
+                "es": true
+              }
+            }
+          },
+          "activityName": "JBCL Custom. Dynamic. CRM. Information. SPORT",
+          "localizedLanguagesTab": {
+            "en": {
+              "group": "regular",
+              "title": "%title-en%",
+              "layout": "1",
+              "icon-src": "%icon-src%",
+              "title-en": "The offers has ended!⏳",
+              "caption-en": "Check them out!",
+              "description": "%description-en%",
+              "buttons_1_link": "%link%?%$utm_tags%",
+              "description-en": "The promotion closed, but don’t worry—we’ve got plenty of awesome promos waiting for you!",
+              "buttons_1_caption": "%caption-en%",
+              "buttons_1_deeplink": "%deeplink%?%$utm_tags%",
+              "buttons_1_highlighted": "True"
+            },
+            "es": {
+              "group": "regular",
+              "title": "%title-es%",
+              "layout": "1",
+              "icon-src": "%icon-src%",
+              "title-es": "¡Las oferta ha finalizado!",
+              "caption-es": "¡Échales un vistazo!",
+              "description": "%description-es%",
+              "buttons_1_link": "%link%?%$utm_tags%",
+              "description-es": "La promoción ya cerró, pero no te preocupes, ¡tenemos muchas promos increíbles esperándote!",
+              "buttons_1_caption": "%caption-es%",
+              "buttons_1_deeplink": "%deeplink%?%$utm_tags%",
+              "buttons_1_highlighted": "True"
+            },
+            "common": {
+              "link": "https://jugabet.cl/es/promo?%$utm_tags%",
+              "deeplink": "link?%$utm_tags%",
+              "icon-src": "https://static.contentin.cloud/c93ad623-44ae-40f6-9aa5-b1aef7fd931a/cc4216ba-eb4d-43e7-a74e-885fffa56d36.png"
+            },
+            "dwhVariables": {
+              "en": [],
+              "es": [],
+              "common": []
+            }
+          }
+        },
+        "validityAmount": "1",
+        "dataDependencies": [],
+        "listOfUsedVariables": [],
+        "placements": []
+      },
+      "isEditable": true,
+      "changedBy": {
+        "authorId": "ba719889-4868-445d-9f9f-d94ddbfcd67c",
+        "authorName": "Sandro S"
+      },
+      "changedAt": "2026-06-08T07:20:07.6739140Z",
+      "version": 1
+    },
+    {
+      "activityId": "2ec0fa0a-b810-4f7d-b9ae-da7bc909a93d",
+      "activityName": "end_of_journey",
+      "events": [],
+      "eventsHistory": [],
+      "tcGroupEvents": [],
+      "dependencies": [],
+      "dataDependencies": [],
+      "dataKeys": [],
+      "isEditable": true,
+      "changedAt": "2026-06-08T07:20:07.6739170Z",
+      "version": 1,
+      "initializationData": {
+        "placements": []
+      }
+    },
+    {
+      "activityId": "11f9ce73-2b34-44f3-83d0-b06e9b6f2998",
+      "activityName": "registration",
+      "activityDisplayName": "Reference codes",
+      "events": [
+        {
+          "eventName": "PlayerAdded",
+          "eventDisplayName": "Players added to journey",
+          "eventType": "Activation",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "5711de9d-3538-4482-a5a2-3d89d0b85766",
+          "count": 0,
+          "version": 1
+        }
+      ],
+      "eventsHistory": [],
+      "tcGroupEvents": [],
+      "dependencies": [],
+      "dataDependencies": [],
+      "dataKeys": [],
+      "initializationData": {
+        "version": "v2",
+        "displayData": [
+          "Promo codes: VAMOSBULLA"
+        ],
+        "refCodeTypes": [
+          "Promocode"
+        ],
+        "promocodeSettings": {
+          "fileId": null,
+          "values": [
+            "VAMOSBULLA"
+          ],
+          "purpose": "Crm",
+          "availability": [
+            "ExistingUser"
+          ],
+          "progressData": {
+            "fileId": null,
+            "status": "",
+            "fileName": "",
+            "totalCount": 0,
+            "failedCount": 0,
+            "successCount": 0,
+            "validationProgress": 0
+          },
+          "promocodeSource": "manual"
+        },
+        "placements": []
+      },
+      "isEditable": true,
+      "changedBy": {
+        "authorId": "ba719889-4868-445d-9f9f-d94ddbfcd67c",
+        "authorName": "Sandro S"
+      },
+      "changedAt": "2026-06-08T07:20:07.6738830Z",
+      "version": 1
+    },
+    {
+      "activityId": "298f7e67-f66e-4cf4-ab00-eef9794ea4f9",
+      "activityName": "end_of_journey",
+      "events": [],
+      "eventsHistory": [],
+      "tcGroupEvents": [],
+      "dependencies": [],
+      "dataDependencies": [],
+      "dataKeys": [],
+      "isEditable": true,
+      "changedAt": "2026-06-08T07:20:07.6739160Z",
+      "version": 1,
+      "initializationData": {
+        "placements": []
+      }
+    }
+  ],
+  "startAt": "2026-06-11T00:01:00.0000000Z",
+  "stopAt": "2026-06-11T04:00:00.0000000Z",
+  "changeHistory": {},
+  "metadata": {
+    "purpose": "Retention",
+    "category": "Marketing",
+    "priority": 2,
+    "productType": "Sport"
+  },
+  "reEntryRule": {
+    "reEntryMode": "Prohibited"
+  },
+  "timeZoneId": "Chile/Continental",
+  "testControlGroupParameters": {
+    "playersAddingStrategy": "ExcludeAll",
+    "isEnabled": false
+  },
+  "activityEventConversionMetrics": [],
+  "areJourneyMetricsAvailable": true,
+  "journeySource": "UBO",
+  "isArchived": false,
+  "isUnlimited": false,
+  "isImmediatelyAfterPublish": false,
+  "rawJourneyData": {
+    "elements": [
+      {
+        "id": "11f9ce73-2b34-44f3-83d0-b06e9b6f2998",
+        "data": {
+          "name": "registration",
+          "type": "source",
+          "order": 1,
+          "ports": [
+            {
+              "id": "PlayerAdded-11f9ce73-2b34-44f3-83d0-b06e9b6f2998"
+            }
+          ],
+          "events": [
+            {
+              "isHidden": false,
+              "eventName": "PlayerAdded",
+              "eventType": "Activation",
+              "payloadKeys": [
+                "Brand",
+                "CurrencyCode"
+              ],
+              "eventDisplayName": "Players added to journey",
+              "canBeUsedInChoosableFlow": false
+            }
+          ],
+          "nodeType": "source",
+          "boundaryDefinition": false,
+          "activityDisplayName": "Reference codes"
+        },
+        "type": "source",
+        "style": {
+          "cursor": "pointer"
+        },
+        "width": 267,
+        "height": 64,
+        "zIndex": 5,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false,
+        "positionAbsolute": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "5711de9d-3538-4482-a5a2-3d89d0b85766",
+        "data": {
+          "name": "notification_center",
+          "ports": [
+            {
+              "id": "input-5711de9d-3538-4482-a5a2-3d89d0b85766"
+            },
+            {
+              "id": "NotificationSent-5711de9d-3538-4482-a5a2-3d89d0b85766"
+            },
+            {
+              "id": "NotificationNotSent-5711de9d-3538-4482-a5a2-3d89d0b85766"
+            }
+          ],
+          "events": [
+            {
+              "isHidden": false,
+              "eventName": "NotificationSent",
+              "eventType": "Completion",
+              "payloadKeys": [],
+              "eventDisplayName": "Sent",
+              "canBeUsedInChoosableFlow": false
+            },
+            {
+              "isHidden": false,
+              "eventName": "NotificationNotSent",
+              "eventType": "Completion",
+              "payloadKeys": [],
+              "eventDisplayName": "Not Sent",
+              "canBeUsedInChoosableFlow": false
+            }
+          ],
+          "activityType": "communication",
+          "activityDisplayName": "On-site messaging"
+        },
+        "type": "action",
+        "style": {
+          "cursor": "pointer"
+        },
+        "width": 267,
+        "height": 64,
+        "hidden": false,
+        "zIndex": 5,
+        "position": {
+          "x": 0,
+          "y": 199
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false
+      },
+      {
+        "id": "298f7e67-f66e-4cf4-ab00-eef9794ea4f9",
+        "data": {
+          "name": "end_of_journey",
+          "ports": [
+            {
+              "id": "input-298f7e67-f66e-4cf4-ab00-eef9794ea4f9"
+            }
+          ],
+          "width": 40,
+          "height": 40,
+          "isHidden": false,
+          "eventName": "NotificationSent",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Sent",
+          "canBeUsedInChoosableFlow": false
+        },
+        "type": "exit",
+        "style": {
+          "cursor": "default"
+        },
+        "width": 40,
+        "height": 40,
+        "hidden": false,
+        "zIndex": 5,
+        "position": {
+          "x": -6.5,
+          "y": 463
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false
+      },
+      {
+        "id": "2ec0fa0a-b810-4f7d-b9ae-da7bc909a93d",
+        "data": {
+          "name": "end_of_journey",
+          "ports": [
+            {
+              "id": "input-2ec0fa0a-b810-4f7d-b9ae-da7bc909a93d"
+            }
+          ],
+          "width": 40,
+          "height": 40,
+          "isHidden": false,
+          "eventName": "NotificationNotSent",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Not Sent",
+          "canBeUsedInChoosableFlow": false
+        },
+        "type": "exit",
+        "style": {
+          "cursor": "default"
+        },
+        "width": 40,
+        "height": 40,
+        "hidden": false,
+        "zIndex": 5,
+        "position": {
+          "x": 233.5,
+          "y": 463
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false
+      },
+      {
+        "id": "f3c37317-d872-4335-acaa-17685abeb9c6",
+        "data": {
+          "eventName": "NotificationSent",
+          "eventType": "Completion",
+          "activityName": "notification_center",
+          "isReconnectable": false,
+          "isDisconnectable": false
+        },
+        "type": "dropEdge",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "5711de9d-3538-4482-a5a2-3d89d0b85766",
+        "target": "298f7e67-f66e-4cf4-ab00-eef9794ea4f9",
+        "zIndex": 1,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "NotificationSent-5711de9d-3538-4482-a5a2-3d89d0b85766",
+        "targetHandle": "input-298f7e67-f66e-4cf4-ab00-eef9794ea4f9",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      },
+      {
+        "id": "cdb92400-9022-4e12-98ea-c7c169e45cdf",
+        "data": {
+          "eventName": "NotificationNotSent",
+          "eventType": "Completion",
+          "activityName": "notification_center",
+          "isReconnectable": false,
+          "isDisconnectable": false
+        },
+        "type": "dropEdge",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "5711de9d-3538-4482-a5a2-3d89d0b85766",
+        "target": "2ec0fa0a-b810-4f7d-b9ae-da7bc909a93d",
+        "zIndex": 1,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "NotificationNotSent-5711de9d-3538-4482-a5a2-3d89d0b85766",
+        "targetHandle": "input-2ec0fa0a-b810-4f7d-b9ae-da7bc909a93d",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      },
+      {
+        "id": "e83031f9-c7b1-4e81-a56f-510813dd5b75",
+        "data": {
+          "isHidden": false,
+          "eventName": "PlayerAdded",
+          "eventType": "Activation",
+          "payloadKeys": [
+            "Brand",
+            "CurrencyCode"
+          ],
+          "activityName": "registration",
+          "isLabelHidden": true,
+          "isReconnectable": false,
+          "eventDisplayName": "Players added to journey",
+          "isDisconnectable": true,
+          "canBeUsedInChoosableFlow": false
+        },
+        "type": "default",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "11f9ce73-2b34-44f3-83d0-b06e9b6f2998",
+        "target": "5711de9d-3538-4482-a5a2-3d89d0b85766",
+        "zIndex": 6,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "PlayerAdded-11f9ce73-2b34-44f3-83d0-b06e9b6f2998",
+        "targetHandle": "input-5711de9d-3538-4482-a5a2-3d89d0b85766",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      }
+    ],
+    "infoValues": {
+      "brand": "JBCL",
+      "stopAt": "2026-06-11T04:00:00Z",
+      "startAt": "2026-06-11T00:01:00Z",
+      "metadata": {
+        "purpose": "Retention",
+        "category": "Marketing",
+        "priority": 2,
+        "productType": "Sport"
+      },
+      "timeZoneId": "Chile/Continental",
+      "isUnlimited": false,
+      "journeyName": "JBCL | SP | UDCH vs O'higgin | Promocode - VAMOSBULLA | AFT | 10.06",
+      "reEntryRule": {
+        "reEntryMode": "Prohibited",
+        "reEntryPeriod": null
+      },
+      "currencyCodes": [
+        "CLP"
+      ],
+      "isImmediatelyAfterPublish": false,
+      "testControlGroupParameters": {
+        "isEnabled": false,
+        "controlGroupPercent": null,
+        "playersAddingStrategy": "ExcludeAll",
+        "daysToKeepInControlGroup": null
+      }
+    },
+    "pathesConfiguration": {},
+    "exitCriteriaSettings": null,
+    "boundaryConfiguration": {},
+    "activitiesConfiguration": {
+      "5711de9d-3538-4482-a5a2-3d89d0b85766": {
+        "data": {
+          "channel": 1,
+          "category": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "contract": 1,
+          "accountId": "",
+          "languages": [
+            {
+              "languageCode": "es"
+            },
+            {
+              "languageCode": "en"
+            }
+          ],
+          "templates": 1313,
+          "deliveryType": "singleChannel",
+          "validityType": "days",
+          "objectForSend": {
+            "metadata": {
+              "utm_source": "boris",
+              "journeyName": "JBCL | SP | UDCH vs Audax | Promocode - XQTANTEMPRANO | AFT | 07.06"
+            },
+            "variables": [
+              {
+                "name": "title-en",
+                "value": "The offers has ended!⏳"
+              },
+              {
+                "name": "caption-en",
+                "value": "Check them out!"
+              },
+              {
+                "name": "description-en",
+                "value": "The promotion closed, but don’t worry—we’ve got plenty of awesome promos waiting for you!"
+              },
+              {
+                "name": "title",
+                "value": "%title-en%"
+              },
+              {
+                "name": "description",
+                "value": "%description-en%"
+              },
+              {
+                "name": "icon-src",
+                "value": "%icon-src%"
+              },
+              {
+                "name": "buttons_1_caption",
+                "value": "%caption-en%"
+              },
+              {
+                "name": "buttons_1_link",
+                "value": "%link%?%$utm_tags%"
+              },
+              {
+                "name": "buttons_1_deeplink",
+                "value": "%deeplink%?%$utm_tags%"
+              },
+              {
+                "name": "buttons_1_highlighted",
+                "value": "True"
+              },
+              {
+                "name": "group",
+                "value": "regular"
+              },
+              {
+                "name": "layout",
+                "value": "1"
+              },
+              {
+                "name": "title-es",
+                "value": "¡Las oferta ha finalizado!"
+              },
+              {
+                "name": "caption-es",
+                "value": "¡Échales un vistazo!"
+              },
+              {
+                "name": "description-es",
+                "value": "La promoción ya cerró, pero no te preocupes, ¡tenemos muchas promos increíbles esperándote!"
+              },
+              {
+                "name": "title",
+                "value": "%title-es%"
+              },
+              {
+                "name": "description",
+                "value": "%description-es%"
+              },
+              {
+                "name": "icon-src",
+                "value": "%icon-src%"
+              },
+              {
+                "name": "buttons_1_caption",
+                "value": "%caption-es%"
+              },
+              {
+                "name": "buttons_1_link",
+                "value": "%link%?%$utm_tags%"
+              },
+              {
+                "name": "buttons_1_deeplink",
+                "value": "%deeplink%?%$utm_tags%"
+              },
+              {
+                "name": "buttons_1_highlighted",
+                "value": "True"
+              },
+              {
+                "name": "group",
+                "value": "regular"
+              },
+              {
+                "name": "layout",
+                "value": "1"
+              },
+              {
+                "name": "link",
+                "value": "https://jugabet.cl/es/promo?%$utm_tags%"
+              },
+              {
+                "name": "deeplink",
+                "value": "link?%$utm_tags%"
+              },
+              {
+                "name": "icon-src",
+                "value": "https://static.contentin.cloud/c93ad623-44ae-40f6-9aa5-b1aef7fd931a/cc4216ba-eb4d-43e7-a74e-885fffa56d36.png"
+              },
+              {
+                "name": "group",
+                "value": "regular"
+              }
+            ],
+            "template_id": 1313,
+            "expire_after": "1.00:00:00.000",
+            "defaultVariables": [],
+            "localizedVariables": []
+          },
+          "singleChannel": {
+            "accordion": {
+              "validList": {
+                "template1313": {
+                  "en": true,
+                  "es": true
+                }
+              }
+            },
+            "activityName": "JBCL Custom. Dynamic. CRM. Information. SPORT",
+            "localizedLanguagesTab": {
+              "en": {
+                "group": "regular",
+                "title": "%title-en%",
+                "layout": "1",
+                "icon-src": "%icon-src%",
+                "title-en": "The offers has ended!⏳",
+                "caption-en": "Check them out!",
+                "description": "%description-en%",
+                "buttons_1_link": "%link%?%$utm_tags%",
+                "description-en": "The promotion closed, but don’t worry—we’ve got plenty of awesome promos waiting for you!",
+                "buttons_1_caption": "%caption-en%",
+                "buttons_1_deeplink": "%deeplink%?%$utm_tags%",
+                "buttons_1_highlighted": "True"
+              },
+              "es": {
+                "group": "regular",
+                "title": "%title-es%",
+                "layout": "1",
+                "icon-src": "%icon-src%",
+                "title-es": "¡Las oferta ha finalizado!",
+                "caption-es": "¡Échales un vistazo!",
+                "description": "%description-es%",
+                "buttons_1_link": "%link%?%$utm_tags%",
+                "description-es": "La promoción ya cerró, pero no te preocupes, ¡tenemos muchas promos increíbles esperándote!",
+                "buttons_1_caption": "%caption-es%",
+                "buttons_1_deeplink": "%deeplink%?%$utm_tags%",
+                "buttons_1_highlighted": "True"
+              },
+              "common": {
+                "link": "https://jugabet.cl/es/promo?%$utm_tags%",
+                "deeplink": "link?%$utm_tags%",
+                "icon-src": "https://static.contentin.cloud/c93ad623-44ae-40f6-9aa5-b1aef7fd931a/cc4216ba-eb4d-43e7-a74e-885fffa56d36.png"
+              },
+              "dwhVariables": {
+                "en": [],
+                "es": [],
+                "common": []
+              }
+            }
+          },
+          "validityAmount": "1",
+          "dataDependencies": [],
+          "listOfUsedVariables": []
+        },
+        "error": false,
+        "displayData": [
+          "1313. JBCL Custom. Dynamic. CRM. Information. SPORT"
+        ],
+        "displayName": "On-site messaging"
+      },
+      "11f9ce73-2b34-44f3-83d0-b06e9b6f2998": {
+        "data": {
+          "version": "v2",
+          "refCodeTypes": [
+            "Promocode"
+          ],
+          "promocodeSettings": {
+            "fileId": null,
+            "values": [
+              "VAMOSBULLA"
+            ],
+            "purpose": "Crm",
+            "availability": [
+              "ExistingUser"
+            ],
+            "progressData": {
+              "fileId": null,
+              "status": "",
+              "fileName": "",
+              "totalCount": 0,
+              "failedCount": 0,
+              "successCount": 0,
+              "validationProgress": 0
+            },
+            "promocodeSource": "manual"
+          }
+        },
+        "error": false,
+        "isTouched": true,
+        "displayData": [
+          "Promo codes: VAMOSBULLA"
+        ],
+        "displayName": "Reference codes"
+      }
+    }
+  },
+  "duplicatedFromVersion": 3,
+  "duplicatedFromId": "JRN-0-575400",
+  "allJourneyActivationsCount": 0,
+  "overJourneyActivationsCount": 0,
+  "reservedJourneyId": "JRN-0-576028"
+}

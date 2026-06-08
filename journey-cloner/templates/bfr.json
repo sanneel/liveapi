@@ -1,0 +1,923 @@
+{
+  "journeyName": "Copy of JBCL | SP | UDCH vs O'higgins | Promocode -VAMOSBULLA | BFR | 10.06",
+  "brand": "JBCL",
+  "currencyCodes": [
+    "CLP"
+  ],
+  "activities": [
+    {
+      "activityId": "f59235a1-27f8-4903-9f10-d821c5be0d19",
+      "activityName": "end_of_journey",
+      "events": [],
+      "eventsHistory": [],
+      "tcGroupEvents": [],
+      "dependencies": [],
+      "dataDependencies": [],
+      "dataKeys": [],
+      "isEditable": true,
+      "changedAt": "2026-06-08T07:17:30.6270020Z",
+      "version": 1,
+      "initializationData": {
+        "placements": []
+      }
+    },
+    {
+      "activityId": "6b8b2d94-186c-4ed8-aaf4-871b330da77d",
+      "activityName": "registration",
+      "activityDisplayName": "Reference codes",
+      "events": [
+        {
+          "eventName": "PlayerAdded",
+          "eventDisplayName": "Players added to journey",
+          "eventType": "Activation",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "b398f104-f5e1-46e1-af3f-a7fe245dc4de",
+          "count": 0,
+          "version": 1
+        }
+      ],
+      "eventsHistory": [],
+      "tcGroupEvents": [],
+      "dependencies": [],
+      "dataDependencies": [],
+      "dataKeys": [],
+      "initializationData": {
+        "version": "v2",
+        "displayData": [
+          "Promo codes: VAMOSBULLA"
+        ],
+        "refCodeTypes": [
+          "Promocode"
+        ],
+        "promocodeSettings": {
+          "fileId": null,
+          "values": [
+            "VAMOSBULLA"
+          ],
+          "purpose": "Crm",
+          "availability": [
+            "ExistingUser"
+          ],
+          "progressData": {
+            "fileId": null,
+            "status": "",
+            "fileName": "",
+            "totalCount": 0,
+            "failedCount": 0,
+            "successCount": 0,
+            "validationProgress": 0
+          },
+          "promocodeSource": "manual"
+        },
+        "placements": []
+      },
+      "isEditable": true,
+      "changedBy": {
+        "authorId": "ba719889-4868-445d-9f9f-d94ddbfcd67c",
+        "authorName": "Sandro S"
+      },
+      "changedAt": "2026-06-08T07:17:30.6269770Z",
+      "version": 1
+    },
+    {
+      "activityId": "abe2379f-6102-4c71-94cc-3909f2fce9be",
+      "activityName": "end_of_journey",
+      "events": [],
+      "eventsHistory": [],
+      "tcGroupEvents": [],
+      "dependencies": [],
+      "dataDependencies": [],
+      "dataKeys": [],
+      "isEditable": true,
+      "changedAt": "2026-06-08T07:17:30.6270040Z",
+      "version": 1,
+      "initializationData": {
+        "placements": []
+      }
+    },
+    {
+      "activityId": "b398f104-f5e1-46e1-af3f-a7fe245dc4de",
+      "activityName": "notification_center",
+      "activityDisplayName": "On-site messaging",
+      "events": [
+        {
+          "eventName": "NotificationNotSent",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "abe2379f-6102-4c71-94cc-3909f2fce9be",
+          "count": 0,
+          "version": 1
+        },
+        {
+          "eventName": "NotificationSent",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "f59235a1-27f8-4903-9f10-d821c5be0d19",
+          "count": 0,
+          "version": 1
+        }
+      ],
+      "eventsHistory": [],
+      "tcGroupEvents": [],
+      "dependencies": [],
+      "dataDependencies": [],
+      "dataKeys": [],
+      "initializationData": {
+        "channel": 1,
+        "category": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "contract": 1,
+        "accountId": "",
+        "languages": [
+          {
+            "languageCode": "es"
+          },
+          {
+            "languageCode": "en"
+          }
+        ],
+        "templates": 1313,
+        "displayData": [
+          "1313. JBCL Custom. Dynamic. CRM. Information. SPORT"
+        ],
+        "deliveryType": "singleChannel",
+        "validityType": "days",
+        "objectForSend": {
+          "metadata": {
+            "utm_source": "boris",
+            "journeyName": "JBCL | SP | UDCH vs O'higgins | Promocode -VAMOSBULLA | BFR | 10.06"
+          },
+          "variables": [
+            {
+              "name": "group",
+              "value": "regular"
+            },
+            {
+              "name": "title",
+              "value": "%title-en%"
+            },
+            {
+              "name": "layout",
+              "value": "1"
+            },
+            {
+              "name": "icon-src",
+              "value": "%icon-src%"
+            },
+            {
+              "name": "title-en",
+              "value": "This code is not available yet! ⏳"
+            },
+            {
+              "name": "caption-en",
+              "value": "VAMOS"
+            },
+            {
+              "name": "description",
+              "value": "%description-en%"
+            },
+            {
+              "name": "buttons_1_link",
+              "value": "%link%?%$utm_tags%"
+            },
+            {
+              "name": "description-en",
+              "value": "Please come back and try again 2 hours before the match"
+            },
+            {
+              "name": "buttons_1_caption",
+              "value": "%caption-en%"
+            },
+            {
+              "name": "buttons_1_deeplink",
+              "value": "%deeplink%?%$utm_tags%"
+            },
+            {
+              "name": "buttons_1_highlighted",
+              "value": "True"
+            },
+            {
+              "name": "group",
+              "value": "regular"
+            },
+            {
+              "name": "title",
+              "value": "%title-es%"
+            },
+            {
+              "name": "layout",
+              "value": "1"
+            },
+            {
+              "name": "icon-src",
+              "value": "%icon-src%"
+            },
+            {
+              "name": "title-es",
+              "value": "¡Este código aún no está disponible!⏳"
+            },
+            {
+              "name": "caption-es",
+              "value": "VAMOS"
+            },
+            {
+              "name": "description",
+              "value": "%description-es%"
+            },
+            {
+              "name": "buttons_1_link",
+              "value": "%link%?%$utm_tags%"
+            },
+            {
+              "name": "description-es",
+              "value": "Por favor, vuelve e inténtalo de nuevo 2 horas antes del partido."
+            },
+            {
+              "name": "buttons_1_caption",
+              "value": "%caption-es%"
+            },
+            {
+              "name": "buttons_1_deeplink",
+              "value": "%deeplink%?%$utm_tags%"
+            },
+            {
+              "name": "buttons_1_highlighted",
+              "value": "True"
+            },
+            {
+              "name": "link",
+              "value": "https://jugabet.cl/es/promo?%$utm_tags%"
+            },
+            {
+              "name": "deeplink",
+              "value": "link?%$utm_tags%"
+            },
+            {
+              "name": "icon-src",
+              "value": "https://static.contentin.cloud/c93ad623-44ae-40f6-9aa5-b1aef7fd931a/cc4216ba-eb4d-43e7-a74e-885fffa56d36.png"
+            },
+            {
+              "name": "group",
+              "value": "regular"
+            }
+          ],
+          "template_id": 1313,
+          "expire_after": "1.00:00:00.000",
+          "defaultVariables": [],
+          "localizedVariables": []
+        },
+        "singleChannel": {
+          "accordion": {
+            "validList": {
+              "template1313": {
+                "en": true,
+                "es": true
+              }
+            }
+          },
+          "activityName": "JBCL Custom. Dynamic. CRM. Information. SPORT",
+          "localizedLanguagesTab": {
+            "en": {
+              "group": "regular",
+              "title": "%title-en%",
+              "layout": "1",
+              "icon-src": "%icon-src%",
+              "title-en": "This code is not available yet! ⏳",
+              "caption-en": "VAMOS",
+              "description": "%description-en%",
+              "buttons_1_link": "%link%?%$utm_tags%",
+              "description-en": "Please come back and try again 2 hours before the match",
+              "buttons_1_caption": "%caption-en%",
+              "buttons_1_deeplink": "%deeplink%?%$utm_tags%",
+              "buttons_1_highlighted": "True"
+            },
+            "es": {
+              "group": "regular",
+              "title": "%title-es%",
+              "layout": "1",
+              "icon-src": "%icon-src%",
+              "title-es": "¡Este código aún no está disponible!⏳",
+              "caption-es": "VAMOS",
+              "description": "%description-es%",
+              "buttons_1_link": "%link%?%$utm_tags%",
+              "description-es": "Por favor, vuelve e inténtalo de nuevo 2 horas antes del partido.",
+              "buttons_1_caption": "%caption-es%",
+              "buttons_1_deeplink": "%deeplink%?%$utm_tags%",
+              "buttons_1_highlighted": "True"
+            },
+            "common": {
+              "link": "https://jugabet.cl/es/promo?%$utm_tags%",
+              "deeplink": "link?%$utm_tags%",
+              "icon-src": "https://static.contentin.cloud/c93ad623-44ae-40f6-9aa5-b1aef7fd931a/cc4216ba-eb4d-43e7-a74e-885fffa56d36.png"
+            },
+            "dwhVariables": {
+              "en": [],
+              "es": [],
+              "common": []
+            }
+          }
+        },
+        "validityAmount": "1",
+        "dataDependencies": [],
+        "listOfUsedVariables": [],
+        "placements": []
+      },
+      "isEditable": true,
+      "changedBy": {
+        "authorId": "ba719889-4868-445d-9f9f-d94ddbfcd67c",
+        "authorName": "Sandro S"
+      },
+      "changedAt": "2026-06-08T07:17:30.6270000Z",
+      "version": 1
+    }
+  ],
+  "stopAt": "2026-06-10T21:59:00.0000000Z",
+  "changeHistory": {},
+  "metadata": {
+    "purpose": "Retention",
+    "category": "Marketing",
+    "priority": 2,
+    "productType": "Sport"
+  },
+  "reEntryRule": {
+    "reEntryMode": "Prohibited"
+  },
+  "timeZoneId": "Chile/Continental",
+  "testControlGroupParameters": {
+    "playersAddingStrategy": "ExcludeAll",
+    "isEnabled": false
+  },
+  "activityEventConversionMetrics": [],
+  "areJourneyMetricsAvailable": true,
+  "journeySource": "UBO",
+  "isArchived": false,
+  "isUnlimited": false,
+  "isImmediatelyAfterPublish": true,
+  "rawJourneyData": {
+    "elements": [
+      {
+        "id": "6b8b2d94-186c-4ed8-aaf4-871b330da77d",
+        "data": {
+          "name": "registration",
+          "type": "source",
+          "order": 1,
+          "ports": [
+            {
+              "id": "PlayerAdded-6b8b2d94-186c-4ed8-aaf4-871b330da77d"
+            }
+          ],
+          "events": [
+            {
+              "isHidden": false,
+              "eventName": "PlayerAdded",
+              "eventType": "Activation",
+              "payloadKeys": [
+                "Brand",
+                "CurrencyCode"
+              ],
+              "eventDisplayName": "Players added to journey",
+              "canBeUsedInChoosableFlow": false
+            }
+          ],
+          "nodeType": "source",
+          "boundaryDefinition": false,
+          "activityDisplayName": "Reference codes"
+        },
+        "type": "source",
+        "style": {
+          "cursor": "pointer"
+        },
+        "width": 267,
+        "height": 64,
+        "zIndex": 5,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false,
+        "positionAbsolute": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "b398f104-f5e1-46e1-af3f-a7fe245dc4de",
+        "data": {
+          "name": "notification_center",
+          "ports": [
+            {
+              "id": "input-b398f104-f5e1-46e1-af3f-a7fe245dc4de"
+            },
+            {
+              "id": "NotificationSent-b398f104-f5e1-46e1-af3f-a7fe245dc4de"
+            },
+            {
+              "id": "NotificationNotSent-b398f104-f5e1-46e1-af3f-a7fe245dc4de"
+            }
+          ],
+          "events": [
+            {
+              "isHidden": false,
+              "eventName": "NotificationSent",
+              "eventType": "Completion",
+              "payloadKeys": [],
+              "eventDisplayName": "Sent",
+              "canBeUsedInChoosableFlow": false
+            },
+            {
+              "isHidden": false,
+              "eventName": "NotificationNotSent",
+              "eventType": "Completion",
+              "payloadKeys": [],
+              "eventDisplayName": "Not Sent",
+              "canBeUsedInChoosableFlow": false
+            }
+          ],
+          "activityType": "communication",
+          "activityDisplayName": "On-site messaging"
+        },
+        "type": "action",
+        "style": {
+          "cursor": "pointer"
+        },
+        "width": 267,
+        "height": 64,
+        "hidden": false,
+        "zIndex": 5,
+        "position": {
+          "x": 0,
+          "y": 199
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false
+      },
+      {
+        "id": "f59235a1-27f8-4903-9f10-d821c5be0d19",
+        "data": {
+          "name": "end_of_journey",
+          "ports": [
+            {
+              "id": "input-f59235a1-27f8-4903-9f10-d821c5be0d19"
+            }
+          ],
+          "width": 40,
+          "height": 40,
+          "isHidden": false,
+          "eventName": "NotificationSent",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Sent",
+          "canBeUsedInChoosableFlow": false
+        },
+        "type": "exit",
+        "style": {
+          "cursor": "default"
+        },
+        "width": 40,
+        "height": 40,
+        "hidden": false,
+        "zIndex": 5,
+        "position": {
+          "x": -6.5,
+          "y": 463
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false
+      },
+      {
+        "id": "abe2379f-6102-4c71-94cc-3909f2fce9be",
+        "data": {
+          "name": "end_of_journey",
+          "ports": [
+            {
+              "id": "input-abe2379f-6102-4c71-94cc-3909f2fce9be"
+            }
+          ],
+          "width": 40,
+          "height": 40,
+          "isHidden": false,
+          "eventName": "NotificationNotSent",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Not Sent",
+          "canBeUsedInChoosableFlow": false
+        },
+        "type": "exit",
+        "style": {
+          "cursor": "default"
+        },
+        "width": 40,
+        "height": 40,
+        "hidden": false,
+        "zIndex": 5,
+        "position": {
+          "x": 233.5,
+          "y": 463
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false
+      },
+      {
+        "id": "f3c37317-d872-4335-acaa-17685abeb9c6",
+        "data": {
+          "eventName": "NotificationSent",
+          "eventType": "Completion",
+          "activityName": "notification_center",
+          "isReconnectable": false,
+          "isDisconnectable": false
+        },
+        "type": "dropEdge",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "b398f104-f5e1-46e1-af3f-a7fe245dc4de",
+        "target": "f59235a1-27f8-4903-9f10-d821c5be0d19",
+        "zIndex": 1,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "NotificationSent-b398f104-f5e1-46e1-af3f-a7fe245dc4de",
+        "targetHandle": "input-f59235a1-27f8-4903-9f10-d821c5be0d19",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      },
+      {
+        "id": "cdb92400-9022-4e12-98ea-c7c169e45cdf",
+        "data": {
+          "eventName": "NotificationNotSent",
+          "eventType": "Completion",
+          "activityName": "notification_center",
+          "isReconnectable": false,
+          "isDisconnectable": false
+        },
+        "type": "dropEdge",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "b398f104-f5e1-46e1-af3f-a7fe245dc4de",
+        "target": "abe2379f-6102-4c71-94cc-3909f2fce9be",
+        "zIndex": 1,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "NotificationNotSent-b398f104-f5e1-46e1-af3f-a7fe245dc4de",
+        "targetHandle": "input-abe2379f-6102-4c71-94cc-3909f2fce9be",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      },
+      {
+        "id": "e83031f9-c7b1-4e81-a56f-510813dd5b75",
+        "data": {
+          "isHidden": false,
+          "eventName": "PlayerAdded",
+          "eventType": "Activation",
+          "payloadKeys": [
+            "Brand",
+            "CurrencyCode"
+          ],
+          "activityName": "registration",
+          "isLabelHidden": true,
+          "isReconnectable": false,
+          "eventDisplayName": "Players added to journey",
+          "isDisconnectable": true,
+          "canBeUsedInChoosableFlow": false
+        },
+        "type": "default",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "6b8b2d94-186c-4ed8-aaf4-871b330da77d",
+        "target": "b398f104-f5e1-46e1-af3f-a7fe245dc4de",
+        "zIndex": 6,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "PlayerAdded-6b8b2d94-186c-4ed8-aaf4-871b330da77d",
+        "targetHandle": "input-b398f104-f5e1-46e1-af3f-a7fe245dc4de",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      }
+    ],
+    "infoValues": {
+      "brand": "JBCL",
+      "stopAt": "2026-06-10T21:59:00Z",
+      "metadata": {
+        "purpose": "Retention",
+        "category": "Marketing",
+        "priority": 2,
+        "productType": "Sport"
+      },
+      "timeZoneId": "Chile/Continental",
+      "isUnlimited": false,
+      "journeyName": "JBCL | SP | UDCH vs O'higgins | Promocode -VAMOSBULLA | BFR | 10.06",
+      "reEntryRule": {
+        "reEntryMode": "Prohibited",
+        "reEntryPeriod": null
+      },
+      "currencyCodes": [
+        "CLP"
+      ],
+      "isImmediatelyAfterPublish": true,
+      "testControlGroupParameters": {
+        "isEnabled": false,
+        "controlGroupPercent": null,
+        "playersAddingStrategy": "ExcludeAll",
+        "daysToKeepInControlGroup": null
+      }
+    },
+    "pathesConfiguration": {},
+    "exitCriteriaSettings": null,
+    "boundaryConfiguration": {},
+    "activitiesConfiguration": {
+      "6b8b2d94-186c-4ed8-aaf4-871b330da77d": {
+        "data": {
+          "version": "v2",
+          "refCodeTypes": [
+            "Promocode"
+          ],
+          "promocodeSettings": {
+            "fileId": null,
+            "values": [
+              "VAMOSBULLA"
+            ],
+            "purpose": "Crm",
+            "availability": [
+              "ExistingUser"
+            ],
+            "progressData": {
+              "fileId": null,
+              "status": "",
+              "fileName": "",
+              "totalCount": 0,
+              "failedCount": 0,
+              "successCount": 0,
+              "validationProgress": 0
+            },
+            "promocodeSource": "manual"
+          }
+        },
+        "error": false,
+        "isTouched": true,
+        "displayData": [
+          "Promo codes: VAMOSBULLA"
+        ],
+        "displayName": "Reference codes"
+      },
+      "b398f104-f5e1-46e1-af3f-a7fe245dc4de": {
+        "data": {
+          "channel": 1,
+          "category": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "contract": 1,
+          "accountId": "",
+          "languages": [
+            {
+              "languageCode": "es"
+            },
+            {
+              "languageCode": "en"
+            }
+          ],
+          "templates": 1313,
+          "deliveryType": "singleChannel",
+          "validityType": "days",
+          "objectForSend": {
+            "metadata": {
+              "utm_source": "boris",
+              "journeyName": "JBCL | SP | UDCH vs O'higgins | Promocode -VAMOSBULLA | BFR | 10.06"
+            },
+            "variables": [
+              {
+                "name": "group",
+                "value": "regular"
+              },
+              {
+                "name": "title",
+                "value": "%title-en%"
+              },
+              {
+                "name": "layout",
+                "value": "1"
+              },
+              {
+                "name": "icon-src",
+                "value": "%icon-src%"
+              },
+              {
+                "name": "title-en",
+                "value": "This code is not available yet! ⏳"
+              },
+              {
+                "name": "caption-en",
+                "value": "VAMOS"
+              },
+              {
+                "name": "description",
+                "value": "%description-en%"
+              },
+              {
+                "name": "buttons_1_link",
+                "value": "%link%?%$utm_tags%"
+              },
+              {
+                "name": "description-en",
+                "value": "Please come back and try again 2 hours before the match"
+              },
+              {
+                "name": "buttons_1_caption",
+                "value": "%caption-en%"
+              },
+              {
+                "name": "buttons_1_deeplink",
+                "value": "%deeplink%?%$utm_tags%"
+              },
+              {
+                "name": "buttons_1_highlighted",
+                "value": "True"
+              },
+              {
+                "name": "group",
+                "value": "regular"
+              },
+              {
+                "name": "title",
+                "value": "%title-es%"
+              },
+              {
+                "name": "layout",
+                "value": "1"
+              },
+              {
+                "name": "icon-src",
+                "value": "%icon-src%"
+              },
+              {
+                "name": "title-es",
+                "value": "¡Este código aún no está disponible!⏳"
+              },
+              {
+                "name": "caption-es",
+                "value": "VAMOS"
+              },
+              {
+                "name": "description",
+                "value": "%description-es%"
+              },
+              {
+                "name": "buttons_1_link",
+                "value": "%link%?%$utm_tags%"
+              },
+              {
+                "name": "description-es",
+                "value": "Por favor, vuelve e inténtalo de nuevo 2 horas antes del partido."
+              },
+              {
+                "name": "buttons_1_caption",
+                "value": "%caption-es%"
+              },
+              {
+                "name": "buttons_1_deeplink",
+                "value": "%deeplink%?%$utm_tags%"
+              },
+              {
+                "name": "buttons_1_highlighted",
+                "value": "True"
+              },
+              {
+                "name": "link",
+                "value": "https://jugabet.cl/es/promo?%$utm_tags%"
+              },
+              {
+                "name": "deeplink",
+                "value": "link?%$utm_tags%"
+              },
+              {
+                "name": "icon-src",
+                "value": "https://static.contentin.cloud/c93ad623-44ae-40f6-9aa5-b1aef7fd931a/cc4216ba-eb4d-43e7-a74e-885fffa56d36.png"
+              },
+              {
+                "name": "group",
+                "value": "regular"
+              }
+            ],
+            "template_id": 1313,
+            "expire_after": "1.00:00:00.000",
+            "defaultVariables": [],
+            "localizedVariables": []
+          },
+          "singleChannel": {
+            "accordion": {
+              "validList": {
+                "template1313": {
+                  "en": true,
+                  "es": true
+                }
+              }
+            },
+            "activityName": "JBCL Custom. Dynamic. CRM. Information. SPORT",
+            "localizedLanguagesTab": {
+              "en": {
+                "group": "regular",
+                "title": "%title-en%",
+                "layout": "1",
+                "icon-src": "%icon-src%",
+                "title-en": "This code is not available yet! ⏳",
+                "caption-en": "VAMOS",
+                "description": "%description-en%",
+                "buttons_1_link": "%link%?%$utm_tags%",
+                "description-en": "Please come back and try again 2 hours before the match",
+                "buttons_1_caption": "%caption-en%",
+                "buttons_1_deeplink": "%deeplink%?%$utm_tags%",
+                "buttons_1_highlighted": "True"
+              },
+              "es": {
+                "group": "regular",
+                "title": "%title-es%",
+                "layout": "1",
+                "icon-src": "%icon-src%",
+                "title-es": "¡Este código aún no está disponible!⏳",
+                "caption-es": "VAMOS",
+                "description": "%description-es%",
+                "buttons_1_link": "%link%?%$utm_tags%",
+                "description-es": "Por favor, vuelve e inténtalo de nuevo 2 horas antes del partido.",
+                "buttons_1_caption": "%caption-es%",
+                "buttons_1_deeplink": "%deeplink%?%$utm_tags%",
+                "buttons_1_highlighted": "True"
+              },
+              "common": {
+                "link": "https://jugabet.cl/es/promo?%$utm_tags%",
+                "deeplink": "link?%$utm_tags%",
+                "icon-src": "https://static.contentin.cloud/c93ad623-44ae-40f6-9aa5-b1aef7fd931a/cc4216ba-eb4d-43e7-a74e-885fffa56d36.png"
+              },
+              "dwhVariables": {
+                "en": [],
+                "es": [],
+                "common": []
+              }
+            }
+          },
+          "validityAmount": "1",
+          "dataDependencies": [],
+          "listOfUsedVariables": []
+        },
+        "error": false,
+        "displayData": [
+          "1313. JBCL Custom. Dynamic. CRM. Information. SPORT"
+        ],
+        "displayName": "On-site messaging"
+      }
+    }
+  },
+  "duplicatedFromVersion": 5,
+  "duplicatedFromId": "JRN-0-575397",
+  "allJourneyActivationsCount": 0,
+  "overJourneyActivationsCount": 0,
+  "reservedJourneyId": "JRN-0-576027"
+}

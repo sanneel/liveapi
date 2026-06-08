@@ -5,9 +5,6 @@
 raw_fetches/*
 !raw_fetches/.gitkeep
 
-templates/*
-!templates/.gitkeep
-
 out/*
 !out/.gitkeep
 

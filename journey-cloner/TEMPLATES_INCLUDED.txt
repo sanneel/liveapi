@@ -1,0 +1,3 @@
+This package includes templates extracted from the copied POST /journey-drafts requests.
+The old reservedJourneyId values are still present inside the templates, but create_journeys.py overwrites them by calling POST /journeys/identifier before creating each draft.
+Do not hardcode Bearer tokens. Put a fresh token in .env.
