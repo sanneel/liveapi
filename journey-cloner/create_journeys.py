@@ -39,6 +39,7 @@ AUTH_TOKEN = os.getenv("AUTH_TOKEN", "")
 BRAND = os.getenv("BRAND", "JBCL")
 LOCAL_TZ_NAME = os.getenv("TIMEZONE", "America/Santiago")
 COOKIE = os.getenv("COOKIE", "").strip()
+OUT_DIR = os.getenv("JOURNEY_CLONER_OUT_DIR", "out")
 
 LOCAL_TZ = ZoneInfo(LOCAL_TZ_NAME)
 UTC = ZoneInfo("UTC")
@@ -383,8 +384,8 @@ def main() -> int:
                 return 0
 
         session = requests.Session()
-        out_dir = Path("out")
-        out_dir.mkdir(exist_ok=True)
+        out_dir = Path(OUT_DIR)
+        out_dir.mkdir(parents=True, exist_ok=True)
 
         for journey_type in args.types:
             print(f"\n[{journey_type}] Loading template...")

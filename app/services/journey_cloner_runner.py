@@ -15,6 +15,7 @@ from ..config import BASE_DIR
 
 CLONER_DIR = BASE_DIR / "journey-cloner"
 SCRIPT_PATH = CLONER_DIR / "create_journeys.py"
+OUTPUT_DIR = BASE_DIR / "data" / "journey_cloner_out"
 TEMPLATE_TYPES = ("followup", "bfr", "two_hours", "aft")
 
 
@@ -105,6 +106,8 @@ def run_journey_cloner(
         cmd.append("--dry-run")
 
     env = os.environ.copy()
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    env["JOURNEY_CLONER_OUT_DIR"] = str(OUTPUT_DIR)
     if token.strip():
         env["AUTH_TOKEN"] = token.strip()
 
