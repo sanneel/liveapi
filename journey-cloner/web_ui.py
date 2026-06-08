@@ -26,6 +26,14 @@ TYPES = ("followup", "bfr", "two_hours", "aft")
 def _page(result: str = "", command: str = "") -> bytes:
     safe_result = html.escape(result)
     safe_command = html.escape(command)
+    result_block = ""
+    if result:
+        result_block = (
+            "<pre><strong>Command</strong>\n"
+            f"{safe_command}\n\n"
+            "<strong>Output</strong>\n"
+            f"{safe_result}</pre>"
+        )
     body = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -166,7 +174,7 @@ def _page(result: str = "", command: str = "") -> bytes:
       </aside>
     </div>
 
-    {f'<pre><strong>Command</strong>\\n{safe_command}\\n\\n<strong>Output</strong>\\n{safe_result}</pre>' if result else ''}
+    {result_block}
   </main>
 </body>
 </html>"""
