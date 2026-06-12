@@ -234,7 +234,7 @@ def cube_gif(
 
     Query params:
       transparent=1  drop the branded background (1-bit GIF transparency)
-      size=NNN       square pixel size (clamped 160–512, default 360)
+      size=NNN       square pixel size (clamped 160–512, default 320)
       frames=NN      rotation frames (clamped 8–48, default 24)
       seconds=N      seconds per full revolution (clamped 1–12, default ~1.9);
                      raise it to slow the spin down

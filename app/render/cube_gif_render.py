@@ -40,9 +40,10 @@ FACE_H = 380
 # re-cropping. Kept modest because animated GIFs of photographic faces grow
 # fast; these defaults land a smooth full rotation around ~700KB, which most
 # email clients accept inline without clipping.
-GIF_SIZE = 360        # square px; sharp enough for the odds text
-GIF_FRAMES = 30       # rendered over a 180° half-turn → 6° per step, smooth
-GIF_FRAME_MS = 32     # 30 × 32ms ≈ 0.96s per 180° loop ≈ 1.9s per revolution
+GIF_SIZE = 320        # square px; the 0.86 fill keeps the cube itself larger
+                      # on screen than the old 360px/0.72 default
+GIF_FRAMES = 24       # rendered over a 180° half-turn → 7.5° per step, smooth
+GIF_FRAME_MS = 40     # 24 × 40ms ≈ 0.96s per 180° loop ≈ 1.9s per revolution
 GIF_PALETTE_COLORS = 256  # max GIF palette — best fidelity on the trophy/gradient
 
 # Route-level clamps so a hand-edited URL can't request a 4000px, 200-frame GIF.
@@ -58,9 +59,11 @@ GIF_SECONDS_MIN, GIF_SECONDS_MAX = 1.0, 12.0
 _FACE_HALF_W = 1.0
 _FACE_HALF_H = _FACE_HALF_W * (FACE_H / FACE_W)
 _CAM_DISTANCE = 3.0  # ~3× face width, mirrors the widget's CSS perspective
-# Pixel scale: front face (Z=+1, depth = CAM-1 = 2) spans ~0.72×canvas wide,
-# leaving margin for the side faces that swing toward the edges mid-spin.
-_FIT = 0.72
+# Pixel scale: front face (Z=+1, depth = CAM-1 = 2) spans ~0.86×canvas wide.
+# The binding constraint is the nearest corner mid-spin (45°, Z=√2): its
+# projected half-height is 0.5705×_FIT, so _FIT ≤ 0.876 avoids clipping;
+# 0.86 keeps a few safety pixels while filling the frame.
+_FIT = 0.86
 # Cull faces whose normal points away from the camera (with a small epsilon
 # so a face exactly edge-on doesn't flicker on/off).
 _BACKFACE_EPS = 0.02
