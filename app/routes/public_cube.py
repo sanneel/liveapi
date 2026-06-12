@@ -32,7 +32,17 @@ from ..database import db_session
 from ..logging_config import get_logger
 from ..middleware import limiter
 from ..models import Match
-from ..render.cube_gif_render import FACE_H, FACE_W, render_cube_gif
+from ..render.cube_gif_render import (
+    FACE_H,
+    FACE_W,
+    GIF_FRAMES,
+    GIF_FRAMES_MAX,
+    GIF_FRAMES_MIN,
+    GIF_SIZE,
+    GIF_SIZE_MAX,
+    GIF_SIZE_MIN,
+    render_cube_gif,
+)
 from ..render.cube_render import render_cube_png
 from ..render.cube_odds_render import render_odds_face
 from ..services import png_cache
@@ -203,20 +213,34 @@ def _build_cube_faces(t: CubeTheme) -> List[Image.Image]:
 
 @router.get("/cube/{theme}.gif")
 @limiter.limit("120/minute")
-def cube_gif(theme: str, request: Request) -> Response:
+def cube_gif(
+    theme: str,
+    request: Request,
+    transparent: bool = False,
+    size: int = GIF_SIZE,
+    frames: int = GIF_FRAMES,
+) -> Response:
     """Animated GIF of the spinning 3D cube for email communications.
 
     Mirrors /cube/{theme}.png but returns a looping GIF that renders in email
     clients (which run no CSS 3D or JS). Each request bakes in the current
     live odds for the resolved match(es); bytes are cached under
-    `cube_gif:{theme}` and cleared by the same parser-cycle invalidation as
-    the PNG endpoints.
+    `cube_gif:{theme}:{size}:{frames}:{transparent}` and cleared by the same
+    parser-cycle invalidation as the PNG endpoints.
+
+    Query params:
+      transparent=1  drop the branded background (1-bit GIF transparency)
+      size=NNN       square pixel size (clamped 160–512, default 360)
+      frames=NN      rotation frames (clamped 8–48, default 24)
     """
     t = get_theme(theme)
     if t is None:
         raise HTTPException(404, f"Unknown cube theme: {theme}")
 
-    key = f"cube_gif:{t.slug}"
+    size = max(GIF_SIZE_MIN, min(int(size), GIF_SIZE_MAX))
+    frames = max(GIF_FRAMES_MIN, min(int(frames), GIF_FRAMES_MAX))
+
+    key = f"cube_gif:{t.slug}:{size}:{frames}:{int(transparent)}"
     cached = png_cache.get(key)
     if cached is not None:
         etag = _etag(cached)
@@ -226,7 +250,9 @@ def cube_gif(theme: str, request: Request) -> Response:
 
     try:
         faces = _build_cube_faces(t)
-        gif = render_cube_gif(t, faces)
+        gif = render_cube_gif(
+            t, faces, size=size, frames=frames, transparent=transparent
+        )
     except Exception:
         logger.exception("cube gif render failed theme=%s", t.slug)
         return Response(

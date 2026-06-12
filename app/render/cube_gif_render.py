@@ -40,10 +40,14 @@ FACE_H = 380
 # re-cropping. Kept modest because animated GIFs of photographic faces grow
 # fast; these defaults land a smooth full rotation around ~700KB, which most
 # email clients accept inline without clipping.
-GIF_SIZE = 320
+GIF_SIZE = 360        # square px; sharp enough for the odds text, ~700-870KB
 GIF_FRAMES = 24       # 15° per step — smooth enough, keeps the file small
 GIF_FRAME_MS = 80     # 24 × 80ms ≈ 1.9s per full revolution
 GIF_PALETTE_COLORS = 192  # photographic faces survive 192 colors + dithering
+
+# Route-level clamps so a hand-edited URL can't request a 4000px, 200-frame GIF.
+GIF_SIZE_MIN, GIF_SIZE_MAX = 160, 512
+GIF_FRAMES_MIN, GIF_FRAMES_MAX = 8, 48
 
 # Camera/geometry constants. World units: face half-width = 1.0.
 _FACE_HALF_W = 1.0
@@ -205,7 +209,46 @@ def _render_frame(
         )
         frame.alpha_composite(warped)
 
-    return frame.convert("RGB")
+    # Caller decides whether to flatten (opaque GIF) or keep alpha (transparent).
+    return frame
+
+
+# GIF transparency is 1-bit: a pixel is fully opaque or fully see-through.
+# Edge pixels from the perspective resample carry partial alpha; anything at
+# or above this threshold becomes opaque, the rest transparent.
+_ALPHA_THRESHOLD = 128
+# Palette index reserved for the transparent color in the transparent path.
+_TRANSPARENT_INDEX = 255
+
+
+def _quantize_opaque(
+    frames_rgba: List[Image.Image], palette_colors: int
+) -> List[Image.Image]:
+    """Flatten onto the (already-opaque) background and map to a shared
+    palette so colors stay stable across frames."""
+    rgb_frames = [f.convert("RGB") for f in frames_rgba]
+    palette_src = rgb_frames[0].quantize(colors=palette_colors, method=Image.FASTOCTREE)
+    return [f.quantize(palette=palette_src, dither=Image.FLOYDSTEINBERG) for f in rgb_frames]
+
+
+def _quantize_transparent(frames_rgba: List[Image.Image]) -> List[Image.Image]:
+    """Map frames to a shared ≤255-color palette and reserve one index for
+    transparency, set from each frame's thresholded alpha channel."""
+    # Build a shared palette from the opaque face pixels of every frame so the
+    # palette covers all rotation angles, leaving index 255 free for transparency.
+    rgb_frames = [f.convert("RGB") for f in frames_rgba]
+    palette_src = rgb_frames[0].quantize(colors=_TRANSPARENT_INDEX, method=Image.FASTOCTREE)
+
+    out: List[Image.Image] = []
+    for rgba, rgb in zip(frames_rgba, rgb_frames):
+        p = rgb.quantize(palette=palette_src, dither=Image.FLOYDSTEINBERG)
+        # 1-bit mask: opaque where alpha ≥ threshold.
+        mask = rgba.getchannel("A").point(lambda a: 255 if a >= _ALPHA_THRESHOLD else 0)
+        # Paint transparent pixels with the reserved index.
+        p.paste(_TRANSPARENT_INDEX, mask=Image.eval(mask, lambda v: 255 - v))
+        p.info["transparency"] = _TRANSPARENT_INDEX
+        out.append(p)
+    return out
 
 
 def render_cube_gif(
@@ -216,30 +259,37 @@ def render_cube_gif(
     frames: int = GIF_FRAMES,
     frame_ms: int = GIF_FRAME_MS,
     palette_colors: int = GIF_PALETTE_COLORS,
+    transparent: bool = False,
 ) -> bytes:
     """Render a looping animated GIF of the spinning 3D cube.
 
     `faces` must hold exactly four images (one per prism face, in rotation
     order). They are normalized to the canonical face size internally.
+
+    When `transparent` is True the branded gradient background is dropped and
+    the area around the cube is made see-through (1-bit GIF transparency, so
+    edges are hard rather than feathered).
     """
     if len(faces) != 4:
         raise ValueError(f"render_cube_gif expects 4 faces, got {len(faces)}")
 
     prepared = [_prepare_face(f) for f in faces]
-    background = _vertical_gradient((size, size), theme.bg_top, theme.bg_bottom)
+    if transparent:
+        background: Image.Image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    else:
+        background = _vertical_gradient((size, size), theme.bg_top, theme.bg_bottom)
 
     rendered = [
         _render_frame(prepared, background, 2 * math.pi * (n / frames), size)
         for n in range(frames)
     ]
 
-    # Shared palette across frames so colors stay stable (no per-frame
-    # re-quantization flicker on the photographic faces).
-    palette_src = rendered[0].quantize(colors=palette_colors, method=Image.FASTOCTREE)
-    paletted = [
-        img.quantize(palette=palette_src, dither=Image.FLOYDSTEINBERG)
-        for img in rendered
-    ]
+    if transparent:
+        paletted = _quantize_transparent(rendered)
+        save_kwargs = {"transparency": _TRANSPARENT_INDEX, "disposal": 2}
+    else:
+        paletted = _quantize_opaque(rendered, palette_colors)
+        save_kwargs = {"disposal": 2}
 
     buf = BytesIO()
     paletted[0].save(
@@ -249,12 +299,12 @@ def render_cube_gif(
         append_images=paletted[1:],
         duration=frame_ms,
         loop=0,
-        disposal=2,
         optimize=True,
+        **save_kwargs,
     )
     data = buf.getvalue()
     logger.info(
-        "cube gif rendered theme=%s size=%d frames=%d bytes=%d",
-        theme.slug, size, frames, len(data),
+        "cube gif rendered theme=%s size=%d frames=%d transparent=%s bytes=%d",
+        theme.slug, size, frames, transparent, len(data),
     )
     return data
