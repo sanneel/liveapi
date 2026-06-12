@@ -44,13 +44,16 @@ from ..render.cube_gif_render import (
     GIF_SIZE,
     GIF_SIZE_MAX,
     GIF_SIZE_MIN,
+    GIF_TILT_DEFAULT,
+    GIF_TILT_MAX,
+    GIF_TILT_MIN,
     render_cube_gif,
 )
 from ..render.cube_render import render_cube_png
 from ..render.cube_odds_render import render_odds_face
 from ..services import png_cache
 from ..services.cube_resolver import resolve_for_theme
-from ..services.cube_themes import CUBE_THEMES, CubeFace, CubeTheme, get_theme, list_themes
+from ..services.cube_themes import CUBE_THEMES, CubeTheme, get_theme, list_themes
 
 logger = get_logger("app.routes.public_cube")
 
@@ -182,35 +185,31 @@ def _placeholder_face(t: CubeTheme) -> Image.Image:
 
 
 def _build_cube_faces(t: CubeTheme) -> List[Image.Image]:
-    """Build the four prism faces (in rotation order) for the GIF, mirroring
-    how the widget alternates promo/odds faces. Themes with fewer than four
-    declared faces are cycled to fill the prism (e.g. UCL's [image, match]
-    becomes [image, match, image, match])."""
-    declared = list(t.faces) or [CubeFace(kind="image", image_url=t.promo_image_url)]
-
-    max_idx = 0
-    for face in declared:
-        if face.kind == "match" and face.match_index > max_idx:
-            max_idx = face.match_index
-
+    """Build the four cube sides for the GIF: one promo (static) face plus
+    three odds faces, in spin order [promo, odds, odds, odds]. The three odds
+    faces show up to three different in-scope matches when available, otherwise
+    they repeat the featured match — so the cube always shows odds on 3 sides
+    and the promo on 1, exactly once per revolution."""
     with db_session() as session:
-        matches = resolve_for_theme(session, t, limit=max_idx + 1)
+        matches = resolve_for_theme(session, t, limit=3)
 
-    faces: List[Image.Image] = []
-    for pos in range(4):
-        face = declared[pos % len(declared)]
-        img: Optional[Image.Image] = None
-        if face.kind == "match":
-            match = matches[face.match_index] if face.match_index < len(matches) else None
-            try:
-                img = Image.open(BytesIO(render_odds_face(match, theme_slug=t.slug))).convert("RGBA")
-            except Exception:
-                logger.exception("cube gif: odds face render failed theme=%s", t.slug)
-        elif face.kind == "image":
-            img = _load_static_image(face.image_url or t.promo_image_url)
-        else:  # "brand" — not used by current themes; colored placeholder.
-            img = _placeholder_face(t)
-        faces.append(img if img is not None else _placeholder_face(t))
+    def odds_face(match: Optional[Match]) -> Image.Image:
+        try:
+            return Image.open(
+                BytesIO(render_odds_face(match, theme_slug=t.slug))
+            ).convert("RGBA")
+        except Exception:
+            logger.exception("cube gif: odds face render failed theme=%s", t.slug)
+            return _placeholder_face(t)
+
+    promo = _load_static_image(t.promo_image_url) or _placeholder_face(t)
+
+    faces: List[Image.Image] = [promo]
+    for i in range(3):
+        # Cycle through resolved matches; fall back to the featured one (or an
+        # empty odds template if nothing is in scope) so all 3 sides render.
+        match = matches[i] if i < len(matches) else (matches[0] if matches else None)
+        faces.append(odds_face(match))
     return faces
 
 
@@ -223,6 +222,7 @@ def cube_gif(
     size: int = GIF_SIZE,
     frames: int = GIF_FRAMES,
     seconds: float = GIF_SECONDS_DEFAULT,
+    tilt: float = GIF_TILT_DEFAULT,
 ) -> Response:
     """Animated GIF of the spinning 3D cube for email communications.
 
@@ -235,9 +235,11 @@ def cube_gif(
     Query params:
       transparent=1  drop the branded background (1-bit GIF transparency)
       size=NNN       square pixel size (clamped 160–512, default 360)
-      frames=NN      rotation frames (clamped 8–48, default 24)
+      frames=NN      rotation frames (clamped 8–48, default 36)
       seconds=N      seconds per full revolution (clamped 1–12, default ~1.9);
                      raise it to slow the spin down
+      tilt=NN        downward view angle in degrees (clamped 0–40, default 22);
+                     0 = straight-on (flat faces), higher = more top visible
     """
     t = get_theme(theme)
     if t is None:
@@ -246,12 +248,11 @@ def cube_gif(
     size = max(GIF_SIZE_MIN, min(int(size), GIF_SIZE_MAX))
     frames = max(GIF_FRAMES_MIN, min(int(frames), GIF_FRAMES_MAX))
     seconds = max(GIF_SECONDS_MIN, min(float(seconds), GIF_SECONDS_MAX))
-    # The GIF is one 180° loop (opposite faces are identical), so it plays in
-    # half the per-revolution time. GIF timing is 10ms-quantized; round so the
-    # spin stays even.
-    frame_ms = max(20, int(round(seconds * 1000 / 2 / frames / 10)) * 10)
+    tilt = max(GIF_TILT_MIN, min(float(tilt), GIF_TILT_MAX))
+    # Full 360° loop. GIF timing is 10ms-quantized; round so the spin stays even.
+    frame_ms = max(20, int(round(seconds * 1000 / frames / 10)) * 10)
 
-    key = f"cube_gif:{t.slug}:{size}:{frames}:{frame_ms}:{int(transparent)}"
+    key = f"cube_gif:{t.slug}:{size}:{frames}:{frame_ms}:{tilt:g}:{int(transparent)}"
     cached = png_cache.get(key)
     if cached is not None:
         etag = _etag(cached)
@@ -263,7 +264,7 @@ def cube_gif(
         faces = _build_cube_faces(t)
         gif = render_cube_gif(
             t, faces, size=size, frames=frames, frame_ms=frame_ms,
-            transparent=transparent,
+            transparent=transparent, tilt_deg=tilt,
         )
     except Exception:
         logger.exception("cube gif render failed theme=%s", t.slug)

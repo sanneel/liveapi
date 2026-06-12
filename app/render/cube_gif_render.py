@@ -24,7 +24,7 @@ import math
 from io import BytesIO
 from typing import List, Sequence, Tuple
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from ..logging_config import get_logger
 from ..services.cube_themes import CubeTheme
@@ -41,8 +41,8 @@ FACE_H = 380
 # fast; these defaults land a smooth full rotation around ~700KB, which most
 # email clients accept inline without clipping.
 GIF_SIZE = 360        # square px; sharp enough for the odds text
-GIF_FRAMES = 30       # rendered over a 180° half-turn → 6° per step, smooth
-GIF_FRAME_MS = 32     # 30 × 32ms ≈ 0.96s per 180° loop ≈ 1.9s per revolution
+GIF_FRAMES = 36       # full 360° turn → 10° per step; tilt hides the stepping
+GIF_FRAME_MS = 53     # 36 × 53ms ≈ 1.9s per revolution
 GIF_PALETTE_COLORS = 256  # max GIF palette — best fidelity on the trophy/gradient
 
 # Route-level clamps so a hand-edited URL can't request a 4000px, 200-frame GIF.
@@ -54,16 +54,23 @@ GIF_FRAMES_MIN, GIF_FRAMES_MAX = 8, 48
 GIF_SECONDS_DEFAULT = 1.9
 GIF_SECONDS_MIN, GIF_SECONDS_MAX = 1.0, 12.0
 
-# Camera/geometry constants. World units: face half-width = 1.0.
+# Camera/geometry constants. World units: half-width = 1.0 (square cross-section
+# so it's a true cube; height is scaled to the face aspect so the side artwork
+# isn't distorted).
 _FACE_HALF_W = 1.0
 _FACE_HALF_H = _FACE_HALF_W * (FACE_H / FACE_W)
-_CAM_DISTANCE = 3.0  # ~3× face width, mirrors the widget's CSS perspective
-# Pixel scale: front face (Z=+1, depth = CAM-1 = 2) spans ~0.72×canvas wide,
-# leaving margin for the side faces that swing toward the edges mid-spin.
-_FIT = 0.72
-# Cull faces whose normal points away from the camera (with a small epsilon
-# so a face exactly edge-on doesn't flicker on/off).
-_BACKFACE_EPS = 0.02
+_CAM_DISTANCE = 3.4  # ~3× cube width, mirrors the widget's CSS perspective
+# Pixel scale leaving margin for the tilt (which makes the silhouette taller)
+# and the side faces that swing toward the edges mid-spin.
+_FIT = 0.60
+# Look slightly DOWN at the cube so its top is always visible. This is the key
+# to "always looks 3D" — a face is never a perfectly flat rectangle, so the
+# spin reads as a rotating solid instead of flipping between flat pages.
+GIF_TILT_DEFAULT = 22.0
+GIF_TILT_MIN, GIF_TILT_MAX = 0.0, 40.0
+# Cull faces whose normal points away from the camera (small epsilon so a face
+# exactly edge-on doesn't flicker on/off).
+_BACKFACE_EPS = 1e-4
 
 
 def _vertical_gradient(
@@ -141,71 +148,87 @@ def _perspective_coeffs(
     return tuple(_solve_linear(matrix, rhs))
 
 
-def _face_geometry(
-    face_angle: float, size: int
-) -> Tuple[float, List[Tuple[float, float]]]:
-    """Project one vertical face at the given rotation angle (radians).
+Point3 = Tuple[float, float, float]
 
-    Returns (average_depth_Z, dst_quad) where dst_quad is the four canvas
-    corners [top-left, top-right, bottom-right, bottom-left]. The two side
-    edges stay vertical (same Z along each edge), so the face is a trapezoid
-    whose left/right heights differ with perspective depth.
+
+def _cube_faces_model() -> List[Tuple[int, List[Point3]]]:
+    """The cube as 5 visible faces (4 sides + top), each a list of 3D corners
+    ordered [top-left, top-right, bottom-right, bottom-left] in the source
+    image's own orientation. y is up. Returns (image_index, corners); image
+    indices 0–3 are the four sides in spin order, 4 is the top texture.
     """
     a = _FACE_HALF_W
     hh = _FACE_HALF_H
-    sin_p = math.sin(face_angle)
-    cos_p = math.cos(face_angle)
-
-    # Left edge (local u = -a) and right edge (u = +a) positions in X–Z.
-    x_left = a * sin_p - a * cos_p
-    z_left = a * cos_p + a * sin_p
-    x_right = a * sin_p + a * cos_p
-    z_right = a * cos_p - a * sin_p
-
-    cx = size / 2.0
-    cy = size / 2.0
-    scale = _FIT * size
-
-    den_l = _CAM_DISTANCE - z_left
-    den_r = _CAM_DISTANCE - z_right
-
-    xl = cx + scale * x_left / den_l
-    xr = cx + scale * x_right / den_r
-    yt_l = cy - scale * hh / den_l
-    yb_l = cy + scale * hh / den_l
-    yt_r = cy - scale * hh / den_r
-    yb_r = cy + scale * hh / den_r
-
-    dst = [(xl, yt_l), (xr, yt_r), (xr, yb_r), (xl, yb_l)]
-    return (z_left + z_right) / 2.0, dst
+    # 8 cube vertices: 0–3 top ring (y=+hh), 4–7 bottom ring (y=-hh).
+    v = [
+        (-a, hh, -a), (a, hh, -a), (a, hh, a), (-a, hh, a),
+        (-a, -hh, -a), (a, -hh, -a), (a, -hh, a), (-a, -hh, a),
+    ]
+    return [
+        (0, [v[3], v[2], v[6], v[7]]),  # front (+z)
+        (1, [v[2], v[1], v[5], v[6]]),  # right (+x)
+        (2, [v[1], v[0], v[4], v[5]]),  # back  (-z)
+        (3, [v[0], v[3], v[7], v[4]]),  # left  (-x)
+        (4, [v[0], v[1], v[2], v[3]]),  # top   (+y)
+    ]
 
 
 def _render_frame(
-    faces: Sequence[Image.Image],
+    images: Sequence[Image.Image],
     background: Image.Image,
     theta: float,
     size: int,
+    tilt: float,
 ) -> Image.Image:
-    """Composite all camera-facing faces for one rotation angle (radians)."""
+    """Composite all camera-facing cube faces for one rotation angle (radians),
+    viewed with a downward `tilt` (radians) so the top stays visible."""
     frame = background.copy().convert("RGBA")
-    src_corners = [(0.0, 0.0), (float(FACE_W), 0.0),
-                   (float(FACE_W), float(FACE_H)), (0.0, float(FACE_H))]
+    cx = cy = size / 2.0
+    scale = _FIT * size
+    st, ct = math.sin(theta), math.cos(theta)
+    sp, cp = math.sin(tilt), math.cos(tilt)
+
+    def rotate(p: Point3) -> Point3:
+        x, y, z = p
+        # Spin about the vertical (Y) axis…
+        xr = x * ct + z * st
+        zr = -x * st + z * ct
+        # …then tilt about X so the top tips toward the camera.
+        yr = y * cp - zr * sp
+        zr2 = y * sp + zr * cp
+        return xr, yr, zr2
+
+    def project(p: Point3) -> Tuple[float, float]:
+        x, y, z = p
+        den = _CAM_DISTANCE - z
+        return cx + scale * x / den, cy - scale * y / den
+
+    src_side = [(0.0, 0.0), (float(FACE_W), 0.0),
+                (float(FACE_W), float(FACE_H)), (0.0, float(FACE_H))]
 
     visible: List[Tuple[float, int, List[Tuple[float, float]]]] = []
-    for i, _face in enumerate(faces):
-        face_angle = theta + i * (math.pi / 2.0)
-        # Front-facing when the face normal (sin, cos) has cos > 0 toward camera.
-        if math.cos(face_angle) <= _BACKFACE_EPS:
+    for img_idx, corners in _cube_faces_model():
+        r = [rotate(c) for c in corners]
+        # Every cube face is centered on its own outward normal (the cube is at
+        # the origin), so the rotated face-center depth IS the outward normal's
+        # z. Positive → the face points toward the camera and is visible.
+        avg_z = sum(p[2] for p in r) / 4.0
+        if avg_z <= _BACKFACE_EPS:
             continue
-        avg_z, dst = _face_geometry(face_angle, size)
-        visible.append((avg_z, i, dst))
+        dst = [project(p) for p in r]
+        visible.append((avg_z, img_idx, dst))
 
-    # Painter's algorithm: draw far faces first so nearer ones overlap them.
+    # Painter's algorithm: draw far faces (smaller z) first.
     visible.sort(key=lambda item: item[0])
 
-    for _avg_z, i, dst in visible:
-        coeffs = _perspective_coeffs(dst, src_corners)
-        warped = faces[i].transform(
+    for _avg_z, img_idx, dst in visible:
+        img = images[img_idx]
+        src = src_side if img_idx < 4 else [
+            (0.0, 0.0), (float(img.width), 0.0),
+            (float(img.width), float(img.height)), (0.0, float(img.height)),
+        ]
+        coeffs = _perspective_coeffs(dst, src)
+        warped = img.transform(
             (size, size),
             Image.PERSPECTIVE,
             coeffs,
@@ -265,11 +288,13 @@ def render_cube_gif(
     frame_ms: int = GIF_FRAME_MS,
     palette_colors: int = GIF_PALETTE_COLORS,
     transparent: bool = False,
+    tilt_deg: float = GIF_TILT_DEFAULT,
 ) -> bytes:
     """Render a looping animated GIF of the spinning 3D cube.
 
-    `faces` must hold exactly four images (one per prism face, in rotation
-    order). They are normalized to the canonical face size internally.
+    `faces` must hold exactly four images (one per cube side, in spin order).
+    They are normalized to the canonical face size internally. The cube's top
+    is generated from the theme so a tilted view always reads as a solid.
 
     When `transparent` is True the branded gradient background is dropped and
     the area around the cube is made see-through (1-bit GIF transparency, so
@@ -278,18 +303,18 @@ def render_cube_gif(
     if len(faces) != 4:
         raise ValueError(f"render_cube_gif expects 4 faces, got {len(faces)}")
 
-    prepared = [_prepare_face(f) for f in faces]
+    tilt = math.radians(max(GIF_TILT_MIN, min(tilt_deg, GIF_TILT_MAX)))
+    # 4 sides + generated top, indexed to match _cube_faces_model().
+    prepared = [_prepare_face(f) for f in faces] + [_top_texture(theme)]
     if transparent:
         background: Image.Image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     else:
         background = _vertical_gradient((size, size), theme.bg_top, theme.bg_bottom)
 
-    # The prism is [promo, odds, promo, odds], so opposite faces are identical
-    # and a 180° turn is visually identical to 0°. Rendering only [0, π) and
-    # looping it doubles angular smoothness for the same frame count/file size
-    # while still looking like a continuous spin.
+    # Full 360° turn: faces differ around the cube (3 odds + 1 promo, plus the
+    # top), so there's no symmetry shortcut — every angle is distinct.
     rendered = [
-        _render_frame(prepared, background, math.pi * (n / frames), size)
+        _render_frame(prepared, background, 2 * math.pi * (n / frames), size, tilt)
         for n in range(frames)
     ]
 
@@ -317,3 +342,18 @@ def render_cube_gif(
         theme.slug, size, frames, transparent, len(data),
     )
     return data
+
+
+def _top_texture(theme: CubeTheme) -> Image.Image:
+    """Square texture for the cube's top face. A flat branded panel with a thin
+    border so the top reads as a solid lid rather than a hole when tilted."""
+    side = FACE_W
+    top = _vertical_gradient((side, side), theme.bg_top, theme.bg_bottom).convert("RGBA")
+    draw = ImageDraw.Draw(top)
+    inset = max(2, side // 40)
+    draw.rectangle(
+        [inset, inset, side - inset - 1, side - inset - 1],
+        outline=(255, 255, 255, 60),
+        width=max(2, side // 90),
+    )
+    return top
