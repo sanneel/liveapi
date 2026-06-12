@@ -88,11 +88,22 @@ JS_TEMPLATE = """\
       headers: headers('application/x-www-form-urlencoded'),
       credentials: 'include',
     });
-    const text = (await r.text()).trim().replace(/^"+|"+$/g, '');
-    if (!r.ok || !text.startsWith('JRN-')) {
-      throw new Error('Failed to reserve journey ID: HTTP ' + r.status + ' ' + text);
+    const raw = (await r.text()).trim();
+    // Response may be a bare string ("JRN-...") or an object like
+    // {"journeyId":"JRN-..."} — mirror parse_identifier_response in Python.
+    let id = raw.replace(/^"+|"+$/g, '');
+    try {
+      const data = JSON.parse(raw);
+      if (typeof data === 'string') {
+        id = data.trim();
+      } else if (data && typeof data === 'object') {
+        id = String(data.identifier || data.journeyId || data.id || data.value || '').trim();
+      }
+    } catch (e) { /* keep the raw text */ }
+    if (!r.ok || !id.startsWith('JRN-')) {
+      throw new Error('Failed to reserve journey ID: HTTP ' + r.status + ' ' + raw);
     }
-    return text;
+    return id;
   }
 
   console.log('Reserving real journey IDs...');
