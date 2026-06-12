@@ -51,6 +51,10 @@ TEMPLATE_FILES = {
     "aft": "templates/aft.json",
 }
 
+# Creation order matters: the 2H campaign connector must point at the FollowUp
+# journey created in the same run, so followup is always processed first.
+TYPE_ORDER = ["followup", "bfr", "two_hours", "aft"]
+
 # Old values from the VAMOSBULLA template set.
 OLD_CODES = [
     "VAMOSBULLA",
@@ -221,6 +225,21 @@ def set_notification_metadata_journey_name(body: dict[str, Any], clean_name: str
             metadata["journeyName"] = clean_name
 
 
+def find_connector_host_ids(body: dict[str, Any]) -> set[str]:
+    """Collect HostJourneyId values from campaign connector activities."""
+    host_ids: set[str] = set()
+    for d in walk_dicts(body):
+        conditions = d.get("campaignConnectorConditions")
+        if not isinstance(conditions, dict):
+            continue
+        activity_data = conditions.get("activityData")
+        if isinstance(activity_data, dict):
+            host_id = activity_data.get("HostJourneyId")
+            if isinstance(host_id, str) and host_id:
+                host_ids.add(host_id)
+    return host_ids
+
+
 def set_raw_info(body: dict[str, Any], key: str, value: Any) -> None:
     raw = body.setdefault("rawJourneyData", {})
     info = raw.setdefault("infoValues", {})
@@ -288,6 +307,7 @@ def prepare_body(
     code: str,
     match_dt: datetime,
     reserved_id: str,
+    followup_id: str | None = None,
 ) -> dict[str, Any]:
     body = copy.deepcopy(template)
     date_label = match_dt.strftime("%d.%m")
@@ -301,6 +321,13 @@ def prepare_body(
     for old_date in OLD_DATE_LABELS:
         replacements[old_date] = date_label
 
+    if followup_id:
+        # Repoint the campaign connector at the FollowUp journey from this run.
+        # Replacing the old id as a plain string also fixes the connector's
+        # displayData line ("JRN-... — <followup name>").
+        for old_host_id in find_connector_host_ids(body):
+            replacements[old_host_id] = followup_id
+
     body = deep_replace(body, replacements)
 
     body["journeyName"] = clean_name
@@ -312,6 +339,114 @@ def prepare_body(
     set_dates(body, journey_type, match_dt)
 
     return body
+
+
+def parse_api_dt(value: str) -> datetime:
+    return datetime.strptime(value[:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=UTC)
+
+
+def verify_body(
+    body: dict[str, Any],
+    journey_type: str,
+    match_name: str,
+    code: str,
+    match_dt: datetime,
+    reserved_id: str,
+    followup_id: str | None,
+) -> list[tuple[bool, str]]:
+    """Run sanity checks on a generated payload. Returns (ok, message) pairs."""
+    checks: list[tuple[bool, str]] = []
+    serialized = json.dumps(body, ensure_ascii=False)
+    date_label = match_dt.strftime("%d.%m")
+    expected_name = build_journey_name(journey_type, match_name, code, date_label)
+
+    checks.append((
+        body.get("journeyName") == expected_name,
+        f"journeyName is {body.get('journeyName')!r}",
+    ))
+    raw_name = body.get("rawJourneyData", {}).get("infoValues", {}).get("journeyName")
+    checks.append((
+        raw_name == expected_name,
+        f"rawJourneyData journeyName is {raw_name!r}",
+    ))
+    checks.append((
+        body.get("reservedJourneyId") == reserved_id,
+        f"reservedJourneyId is {body.get('reservedJourneyId')!r}",
+    ))
+
+    leftovers = [
+        old for old in (OLD_CODES + OLD_MATCH_TEXTS + OLD_DATE_LABELS)
+        if old in serialized
+    ]
+    checks.append((
+        not leftovers,
+        "no leftover old campaign values"
+        if not leftovers
+        else f"old campaign values still present: {leftovers}",
+    ))
+
+    promo_values: list[Any] = []
+    for d in walk_dicts(body):
+        settings = d.get("promocodeSettings")
+        if isinstance(settings, dict):
+            promo_values.append(settings.get("values"))
+    if not promo_values:
+        # The captured FollowUp journey has no promocode segmentation; the
+        # code only appears in its name. The other types must have it.
+        checks.append((
+            journey_type == "followup",
+            "no promocodeSettings in template"
+            + ("" if journey_type == "followup" else " (expected at least one)"),
+        ))
+    else:
+        promo_ok = all(v == [code] for v in promo_values)
+        checks.append((
+            promo_ok,
+            f"promocode is [{code}] in all {len(promo_values)} promocodeSettings"
+            if promo_ok
+            else f"promocodeSettings wrong: {promo_values}",
+        ))
+
+    try:
+        start_at = parse_api_dt(body["startAt"])
+        stop_at = parse_api_dt(body["stopAt"])
+        checks.append((
+            start_at < stop_at,
+            f"startAt {body['startAt']} is before stopAt {body['stopAt']}",
+        ))
+        checks.append((
+            stop_at > datetime.now(UTC),
+            f"stopAt {body['stopAt']} is in the future",
+        ))
+    except (KeyError, ValueError) as exc:
+        checks.append((False, f"could not parse startAt/stopAt: {exc}"))
+
+    if journey_type == "two_hours":
+        hosts = find_connector_host_ids(body)
+        if not hosts:
+            checks.append((False, "no campaign connector (HostJourneyId) found in payload"))
+        elif followup_id:
+            checks.append((
+                hosts == {followup_id},
+                f"campaign connector HostJourneyId is {sorted(hosts)} "
+                f"(expected {followup_id})",
+            ))
+        else:
+            checks.append((
+                False,
+                f"campaign connector still points at old journey: {sorted(hosts)}",
+            ))
+
+    return checks
+
+
+def print_checks(journey_type: str, checks: list[tuple[bool, str]]) -> bool:
+    print(f"[{journey_type}] Verification:")
+    all_ok = True
+    for ok, message in checks:
+        print(f"  {'OK  ' if ok else 'FAIL'} {message}")
+        all_ok = all_ok and ok
+    return all_ok
 
 
 def prompt_missing(args: argparse.Namespace) -> argparse.Namespace:
@@ -341,6 +476,11 @@ def parse_args() -> argparse.Namespace:
         default=["followup", "bfr", "two_hours", "aft"],
         help="Use this to test only one type first, example: --types aft",
     )
+    parser.add_argument(
+        "--followup-id",
+        help="Existing FollowUp journey ID (JRN-...) for the 2H campaign connector. "
+        "Only needed when creating two_hours without followup in the same run.",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Write output JSON files but do not call POST /journey-drafts")
     parser.add_argument("--yes", action="store_true", help="Do not ask for final confirmation")
     return prompt_missing(parser.parse_args())
@@ -368,13 +508,31 @@ def main() -> int:
         match_name = args.match.strip()
         date_label = match_dt.strftime("%d.%m")
 
+        ordered_types = [t for t in TYPE_ORDER if t in args.types]
+        followup_id_override = (args.followup_id or "").strip()
+        if followup_id_override and not followup_id_override.startswith("JRN-"):
+            raise JourneyCloneError(
+                f"--followup-id must look like JRN-..., got: {followup_id_override!r}"
+            )
+
+        needs_followup_link = (
+            "two_hours" in ordered_types
+            and "followup" not in ordered_types
+            and not followup_id_override
+        )
+        if needs_followup_link and not args.dry_run:
+            raise JourneyCloneError(
+                "two_hours needs a FollowUp journey for its campaign connector. "
+                "Include followup in --types or pass --followup-id JRN-..."
+            )
+
         print("\nCampaign")
         print(f"  Match: {match_name}")
         print(f"  Code:  {code}")
         print(f"  Date:  {date_label}")
         print(f"  Time:  {match_dt.strftime('%Y-%m-%d %H:%M')} {LOCAL_TZ_NAME}")
         print("\nWill create:")
-        for t in args.types:
+        for t in ordered_types:
             print(f"  - {build_journey_name(t, match_name, code, date_label)}")
 
         if not args.yes:
@@ -386,8 +544,10 @@ def main() -> int:
         session = requests.Session()
         out_dir = Path(OUT_DIR)
         out_dir.mkdir(parents=True, exist_ok=True)
+        created_ids: dict[str, str] = {}
+        failed_types: list[str] = []
 
-        for journey_type in args.types:
+        for journey_type in ordered_types:
             print(f"\n[{journey_type}] Loading template...")
             template = load_template(TEMPLATE_FILES[journey_type])
 
@@ -399,21 +559,53 @@ def main() -> int:
                 reserved_id = reserve_journey_id(session)
                 print(f"[{journey_type}] Reserved ID: {reserved_id}")
 
-            body = prepare_body(template, journey_type, match_name, code, match_dt, reserved_id)
+            followup_id = None
+            if journey_type == "two_hours":
+                followup_id = followup_id_override or created_ids.get("followup")
+                if followup_id:
+                    print(f"[{journey_type}] Campaign connector -> FollowUp journey: {followup_id}")
+                else:
+                    print(
+                        f"[{journey_type}] WARNING: no FollowUp ID available, "
+                        "campaign connector keeps the template's old journey ID."
+                    )
+
+            body = prepare_body(
+                template, journey_type, match_name, code, match_dt, reserved_id,
+                followup_id=followup_id,
+            )
+            created_ids[journey_type] = reserved_id
             out_path = out_dir / f"{reserved_id}_{journey_type}.json"
             out_path.write_text(json.dumps(body, ensure_ascii=False, indent=2), encoding="utf-8")
             print(f"[{journey_type}] Wrote payload: {out_path}")
             print(f"[{journey_type}] Name: {body['journeyName']}")
 
+            checks = verify_body(
+                body, journey_type, match_name, code, match_dt, reserved_id, followup_id
+            )
+            checks_ok = print_checks(journey_type, checks)
+            if not checks_ok:
+                failed_types.append(journey_type)
+
             if args.dry_run:
                 print(f"[{journey_type}] Dry run enabled, not posting draft.")
                 continue
+
+            if not checks_ok:
+                raise JourneyCloneError(
+                    f"Verification failed for {journey_type}, draft NOT posted. "
+                    f"Inspect {out_path} and fix before retrying."
+                )
 
             print(f"[{journey_type}] Creating draft...")
             result = create_draft(session, body)
             print(f"[{journey_type}] Created draft. Response: {result}")
 
-        print("\nDone.")
+        if failed_types:
+            print(f"\nVERIFICATION FAILED for: {', '.join(failed_types)}")
+            return 1
+        print(f"\nAll checks passed for: {', '.join(ordered_types)}")
+        print("Done.")
         return 0
 
     except Exception as exc:
