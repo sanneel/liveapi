@@ -6,10 +6,11 @@ cube widget (`app/templates/cube/widget.html`) can never display in an
 inbox. This module bakes the same spinning-cube look into an animated GIF
 that an email's `<img src>` can point at.
 
-Like the rest of the cube pipeline this is deliberately PIL-only — no
-Playwright, no Chromium. Each frame perspective-projects the four prism
-faces (promo / odds, the same images the widget shows) around the vertical
-axis using a numpy-solved homography, then the frames are assembled into a
+Like the rest of the cube pipeline this is deliberately dependency-light —
+PIL-only, no numpy, no Playwright, no Chromium. Each frame perspective-
+projects the four prism faces (promo / odds, the same images the widget
+shows) around the vertical axis using a homography solved with a small
+pure-Python Gaussian elimination, then the frames are assembled into a
 looping GIF with a shared palette so colors don't flicker between frames.
 
 The caller supplies the four face images already rendered (promo JPGs and
@@ -23,7 +24,6 @@ import math
 from io import BytesIO
 from typing import List, Sequence, Tuple
 
-import numpy as np
 from PIL import Image
 
 from ..logging_config import get_logger
@@ -64,13 +64,23 @@ def _vertical_gradient(
 ) -> Image.Image:
     """Solid branded background. GIF 1-bit transparency looks bad on the
     colored email backgrounds these run on, so frames are composited onto an
-    opaque gradient instead of shipping transparency."""
+    opaque gradient instead of shipping transparency.
+
+    Built as a 1-pixel-wide vertical strip then stretched horizontally — each
+    row is a flat color, so the cheap resize is exact and PIL-only (no numpy).
+    """
     w, h = size
-    grad = np.zeros((h, w, 3), dtype=np.uint8)
-    for c in range(3):
-        col = np.linspace(top[c], bottom[c], h, dtype=np.float32)
-        grad[:, :, c] = np.repeat(col[:, None], w, axis=1).astype(np.uint8)
-    return Image.fromarray(grad, "RGB")
+    strip = Image.new("RGB", (1, h))
+    px = strip.load()
+    denom = max(1, h - 1)
+    for y in range(h):
+        t = y / denom
+        px[0, y] = (
+            int(top[0] + (bottom[0] - top[0]) * t),
+            int(top[1] + (bottom[1] - top[1]) * t),
+            int(top[2] + (bottom[2] - top[2]) * t),
+        )
+    return strip.resize((w, h), Image.BILINEAR)
 
 
 def _prepare_face(img: Image.Image) -> Image.Image:
@@ -81,6 +91,30 @@ def _prepare_face(img: Image.Image) -> Image.Image:
     return rgba
 
 
+def _solve_linear(matrix: List[List[float]], rhs: List[float]) -> List[float]:
+    """Solve a square linear system via Gaussian elimination with partial
+    pivoting. Small fixed size (8×8 here), so pure Python is plenty fast and
+    keeps this module dependency-free."""
+    n = len(rhs)
+    # Augmented matrix [A | b].
+    aug = [list(matrix[i]) + [rhs[i]] for i in range(n)]
+    for col in range(n):
+        # Partial pivot: swap in the row with the largest magnitude in `col`.
+        pivot = max(range(col, n), key=lambda r: abs(aug[r][col]))
+        if abs(aug[pivot][col]) < 1e-12:
+            raise ValueError("Degenerate perspective system (collinear quad)")
+        aug[col], aug[pivot] = aug[pivot], aug[col]
+        pivot_val = aug[col][col]
+        for r in range(n):
+            if r == col:
+                continue
+            factor = aug[r][col] / pivot_val
+            if factor:
+                for c in range(col, n + 1):
+                    aug[r][c] -= factor * aug[col][c]
+    return [aug[i][n] / aug[i][i] for i in range(n)]
+
+
 def _perspective_coeffs(
     dst: Sequence[Tuple[float, float]],
     src: Sequence[Tuple[float, float]],
@@ -88,14 +122,14 @@ def _perspective_coeffs(
     """Solve the 8 PIL PERSPECTIVE coefficients mapping each output (dst)
     point back to its input (src) point — the direction PIL.transform wants.
     """
-    matrix = []
+    matrix: List[List[float]] = []
+    rhs: List[float] = []
     for (dx, dy), (sx, sy) in zip(dst, src):
         matrix.append([dx, dy, 1, 0, 0, 0, -sx * dx, -sx * dy])
         matrix.append([0, 0, 0, dx, dy, 1, -sy * dx, -sy * dy])
-    a = np.array(matrix, dtype=np.float64)
-    b = np.array([c for pt in src for c in pt], dtype=np.float64)
-    coeffs = np.linalg.solve(a, b)
-    return tuple(coeffs)
+        rhs.append(sx)
+        rhs.append(sy)
+    return tuple(_solve_linear(matrix, rhs))
 
 
 def _face_geometry(
