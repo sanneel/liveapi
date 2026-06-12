@@ -40,10 +40,10 @@ FACE_H = 380
 # re-cropping. Kept modest because animated GIFs of photographic faces grow
 # fast; these defaults land a smooth full rotation around ~700KB, which most
 # email clients accept inline without clipping.
-GIF_SIZE = 360        # square px; sharp enough for the odds text, ~700-870KB
-GIF_FRAMES = 24       # 15° per step — smooth enough, keeps the file small
-GIF_FRAME_MS = 80     # 24 × 80ms ≈ 1.9s per full revolution
-GIF_PALETTE_COLORS = 192  # photographic faces survive 192 colors + dithering
+GIF_SIZE = 360        # square px; sharp enough for the odds text
+GIF_FRAMES = 30       # rendered over a 180° half-turn → 6° per step, smooth
+GIF_FRAME_MS = 32     # 30 × 32ms ≈ 0.96s per 180° loop ≈ 1.9s per revolution
+GIF_PALETTE_COLORS = 256  # max GIF palette — best fidelity on the trophy/gradient
 
 # Route-level clamps so a hand-edited URL can't request a 4000px, 200-frame GIF.
 GIF_SIZE_MIN, GIF_SIZE_MAX = 160, 512
@@ -284,8 +284,12 @@ def render_cube_gif(
     else:
         background = _vertical_gradient((size, size), theme.bg_top, theme.bg_bottom)
 
+    # The prism is [promo, odds, promo, odds], so opposite faces are identical
+    # and a 180° turn is visually identical to 0°. Rendering only [0, π) and
+    # looping it doubles angular smoothness for the same frame count/file size
+    # while still looking like a continuous spin.
     rendered = [
-        _render_frame(prepared, background, 2 * math.pi * (n / frames), size)
+        _render_frame(prepared, background, math.pi * (n / frames), size)
         for n in range(frames)
     ]
 

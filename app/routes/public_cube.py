@@ -246,8 +246,10 @@ def cube_gif(
     size = max(GIF_SIZE_MIN, min(int(size), GIF_SIZE_MAX))
     frames = max(GIF_FRAMES_MIN, min(int(frames), GIF_FRAMES_MAX))
     seconds = max(GIF_SECONDS_MIN, min(float(seconds), GIF_SECONDS_MAX))
-    # GIF frame timing is quantized to 10ms; round so the spin stays even.
-    frame_ms = max(20, int(round(seconds * 1000 / frames / 10)) * 10)
+    # The GIF is one 180° loop (opposite faces are identical), so it plays in
+    # half the per-revolution time. GIF timing is 10ms-quantized; round so the
+    # spin stays even.
+    frame_ms = max(20, int(round(seconds * 1000 / 2 / frames / 10)) * 10)
 
     key = f"cube_gif:{t.slug}:{size}:{frames}:{frame_ms}:{int(transparent)}"
     cached = png_cache.get(key)
