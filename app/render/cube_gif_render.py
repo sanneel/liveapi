@@ -273,6 +273,9 @@ def render_cube_gif(
 
     `faces` must hold exactly four images (one per prism face, in rotation
     order). They are normalized to the canonical face size internally.
+    `frames` is the count per half-turn; when the four faces don't form two
+    identical opposite pairs, twice that many frames are rendered to cover
+    the full revolution seamlessly.
 
     When `transparent` is True the branded gradient background is dropped and
     the area around the cube is made see-through (1-bit GIF transparency, so
@@ -287,13 +290,20 @@ def render_cube_gif(
     else:
         background = _vertical_gradient((size, size), theme.bg_top, theme.bg_bottom)
 
-    # The prism is [promo, odds, promo, odds], so opposite faces are identical
-    # and a 180° turn is visually identical to 0°. Rendering only [0, π) and
-    # looping it doubles angular smoothness for the same frame count/file size
-    # while still looking like a continuous spin.
+    # When opposite faces are identical (e.g. [promo, odds, promo, odds]) a
+    # 180° turn is visually identical to 0°, so rendering only [0, π) and
+    # looping it halves the frame count/file size. With four distinct faces
+    # (e.g. promo + three matches) that shortcut visibly swaps face contents
+    # at every loop restart, so the full 360° must be rendered. Same angular
+    # step either way — `frames` counts frames per half-turn.
+    half_turn_loops = (
+        prepared[0].tobytes() == prepared[2].tobytes()
+        and prepared[1].tobytes() == prepared[3].tobytes()
+    )
+    total_frames = frames if half_turn_loops else frames * 2
     rendered = [
         _render_frame(prepared, background, math.pi * (n / frames), size)
-        for n in range(frames)
+        for n in range(total_frames)
     ]
 
     if transparent:
@@ -316,7 +326,8 @@ def render_cube_gif(
     )
     data = buf.getvalue()
     logger.info(
-        "cube gif rendered theme=%s size=%d frames=%d transparent=%s bytes=%d",
-        theme.slug, size, frames, transparent, len(data),
+        "cube gif rendered theme=%s size=%d frames=%d half_turn=%s "
+        "transparent=%s bytes=%d",
+        theme.slug, size, total_frames, half_turn_loops, transparent, len(data),
     )
     return data
