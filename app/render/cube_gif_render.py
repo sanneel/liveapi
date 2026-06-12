@@ -31,30 +31,30 @@ from ..services.cube_themes import CubeTheme
 
 logger = get_logger("app.render.cube_gif_render")
 
-# Source face aspect — matches the widget's 420×380 (= 1.105:1) faces.
-FACE_W = 420
-FACE_H = 380
+# Canonical face resolution (aspect 1.105:1, matching the widget's 420×380).
+# Rendered at 1.5× the widget's native size so the cube carries enough detail
+# for legible logos/odds; the odds card is rendered at a matching scale.
+FACE_SCALE = 1.5
+FACE_W = int(420 * FACE_SCALE)   # 630
+FACE_H = int(380 * FACE_SCALE)   # 570
 
 # ── Email-friendly defaults ──────────────────────────────────────────────
 # Square canvas so the GIF drops into email headers / social without
 # re-cropping. Kept modest because animated GIFs of photographic faces grow
 # fast; these defaults land a smooth full rotation around ~700KB, which most
 # email clients accept inline without clipping.
-GIF_SIZE = 360        # square px; sharp enough for the odds text
+GIF_SIZE = 440        # square px; large enough for legible odds on the faces
 GIF_PALETTE_COLORS = 256  # max GIF palette — best fidelity on the trophy/gradient
 
 # Route-level clamps so a hand-edited URL can't request a 4000px GIF.
 GIF_SIZE_MIN, GIF_SIZE_MAX = 160, 512
 
-# "Showcase" rotation: the cube PAUSES with each face front-on (so the odds are
-# big and readable), then smoothly turns 90° to the next. Constant spinning at
-# email size leaves the odds skewed/tiny and unreadable; the dwell is what makes
-# them legible while still reading as a rotating 3D cube.
-GIF_DWELL_DEFAULT = 1.6   # seconds each face is held front-on
-GIF_DWELL_MIN, GIF_DWELL_MAX = 0.3, 5.0
-GIF_TURN_DEFAULT = 0.6    # seconds to rotate 90° between faces
-GIF_TURN_MIN, GIF_TURN_MAX = 0.2, 2.0
-GIF_TURN_STEPS = 8        # frames per 90° turn (smoothness of the motion)
+# Continuous rotation. Default to a slow spin so each face is legible as it
+# passes front-on while never stopping ("live" rotation).
+GIF_FRAMES = 40       # frames per full 360° revolution (smoothness)
+GIF_FRAMES_MIN, GIF_FRAMES_MAX = 12, 60
+GIF_SECONDS_DEFAULT = 6.0   # seconds per full revolution
+GIF_SECONDS_MIN, GIF_SECONDS_MAX = 2.0, 16.0
 
 # Camera/geometry constants. World units: half-width = 1.0 (square cross-section
 # so it's a true cube; height is scaled to the face aspect so the side artwork
@@ -287,41 +287,13 @@ def _quantize_transparent(frames_rgba: List[Image.Image]) -> List[Image.Image]:
     return out
 
 
-def _smoothstep(x: float) -> float:
-    """Ease-in-out so each 90° turn accelerates then decelerates."""
-    return x * x * (3.0 - 2.0 * x)
-
-
-def _rotation_schedule(
-    dwell_ms: float, turn_ms: float, turn_steps: int
-) -> Tuple[List[float], List[int]]:
-    """Build (angles, per-frame durations) for one full revolution: hold each
-    of the 4 faces front-on, then ease 90° to the next. A hold is a single
-    long-duration frame (cheap); the turn is several short frames (smooth)."""
-    angles: List[float] = []
-    durations: List[int] = []
-    quarter = math.pi / 2.0
-    step_ms = max(20, int(round(turn_ms / turn_steps / 10)) * 10)
-    for i in range(4):
-        base = i * quarter
-        angles.append(base)
-        durations.append(max(20, int(round(dwell_ms / 10)) * 10))
-        # Intermediate turn frames only (exclude the endpoint — it equals the
-        # NEXT face's hold angle, which would dedupe and misalign durations).
-        for k in range(1, turn_steps):
-            angles.append(base + quarter * _smoothstep(k / turn_steps))
-            durations.append(step_ms)
-    return angles, durations
-
-
 def render_cube_gif(
     theme: CubeTheme,
     faces: Sequence[Image.Image],
     *,
     size: int = GIF_SIZE,
-    dwell_ms: float = GIF_DWELL_DEFAULT * 1000,
-    turn_ms: float = GIF_TURN_DEFAULT * 1000,
-    turn_steps: int = GIF_TURN_STEPS,
+    frames: int = GIF_FRAMES,
+    seconds: float = GIF_SECONDS_DEFAULT,
     palette_colors: int = GIF_PALETTE_COLORS,
     transparent: bool = False,
     tilt_deg: float = GIF_TILT_DEFAULT,
@@ -352,13 +324,13 @@ def render_cube_gif(
     else:
         background = _vertical_gradient((rsize, rsize), theme.bg_top, theme.bg_bottom)
 
-    # Showcase rotation: pause front-on on each face, then ease 90° to the next.
-    angles, durations = _rotation_schedule(dwell_ms, turn_ms, turn_steps)
+    # Continuous full 360° spin at constant angular speed ("live" rotation).
     rendered = [
-        _render_frame(prepared, background, ang, rsize, tilt)
+        _render_frame(prepared, background, 2 * math.pi * (n / frames), rsize, tilt)
         .resize((size, size), Image.LANCZOS)
-        for ang in angles
+        for n in range(frames)
     ]
+    frame_ms = max(20, int(round(seconds * 1000 / frames / 10)) * 10)
 
     if transparent:
         paletted = _quantize_transparent(rendered)
@@ -373,7 +345,7 @@ def render_cube_gif(
         format="GIF",
         save_all=True,
         append_images=paletted[1:],
-        duration=durations,
+        duration=frame_ms,
         loop=0,
         optimize=True,
         **save_kwargs,
