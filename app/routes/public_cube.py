@@ -35,18 +35,18 @@ from ..models import Match
 from ..render.cube_gif_render import (
     FACE_H,
     FACE_W,
-    GIF_FRAMES,
-    GIF_FRAMES_MAX,
-    GIF_FRAMES_MIN,
-    GIF_SECONDS_DEFAULT,
-    GIF_SECONDS_MAX,
-    GIF_SECONDS_MIN,
+    GIF_DWELL_DEFAULT,
+    GIF_DWELL_MAX,
+    GIF_DWELL_MIN,
     GIF_SIZE,
     GIF_SIZE_MAX,
     GIF_SIZE_MIN,
     GIF_TILT_DEFAULT,
     GIF_TILT_MAX,
     GIF_TILT_MIN,
+    GIF_TURN_DEFAULT,
+    GIF_TURN_MAX,
+    GIF_TURN_MIN,
     render_cube_gif,
 )
 from ..render.cube_render import render_cube_png
@@ -220,24 +220,23 @@ def cube_gif(
     request: Request,
     transparent: str = "0",
     size: int = GIF_SIZE,
-    frames: int = GIF_FRAMES,
-    seconds: float = GIF_SECONDS_DEFAULT,
+    dwell: float = GIF_DWELL_DEFAULT,
+    turn: float = GIF_TURN_DEFAULT,
     tilt: float = GIF_TILT_DEFAULT,
 ) -> Response:
     """Animated GIF of the spinning 3D cube for email communications.
 
     Mirrors /cube/{theme}.png but returns a looping GIF that renders in email
-    clients (which run no CSS 3D or JS). Each request bakes in the current
-    live odds for the resolved match(es); bytes are cached under
-    `cube_gif:{theme}:{size}:{frames}:{ms}:{transparent}` and cleared by the
+    clients (which run no CSS 3D or JS). The cube pauses front-on on each face
+    (so the odds are large and readable) then turns 90° to the next. Each
+    request bakes in the current live odds; bytes are cached and cleared by the
     same parser-cycle invalidation as the PNG endpoints.
 
     Query params:
       transparent=1  drop the branded background (1-bit GIF transparency)
       size=NNN       square pixel size (clamped 160–512, default 360)
-      frames=NN      rotation frames (clamped 8–48, default 36)
-      seconds=N      seconds per full revolution (clamped 1–12, default ~1.9);
-                     raise it to slow the spin down
+      dwell=N        seconds each face is held front-on (clamped 0.3–5, def 1.6)
+      turn=N         seconds to rotate 90° between faces (clamped 0.2–2, def 0.6)
       tilt=NN        downward view angle in degrees (clamped 0–40, default 16);
                      0 = straight-on (flat faces), higher = more top visible
     """
@@ -249,13 +248,13 @@ def cube_gif(
     # second '?') is treated as truthy instead of 422-ing the whole request.
     is_transparent = transparent.strip().lower().startswith(("1", "true", "yes", "on"))
     size = max(GIF_SIZE_MIN, min(int(size), GIF_SIZE_MAX))
-    frames = max(GIF_FRAMES_MIN, min(int(frames), GIF_FRAMES_MAX))
-    seconds = max(GIF_SECONDS_MIN, min(float(seconds), GIF_SECONDS_MAX))
+    dwell = max(GIF_DWELL_MIN, min(float(dwell), GIF_DWELL_MAX))
+    turn = max(GIF_TURN_MIN, min(float(turn), GIF_TURN_MAX))
     tilt = max(GIF_TILT_MIN, min(float(tilt), GIF_TILT_MAX))
-    # Full 360° loop. GIF timing is 10ms-quantized; round so the spin stays even.
-    frame_ms = max(20, int(round(seconds * 1000 / frames / 10)) * 10)
 
-    key = f"cube_gif:{t.slug}:{size}:{frames}:{frame_ms}:{tilt:g}:{int(is_transparent)}"
+    key = (
+        f"cube_gif:{t.slug}:{size}:{dwell:g}:{turn:g}:{tilt:g}:{int(is_transparent)}"
+    )
     cached = png_cache.get(key)
     if cached is not None:
         etag = _etag(cached)
@@ -266,7 +265,7 @@ def cube_gif(
     try:
         faces = _build_cube_faces(t)
         gif = render_cube_gif(
-            t, faces, size=size, frames=frames, frame_ms=frame_ms,
+            t, faces, size=size, dwell_ms=dwell * 1000, turn_ms=turn * 1000,
             transparent=is_transparent, tilt_deg=tilt,
         )
     except Exception:
