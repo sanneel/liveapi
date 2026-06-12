@@ -208,21 +208,31 @@ def build_journey_name(journey_type: str, match_name: str, code: str, date_label
     raise ValueError(f"Unknown journey type: {journey_type}")
 
 
-def set_promocode_everywhere(body: dict[str, Any], code: str) -> None:
+def set_promocode_everywhere(body: dict[str, Any], code: str) -> tuple[int, int]:
+    """Returns (promocodeSettings blocks updated, displayData lines updated)."""
+    settings_count = 0
+    display_count = 0
     for d in walk_dicts(body):
         if "promocodeSettings" in d and isinstance(d["promocodeSettings"], dict):
             d["promocodeSettings"]["values"] = [code]
+            settings_count += 1
         if d.get("refCodeTypes") == ["Promocode"] and "displayData" in d:
             d["displayData"] = [f"Promo codes: {code}"]
+            display_count += 1
         if d.get("displayName") == "Reference codes" and "displayData" in d:
             d["displayData"] = [f"Promo codes: {code}"]
+            display_count += 1
+    return settings_count, display_count
 
 
-def set_notification_metadata_journey_name(body: dict[str, Any], clean_name: str) -> None:
+def set_notification_metadata_journey_name(body: dict[str, Any], clean_name: str) -> int:
+    count = 0
     for d in walk_dicts(body):
         metadata = d.get("metadata")
         if isinstance(metadata, dict) and "journeyName" in metadata:
             metadata["journeyName"] = clean_name
+            count += 1
+    return count
 
 
 def find_connector_host_ids(body: dict[str, Any]) -> set[str]:
@@ -308,10 +318,12 @@ def prepare_body(
     match_dt: datetime,
     reserved_id: str,
     followup_id: str | None = None,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], list[str]]:
+    """Returns the prepared body plus a log of every setting that was changed."""
     body = copy.deepcopy(template)
     date_label = match_dt.strftime("%d.%m")
     clean_name = build_journey_name(journey_type, match_name, code, date_label)
+    report: list[str] = []
 
     replacements: dict[str, str] = {}
     for old_code in OLD_CODES:
@@ -328,17 +340,46 @@ def prepare_body(
         for old_host_id in find_connector_host_ids(body):
             replacements[old_host_id] = followup_id
 
+    # Count occurrences in the same sequential order deep_replace applies them,
+    # so overlapping old values (e.g. "O'higgins" vs "O'higgin") aren't double-counted.
+    counting_text = json.dumps(body, ensure_ascii=False)
+    for old, new in replacements.items():
+        count = counting_text.count(old)
+        if count:
+            report.append(f"replaced {old!r} -> {new!r} ({count}x in template)")
+            counting_text = counting_text.replace(old, new)
+
     body = deep_replace(body, replacements)
 
     body["journeyName"] = clean_name
     body["reservedJourneyId"] = reserved_id
     set_raw_info(body, "journeyName", clean_name)
+    report.append(f"journeyName = {clean_name!r}")
+    report.append(f"reservedJourneyId = {reserved_id!r}")
 
-    set_promocode_everywhere(body, code)
-    set_notification_metadata_journey_name(body, clean_name)
+    settings_count, display_count = set_promocode_everywhere(body, code)
+    if settings_count or display_count:
+        report.append(
+            f"promocode = {code!r} in {settings_count} promocodeSettings "
+            f"+ {display_count} displayData lines"
+        )
+    metadata_count = set_notification_metadata_journey_name(body, clean_name)
+    if metadata_count:
+        report.append(f"notification metadata journeyName updated in {metadata_count} places")
+
     set_dates(body, journey_type, match_dt)
+    start_local = parse_api_dt(body["startAt"]).astimezone(LOCAL_TZ)
+    stop_local = parse_api_dt(body["stopAt"]).astimezone(LOCAL_TZ)
+    report.append(
+        f"startAt = {body['startAt']} ({start_local.strftime('%Y-%m-%d %H:%M')} Chile)"
+    )
+    report.append(
+        f"stopAt = {body['stopAt']} ({stop_local.strftime('%Y-%m-%d %H:%M')} Chile)"
+    )
+    report.append(f"isImmediatelyAfterPublish = {body['isImmediatelyAfterPublish']}")
+    report.append(f"timeZoneId = {body['timeZoneId']!r}")
 
-    return body
+    return body, report
 
 
 def parse_api_dt(value: str) -> datetime:
@@ -570,11 +611,15 @@ def main() -> int:
                         "campaign connector keeps the template's old journey ID."
                     )
 
-            body = prepare_body(
+            body, settings_report = prepare_body(
                 template, journey_type, match_name, code, match_dt, reserved_id,
                 followup_id=followup_id,
             )
             created_ids[journey_type] = reserved_id
+
+            print(f"[{journey_type}] Applied settings:")
+            for line in settings_report:
+                print(f"  {line}")
             out_path = out_dir / f"{reserved_id}_{journey_type}.json"
             out_path.write_text(json.dumps(body, ensure_ascii=False, indent=2), encoding="utf-8")
             print(f"[{journey_type}] Wrote payload: {out_path}")
