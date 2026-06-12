@@ -108,15 +108,10 @@ def _parse_odds(match: Match) -> tuple[str, str, str]:
         return "-", "-", "-"
 
 
-def _paste_logo(
-    img: Image.Image,
-    logo_bytes: Optional[bytes],
-    xy: Tuple[int, int],
-    logo_size: int = LOGO_SIZE,
-) -> None:
+def _paste_logo(img: Image.Image, logo_bytes: Optional[bytes], xy: Tuple[int, int]) -> None:
     """Crop transparent padding from the source logo, scale (up or down) to
-    fill logo_size preserving aspect ratio, then center it inside the
-    logo_size square so rectangular flags don't appear tiny in the corner.
+    fill LOGO_SIZE preserving aspect ratio, then center it inside the
+    LOGO_SIZE square so rectangular flags don't appear tiny in the corner.
 
     PIL's `Image.thumbnail` only DOWNSCALES, so for small source logos we
     must compute the scale factor explicitly and use `resize`."""
@@ -127,14 +122,14 @@ def _paste_logo(
         bbox = logo.getbbox()
         if bbox:
             logo = logo.crop(bbox)
-        # Scale to fit logo_size on the limiting axis, preserving aspect.
-        scale = min(logo_size / logo.width, logo_size / logo.height)
+        # Scale to fit LOGO_SIZE on the limiting axis, preserving aspect.
+        scale = min(LOGO_SIZE / logo.width, LOGO_SIZE / logo.height)
         new_w = max(1, int(round(logo.width * scale)))
         new_h = max(1, int(round(logo.height * scale)))
         logo = logo.resize((new_w, new_h), Image.Resampling.LANCZOS)
-        # Center inside a transparent logo_size×logo_size canvas.
-        canvas = Image.new("RGBA", (logo_size, logo_size), (0, 0, 0, 0))
-        canvas.paste(logo, ((logo_size - new_w) // 2, (logo_size - new_h) // 2), logo)
+        # Center inside a transparent LOGO_SIZE×LOGO_SIZE canvas.
+        canvas = Image.new("RGBA", (LOGO_SIZE, LOGO_SIZE), (0, 0, 0, 0))
+        canvas.paste(logo, ((LOGO_SIZE - new_w) // 2, (LOGO_SIZE - new_h) // 2), logo)
         img.paste(canvas, xy, canvas)
     except Exception:
         logger.exception("cube odds renderer: failed to paste logo")
@@ -152,33 +147,17 @@ def _draw_team_name(
     draw.text((cx - tw / 2, y), name, font=font, fill=(80, 20, 180, 255))
 
 
-def render_odds_face(
-    match: Optional[Match], theme_slug: str = "ucl", scale: float = 1.0
-) -> bytes:
-    """Composite live odds (and logos when configured) onto the theme's dynamic
-    template.
-
-    `scale` renders the whole card larger (template + logos + text + odds boxes
-    all multiplied) so the animated-GIF cube can show legible odds. The live
-    widget calls with scale=1.0 and is unchanged.
-    """
+def render_odds_face(match: Optional[Match], theme_slug: str = "ucl") -> bytes:
+    """Composite live odds (and logos when configured) onto the theme's dynamic template."""
     cfg = _THEME_CONFIG.get(theme_slug) or _THEME_CONFIG["ucl"]
     template_path: Path = cfg["template"]
     boxes: Tuple = cfg["boxes"]
 
-    def sc(v: float) -> int:
-        return int(round(v * scale))
-
-    def sc_box(b: Tuple) -> Tuple:
-        return tuple(sc(x) for x in b)
-
     if not template_path.exists():
         logger.error(f"cube odds renderer: template missing at {template_path}")
-        img = Image.new("RGB", (sc(420), sc(380)), (20, 20, 40))
+        img = Image.new("RGB", (420, 380), (20, 20, 40))
     else:
         img = Image.open(template_path).convert("RGBA")
-        if scale != 1.0:
-            img = img.resize((sc(img.width), sc(img.height)), Image.Resampling.LANCZOS)
 
     if match is None:
         out = BytesIO()
@@ -187,31 +166,29 @@ def render_odds_face(
 
     # Team logos (worldcup only — UCL has logos baked into the template)
     if "logo_home" in cfg:
-        logo_px = sc(LOGO_SIZE)
         home_name = (match.home_name or "").strip()
         away_name = (match.away_name or "").strip()
-        home_bytes = get_logo_png_bytes(match.home_logo) or render_initials_png(home_name, logo_px)
-        away_bytes = get_logo_png_bytes(match.away_logo) or render_initials_png(away_name, logo_px)
-        lh, lw = cfg["logo_home"], cfg["logo_away"]
-        _paste_logo(img, home_bytes, (sc(lh[0]), sc(lh[1])), logo_px)
-        _paste_logo(img, away_bytes, (sc(lw[0]), sc(lw[1])), logo_px)
+        home_bytes = get_logo_png_bytes(match.home_logo) or render_initials_png(home_name, LOGO_SIZE)
+        away_bytes = get_logo_png_bytes(match.away_logo) or render_initials_png(away_name, LOGO_SIZE)
+        _paste_logo(img, home_bytes, cfg["logo_home"])
+        _paste_logo(img, away_bytes, cfg["logo_away"])
 
         if "name_home" in cfg:
             d_tmp = ImageDraw.Draw(img)
-            fn = _font(sc(NAME_FONT_SIZE))
+            fn = _font(NAME_FONT_SIZE)
             cx_h, y_h = cfg["name_home"]
             cx_a, y_a = cfg["name_away"]
-            _draw_team_name(d_tmp, home_name.upper(), sc(cx_h), sc(y_h), fn)
-            _draw_team_name(d_tmp, away_name.upper(), sc(cx_a), sc(y_a), fn)
+            _draw_team_name(d_tmp, home_name.upper(), cx_h, y_h, fn)
+            _draw_team_name(d_tmp, away_name.upper(), cx_a, y_a, fn)
 
     d = ImageDraw.Draw(img)
     p1, dr, p2 = _parse_odds(match)
-    fo = _font(sc(ODDS_FONT_SIZE))
+    fo = _font(ODDS_FONT_SIZE)
     colors = cfg.get("box_colors", (_PURPLE, _PURPLE, _PURPLE))
 
-    _draw_center(d, sc_box(boxes[0]), p1, fo, colors[0])
-    _draw_center(d, sc_box(boxes[1]), dr, fo, colors[1])
-    _draw_center(d, sc_box(boxes[2]), p2, fo, colors[2])
+    _draw_center(d, boxes[0], p1, fo, colors[0])
+    _draw_center(d, boxes[1], dr, fo, colors[1])
+    _draw_center(d, boxes[2], p2, fo, colors[2])
 
     out = BytesIO()
     img.convert("RGB").save(out, format="PNG", optimize=True)
