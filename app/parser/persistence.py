@@ -167,11 +167,13 @@ def _invalidate_post_parse(sport: str, touched_slugs: Set[str]) -> None:
         # Themed cubes are sport-scoped (all current themes filter football).
         # Cheapest correct behavior: wipe the whole cube namespace whenever
         # the cube's sport refreshed. Theme registry is small (<10 entries)
-        # so this stays O(1) effectively. Wipe both the main face cache
-        # (`cube:{slug}`) AND the odds face cache (`cube_odds:{slug}`).
+        # so this stays O(1) effectively. Wipe the main face cache
+        # (`cube:{slug}`), the odds face cache (`cube_odds:{slug}`) AND the
+        # animated GIF cache (`cube_gif:{slug}:...`) so emails see fresh odds.
         if sport == "football":
             png_cache.invalidate_prefix("cube:")
             png_cache.invalidate_prefix("cube_odds:")
+            png_cache.invalidate_prefix("cube_gif:")
     except Exception:
         logger.exception("post-parse hot/club cache invalidation failed")
 

@@ -48,6 +48,11 @@ GIF_PALETTE_COLORS = 192  # photographic faces survive 192 colors + dithering
 # Route-level clamps so a hand-edited URL can't request a 4000px, 200-frame GIF.
 GIF_SIZE_MIN, GIF_SIZE_MAX = 160, 512
 GIF_FRAMES_MIN, GIF_FRAMES_MAX = 8, 48
+# Seconds for one full revolution. Default matches 24×80ms ≈ 1.9s. Raise it to
+# slow the spin; GIF frame timing is centisecond-quantized so very small values
+# round oddly, hence the floor.
+GIF_SECONDS_DEFAULT = 1.9
+GIF_SECONDS_MIN, GIF_SECONDS_MAX = 1.0, 12.0
 
 # Camera/geometry constants. World units: face half-width = 1.0.
 _FACE_HALF_W = 1.0

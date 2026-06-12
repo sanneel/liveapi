@@ -129,6 +129,7 @@ def _invalidate_theme_cache(theme_slug: str) -> None:
     """
     png_cache.invalidate(f"cube:{theme_slug}")
     png_cache.invalidate_prefix(f"cube_odds:{theme_slug}")
+    png_cache.invalidate_prefix(f"cube_gif:{theme_slug}")
 
 
 # ════════════════════════════════════════════════════════════════════════

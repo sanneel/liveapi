@@ -38,6 +38,9 @@ from ..render.cube_gif_render import (
     GIF_FRAMES,
     GIF_FRAMES_MAX,
     GIF_FRAMES_MIN,
+    GIF_SECONDS_DEFAULT,
+    GIF_SECONDS_MAX,
+    GIF_SECONDS_MIN,
     GIF_SIZE,
     GIF_SIZE_MAX,
     GIF_SIZE_MIN,
@@ -219,19 +222,22 @@ def cube_gif(
     transparent: bool = False,
     size: int = GIF_SIZE,
     frames: int = GIF_FRAMES,
+    seconds: float = GIF_SECONDS_DEFAULT,
 ) -> Response:
     """Animated GIF of the spinning 3D cube for email communications.
 
     Mirrors /cube/{theme}.png but returns a looping GIF that renders in email
     clients (which run no CSS 3D or JS). Each request bakes in the current
     live odds for the resolved match(es); bytes are cached under
-    `cube_gif:{theme}:{size}:{frames}:{transparent}` and cleared by the same
-    parser-cycle invalidation as the PNG endpoints.
+    `cube_gif:{theme}:{size}:{frames}:{ms}:{transparent}` and cleared by the
+    same parser-cycle invalidation as the PNG endpoints.
 
     Query params:
       transparent=1  drop the branded background (1-bit GIF transparency)
       size=NNN       square pixel size (clamped 160–512, default 360)
       frames=NN      rotation frames (clamped 8–48, default 24)
+      seconds=N      seconds per full revolution (clamped 1–12, default ~1.9);
+                     raise it to slow the spin down
     """
     t = get_theme(theme)
     if t is None:
@@ -239,8 +245,11 @@ def cube_gif(
 
     size = max(GIF_SIZE_MIN, min(int(size), GIF_SIZE_MAX))
     frames = max(GIF_FRAMES_MIN, min(int(frames), GIF_FRAMES_MAX))
+    seconds = max(GIF_SECONDS_MIN, min(float(seconds), GIF_SECONDS_MAX))
+    # GIF frame timing is quantized to 10ms; round so the spin stays even.
+    frame_ms = max(20, int(round(seconds * 1000 / frames / 10)) * 10)
 
-    key = f"cube_gif:{t.slug}:{size}:{frames}:{int(transparent)}"
+    key = f"cube_gif:{t.slug}:{size}:{frames}:{frame_ms}:{int(transparent)}"
     cached = png_cache.get(key)
     if cached is not None:
         etag = _etag(cached)
@@ -251,7 +260,8 @@ def cube_gif(
     try:
         faces = _build_cube_faces(t)
         gif = render_cube_gif(
-            t, faces, size=size, frames=frames, transparent=transparent
+            t, faces, size=size, frames=frames, frame_ms=frame_ms,
+            transparent=transparent,
         )
     except Exception:
         logger.exception("cube gif render failed theme=%s", t.slug)
@@ -508,5 +518,6 @@ def invalidate_all_cubes() -> int:
     for slug, theme in CUBE_THEMES.items():
         png_cache.invalidate(_cache_key(slug))
         png_cache.invalidate_prefix(f"cube_odds:{slug}")
+        png_cache.invalidate_prefix(f"cube_gif:{slug}")
         n += 1
     return n
