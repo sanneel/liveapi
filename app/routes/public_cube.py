@@ -218,7 +218,7 @@ def _build_cube_faces(t: CubeTheme) -> List[Image.Image]:
 def cube_gif(
     theme: str,
     request: Request,
-    transparent: bool = False,
+    transparent: str = "0",
     size: int = GIF_SIZE,
     frames: int = GIF_FRAMES,
     seconds: float = GIF_SECONDS_DEFAULT,
@@ -238,13 +238,16 @@ def cube_gif(
       frames=NN      rotation frames (clamped 8–48, default 36)
       seconds=N      seconds per full revolution (clamped 1–12, default ~1.9);
                      raise it to slow the spin down
-      tilt=NN        downward view angle in degrees (clamped 0–40, default 22);
+      tilt=NN        downward view angle in degrees (clamped 0–40, default 16);
                      0 = straight-on (flat faces), higher = more top visible
     """
     t = get_theme(theme)
     if t is None:
         raise HTTPException(404, f"Unknown cube theme: {theme}")
 
+    # Lenient bool so a mistyped URL like `transparent=1?tilt=30` (a stray
+    # second '?') is treated as truthy instead of 422-ing the whole request.
+    is_transparent = transparent.strip().lower().startswith(("1", "true", "yes", "on"))
     size = max(GIF_SIZE_MIN, min(int(size), GIF_SIZE_MAX))
     frames = max(GIF_FRAMES_MIN, min(int(frames), GIF_FRAMES_MAX))
     seconds = max(GIF_SECONDS_MIN, min(float(seconds), GIF_SECONDS_MAX))
@@ -252,7 +255,7 @@ def cube_gif(
     # Full 360° loop. GIF timing is 10ms-quantized; round so the spin stays even.
     frame_ms = max(20, int(round(seconds * 1000 / frames / 10)) * 10)
 
-    key = f"cube_gif:{t.slug}:{size}:{frames}:{frame_ms}:{tilt:g}:{int(transparent)}"
+    key = f"cube_gif:{t.slug}:{size}:{frames}:{frame_ms}:{tilt:g}:{int(is_transparent)}"
     cached = png_cache.get(key)
     if cached is not None:
         etag = _etag(cached)
@@ -264,7 +267,7 @@ def cube_gif(
         faces = _build_cube_faces(t)
         gif = render_cube_gif(
             t, faces, size=size, frames=frames, frame_ms=frame_ms,
-            transparent=transparent, tilt_deg=tilt,
+            transparent=is_transparent, tilt_deg=tilt,
         )
     except Exception:
         logger.exception("cube gif render failed theme=%s", t.slug)

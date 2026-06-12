@@ -62,11 +62,17 @@ _FACE_HALF_H = _FACE_HALF_W * (FACE_H / FACE_W)
 _CAM_DISTANCE = 3.4  # ~3× cube width, mirrors the widget's CSS perspective
 # Pixel scale leaving margin for the tilt (which makes the silhouette taller)
 # and the side faces that swing toward the edges mid-spin.
-_FIT = 0.60
+_FIT = 0.66
+# Supersample factor: render each frame this many times larger, then downscale
+# with LANCZOS before quantizing. Antialiases the perspective-warped edges and
+# odds text — the single biggest perceived-quality win. File size is unchanged
+# (final pixels are the same); only render time grows (~SS²).
+_SUPERSAMPLE = 2
 # Look slightly DOWN at the cube so its top is always visible. This is the key
 # to "always looks 3D" — a face is never a perfectly flat rectangle, so the
-# spin reads as a rotating solid instead of flipping between flat pages.
-GIF_TILT_DEFAULT = 22.0
+# spin reads as a rotating solid instead of flipping between flat pages. Kept
+# modest so the faces stay large/legible and the top doesn't dominate.
+GIF_TILT_DEFAULT = 16.0
 GIF_TILT_MIN, GIF_TILT_MAX = 0.0, 40.0
 # Cull faces whose normal points away from the camera (small epsilon so a face
 # exactly edge-on doesn't flicker on/off).
@@ -304,17 +310,23 @@ def render_cube_gif(
         raise ValueError(f"render_cube_gif expects 4 faces, got {len(faces)}")
 
     tilt = math.radians(max(GIF_TILT_MIN, min(tilt_deg, GIF_TILT_MAX)))
-    # 4 sides + generated top, indexed to match _cube_faces_model().
-    prepared = [_prepare_face(f) for f in faces] + [_top_texture(theme)]
+    sides = [_prepare_face(f) for f in faces]
+    # 4 sides + generated top, indexed to match _cube_faces_model(). The top
+    # borrows the promo face's frame color so the lid stays on-brand.
+    prepared = sides + [_top_texture(sides[0])]
+
+    # Supersample: render large, then downscale with LANCZOS for clean edges.
+    rsize = size * _SUPERSAMPLE
     if transparent:
-        background: Image.Image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        background: Image.Image = Image.new("RGBA", (rsize, rsize), (0, 0, 0, 0))
     else:
-        background = _vertical_gradient((size, size), theme.bg_top, theme.bg_bottom)
+        background = _vertical_gradient((rsize, rsize), theme.bg_top, theme.bg_bottom)
 
     # Full 360° turn: faces differ around the cube (3 odds + 1 promo, plus the
     # top), so there's no symmetry shortcut — every angle is distinct.
     rendered = [
-        _render_frame(prepared, background, 2 * math.pi * (n / frames), size, tilt)
+        _render_frame(prepared, background, 2 * math.pi * (n / frames), rsize, tilt)
+        .resize((size, size), Image.LANCZOS)
         for n in range(frames)
     ]
 
@@ -344,16 +356,29 @@ def render_cube_gif(
     return data
 
 
-def _top_texture(theme: CubeTheme) -> Image.Image:
-    """Square texture for the cube's top face. A flat branded panel with a thin
-    border so the top reads as a solid lid rather than a hole when tilted."""
+def _border_color(face: Image.Image) -> Tuple[int, int, int]:
+    """Average color of a face's outer frame, so the top lid matches the
+    cube's own branded border instead of clashing with the theme background."""
+    w, h = face.size
+    strip = face.convert("RGB").crop((0, 0, w, max(1, h // 12)))
+    small = strip.resize((1, 1), Image.BILINEAR)
+    return small.getpixel((0, 0))
+
+
+def _top_texture(promo_face: Image.Image) -> Image.Image:
+    """Square texture for the cube's top face: a solid panel in the cube's own
+    border color, slightly darkened so it reads as a distinct top plane, with a
+    thin inner line. Sampling the face border keeps the lid on-brand."""
     side = FACE_W
-    top = _vertical_gradient((side, side), theme.bg_top, theme.bg_bottom).convert("RGBA")
+    r, g, b = _border_color(promo_face)
+    base = (int(r * 0.82), int(g * 0.82), int(b * 0.82))
+    top = Image.new("RGBA", (side, side), base + (255,))
     draw = ImageDraw.Draw(top)
-    inset = max(2, side // 40)
+    inset = max(2, side // 22)
+    inner = (int(r * 0.62), int(g * 0.62), int(b * 0.62), 255)
     draw.rectangle(
         [inset, inset, side - inset - 1, side - inset - 1],
-        outline=(255, 255, 255, 60),
-        width=max(2, side // 90),
+        outline=inner,
+        width=max(2, side // 110),
     )
     return top
