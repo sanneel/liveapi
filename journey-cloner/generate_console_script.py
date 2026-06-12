@@ -5,15 +5,17 @@ Generate a browser-console script that creates the 4 journey drafts.
 Use this when the machine that can reach the Journey Builder API (work
 laptop on the office VPN) cannot run Python. The payloads are prepared
 and verified here, embedded into a single JS file, and the JS does only
-the API calls: reserve real JRN ids, link the 2H campaign connector to
-the new FollowUp, recompute "start now" times, POST the drafts.
+the API calls: capture the auth token from the page's own requests,
+reserve real JRN ids, link the 2H campaign connector to the new
+FollowUp, recompute "start now" times, POST the drafts.
 
 Usage:
   python generate_console_script.py --match "UDCH vs Calera" --code DALELEON \
       --date 2026-06-14 --time 15:00
 
 Then paste the generated console_scripts/<CODE>_console.js into Chrome
-DevTools console on a logged-in backoffice tab, set TOKEN at the top.
+DevTools console on a logged-in backoffice tab. No token copying needed:
+the script captures it automatically from the page's next API request.
 """
 
 from __future__ import annotations
@@ -40,34 +42,99 @@ DEFAULT_BASE_URL = (
     "https://pmi.rea-backoffice.gr8.tech/api/ubo/api/v0/crm/journey-builder/v0"
 )
 
+# Markers are replaced with json.dumps()-encoded values; %-formatting is not
+# used because the JS contains literal % characters (console styling).
 JS_TEMPLATE = """\
-// Journey Cloner console script — generated %(generated_at)s
-// Campaign: %(match)s | %(code)s | %(match_local)s Chile
+// Journey Cloner console script — generated @GENERATED_AT@
+// Campaign: @CAMPAIGN@
 //
 // HOW TO RUN (work laptop, on the office VPN):
 //   1. Open the Journey Builder backoffice in Chrome, logged in.
 //   2. F12 -> Console tab (if Chrome warns, type: allow pasting).
-//   3. Replace TOKEN below with a fresh bearer token: F12 -> Network tab,
-//      click any backoffice request -> Headers -> "authorization".
-//   4. Paste the whole script and press Enter.
+//   3. Paste this whole script and press Enter.
+//   4. If it says "Waiting for a token", click anything in the backoffice
+//      UI (e.g. refresh the journeys list) so the page makes a request.
+//   5. Wait for "DONE" with the created JRN ids.
 //
 (async () => {
   'use strict';
-  const TOKEN = 'PASTE_FRESH_BEARER_TOKEN_HERE';
+  // Optional: paste an access token here to skip auto-capture.
+  const MANUAL_TOKEN = '';
 
-  const BASE = %(base_url)s;
-  const BRAND = %(brand)s;
-  const ORDER = %(order)s;
+  const BASE = @BASE_URL@;
+  const BRAND = @BRAND@;
+  const ORDER = @ORDER@;
   // Journeys that start "immediately after publish": startAt is recomputed
   // to the moment this script runs, not the moment the file was generated.
-  const IMMEDIATE = %(immediate)s;
-  const PAYLOADS = %(payloads)s;
+  const IMMEDIATE = @IMMEDIATE@;
 
-  if (TOKEN.includes('PASTE')) {
-    console.error('Set TOKEN first (copy the authorization header from any backoffice request in the Network tab).');
-    return;
+  const decodeJwt = (token) => {
+    try {
+      return JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    } catch (e) {
+      return null;
+    }
+  };
+  const usableAuth = (value) => {
+    if (!value || !/^Bearer\\s+\\S+/i.test(value)) return null;
+    const payload = decodeJwt(value.replace(/^Bearer\\s+/i, ''));
+    if (!payload || payload.typ !== 'Bearer') return null;
+    if (payload.exp - Date.now() / 1000 < 30) return null;
+    return 'Bearer ' + value.replace(/^Bearer\\s+/i, '');
+  };
+
+  async function obtainAuth() {
+    if (MANUAL_TOKEN.trim()) {
+      const auth = usableAuth('Bearer ' + MANUAL_TOKEN.trim().replace(/^Bearer\\s+/i, ''));
+      if (!auth) throw new Error('MANUAL_TOKEN is not a valid unexpired access token (typ must be "Bearer").');
+      return auth;
+    }
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const origFetch = window.fetch;
+      const origSetHeader = XMLHttpRequest.prototype.setRequestHeader;
+      const cleanup = () => {
+        window.fetch = origFetch;
+        XMLHttpRequest.prototype.setRequestHeader = origSetHeader;
+      };
+      const consider = (value) => {
+        const auth = usableAuth(value);
+        if (auth && !settled) {
+          settled = true;
+          cleanup();
+          clearTimeout(timer);
+          console.log('%cToken captured from the page.', 'color:#22c55e;font-weight:bold');
+          resolve(auth);
+        }
+      };
+      window.fetch = function (input, init) {
+        try {
+          const h = (init && init.headers) || (input && input.headers);
+          if (h) {
+            if (typeof h.get === 'function') consider(h.get('authorization'));
+            else consider(h.authorization || h.Authorization);
+          }
+        } catch (e) { /* never break the page's own requests */ }
+        return origFetch.apply(this, arguments);
+      };
+      XMLHttpRequest.prototype.setRequestHeader = function (name, value) {
+        try {
+          if (/^authorization$/i.test(name)) consider(value);
+        } catch (e) { /* never break the page's own requests */ }
+        return origSetHeader.apply(this, arguments);
+      };
+      const timer = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          cleanup();
+          reject(new Error('No token captured in 3 minutes. Click around in the backoffice UI and run the script again.'));
+        }
+      }, 180000);
+      console.log('%cWaiting for a token... refresh the journeys list or click anything in the backoffice UI.', 'color:#eab308;font-weight:bold');
+    });
   }
-  const auth = TOKEN.startsWith('Bearer ') ? TOKEN : 'Bearer ' + TOKEN;
+
+  const auth = await obtainAuth();
   const headers = (contentType) => ({
     accept: 'application/json, text/plain, */*',
     authorization: auth,
@@ -106,6 +173,11 @@ JS_TEMPLATE = """\
     return id;
   }
 
+  const PAYLOADS = @PAYLOADS@;
+
+  console.log('Will create:');
+  for (const type of ORDER) console.log(`  [${type}] ${PAYLOADS[type].journeyName}`);
+
   console.log('Reserving real journey IDs...');
   const realIds = {};
   for (const type of ORDER) {
@@ -143,13 +215,60 @@ JS_TEMPLATE = """\
       console.error(`[${type}] FAILED: HTTP ${r.status}`, respText);
       throw new Error(`Stopped at ${type}; later drafts were NOT created.`);
     }
-    console.log(`[${type}] Created. Response:`, respText);
+    console.log(`%c[${type}] Created.`, 'color:#22c55e', respText);
   }
 
-  console.log('DONE. Created journey IDs:', realIds);
+  console.log('%cDONE. Created journey IDs:', 'color:#22c55e;font-weight:bold', realIds);
   console.log('Open the 2H draft and confirm its campaign connector shows', realIds.followup || '(followup id)');
 })();
 """
+
+
+def build_console_js(
+    match_name: str,
+    code: str,
+    match_dt: datetime,
+    ordered_types: list[str],
+) -> tuple[bool, str]:
+    """Prepare + verify payloads and render the console JS.
+
+    Returns (all_checks_ok, js_text). Verification results are printed.
+    """
+    payloads: dict[str, dict] = {}
+    all_ok = True
+    for journey_type in ordered_types:
+        template = load_template(TEMPLATE_FILES[journey_type])
+        reserved_id = f"DRY-RUN-{journey_type.upper()}"
+        followup_id = "DRY-RUN-FOLLOWUP" if journey_type == "two_hours" else None
+        body, report = prepare_body(
+            template, journey_type, match_name, code, match_dt, reserved_id,
+            followup_id=followup_id,
+        )
+        print(f"\n[{journey_type}] Applied settings:")
+        for line in report:
+            print(f"  {line}")
+        checks = verify_body(
+            body, journey_type, match_name, code, match_dt, reserved_id, followup_id
+        )
+        all_ok = print_checks(journey_type, checks) and all_ok
+        payloads[journey_type] = body
+
+    campaign = (
+        f"{match_name} | {code} | {match_dt.strftime('%Y-%m-%d %H:%M')} Chile"
+    )
+    js = JS_TEMPLATE
+    js = js.replace("@GENERATED_AT@", datetime.now(LOCAL_TZ).strftime("%Y-%m-%d %H:%M %Z"))
+    js = js.replace("@CAMPAIGN@", campaign)
+    js = js.replace("@BASE_URL@", json.dumps(BASE_URL or DEFAULT_BASE_URL))
+    js = js.replace("@BRAND@", json.dumps(BRAND))
+    js = js.replace("@ORDER@", json.dumps(ordered_types))
+    js = js.replace(
+        "@IMMEDIATE@",
+        json.dumps({t: t in ("followup", "bfr") for t in ordered_types}),
+    )
+    # Payloads go last so marker-like text inside them can never be replaced.
+    js = js.replace("@PAYLOADS@", json.dumps(payloads, ensure_ascii=False))
+    return all_ok, js
 
 
 def main() -> int:
@@ -173,48 +292,18 @@ def main() -> int:
     match_name = args.match.strip()
     ordered_types = [t for t in TYPE_ORDER if t in args.types]
 
-    payloads: dict[str, dict] = {}
-    all_ok = True
-    for journey_type in ordered_types:
-        template = load_template(TEMPLATE_FILES[journey_type])
-        reserved_id = f"DRY-RUN-{journey_type.upper()}"
-        followup_id = "DRY-RUN-FOLLOWUP" if journey_type == "two_hours" else None
-        body, report = prepare_body(
-            template, journey_type, match_name, code, match_dt, reserved_id,
-            followup_id=followup_id,
-        )
-        print(f"\n[{journey_type}] Applied settings:")
-        for line in report:
-            print(f"  {line}")
-        checks = verify_body(
-            body, journey_type, match_name, code, match_dt, reserved_id, followup_id
-        )
-        all_ok = print_checks(journey_type, checks) and all_ok
-        payloads[journey_type] = body
-
+    all_ok, js = build_console_js(match_name, code, match_dt, ordered_types)
     if not all_ok:
         print("\nVERIFICATION FAILED — console script NOT generated.", file=sys.stderr)
         return 1
-
-    js = JS_TEMPLATE % {
-        "generated_at": datetime.now(LOCAL_TZ).strftime("%Y-%m-%d %H:%M %Z"),
-        "match": match_name,
-        "code": code,
-        "match_local": match_dt.strftime("%Y-%m-%d %H:%M"),
-        "base_url": json.dumps(BASE_URL or DEFAULT_BASE_URL),
-        "brand": json.dumps(BRAND),
-        "order": json.dumps(ordered_types),
-        "immediate": json.dumps({t: t in ("followup", "bfr") for t in ordered_types}),
-        "payloads": json.dumps(payloads, ensure_ascii=False),
-    }
 
     out_dir = Path("console_scripts")
     out_dir.mkdir(exist_ok=True)
     out_path = out_dir / f"{code}_console.js"
     out_path.write_text(js, encoding="utf-8")
     print(f"\nAll checks passed. Console script written: {out_path}")
-    print("Paste it into the DevTools console on a logged-in backoffice tab "
-          "(set TOKEN at the top first).")
+    print("Paste it into the DevTools console on a logged-in backoffice tab. "
+          "It captures the auth token automatically.")
     return 0
 
 

@@ -75,6 +75,67 @@ def missing_templates(selected_types: List[str]) -> List[str]:
     return [key for key in selected_types if not status.get(key)]
 
 
+def generate_console_script(
+    *,
+    home: str,
+    away: str,
+    code: str,
+    date: str,
+    chile_time: str,
+    selected_types: List[str],
+) -> Tuple[int, str, str, str | None, str]:
+    """Generate the paste-into-DevTools console script for a campaign.
+
+    Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
+    """
+    match_name = f"{home.strip()} vs {away.strip()}"
+    clean_code = code.strip().upper()
+    cmd = [
+        python_executable(),
+        str(CLONER_DIR / "generate_console_script.py"),
+        "--match",
+        match_name,
+        "--code",
+        clean_code,
+        "--date",
+        date.strip(),
+        "--time",
+        chile_time.strip(),
+        "--types",
+        *selected_types,
+    ]
+
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+
+    display_cmd = " ".join(
+        part if " " not in part else repr(part) for part in cmd
+    )
+
+    proc = subprocess.run(
+        cmd,
+        cwd=CLONER_DIR,
+        env=env,
+        text=True,
+        encoding="utf-8",
+        capture_output=True,
+        timeout=300,
+    )
+    output = proc.stdout
+    if proc.stderr:
+        output += "\nSTDERR:\n" + proc.stderr
+
+    js_filename = f"{clean_code}_console.js"
+    js_text = None
+    if proc.returncode == 0:
+        js_path = CLONER_DIR / "console_scripts" / js_filename
+        if js_path.exists():
+            js_text = js_path.read_text(encoding="utf-8")
+        else:
+            output += f"\nERROR: expected script file not found: {js_path}"
+    return proc.returncode, output, display_cmd, js_text, js_filename
+
+
 def run_journey_cloner(
     *,
     token: str,

@@ -32,6 +32,7 @@ from ..models import Campaign, Club, HotBoost, Match, User
 from ..parser.extra_feeds import add_extra_feed, delete_extra_feed, load_extra_feeds
 from ..repositories.match_repo import MatchRepository
 from ..services.journey_cloner_runner import (
+    generate_console_script,
     missing_templates,
     run_journey_cloner,
     save_template_from_fetch,
@@ -406,6 +407,78 @@ def journey_cloner_run(
             "template_saved": "",
             "template_error": "",
             "form": form,
+        },
+    )
+
+
+@router.post("/admin/journey-cloner/console-script", response_class=HTMLResponse)
+def journey_cloner_console_script(
+    request: Request,
+    home: str = Form(...),
+    away: str = Form(...),
+    date: str = Form(...),
+    chile_time: str = Form(...),
+    code: str = Form(...),
+    types: List[str] = Form(["followup", "bfr", "two_hours", "aft"]),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    selected_types = [t for t in types if t in {"followup", "bfr", "two_hours", "aft"}]
+    form = {
+        "home": home,
+        "away": away,
+        "date": date,
+        "chile_time": chile_time,
+        "code": code,
+    }
+    error = ""
+    result = None
+    console_script = None
+
+    if not selected_types:
+        error = "Select at least one draft type."
+    else:
+        missing = missing_templates(selected_types)
+        if missing:
+            error = "Missing templates: " + ", ".join(f"templates/{m}.json" for m in missing)
+
+    if not error:
+        try:
+            exit_code, output, display_cmd, js_text, js_name = generate_console_script(
+                home=home,
+                away=away,
+                code=code,
+                date=date,
+                chile_time=chile_time,
+                selected_types=selected_types,
+            )
+            result = {
+                "exit_code": exit_code,
+                "output": output,
+                "command": display_cmd,
+                "ok": exit_code == 0 and js_text is not None,
+            }
+            if exit_code == 0 and js_text is not None:
+                console_script = {"name": js_name, "text": js_text}
+            else:
+                error = "Console script was not generated. Check the run output below."
+        except Exception as exc:
+            error = str(exc)
+
+    return templates.TemplateResponse(
+        request,
+        "journey_cloner.html",
+        {
+            "active_page": "journey_cloner",
+            "current_user": user,
+            "template_status": template_status(),
+            "selected_types": selected_types,
+            "dry_run": True,
+            "result": result,
+            "error": error,
+            "template_saved": "",
+            "template_error": "",
+            "form": form,
+            "console_script": console_script,
         },
     )
 
