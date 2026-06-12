@@ -106,11 +106,12 @@
         <div class="links">
           <a href="/cube/{{ t.slug }}/widget" target="_blank">Widget: <code>/cube/{{ t.slug }}/widget</code></a>
           <a href="/cube/{{ t.slug }}.png" target="_blank">PNG: <code>/cube/{{ t.slug }}.png</code></a>
+          <a href="/cube/{{ t.slug }}.gif" target="_blank">GIF (email): <code>/cube/{{ t.slug }}.gif</code></a>
           <a href="/cube/{{ t.slug }}/data.json" target="_blank">Data: <code>/cube/{{ t.slug }}/data.json</code></a>
         </div>
         <div class="embed">
-          Embed snippet:
-          <pre>&lt;iframe src="/cube/{{ t.slug }}/widget" width="240" height="240" frameborder="0" allowtransparency="true"&gt;&lt;/iframe&gt;</pre>
+          Email snippet (animated cube):
+          <pre>&lt;img src="https://jb-service.cl/cube/{{ t.slug }}.gif" width="320" height="320" alt="{{ t.display_name }}"&gt;</pre>
         </div>
       </div>
     {% endfor %}

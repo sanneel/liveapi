@@ -32,11 +32,12 @@ from ..database import db_session
 from ..logging_config import get_logger
 from ..middleware import limiter
 from ..models import Match
+from ..render.cube_gif_render import FACE_H, FACE_W, render_cube_gif
 from ..render.cube_render import render_cube_png
 from ..render.cube_odds_render import render_odds_face
 from ..services import png_cache
 from ..services.cube_resolver import resolve_for_theme
-from ..services.cube_themes import CUBE_THEMES, CubeTheme, get_theme, list_themes
+from ..services.cube_themes import CUBE_THEMES, CubeFace, CubeTheme, get_theme, list_themes
 
 logger = get_logger("app.routes.public_cube")
 
@@ -130,6 +131,115 @@ def cube_png(theme: str, request: Request) -> Response:
     if request.headers.get("if-none-match") == etag:
         return Response(status_code=304, headers={"ETag": etag})
     return _png_response(png, cache_status="MISS", etag=etag)
+
+
+def _gif_response(gif: bytes, cache_status: str, etag: str = "") -> Response:
+    headers = {
+        "Cache-Control": "public, max-age=30, stale-while-revalidate=30",
+        "X-Cache": cache_status,
+    }
+    if etag:
+        headers["ETag"] = etag
+    return Response(content=gif, media_type="image/gif", headers=headers)
+
+
+def _load_static_image(url: str) -> Optional[Image.Image]:
+    """Load a local /static/... face image. External URLs are not fetched
+    server-side (the cube's promo assets all live under app/static)."""
+    if not url:
+        return None
+    prefix = "/static/"
+    if not url.startswith(prefix):
+        logger.warning("cube gif: non-static face image_url ignored: %s", url)
+        return None
+    path = BASE_DIR / "static" / url[len(prefix):]
+    if not path.exists():
+        logger.warning("cube gif: static face image not found: %s", path)
+        return None
+    try:
+        return Image.open(path).convert("RGBA")
+    except Exception:
+        logger.exception("cube gif: failed to open static face %s", path)
+        return None
+
+
+def _placeholder_face(t: CubeTheme) -> Image.Image:
+    """Opaque theme-colored fallback used when a face image is unavailable."""
+    return Image.new("RGBA", (FACE_W, FACE_H), (*t.bg_top, 255))
+
+
+def _build_cube_faces(t: CubeTheme) -> List[Image.Image]:
+    """Build the four prism faces (in rotation order) for the GIF, mirroring
+    how the widget alternates promo/odds faces. Themes with fewer than four
+    declared faces are cycled to fill the prism (e.g. UCL's [image, match]
+    becomes [image, match, image, match])."""
+    declared = list(t.faces) or [CubeFace(kind="image", image_url=t.promo_image_url)]
+
+    max_idx = 0
+    for face in declared:
+        if face.kind == "match" and face.match_index > max_idx:
+            max_idx = face.match_index
+
+    with db_session() as session:
+        matches = resolve_for_theme(session, t, limit=max_idx + 1)
+
+    faces: List[Image.Image] = []
+    for pos in range(4):
+        face = declared[pos % len(declared)]
+        img: Optional[Image.Image] = None
+        if face.kind == "match":
+            match = matches[face.match_index] if face.match_index < len(matches) else None
+            try:
+                img = Image.open(BytesIO(render_odds_face(match, theme_slug=t.slug))).convert("RGBA")
+            except Exception:
+                logger.exception("cube gif: odds face render failed theme=%s", t.slug)
+        elif face.kind == "image":
+            img = _load_static_image(face.image_url or t.promo_image_url)
+        else:  # "brand" — not used by current themes; colored placeholder.
+            img = _placeholder_face(t)
+        faces.append(img if img is not None else _placeholder_face(t))
+    return faces
+
+
+@router.get("/cube/{theme}.gif")
+@limiter.limit("120/minute")
+def cube_gif(theme: str, request: Request) -> Response:
+    """Animated GIF of the spinning 3D cube for email communications.
+
+    Mirrors /cube/{theme}.png but returns a looping GIF that renders in email
+    clients (which run no CSS 3D or JS). Each request bakes in the current
+    live odds for the resolved match(es); bytes are cached under
+    `cube_gif:{theme}` and cleared by the same parser-cycle invalidation as
+    the PNG endpoints.
+    """
+    t = get_theme(theme)
+    if t is None:
+        raise HTTPException(404, f"Unknown cube theme: {theme}")
+
+    key = f"cube_gif:{t.slug}"
+    cached = png_cache.get(key)
+    if cached is not None:
+        etag = _etag(cached)
+        if request.headers.get("if-none-match") == etag:
+            return Response(status_code=304, headers={"ETag": etag})
+        return _gif_response(cached, cache_status="HIT", etag=etag)
+
+    try:
+        faces = _build_cube_faces(t)
+        gif = render_cube_gif(t, faces)
+    except Exception:
+        logger.exception("cube gif render failed theme=%s", t.slug)
+        return Response(
+            content=_TRANSPARENT_PNG_1X1,
+            media_type="image/png",
+            status_code=500,
+        )
+
+    png_cache.put(key, gif)
+    etag = _etag(gif)
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers={"ETag": etag})
+    return _gif_response(gif, cache_status="MISS", etag=etag)
 
 
 @router.get("/cube/{theme}/odds.png")
