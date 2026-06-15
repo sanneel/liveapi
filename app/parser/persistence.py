@@ -174,8 +174,24 @@ def _invalidate_post_parse(sport: str, touched_slugs: Set[str]) -> None:
             png_cache.invalidate_prefix("cube:")
             png_cache.invalidate_prefix("cube_odds:")
             png_cache.invalidate_prefix("cube_gif:")
+            # Re-render the default email GIF in the background so the cache is
+            # warm BEFORE the next inbox open — emails fetch the GIF once with a
+            # short timeout and won't wait for a cold render (the "must refresh"
+            # bug). Daemon thread so it never blocks the parse cycle.
+            _schedule_cube_gif_prewarm()
     except Exception:
         logger.exception("post-parse hot/club cache invalidation failed")
+
+
+def _schedule_cube_gif_prewarm() -> None:
+    """Kick off cube GIF pre-warming off the parse-cycle critical path."""
+    try:
+        from ..routes.public_cube import prewarm_cube_gifs
+        threading.Thread(
+            target=prewarm_cube_gifs, name="cube-gif-prewarm", daemon=True
+        ).start()
+    except Exception:
+        logger.exception("failed to schedule cube gif pre-warm")
 
 
 

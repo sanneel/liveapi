@@ -42,10 +42,10 @@ FACE_H = 380
 # with four distinct faces (e.g. worldcup) must render the full 360° (48
 # frames) and so are roughly twice the size. For an even smaller email asset,
 # callers can request fewer frames / a smaller canvas via ?frames= / ?size=.
-GIF_SIZE = 320        # square px; the 0.86 fill keeps the cube itself larger
-                      # on screen than the old 360px/0.72 default
-GIF_FRAMES = 24       # rendered over a 180° half-turn → 7.5° per step, smooth
-GIF_FRAME_MS = 40     # 24 × 40ms ≈ 0.96s per 180° loop ≈ 1.9s per revolution
+GIF_SIZE = 288        # square px; tuned so the worldcup (full-360, 32-frame)
+                      # email GIF lands near ~1MB for reliable inbox loading
+GIF_FRAMES = 16       # frames per 180°; worldcup renders 2× = 32 total
+GIF_FRAME_MS = 60     # 16 × 60ms ≈ 0.96s per 180° loop ≈ 1.9s per revolution
 # 128 colors (down from the 256 max) roughly halves byte size with no visible
 # loss at email display size — the trophy/ball gradients still read cleanly and
 # the dark brand background bands only faintly. Paired with NO dithering in

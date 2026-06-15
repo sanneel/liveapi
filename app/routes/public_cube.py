@@ -59,6 +59,50 @@ router = APIRouter()
 BASE_DIR = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
+# Durable on-disk store for rendered cube GIFs. Email clients (Gmail's image
+# proxy especially) fetch the GIF once with a short timeout and won't wait for
+# a multi-second live render — so the GIF must NEVER be rendered on the request
+# path. We render it ahead of time (parser-cycle pre-warm, see
+# `prewarm_cube_gifs`) and write it here; requests then serve a ready file in
+# milliseconds. Disk (not just the 30s in-memory png_cache) so the warm GIF
+# also survives restarts/redeploys.
+_GIF_DISK_DIR = BASE_DIR.parent / "data" / "cube_gif"
+
+
+def _gif_disk_path(key: str) -> Path:
+    return _GIF_DISK_DIR / (key.replace(":", "_") + ".gif")
+
+
+def _gif_disk_read(key: str) -> Optional[bytes]:
+    try:
+        p = _gif_disk_path(key)
+        if p.exists():
+            return p.read_bytes()
+    except Exception:
+        logger.exception("cube gif: disk read failed key=%s", key)
+    return None
+
+
+def _gif_disk_write(key: str, data: bytes) -> None:
+    try:
+        _GIF_DISK_DIR.mkdir(parents=True, exist_ok=True)
+        tmp = _gif_disk_path(key).with_suffix(".tmp")
+        tmp.write_bytes(data)
+        tmp.replace(_gif_disk_path(key))  # atomic swap so readers never see a partial file
+    except Exception:
+        logger.exception("cube gif: disk write failed key=%s", key)
+
+
+def _compute_frame_ms(seconds: float, frames: int) -> int:
+    """Per-frame duration (ms). One 180° loop plays in half the per-revolution
+    time; GIF timing is 10ms-quantized. Shared by the route and the pre-warmer
+    so they produce the SAME cache key."""
+    return max(20, int(round(seconds * 1000 / 2 / frames / 10)) * 10)
+
+
+def _gif_cache_key(slug: str, size: int, frames: int, frame_ms: int, transparent: bool) -> str:
+    return f"cube_gif:{slug}:{size}:{frames}:{frame_ms}:{int(transparent)}"
+
 # 1×1 transparent fallback shared with public_hot.py contract.
 _TRANSPARENT_PNG_1X1 = (
     b"\x89PNG\r\n\x1a\n"
@@ -214,6 +258,22 @@ def _build_cube_faces(t: CubeTheme) -> List[Image.Image]:
     return faces
 
 
+def _render_and_store_gif(
+    t: CubeTheme, size: int, frames: int, frame_ms: int, is_transparent: bool
+) -> bytes:
+    """Build faces, render the GIF, and persist it to memory + disk. Shared by
+    the request path (cold-render fallback) and the parser-cycle pre-warmer."""
+    faces = _build_cube_faces(t)
+    gif = render_cube_gif(
+        t, faces, size=size, frames=frames, frame_ms=frame_ms,
+        transparent=is_transparent,
+    )
+    key = _gif_cache_key(t.slug, size, frames, frame_ms, is_transparent)
+    png_cache.put(key, gif)
+    _gif_disk_write(key, gif)
+    return gif
+
+
 @router.get("/cube/{theme}.gif")
 @limiter.limit("120/minute")
 def cube_gif(
@@ -227,15 +287,16 @@ def cube_gif(
     """Animated GIF of the spinning 3D cube for email communications.
 
     Mirrors /cube/{theme}.png but returns a looping GIF that renders in email
-    clients (which run no CSS 3D or JS). Each request bakes in the current
-    live odds for the resolved match(es); bytes are cached under
-    `cube_gif:{theme}:{size}:{frames}:{ms}:{transparent}` and cleared by the
-    same parser-cycle invalidation as the PNG endpoints.
+    clients (which run no CSS 3D or JS). Bytes are served from a warm store —
+    in-memory png_cache, then the on-disk pre-rendered file — and only rendered
+    live as a last resort (first ever request before any pre-warm). The parser
+    cycle re-renders the default GIF to disk so email opens are always a fast
+    HIT instead of a multi-second cold render.
 
     Query params:
       transparent=1  drop the branded background (1-bit GIF transparency)
-      size=NNN       square pixel size (clamped 160–512, default 320)
-      frames=NN      rotation frames (clamped 8–48, default 24)
+      size=NNN       square pixel size (clamped 160–512, default 288)
+      frames=NN      rotation frames (clamped 8–48, default 16)
       seconds=N      seconds per full revolution (clamped 1–12, default ~1.9);
                      raise it to slow the spin down
     """
@@ -252,25 +313,30 @@ def cube_gif(
     size = max(GIF_SIZE_MIN, min(int(size), GIF_SIZE_MAX))
     frames = max(GIF_FRAMES_MIN, min(int(frames), GIF_FRAMES_MAX))
     seconds = max(GIF_SECONDS_MIN, min(float(seconds), GIF_SECONDS_MAX))
-    # The GIF is one 180° loop (opposite faces are identical), so it plays in
-    # half the per-revolution time. GIF timing is 10ms-quantized; round so the
-    # spin stays even.
-    frame_ms = max(20, int(round(seconds * 1000 / 2 / frames / 10)) * 10)
+    frame_ms = _compute_frame_ms(seconds, frames)
 
-    key = f"cube_gif:{t.slug}:{size}:{frames}:{frame_ms}:{int(is_transparent)}"
-    cached = png_cache.get(key)
-    if cached is not None:
-        etag = _etag(cached)
+    key = _gif_cache_key(t.slug, size, frames, frame_ms, is_transparent)
+
+    def _serve(gif: bytes, status: str) -> Response:
+        etag = _etag(gif)
         if request.headers.get("if-none-match") == etag:
             return Response(status_code=304, headers={"ETag": etag})
-        return _gif_response(cached, cache_status="HIT", etag=etag)
+        return _gif_response(gif, cache_status=status, etag=etag)
 
+    # 1) hot in-memory cache
+    cached = png_cache.get(key)
+    if cached is not None:
+        return _serve(cached, "HIT")
+
+    # 2) durable on-disk pre-render (survives restarts; the email common case)
+    on_disk = _gif_disk_read(key)
+    if on_disk is not None:
+        png_cache.put(key, on_disk)
+        return _serve(on_disk, "DISK")
+
+    # 3) last resort: render now (first request before any pre-warm)
     try:
-        faces = _build_cube_faces(t)
-        gif = render_cube_gif(
-            t, faces, size=size, frames=frames, frame_ms=frame_ms,
-            transparent=is_transparent,
-        )
+        gif = _render_and_store_gif(t, size, frames, frame_ms, is_transparent)
     except Exception:
         logger.exception("cube gif render failed theme=%s", t.slug)
         return Response(
@@ -278,12 +344,7 @@ def cube_gif(
             media_type="image/png",
             status_code=500,
         )
-
-    png_cache.put(key, gif)
-    etag = _etag(gif)
-    if request.headers.get("if-none-match") == etag:
-        return Response(status_code=304, headers={"ETag": etag})
-    return _gif_response(gif, cache_status="MISS", etag=etag)
+    return _serve(gif, "MISS")
 
 
 @router.get("/cube/{theme}/odds.png")
@@ -529,3 +590,28 @@ def invalidate_all_cubes() -> int:
         png_cache.invalidate_prefix(f"cube_gif:{slug}")
         n += 1
     return n
+
+
+def prewarm_cube_gifs() -> int:
+    """Re-render the DEFAULT email GIF for every theme to disk + memory.
+
+    Called (in a background thread) by the parser persistence hook right after
+    the cube cache is invalidated, so the GIF an email's <img> points at —
+    `/cube/{theme}.gif` with no query params — is always a warm HIT instead of
+    a slow cold render at inbox-open time. Only the default-params variant is
+    pre-warmed; custom-param URLs (admin previews) still render on demand.
+
+    Best-effort: a failure for one theme is logged and leaves the previous
+    on-disk GIF in place (slightly stale but still loads instantly). Returns the
+    number of themes successfully warmed.
+    """
+    frame_ms = _compute_frame_ms(GIF_SECONDS_DEFAULT, GIF_FRAMES)
+    warmed = 0
+    for slug, theme in CUBE_THEMES.items():
+        try:
+            _render_and_store_gif(theme, GIF_SIZE, GIF_FRAMES, frame_ms, False)
+            warmed += 1
+        except Exception:
+            logger.exception("cube gif pre-warm failed theme=%s", slug)
+    logger.info("cube gif pre-warm complete themes=%d", warmed)
+    return warmed
