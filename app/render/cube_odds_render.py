@@ -68,11 +68,18 @@ _LIME = (183, 222, 19, 255)          # sampled from the template's frame
 _PANEL_BG = (247, 248, 253, 255)     # the panel's near-white inner fill
 
 PANEL_TOP_Y = 150          # white panel starts here (was ~220); covers lower hero
-PANEL_LOGO_SIZE = 84       # team badge size on the big panel
-PANEL_VS_FONT = 52
-PANEL_NAME_FONT = 20
-PANEL_INFO_FONT = 18
-PANEL_ODDS_FONT = 36
+PANEL_BADGE_R = 40         # radius of the circular team-logo badge
+# Center column reserved for "VS" + kickoff/status. Team names + badges live in
+# the left/right columns OUTSIDE this band so long names can never overlap the
+# centered text (the bug with "ARABIA SAUDITA" running into "HOY 23:00").
+PANEL_CENTER_HALF = 62     # half-width of the protected center column
+PANEL_SIDE_PAD = 18        # inner padding from the panel edge to a name/badge
+PANEL_VS_FONT = 46
+PANEL_NAME_FONT = 20       # base; auto-shrinks to fit the side column
+PANEL_NAME_FONT_MIN = 13
+PANEL_INFO_FONT = 17       # base; auto-shrinks to fit the center column
+PANEL_INFO_FONT_MIN = 12
+PANEL_ODDS_FONT = 34
 
 _font_cache: dict = {}
 
@@ -180,6 +187,29 @@ def _match_info(match: Match) -> str:
     return (match.time_raw or "").strip()
 
 
+def _fit_font(
+    d: ImageDraw.ImageDraw, text: str, max_width: int, base: int, min_size: int
+) -> ImageFont.ImageFont:
+    """Largest font (base..min) whose rendered `text` width fits `max_width`."""
+    size = base
+    while size > min_size and d.textlength(text, font=_font(size)) > max_width:
+        size -= 1
+    return _font(size)
+
+
+def _draw_logo_badge(
+    img: Image.Image, d: ImageDraw.ImageDraw, logo_bytes: Optional[bytes],
+    cx: int, cy: int, r: int = PANEL_BADGE_R,
+) -> None:
+    """White circular badge with a purple ring, team logo fit inside. Gives
+    rectangular flags a consistent, intentional 'coin' look on the panel."""
+    d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=_WHITE,
+              outline=_BRAND_PURPLE, width=3)
+    # Keep the logo well inside the circle (square side < circle diameter).
+    box = int(r * 1.3)
+    _paste_logo(img, logo_bytes, (cx - box // 2, cy - box // 2), size=box)
+
+
 def _render_big_panel(img: Image.Image, match: Match) -> None:
     """Draw the enlarged white matchup card over the template (worldcup).
 
@@ -187,9 +217,14 @@ def _render_big_panel(img: Image.Image, match: Match) -> None:
     kickoff/status line and odds are all large enough to read once the face is
     perspective-warped and colour-reduced onto the GIF. Flat fills compress far
     better in GIF than the photographic hero they cover, so this also shrinks
-    the file. The JUGABET header + upper hero stay visible above the card."""
+    the file. The JUGABET header + upper hero stay visible above the card.
+
+    Layout uses three columns — left team / center (VS + kickoff) / right team —
+    with the center band reserved so long names auto-shrink instead of
+    overlapping the centered text."""
     W = img.width
     d = ImageDraw.Draw(img)
+    cx_mid = W / 2
 
     # Lime frame + near-white card.
     d.rounded_rectangle([10, PANEL_TOP_Y - 6, W - 10, 372], radius=28, fill=_LIME)
@@ -198,31 +233,42 @@ def _render_big_panel(img: Image.Image, match: Match) -> None:
     home_name = (match.home_name or "").strip()
     away_name = (match.away_name or "").strip()
 
-    # Team badges (real logo, else initials), centred and enlarged.
-    half = PANEL_LOGO_SIZE // 2
-    home_bytes = get_logo_png_bytes(match.home_logo) or render_initials_png(home_name, PANEL_LOGO_SIZE)
-    away_bytes = get_logo_png_bytes(match.away_logo) or render_initials_png(away_name, PANEL_LOGO_SIZE)
-    _paste_logo(img, home_bytes, (86 - half, 182 - half), size=PANEL_LOGO_SIZE)
-    _paste_logo(img, away_bytes, (W - 86 - half, 182 - half), size=PANEL_LOGO_SIZE)
+    # Column geometry: side columns sit outside the protected center band.
+    side_inner = int(cx_mid - PANEL_CENTER_HALF)      # inner edge of side columns
+    home_cx = (PANEL_SIDE_PAD + side_inner) // 2
+    away_cx = W - home_cx
+    name_max_w = side_inner - PANEL_SIDE_PAD - 6      # width a name may occupy
 
-    # VS, team names, kickoff/status — all centred via text anchors.
-    d.text((W / 2, PANEL_TOP_Y + 2), "VS", font=_font(PANEL_VS_FONT),
-           fill=_BRAND_PURPLE, anchor="ma")
-    d.text((86, 226), home_name.upper(), font=_font(PANEL_NAME_FONT),
-           fill=_BRAND_PURPLE, anchor="ma")
-    d.text((W - 86, 226), away_name.upper(), font=_font(PANEL_NAME_FONT),
-           fill=_BRAND_PURPLE, anchor="ma")
+    # Circular team badges (real logo, else initials).
+    home_bytes = get_logo_png_bytes(match.home_logo) or render_initials_png(home_name, 2 * PANEL_BADGE_R)
+    away_bytes = get_logo_png_bytes(match.away_logo) or render_initials_png(away_name, 2 * PANEL_BADGE_R)
+    badge_cy = 198
+    _draw_logo_badge(img, d, home_bytes, home_cx, badge_cy)
+    _draw_logo_badge(img, d, away_bytes, away_cx, badge_cy)
+
+    # VS — centered in the protected band.
+    d.text((cx_mid, 172), "VS", font=_font(PANEL_VS_FONT), fill=_BRAND_PURPLE, anchor="mm")
+
+    # Kickoff / live status — centered under VS, shrunk to the center band.
     info = _match_info(match)
     if info:
-        d.text((W / 2, 230), info, font=_font(PANEL_INFO_FONT),
-               fill=_BRAND_PURPLE, anchor="ma")
+        info_font = _fit_font(d, info, 2 * PANEL_CENTER_HALF - 8,
+                              PANEL_INFO_FONT, PANEL_INFO_FONT_MIN)
+        d.text((cx_mid, 214), info, font=info_font, fill=_BRAND_PURPLE, anchor="mm")
+
+    # Team names — under each badge, auto-shrunk to fit their column.
+    name_y = 256
+    home_font = _fit_font(d, home_name.upper(), name_max_w, PANEL_NAME_FONT, PANEL_NAME_FONT_MIN)
+    away_font = _fit_font(d, away_name.upper(), name_max_w, PANEL_NAME_FONT, PANEL_NAME_FONT_MIN)
+    d.text((home_cx, name_y), home_name.upper(), font=home_font, fill=_BRAND_PURPLE, anchor="mm")
+    d.text((away_cx, name_y), away_name.upper(), font=away_font, fill=_BRAND_PURPLE, anchor="mm")
 
     # Three enlarged odds pills (purple / white / purple), odds centred inside.
     p1, dr, p2 = _parse_odds(match)
     odds = (p1, dr, p2)
     fills = (_BRAND_PURPLE, _PANEL_BG, _BRAND_PURPLE)
     txts = (_WHITE, _BRAND_PURPLE, _WHITE)
-    pad, y0, y1 = 16, 288, 346
+    pad, y0, y1 = 16, 290, 346
     inner = W - 32
     bw = (inner - 4 * pad) // 3
     fo = _font(PANEL_ODDS_FONT)
