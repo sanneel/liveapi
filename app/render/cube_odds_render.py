@@ -246,15 +246,16 @@ def _render_big_panel(img: Image.Image, match: Match) -> None:
     _draw_logo_badge(img, d, home_bytes, home_cx, badge_cy)
     _draw_logo_badge(img, d, away_bytes, away_cx, badge_cy)
 
-    # VS — centered in the protected band.
-    d.text((cx_mid, 172), "VS", font=_font(PANEL_VS_FONT), fill=_BRAND_PURPLE, anchor="mm")
+    # VS — centered in the protected band, dropped down to sit level with the
+    # team badges (badge_cy) rather than crowding the top of the panel.
+    d.text((cx_mid, badge_cy), "VS", font=_font(PANEL_VS_FONT), fill=_BRAND_PURPLE, anchor="mm")
 
-    # Kickoff / live status — centered under VS, shrunk to the center band.
+    # Kickoff / live status — centered just under VS, shrunk to the center band.
     info = _match_info(match)
     if info:
         info_font = _fit_font(d, info, 2 * PANEL_CENTER_HALF - 8,
                               PANEL_INFO_FONT, PANEL_INFO_FONT_MIN)
-        d.text((cx_mid, 214), info, font=info_font, fill=_BRAND_PURPLE, anchor="mm")
+        d.text((cx_mid, badge_cy + 36), info, font=info_font, fill=_BRAND_PURPLE, anchor="mm")
 
     # Team names — under each badge, auto-shrunk to fit their column.
     name_y = 256
