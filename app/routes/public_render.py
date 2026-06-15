@@ -293,13 +293,14 @@ def render_campaign_png(
         matches = _resolve_matches(session, campaign, auto_limit)
         events = [m.to_event_dict() for m in matches]
         sport = campaign.sport
+        theme = "vip" if campaign.vip else "default"
 
     if not events:
         # No CTA, no redirect, no HTML — empty campaigns return a 1×1.
         return _png_response(TRANSPARENT_PNG_1X1, cache_status="EMPTY")
 
     try:
-        png = render_for_sport(sport, events)
+        png = render_for_sport(sport, events, theme=theme)
     except Exception:
         logger.exception(f"render failed for slug={slug}")
         return _png_response(TRANSPARENT_PNG_1X1, cache_status="ERROR", status_code=500)

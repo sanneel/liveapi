@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+import inspect
 import threading
 import time
+from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -69,6 +71,80 @@ BRAND_LOGO_REL_PATH = "logos/logo_jugabet.png"
 BRAND_LOGO_HEIGHT = 40     # px (rendered height)
 BRAND_PAD = 22             # padding from card edges
 # ==================
+
+# ---------- Card color themes ----------
+RGB = Tuple[int, int, int]
+
+
+@dataclass(frozen=True)
+class CardTheme:
+    """All colors that define one card look. Geometry/layout is shared; only
+    these RGB values change between themes (e.g. default vs VIP)."""
+    card: RGB              # card background (non-live)
+    card_live: RGB         # card background (live)
+    text_main: RGB         # team names
+    accent: RGB            # "VS" text + green accent border
+    score: RGB             # live score
+    logo_plate: RGB        # plate behind team logos (non-live)
+    logo_plate_live: RGB
+    odds_plate: RGB        # odds pill fill (non-live)
+    odds_plate_live: RGB
+    border: RGB            # 2px beveled accent border
+    glow_idle: RGB         # center glow, non-live
+    glow_live: RGB         # center glow, live
+    shadow_idle: RGB       # inner shadow, non-live
+    shadow_live: RGB       # inner shadow, live
+
+
+# DEFAULT — the original navy / blue-glow / lime look (unchanged values).
+_THEME_DEFAULT = CardTheme(
+    card=(3, 16, 42),
+    card_live=(3, 16, 42),
+    text_main=(245, 245, 245),
+    accent=(182, 222, 19),
+    score=(238, 49, 36),
+    logo_plate=(29, 47, 90),
+    logo_plate_live=(31, 36, 51),
+    odds_plate=(23, 45, 86),
+    odds_plate_live=(45, 39, 59),
+    border=(182, 222, 19),
+    glow_idle=(0, 92, 255),
+    glow_live=(160, 40, 40),
+    shadow_idle=(0, 92, 255),
+    shadow_live=(255, 0, 40),
+)
+
+# VIP — purple / violet-glow palette sampled from the JUGAVIP email creative
+# (deep indigo backgrounds, violet→magenta gradient, royal-blue CTA, the same
+# lime "JUGA/VIP" accent + crowns, gold trophy). Keeps the lime accent + border
+# so it still reads as Jugabet; swaps navy/blue for indigo/violet and uses a
+# magenta glow for live cards instead of red.
+_THEME_VIP = CardTheme(
+    card=(26, 14, 64),
+    card_live=(30, 14, 58),
+    text_main=(245, 245, 248),
+    accent=(182, 222, 19),
+    score=(255, 74, 120),
+    logo_plate=(84, 50, 190),
+    logo_plate_live=(74, 42, 150),
+    odds_plate=(74, 44, 170),
+    odds_plate_live=(86, 44, 150),
+    border=(182, 222, 19),
+    glow_idle=(140, 74, 255),
+    glow_live=(214, 60, 150),
+    shadow_idle=(140, 74, 255),
+    shadow_live=(255, 60, 130),
+)
+
+_CARD_THEMES: Dict[str, CardTheme] = {
+    "default": _THEME_DEFAULT,
+    "vip": _THEME_VIP,
+}
+
+
+def get_card_theme(name: Optional[str]) -> CardTheme:
+    """Resolve a theme name to its palette, falling back to default."""
+    return _CARD_THEMES.get((name or "default").strip().lower(), _THEME_DEFAULT)
 
 #1px x 1px if feed is empty:
 TRANSPARENT_PNG_1X1 = (
@@ -347,9 +423,13 @@ def _make_vignette_overlay(w: int, h: int, strength: int = 55) -> Image.Image:
     return overlay
 
 
-def _apply_card_fx_masked(img: Image.Image, x0: int, y0: int, x1: int, y1: int, is_live: bool, mask: Image.Image) -> None:
+def _apply_card_fx_masked(
+    img: Image.Image, x0: int, y0: int, x1: int, y1: int,
+    is_live: bool, mask: Image.Image, theme: CardTheme = _THEME_DEFAULT,
+) -> None:
     """
     Apply vignette + center glow only inside 'mask' (beveled shape).
+    Glow color comes from the active card theme.
     """
     w = x1 - x0
     h = y1 - y0
@@ -360,9 +440,9 @@ def _apply_card_fx_masked(img: Image.Image, x0: int, y0: int, x1: int, y1: int, 
     fx.alpha_composite(_make_vignette_overlay(w, h, strength=48), dest=(0, 0))
 
     if is_live:
-        fx.alpha_composite(_make_center_glow_overlay(w, h, color_rgb=(160, 40, 40), peak_alpha=95), dest=(0, 0))
+        fx.alpha_composite(_make_center_glow_overlay(w, h, color_rgb=theme.glow_live, peak_alpha=95), dest=(0, 0))
     else:
-        fx.alpha_composite(_make_center_glow_overlay(w, h, color_rgb=(0, 92, 255), peak_alpha=45), dest=(0, 0))
+        fx.alpha_composite(_make_center_glow_overlay(w, h, color_rgb=theme.glow_idle, peak_alpha=45), dest=(0, 0))
 
     # Clip FX to bevel mask: alpha = alpha * mask
     a = fx.getchannel("A")
@@ -459,23 +539,25 @@ def _fit_team_font_size(
 
 
 # ---------- Rendering ----------
-def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
+def render_hot_png(events: List[Dict[str, Any]], theme: str = "default") -> bytes:
     card_h = 270
     gap = 18
 
-    # transparent canvas
-    card = (3, 16, 42)
-    card_live = (3, 16, 42)
+    # Resolve the color palette for this render ("default" or "vip"); only
+    # colors differ between themes, all geometry below is shared.
+    pal = get_card_theme(theme)
+    card = pal.card
+    card_live = pal.card_live
 
-    text_main = (245, 245, 245)
-    accent = (182, 222, 19)
-    red = (238, 49, 36)
+    text_main = pal.text_main
+    accent = pal.accent
+    red = pal.score
 
-    logo_plate = (29, 47, 90)
-    logo_plate_live = (31, 36, 51)
+    logo_plate = pal.logo_plate
+    logo_plate_live = pal.logo_plate_live
 
-    odds_plate = (23, 45, 86)
-    odds_plate_live = (45, 39, 59)
+    odds_plate = pal.odds_plate
+    odds_plate_live = pal.odds_plate_live
 
     font_score = _pick_font(LIVE_SCORE_FONT, extrabold=True)  # ExtraBold (LIVE score)
     font_vs = _pick_font(LIVE_SCORE_FONT, extrabold=True)     # ExtraBold
@@ -509,10 +591,10 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
         bevel_mask = _paste_beveled_rect(img, x0, y0, x1, y1, fill_rgba=fill_color, cut=CARD_BEVEL_CUT)
 
         # FX clipped to the bevel shape
-        _apply_card_fx_masked(img, x0, y0, x1, y1, is_live=is_live, mask=bevel_mask)
+        _apply_card_fx_masked(img, x0, y0, x1, y1, is_live=is_live, mask=bevel_mask, theme=pal)
 
         # --- Inner shadow ---
-        shadow_color = (255, 0, 40) if is_live else (0, 92, 255)
+        shadow_color = pal.shadow_live if is_live else pal.shadow_idle
         _apply_inner_shadow(
             img,
             x0, y0, x1, y1,
@@ -522,8 +604,8 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
             blur_radius=10,
         )
 
-        # --- Green accent border (2px) AFTER blur/fx so it stays чистий ---
-        border_color = (182, 222, 19, 255)
+        # --- Accent border (2px) AFTER blur/fx so it stays чистий ---
+        border_color = (*pal.border, 255)
         border_width = 2
 
         outer_mask = _bevel_mask(x1 - x0, y1 - y0, cut=CARD_BEVEL_CUT)

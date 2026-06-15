@@ -42,6 +42,7 @@ class CampaignRepository:
         mode: str = "manual",
         league: Optional[str] = None,
         created_by: Optional[str] = None,
+        vip: bool = False,
     ) -> Campaign:
         c = Campaign(
             slug=slug,
@@ -49,6 +50,7 @@ class CampaignRepository:
             sport=sport,
             mode=mode,
             league=league,
+            vip=vip,
             enabled=True,
             created_by=created_by,
         )

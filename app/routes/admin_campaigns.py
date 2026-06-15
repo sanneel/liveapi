@@ -149,6 +149,7 @@ def campaigns_create(
     sport: str = Form(...),
     mode: str = Form(...),
     league: Optional[str] = Form(None),
+    vip: Optional[str] = Form(None),
     user: User = Depends(require_role("editor")),
 ) -> RedirectResponse:
     slug = _validate_slug(slug)
@@ -156,16 +157,17 @@ def campaigns_create(
     mode = _validate_mode(mode)
     league_v = _normalise_league(league) if mode == "auto" else None
     title = (title or slug).strip()[:120]
+    vip_v = bool(vip)
 
     with db_session() as session:
         repo = CampaignRepository(session)
         if repo.find_by_slug(slug):
             raise HTTPException(400, "A campaign with this slug already exists.")
         repo.create(slug=slug, title=title, sport=sport, mode=mode,
-                    league=league_v, created_by=user.username)
+                    league=league_v, created_by=user.username, vip=vip_v)
         LogRepository(session).record(
             "campaign.create", username=user.username,
-            target=slug, payload={"sport": sport, "mode": mode, "league": league_v},
+            target=slug, payload={"sport": sport, "mode": mode, "league": league_v, "vip": vip_v},
         )
 
     return RedirectResponse(f"/admin/campaigns/{slug}", status_code=status.HTTP_303_SEE_OTHER)
@@ -225,6 +227,7 @@ def campaigns_update(
     sport: str = Form(...),
     league: Optional[str] = Form(None),
     enabled: Optional[str] = Form(None),
+    vip: Optional[str] = Form(None),
     user: User = Depends(require_role("editor")),
 ) -> RedirectResponse:
     slug = _validate_slug(slug)
@@ -242,11 +245,13 @@ def campaigns_update(
             sport=sport,
             league=league_v,
             enabled=bool(enabled),
+            vip=bool(vip),
         )
         LogRepository(session).record(
             "campaign.update", username=user.username,
             target=slug, payload={
-                "sport": sport, "league": league_v, "enabled": bool(enabled),
+                "sport": sport, "league": league_v,
+                "enabled": bool(enabled), "vip": bool(vip),
             },
         )
     _cache_invalidate(slug)
@@ -305,7 +310,7 @@ def campaigns_duplicate(
             candidate = f"{new_slug}-{idx}"
         repo.create(slug=candidate, title=src.title + " (copy)",
                     sport=src.sport, mode=src.mode, league=src.league,
-                    created_by=user.username)
+                    created_by=user.username, vip=src.vip)
         # copy matches (only meaningful for manual; cheap no-op otherwise)
         match_rows = repo.get_match_rows(slug)
         repo.set_matches(candidate, [r.event_id for r in match_rows])
