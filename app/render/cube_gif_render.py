@@ -38,13 +38,19 @@ FACE_H = 380
 # ── Email-friendly defaults ──────────────────────────────────────────────
 # Square canvas so the GIF drops into email headers / social without
 # re-cropping. Kept modest because animated GIFs of photographic faces grow
-# fast; these defaults land a smooth full rotation around ~700KB, which most
-# email clients accept inline without clipping.
+# fast. Two-pair themes (e.g. UCL) loop a 180° half-turn (24 frames); themes
+# with four distinct faces (e.g. worldcup) must render the full 360° (48
+# frames) and so are roughly twice the size. For an even smaller email asset,
+# callers can request fewer frames / a smaller canvas via ?frames= / ?size=.
 GIF_SIZE = 320        # square px; the 0.86 fill keeps the cube itself larger
                       # on screen than the old 360px/0.72 default
 GIF_FRAMES = 24       # rendered over a 180° half-turn → 7.5° per step, smooth
 GIF_FRAME_MS = 40     # 24 × 40ms ≈ 0.96s per 180° loop ≈ 1.9s per revolution
-GIF_PALETTE_COLORS = 256  # max GIF palette — best fidelity on the trophy/gradient
+# 128 colors (down from the 256 max) roughly halves byte size with no visible
+# loss at email display size — the trophy/ball gradients still read cleanly and
+# the dark brand background bands only faintly. Paired with NO dithering in
+# `_quantize_opaque` (see there) this is the single biggest size lever.
+GIF_PALETTE_COLORS = 128
 
 # Route-level clamps so a hand-edited URL can't request a 4000px, 200-frame GIF.
 GIF_SIZE_MIN, GIF_SIZE_MAX = 160, 512
@@ -233,10 +239,16 @@ def _quantize_opaque(
     frames_rgba: List[Image.Image], palette_colors: int
 ) -> List[Image.Image]:
     """Flatten onto the (already-opaque) background and map to a shared
-    palette so colors stay stable across frames."""
+    palette so colors stay stable across frames.
+
+    Dithering is deliberately OFF: Floyd–Steinberg sprays per-pixel noise that
+    defeats GIF's LZW run-length compression, nearly doubling the file (measured
+    ~1034KB → ~559KB on the 48-frame worldcup cube) for a difference invisible at
+    email display size. The cost is faint banding on the gradient background,
+    which 128 palette colors keeps subtle."""
     rgb_frames = [f.convert("RGB") for f in frames_rgba]
     palette_src = rgb_frames[0].quantize(colors=palette_colors, method=Image.FASTOCTREE)
-    return [f.quantize(palette=palette_src, dither=Image.FLOYDSTEINBERG) for f in rgb_frames]
+    return [f.quantize(palette=palette_src, dither=Image.NONE) for f in rgb_frames]
 
 
 def _quantize_transparent(frames_rgba: List[Image.Image]) -> List[Image.Image]:
