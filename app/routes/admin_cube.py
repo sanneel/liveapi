@@ -592,7 +592,11 @@ def api_cube_block_slot(
     drop_event = str((body or {}).get("event_id") or "").strip()
     with db_session() as session:
         override_repo = CubeOverrideRepository(session)
-        override_repo.block_slot(t.slug, slot, by=user.username)
+        # Remember the dropped match on the slot so "restore auto" can bring it
+        # back (un-suppress) in one click.
+        override_repo.block_slot(
+            t.slug, slot, by=user.username, dropped_event_id=drop_event or None
+        )
         if drop_event:
             # Hide the removed match so auto-rank can't slot it elsewhere.
             override_repo.set_suppress(t.slug, drop_event, True, by=user.username)
@@ -614,17 +618,27 @@ def api_cube_unblock_slot(
     request: Request,
     user: User = Depends(require_role("editor")),
 ) -> Dict[str, Any]:
-    """Release a blank slot back to automatic ranking."""
+    """Release a blank slot back to automatic, and bring back the match that
+    was removed from it (un-suppress) so emptying a slot is fully reversible."""
     t = _validate_theme(theme)
     with db_session() as session:
-        removed = CubeOverrideRepository(session).unblock_slot(t.slug, int(slot))
+        override_repo = CubeOverrideRepository(session)
+        dropped = override_repo.unblock_slot(t.slug, int(slot))
+        restored = None
+        if dropped:
+            override_repo.set_suppress(t.slug, dropped, False, by=user.username)
+            restored = dropped
         LogRepository(session).record(
             "cube.unblock", username=user.username, target=t.slug,
-            payload={"slot": int(slot), "was_blocked": removed},
+            payload={
+                "slot": int(slot),
+                "was_blocked": dropped is not None,
+                "restored": restored,
+            },
             ip=_client_ip(request),
         )
     _invalidate_theme_cache(t.slug)
-    return {"ok": True, "cube": t.slug, "slot": int(slot)}
+    return {"ok": True, "cube": t.slug, "slot": int(slot), "restored": restored}
 
 
 @router.delete("/api/admin/cube/{theme}/override/{event_id}")

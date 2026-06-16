@@ -26,6 +26,9 @@ class CubeBlockedSlot(Base):
 
     cube_slug = Column(String, nullable=False)
     position = Column(Integer, nullable=False)
+    # The match that was showing when the operator emptied this slot. Kept so
+    # "restore auto" can un-suppress it and let it rank back in.
+    dropped_event_id = Column(String, nullable=True)
     created_by = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 

@@ -263,12 +263,24 @@ class CubeOverrideRepository:
         )
         return {int(pos) for (pos,) in rows}
 
-    def block_slot(self, cube_slug: str, position: int, *, by: Optional[str] = None) -> bool:
-        """Reserve a slot as blank. Returns True if newly blocked."""
+    def block_slot(
+        self,
+        cube_slug: str,
+        position: int,
+        *,
+        by: Optional[str] = None,
+        dropped_event_id: Optional[str] = None,
+    ) -> bool:
+        """Reserve a slot as blank. Returns True if newly blocked.
+
+        `dropped_event_id` is the match that was showing in the slot; it's
+        remembered so `unblock_slot` can hand it back for un-suppressing.
+        """
         cube_slug = (cube_slug or "").strip()
         if not cube_slug:
             raise ValueError("cube_slug required")
         position = int(position)
+        dropped_event_id = (dropped_event_id or "").strip() or None
         existing = (
             self.session.query(CubeBlockedSlot)
             .filter(CubeBlockedSlot.cube_slug == cube_slug)
@@ -276,19 +288,34 @@ class CubeOverrideRepository:
             .first()
         )
         if existing:
+            # Already blank — just keep the most recent dropped match.
+            if dropped_event_id:
+                existing.dropped_event_id = dropped_event_id
             return False
         self.session.add(
-            CubeBlockedSlot(cube_slug=cube_slug, position=position, created_by=by)
+            CubeBlockedSlot(
+                cube_slug=cube_slug,
+                position=position,
+                created_by=by,
+                dropped_event_id=dropped_event_id,
+            )
         )
         # Any pin sitting in this slot must go — the slot is now blank.
         self.clear_position_at_slot(cube_slug, position)
         logger.info("cube_blocked_slot.block cube=%s position=%d by=%s", cube_slug, position, by)
         return True
 
-    def unblock_slot(self, cube_slug: str, position: int) -> bool:
-        """Release a blank slot back to automatic. Returns True if it was blocked."""
+    def unblock_slot(self, cube_slug: str, position: int) -> Optional[str]:
+        """Release a blank slot back to automatic.
+
+        Returns the `dropped_event_id` that was stored on the slot (so the
+        caller can un-suppress it), or "" when the slot was blocked but had no
+        remembered match, or None when nothing was blocked. Both "" and a real
+        id are truthy-or-not but distinct from None — callers that only care
+        "was it blocked?" should compare `is not None`.
+        """
         if not cube_slug:
-            return False
+            return None
         row = (
             self.session.query(CubeBlockedSlot)
             .filter(CubeBlockedSlot.cube_slug == cube_slug)
@@ -296,10 +323,11 @@ class CubeOverrideRepository:
             .first()
         )
         if row is None:
-            return False
+            return None
+        dropped = row.dropped_event_id or ""
         self.session.delete(row)
         logger.info("cube_blocked_slot.unblock cube=%s position=%d", cube_slug, int(position))
-        return True
+        return dropped
 
     def clear_blocked(self, cube_slug: str) -> int:
         """Remove every blocked slot for this cube."""
