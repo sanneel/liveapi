@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from datetime import datetime
 import unicodedata
-from typing import List
+from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -115,9 +115,12 @@ def resolve_for_theme(
     session: Session,
     theme: CubeTheme,
     limit: int = 1,
-) -> List[Match]:
-    """Return up to `limit` matches that satisfy `theme`, ranked by the
-    sport's hot scorer, with cube override pins/suppressions applied.
+) -> List[Optional[Match]]:
+    """Return a POSITIONAL list of up to `limit` slots that satisfy `theme`,
+    ranked by the sport's hot scorer, with cube override pins / suppressions /
+    blocked (blank) slots applied. Entry `i` is the Match for slot `i`, or
+    `None` when that slot is intentionally blank (operator-blocked) or no match
+    is available. Callers index by slot and treat `None` as an empty slot.
 
     Behavior:
       1. Load cube_override rows for this theme (pins + suppressions).
@@ -140,6 +143,7 @@ def resolve_for_theme(
 
     pinned = override_repo.all_pinned(theme.slug)        # {slot: event_id}
     suppressed = override_repo.all_suppressed(theme.slug)  # {event_id, ...}
+    blocked = override_repo.blocked_slots(theme.slug)     # {slot, ...} kept blank
 
     engine = HotEngine(session, theme.sport)
     # Oversample so the theme filter has something to work with even when
@@ -162,6 +166,9 @@ def resolve_for_theme(
     slots: List[Match | None] = [None for _ in range(limit)]
     used_ids: set = set()
     for slot in range(limit):
+        if slot in blocked:
+            # Operator reserved this slot as blank — never auto-fill it.
+            continue
         if slot in pinned:
             eid = pinned[slot]
             if eid in suppressed:
@@ -199,7 +206,7 @@ def resolve_for_theme(
     # pool. Without this, themes with a small candidate count (e.g. the
     # WC group-stage when only ~5 fixtures are scheduled today) leave
     # slots 2/3 permanently empty after slot 1 is pinned.
-    if any(m is None for m in slots):
+    if any(m is None for i, m in enumerate(slots) if i not in blocked):
         extras = match_repo.find_active_by_sport(theme.sport)
         extras = [m for m in extras if match_in_theme(m.tournament_slug, theme)]
         if theme.required_teams:
@@ -211,7 +218,7 @@ def resolve_for_theme(
             extras.sort(key=lambda m: m.last_updated_at or datetime.min, reverse=True)
         extra_iter = iter(extras)
         for i, current in enumerate(slots):
-            if current is not None:
+            if current is not None or i in blocked:
                 continue
             for m in extra_iter:
                 if m.event_id in used_ids:
@@ -220,9 +227,13 @@ def resolve_for_theme(
                 used_ids.add(m.event_id)
                 break
 
-    out = [m for m in slots if m is not None]
-    if out:
-        return out
+    # Return the POSITIONAL slot list (None = blank/blocked/unavailable) so
+    # callers that index by slot (cube faces, web odds, admin) see a reserved
+    # blank in its place instead of the list silently compacting. Only when the
+    # operator has done NOTHING and auto produced nothing do we drop to the raw
+    # fallback below (which has no internal gaps anyway).
+    if blocked or any(m is not None for m in slots):
+        return slots
 
     # Fallback: raw active in the theme, freshest first. Mirrors the admin
     # Browse fallback pattern so a cube doesn't go silent the moment the

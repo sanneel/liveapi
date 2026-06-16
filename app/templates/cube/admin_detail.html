@@ -32,9 +32,9 @@
   </div>
 
   <p class="text-sm text-muted-400 mb-4">
-    Automatic by default. Use <span class="text-zinc-300">▲ ▼</span> to set the order,
-    <span class="text-zinc-300">✕</span> to drop a match, and the search below to add one.
-    Anything you don't touch stays automatic.
+    Automatic by default. <span class="text-zinc-300">✕</span> empties a slot (it stays
+    <em>blank</em> — it won't auto-refill), then add the match you want from the search below.
+    <span class="text-zinc-300">▲ ▼</span> sets the order. Untouched slots stay automatic.
   </p>
 
   <!-- ═══════════════════════ SHOWING NOW ═══════════════════════ -->
@@ -45,9 +45,10 @@
     </header>
     <ul class="divide-y divide-ink-600/30">
       <template x-for="(m, idx) in top" :key="'slot-' + idx">
-        <li class="px-3 py-3 flex items-center gap-3">
+        <li class="px-3 py-3 flex items-center gap-3 min-h-[56px]">
           <span class="w-5 text-center text-sm font-mono tabular-nums text-zinc-500 flex-shrink-0" x-text="idx + 1"></span>
 
+          <!-- Filled slot -->
           <template x-if="m">
             <div class="flex-1 flex items-center gap-3 min-w-0">
               <span class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase flex-shrink-0"
@@ -72,7 +73,7 @@
                         class="p-1.5 rounded text-muted-400 hover:text-zinc-100 hover:bg-ink-700 disabled:opacity-25 disabled:hover:bg-transparent">
                   <i data-lucide="chevron-down" class="!w-4 !h-4"></i>
                 </button>
-                <button @click="remove(m)" :disabled="busy" title="Drop this match (auto picks the next)"
+                <button @click="blankSlot(idx, m)" :disabled="busy" title="Empty this slot (stays blank)"
                         class="p-1.5 rounded text-muted-400 hover:text-red-300 hover:bg-red-950/40 disabled:opacity-30">
                   <i data-lucide="x" class="!w-4 !h-4"></i>
                 </button>
@@ -80,8 +81,21 @@
             </div>
           </template>
 
+          <!-- Blank slot -->
           <template x-if="!m">
-            <span class="flex-1 text-meta text-muted-600 italic">empty — no match available</span>
+            <div class="flex-1 flex items-center gap-3">
+              <template x-if="blockedSlots.includes(idx)">
+                <span class="flex-1 text-meta text-amber-300/70 italic">blank — add a match below to fill it</span>
+              </template>
+              <template x-if="!blockedSlots.includes(idx)">
+                <span class="flex-1 text-meta text-muted-600 italic">empty — no match available</span>
+              </template>
+              <button x-show="blockedSlots.includes(idx)" @click="unblock(idx)" :disabled="busy"
+                      title="Let it rank automatically again"
+                      class="text-xs bg-ink-700 hover:bg-ink-600 text-zinc-300 px-2 py-1 rounded disabled:opacity-40 flex-shrink-0">
+                ⟳ Auto
+              </button>
+            </div>
           </template>
         </li>
       </template>
@@ -90,8 +104,9 @@
 
   <!-- ═══════════════════════ ADD A MATCH ═══════════════════════ -->
   <section class="bg-ink-900 border border-ink-600/60 rounded-lg overflow-hidden mb-5">
-    <header class="px-4 py-2 bg-ink-950/40 border-b border-ink-600/30">
+    <header class="px-4 py-2 bg-ink-950/40 border-b border-ink-600/30 flex items-center justify-between">
       <h3 class="text-label uppercase text-muted-400">Add a match</h3>
+      <span class="text-meta text-muted-500" x-text="hasBlank ? 'fills the blank slot' : 'replaces the last slot'"></span>
     </header>
     <div class="p-3 border-b border-ink-600/30">
       <input x-model="addQuery" placeholder="Search a match to add…"
@@ -162,9 +177,10 @@ function cubeAdmin() {
   return {
     theme: {{ theme.slug | tojson }},
     slotCount: {{ slot_count }},
-    top: [],                 // length slotCount, each = match or null (what renders)
-    candidates: [],          // in-theme matches not currently shown (the add pool)
+    top: [],                 // length slotCount; entry = match or null (blank slot)
+    candidates: [],          // in-theme matches not currently shown
     suppressedMatches: [],
+    blockedSlots: [],        // slot indices the operator reserved as blank
     addQuery: '',
     loading: false,
     busy: false,
@@ -180,6 +196,10 @@ function cubeAdmin() {
       let last = -1;
       this.top.forEach((m, i) => { if (m) last = i; });
       return last;
+    },
+
+    get hasBlank() {
+      return this.top.some(m => !m);
     },
 
     get filteredCandidates() {
@@ -213,9 +233,9 @@ function cubeAdmin() {
         const padded = [];
         for (let i = 0; i < this.slotCount; i++) padded.push(top[i] || null);
         this.top = padded;
-        // Add pool = addable matches only (dropped ones live in the Dropped list).
         this.candidates = (data.candidates || []).filter(c => !c.suppressed);
         this.suppressedMatches = data.suppressed || [];
+        this.blockedSlots = data.blocked_slots || [];
         this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
       } catch (e) {
         console.error('[cubeAdmin.load]', e);
@@ -246,21 +266,25 @@ function cubeAdmin() {
 
     pin(eventId, slot) { return this._post(`/pin/${encodeURIComponent(eventId)}`, { position: slot }); },
     reorderPins(pins) { return this._post(`/reorder`, { pins }); },
-    suppress(eventId, value) { return this._post(`/suppress/${encodeURIComponent(eventId)}`, { suppress: value }); },
 
-    // + Add — feature this match. Drops it into the first empty/automatic slot
-    // so it appears without bumping a match you've already chosen.
-    addMatch(eventId) {
-      let slot = this.slotCount - 1;
-      for (let i = 0; i < this.slotCount; i++) {
-        const m = this.top[i];
-        if (!m || m.position === null || m.position === undefined) { slot = i; break; }
-      }
-      this._do(() => this.pin(eventId, slot), 'Added');
+    // ✕ — empty this slot. It stays BLANK (the resolver won't auto-refill it)
+    // and the match is dropped so it can't pop up in another slot.
+    blankSlot(idx, m) {
+      this._do(() => this._post(`/block/${idx}`, { event_id: m.event_id }), 'Slot emptied — add a match');
     },
 
-    // ▲ / ▼ — set the order. Swaps two slots atomically (pins both); a slot
-    // left empty just receives the moved match.
+    // ⟳ Auto — release a blank slot back to automatic.
+    unblock(idx) { this._do(() => this._post(`/unblock/${idx}`, {}), 'Slot back to automatic'); },
+
+    // + Add — drop this match into the first blank slot (fills your gap). If no
+    // slot is blank, it takes the last slot.
+    addMatch(eventId) {
+      let slot = this.top.findIndex(m => !m);
+      if (slot < 0) slot = this.slotCount - 1;
+      this._do(() => this.pin(eventId, slot), `Added to slot ${slot + 1}`);
+    },
+
+    // ▲ / ▼ — set the order (atomic swap; an empty target just receives it).
     move(idx, dir) {
       const to = idx + dir;
       if (to < 0 || to >= this.slotCount) return;
@@ -275,10 +299,7 @@ function cubeAdmin() {
         : this.pin(a.event_id, to), 'Order updated');
     },
 
-    // ✕ — drop this match (suppress); the slot refills from the next ranked.
-    remove(m) { this._do(() => this.suppress(m.event_id, true), 'Removed — auto picked the next'); },
-
-    restoreMatch(eventId) { this._do(() => this.suppress(eventId, false), 'Restored'); },
+    restoreMatch(eventId) { this._do(() => this._post(`/suppress/${encodeURIComponent(eventId)}`, { suppress: false }), 'Restored'); },
 
     async resetAll() {
       if (!confirm('Clear every change for this cube? It reverts to fully automatic ranking.')) return;

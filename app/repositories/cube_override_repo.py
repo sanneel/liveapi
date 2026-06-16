@@ -17,7 +17,7 @@ from typing import Dict, Iterable, List, Optional, Set
 from sqlalchemy.orm import Session
 
 from ..logging_config import get_logger
-from ..models import CubeOverride, Match
+from ..models import CubeBlockedSlot, CubeOverride, Match
 
 logger = get_logger("app.repositories.cube_override")
 
@@ -230,8 +230,8 @@ class CubeOverrideRepository:
         return cleared
 
     def clear_all_for_cube(self, cube_slug: str) -> int:
-        """Delete every override row for this cube. Returns the number of
-        rows removed. Used by the admin "Reset all overrides" button."""
+        """Delete every override row AND blocked slot for this cube. Returns the
+        number of override rows removed. Used by the admin "Reset" button."""
         if not cube_slug:
             return 0
         rows = (
@@ -242,12 +242,77 @@ class CubeOverrideRepository:
         n = len(rows)
         for row in rows:
             self.session.delete(row)
+        self.clear_blocked(cube_slug)
         if n:
             logger.info(
                 "cube_override.clear_all_for_cube cube=%s removed=%d",
                 cube_slug, n,
             )
         return n
+
+    # ─── blocked slots (operator-reserved empty slots) ──────────────────
+    def blocked_slots(self, cube_slug: str) -> Set[int]:
+        """Return the set of slot positions the operator has reserved as blank
+        for this cube. The resolver leaves these slots empty (no auto-fill)."""
+        if not cube_slug:
+            return set()
+        rows = (
+            self.session.query(CubeBlockedSlot.position)
+            .filter(CubeBlockedSlot.cube_slug == cube_slug)
+            .all()
+        )
+        return {int(pos) for (pos,) in rows}
+
+    def block_slot(self, cube_slug: str, position: int, *, by: Optional[str] = None) -> bool:
+        """Reserve a slot as blank. Returns True if newly blocked."""
+        cube_slug = (cube_slug or "").strip()
+        if not cube_slug:
+            raise ValueError("cube_slug required")
+        position = int(position)
+        existing = (
+            self.session.query(CubeBlockedSlot)
+            .filter(CubeBlockedSlot.cube_slug == cube_slug)
+            .filter(CubeBlockedSlot.position == position)
+            .first()
+        )
+        if existing:
+            return False
+        self.session.add(
+            CubeBlockedSlot(cube_slug=cube_slug, position=position, created_by=by)
+        )
+        # Any pin sitting in this slot must go — the slot is now blank.
+        self.clear_position_at_slot(cube_slug, position)
+        logger.info("cube_blocked_slot.block cube=%s position=%d by=%s", cube_slug, position, by)
+        return True
+
+    def unblock_slot(self, cube_slug: str, position: int) -> bool:
+        """Release a blank slot back to automatic. Returns True if it was blocked."""
+        if not cube_slug:
+            return False
+        row = (
+            self.session.query(CubeBlockedSlot)
+            .filter(CubeBlockedSlot.cube_slug == cube_slug)
+            .filter(CubeBlockedSlot.position == int(position))
+            .first()
+        )
+        if row is None:
+            return False
+        self.session.delete(row)
+        logger.info("cube_blocked_slot.unblock cube=%s position=%d", cube_slug, int(position))
+        return True
+
+    def clear_blocked(self, cube_slug: str) -> int:
+        """Remove every blocked slot for this cube."""
+        if not cube_slug:
+            return 0
+        rows = (
+            self.session.query(CubeBlockedSlot)
+            .filter(CubeBlockedSlot.cube_slug == cube_slug)
+            .all()
+        )
+        for row in rows:
+            self.session.delete(row)
+        return len(rows)
 
     def clear(self, cube_slug: str, event_id: str) -> bool:
         """Remove the row entirely (both pin and suppress reset for this cube/event)."""
