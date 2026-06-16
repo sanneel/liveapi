@@ -17,7 +17,7 @@ from typing import Dict, Iterable, List, Optional, Set
 from sqlalchemy.orm import Session
 
 from ..logging_config import get_logger
-from ..models import CubeOverride
+from ..models import CubeOverride, Match
 
 logger = get_logger("app.repositories.cube_override")
 
@@ -181,6 +181,53 @@ class CubeOverrideRepository:
             row.position = None
             row.updated_at = datetime.utcnow()
         return len(rows)
+
+    def release_finished_pins(self, now: Optional[datetime] = None) -> int:
+        """Clear `position` on pinned rows whose match has finished or vanished.
+
+        Finished = the Match row is gone, OR it's inactive AND already past its
+        kickoff time. An inactive-but-still-upcoming fixture (a flaky feed
+        briefly dropping it) KEEPS its pin — mirrors the old resolver logic that
+        protected against the "World Cup pin vanished" bug.
+
+        This is the single owner of that cleanup write. It runs from the parser
+        cycle (which owns DB writes) so the render paths — request handlers and
+        background GIF pre-warm threads — stay strictly read-only and can't race
+        the parser into a SQLite "database is locked". Returns rows cleared.
+        """
+        now = now or datetime.utcnow()
+        pinned = (
+            self.session.query(CubeOverride)
+            .filter(CubeOverride.position.is_not(None))
+            .all()
+        )
+        if not pinned:
+            return 0
+        event_ids = [r.event_id for r in pinned]
+        matches = {
+            m.event_id: m
+            for m in self.session.query(Match)
+            .filter(Match.event_id.in_(event_ids))
+            .all()
+        }
+        cleared = 0
+        for row in pinned:
+            m = matches.get(row.event_id)
+            if m is not None and m.is_active:
+                continue  # live or upcoming — keep the pin
+            gone = m is None
+            past_kickoff = (
+                m is not None
+                and m.start_time_utc is not None
+                and m.start_time_utc < now
+            )
+            if gone or past_kickoff:
+                row.position = None
+                row.updated_at = now
+                cleared += 1
+        if cleared:
+            logger.info("cube_override.release_finished_pins cleared=%d", cleared)
+        return cleared
 
     def clear_all_for_cube(self, cube_slug: str) -> int:
         """Delete every override row for this cube. Returns the number of
