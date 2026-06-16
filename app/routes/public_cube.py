@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import hashlib
 import json as _json
+import os
 import threading
 from dataclasses import asdict
 from io import BytesIO
@@ -87,9 +88,15 @@ def _gif_disk_read(key: str) -> Optional[bytes]:
 def _gif_disk_write(key: str, data: bytes) -> None:
     try:
         _GIF_DISK_DIR.mkdir(parents=True, exist_ok=True)
-        tmp = _gif_disk_path(key).with_suffix(".tmp")
+        final = _gif_disk_path(key)
+        # Unique temp name per writer: an override-triggered refresh and the
+        # parser-cycle pre-warm can re-render the SAME key concurrently. A
+        # shared ".tmp" name would let the two interleave and corrupt the file;
+        # pid+thread keeps each writer's temp private, and replace() is atomic
+        # so the final file is always one complete writer's output.
+        tmp = final.with_name(f"{final.name}.{os.getpid()}.{threading.get_ident()}.tmp")
         tmp.write_bytes(data)
-        tmp.replace(_gif_disk_path(key))  # atomic swap so readers never see a partial file
+        tmp.replace(final)
     except Exception:
         logger.exception("cube gif: disk write failed key=%s", key)
 
@@ -601,6 +608,9 @@ def prewarm_cube_gif(theme: CubeTheme) -> None:
     _render_and_store_gif(theme, GIF_SIZE, GIF_FRAMES, frame_ms, False)
 
 
+_prewarm_lock = threading.Lock()
+
+
 def prewarm_cube_gifs() -> int:
     """Re-render the DEFAULT email GIF for every theme to disk + memory.
 
@@ -610,19 +620,30 @@ def prewarm_cube_gifs() -> int:
     a slow cold render at inbox-open time. Only the default-params variant is
     pre-warmed; custom-param URLs (admin previews) still render on demand.
 
+    Coalesced: parser cycles can fire faster than a full pre-warm completes, so
+    a non-blocking lock skips this run if one is already in flight (the next
+    cycle will warm with the freshest odds anyway). Avoids stacking render
+    threads and SQLite contention.
+
     Best-effort: a failure for one theme is logged and leaves the previous
     on-disk GIF in place (slightly stale but still loads instantly). Returns the
-    number of themes successfully warmed.
+    number of themes successfully warmed (0 if skipped).
     """
-    warmed = 0
-    for slug, theme in CUBE_THEMES.items():
-        try:
-            prewarm_cube_gif(theme)
-            warmed += 1
-        except Exception:
-            logger.exception("cube gif pre-warm failed theme=%s", slug)
-    logger.info("cube gif pre-warm complete themes=%d", warmed)
-    return warmed
+    if not _prewarm_lock.acquire(blocking=False):
+        logger.info("cube gif pre-warm already in progress; skipping this cycle")
+        return 0
+    try:
+        warmed = 0
+        for slug, theme in CUBE_THEMES.items():
+            try:
+                prewarm_cube_gif(theme)
+                warmed += 1
+            except Exception:
+                logger.exception("cube gif pre-warm failed theme=%s", slug)
+        logger.info("cube gif pre-warm complete themes=%d", warmed)
+        return warmed
+    finally:
+        _prewarm_lock.release()
 
 
 def _gif_disk_delete_theme(slug: str) -> None:

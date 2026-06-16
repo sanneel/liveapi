@@ -81,7 +81,7 @@ PANEL_BADGE_R = 40         # radius of the circular team-logo badge
 # centered text (the bug with "ARABIA SAUDITA" running into "HOY 23:00").
 PANEL_CENTER_HALF = 62     # half-width of the protected center column
 PANEL_SIDE_PAD = 18        # inner padding from the panel edge to a name/badge
-PANEL_VS_FONT = 46
+PANEL_VS_FONT = 34
 PANEL_NAME_FONT = 20       # base; auto-shrinks to fit the side column
 PANEL_NAME_FONT_MIN = 13
 PANEL_INFO_FONT = 17       # base; auto-shrinks to fit the center column
