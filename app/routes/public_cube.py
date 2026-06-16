@@ -655,11 +655,23 @@ def _gif_disk_delete_theme(slug: str) -> None:
         logger.exception("cube gif: disk delete failed slug=%s", slug)
 
 
+_refresh_timers: Dict[str, threading.Timer] = {}
+_refresh_lock = threading.Lock()
+# Wait this long after the LAST override change before re-rendering the GIF.
+# Keeps rapid admin edits (✕, add, reorder in a row) from each kicking off a
+# CPU-heavy render that competes with the admin page's reload for the GIL —
+# which made every click feel ~3s slow.
+_GIF_REFRESH_DEBOUNCE_SEC = 4.0
+
+
 def refresh_cube_gif(slug: str) -> None:
-    """Drop the stale on-disk + in-memory GIF for one theme and re-render the
-    default variant off-thread. Called when an admin override changes the
-    cube's matches, so the GIF reflects the change instead of serving the old
-    pre-rendered file. Non-blocking: the re-render runs in a daemon thread."""
+    """Mark a theme's pre-rendered GIF stale and schedule a debounced re-render.
+
+    The stale on-disk + in-memory copy is dropped IMMEDIATELY (cheap), so the
+    next real GIF request renders fresh on demand. The expensive re-warm is
+    debounced: it runs `_GIF_REFRESH_DEBOUNCE_SEC` after the last change, so a
+    burst of admin edits triggers one render instead of one-per-click, and it
+    never runs on the click's request path. Called by override mutations."""
     t = get_theme(slug)
     if t is None:
         return
@@ -672,6 +684,11 @@ def refresh_cube_gif(slug: str) -> None:
         except Exception:
             logger.exception("cube gif refresh re-warm failed slug=%s", slug)
 
-    threading.Thread(
-        target=_job, name=f"cube-gif-refresh-{slug}", daemon=True
-    ).start()
+    with _refresh_lock:
+        old = _refresh_timers.get(slug)
+        if old is not None:
+            old.cancel()
+        timer = threading.Timer(_GIF_REFRESH_DEBOUNCE_SEC, _job)
+        timer.daemon = True
+        _refresh_timers[slug] = timer
+        timer.start()

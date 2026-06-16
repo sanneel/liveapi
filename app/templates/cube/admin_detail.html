@@ -268,8 +268,11 @@ function cubeAdmin() {
     reorderPins(pins) { return this._post(`/reorder`, { pins }); },
 
     // ✕ — empty this slot. It stays BLANK (the resolver won't auto-refill it)
-    // and the match is dropped so it can't pop up in another slot.
+    // and the match is dropped so it can't pop up in another slot. Optimistic:
+    // blank it in the UI immediately, then confirm + reconcile via load().
     blankSlot(idx, m) {
+      this.top = this.top.map((x, i) => (i === idx ? null : x));
+      if (!this.blockedSlots.includes(idx)) this.blockedSlots = [...this.blockedSlots, idx];
       this._do(() => this._post(`/block/${idx}`, { event_id: m.event_id }), 'Slot emptied — add a match');
     },
 
