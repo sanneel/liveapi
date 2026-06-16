@@ -46,9 +46,16 @@ _THEME_CONFIG = {
         "template":   _LOGOS / "19dfacf6-41c4-43b9-91c7-79c6c2a0226f.jpg",
         "boxes":      ((33, 322, 147, 348), (153, 322, 265, 348), (273, 322, 387, 348)),
         "box_colors": (_WHITE, _PURPLE, _WHITE),
-        # Enlarged white card drawn in code (see `_render_big_panel`): the panel
-        # grows up over the lower ball/trophy and all elements scale up. The
-        # baked panel/VS/pills in the template are covered by the redrawn ones.
+        # Web odds face (/cube/worldcup/odds.png) uses these — logos + names +
+        # kickoff/status drawn onto the baked template (the ORIGINAL design).
+        "logo_home":  (57, 226),
+        "logo_away":  (297, 226),
+        "name_home":  (90,  296),
+        "name_away":  (330, 296),
+        "info_pos":   (210, 298),
+        # Enlarged code-drawn card (see `_render_big_panel`). Used ONLY by the
+        # email GIF, which calls render_odds_face(..., big_panel=True). The web
+        # odds face above is unaffected.
         "big_panel": True,
     },
 }
@@ -282,8 +289,15 @@ def _render_big_panel(img: Image.Image, match: Match) -> None:
                fill=txts[i], anchor="mm")
 
 
-def render_odds_face(match: Optional[Match], theme_slug: str = "ucl") -> bytes:
-    """Composite live odds (and logos when configured) onto the theme's dynamic template."""
+def render_odds_face(
+    match: Optional[Match], theme_slug: str = "ucl", big_panel: bool = False
+) -> bytes:
+    """Composite live odds (and logos when configured) onto the theme's dynamic template.
+
+    `big_panel=True` draws the enlarged code-rendered matchup card (used by the
+    email GIF). The default (False) keeps the ORIGINAL design — logos + names +
+    odds on the baked template — which is what the web cube face
+    (/cube/{theme}/odds.png) serves."""
     cfg = _THEME_CONFIG.get(theme_slug) or _THEME_CONFIG["ucl"]
     template_path: Path = cfg["template"]
     boxes: Tuple = cfg.get("boxes", ((0, 0, 0, 0),) * 3)
@@ -299,9 +313,9 @@ def render_odds_face(match: Optional[Match], theme_slug: str = "ucl") -> bytes:
         img.convert("RGB").save(out, format="PNG", optimize=True)
         return out.getvalue()
 
-    # Themes flagged big_panel draw an enlarged code-rendered matchup card
-    # (logos + names + kickoff/status + odds) instead of the small baked boxes.
-    if cfg.get("big_panel"):
+    # Big panel is opt-in (GIF only). The web odds face leaves it False and
+    # falls through to the original baked-template path below.
+    if big_panel and cfg.get("big_panel"):
         _render_big_panel(img, match)
         out = BytesIO()
         img.convert("RGB").save(out, format="PNG", optimize=True)

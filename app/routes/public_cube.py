@@ -248,7 +248,9 @@ def _build_cube_faces(t: CubeTheme) -> List[Image.Image]:
         if face.kind == "match":
             match = matches[face.match_index] if face.match_index < len(matches) else None
             try:
-                img = Image.open(BytesIO(render_odds_face(match, theme_slug=t.slug))).convert("RGBA")
+                # big_panel=True: the GIF uses the enlarged code-drawn card;
+                # the web odds face (/cube/{theme}/odds.png) keeps the original.
+                img = Image.open(BytesIO(render_odds_face(match, theme_slug=t.slug, big_panel=True))).convert("RGBA")
             except Exception:
                 logger.exception("cube gif: odds face render failed theme=%s", t.slug)
         elif face.kind == "image":
