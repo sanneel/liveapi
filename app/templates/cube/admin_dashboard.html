@@ -1,44 +1,57 @@
 {% extends "base.html" %}
 {% block title %}Cubes · Jugabet Admin{% endblock %}
-{% block page_title %}Cube desk{% endblock %}
+{% block page_title %}Cubes{% endblock %}
 
 {% block page_actions %}
-  <span style="font-family:var(--font-mono);font-size:12px;color:var(--dim)">{{ cube_rows|length }} cube{{ '' if cube_rows|length == 1 else 's' }}</span>
+  <div class="bo-toolbar">
+    <span class="t-link" style="font-size:12.5px">{{ cube_rows|length }} cube{{ '' if cube_rows|length == 1 else 's' }}</span>
+  </div>
 {% endblock %}
 
 {% block content %}
-<div class="cube-board cube-desk">
+<div class="bo">
+ <div class="bo-board">
 
-  <p class="desk-lede" style="max-width:70ch">
+  <p class="bo-hint">
     Each cube auto-picks matches by hot-score, filtered to its competition. Open one to
-    <b>pin</b> a match to a slot, <b>remove</b> matches you don't want, or
-    <b>reset</b> back to fully automatic.
+    <b>pin</b> a match to a slot, <b>remove</b> matches you don't want, or <b>reset</b> back to automatic.
   </p>
 
-  <div class="grid">
-    {% for row in cube_rows %}
-      <article class="cube-card">
-        <header class="cc-head">
-          <span class="cc-name">{{ row.display_name }}</span>
-          <span class="cc-sport">{{ row.sport }}</span>
-        </header>
+  <section class="bo-card">
+    <table class="bo-table">
+      <thead>
+        <tr>
+          <th>Cube</th><th>Sport</th><th>Slots</th><th>Candidates</th><th>Overrides</th><th class="c-act"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in cube_rows %}
+          <tr>
+            <td class="name">{{ row.display_name }}</td>
+            <td class="muted">{{ row.sport }}</td>
+            <td class="muted">{{ row.slots }}</td>
+            <td class="muted">
+              {{ row.in_theme }}{% if row.in_theme == 0 %} <span class="bo-tag">none live</span>{% endif %}
+            </td>
+            <td>
+              {% if row.prefer_live %}<span class="bo-tag live">live-first</span>{% endif %}
+              {% if row.pinned > 0 %}<span class="bo-tag pin">{{ row.pinned }} pinned</span>{% endif %}
+              {% if row.suppressed > 0 %}<span class="bo-tag live">{{ row.suppressed }} dropped</span>{% endif %}
+              {% if not row.prefer_live and row.pinned == 0 and row.suppressed == 0 %}<span class="muted" style="color:var(--bo-faint)">—</span>{% endif %}
+            </td>
+            <td class="c-act">
+              <div class="bo-actions">
+                <a href="/cube/{{ row.slug }}.png" target="_blank" class="bo-btn" title="Open rendered PNG">PNG ↗</a>
+                <a href="/cube/{{ row.slug }}" target="_blank" class="bo-btn" title="Open live preview">View ↗</a>
+                <a href="/admin/cube/{{ row.slug }}" class="bo-btn primary">Manage →</a>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
 
-        <div class="cc-stats">
-          <span class="stat"><b>{{ row.slots }}</b> slot{{ '' if row.slots == 1 else 's' }}</span>
-          <span class="stat"><b>{{ row.in_theme }}</b> candidate{{ '' if row.in_theme == 1 else 's' }}</span>
-          {% if row.prefer_live %}<span class="stat live">live-first</span>{% endif %}
-          {% if row.pinned > 0 %}<span class="stat pin"><b>{{ row.pinned }}</b> pinned</span>{% endif %}
-          {% if row.suppressed > 0 %}<span class="stat live"><b>{{ row.suppressed }}</b> dropped</span>{% endif %}
-          {% if row.in_theme == 0 %}<span class="stat">no live matches</span>{% endif %}
-        </div>
-
-        <footer class="cc-foot">
-          <a href="/admin/cube/{{ row.slug }}" class="btn btn-gold grow" style="justify-content:center">Manage →</a>
-          <a href="/cube/{{ row.slug }}.png" target="_blank" class="btn" title="Open rendered PNG">PNG ↗</a>
-          <a href="/cube/{{ row.slug }}" target="_blank" class="btn" title="Open live preview">View ↗</a>
-        </footer>
-      </article>
-    {% endfor %}
-  </div>
+ </div>
 </div>
 {% endblock %}

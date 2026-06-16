@@ -1,137 +1,139 @@
 {% extends "base.html" %}
 {% block title %}{{ theme.display_name }} cube · Jugabet Admin{% endblock %}
-{% block page_title %}{{ theme.display_name }} · Cube desk{% endblock %}
+{% block page_title %}{{ theme.display_name }} — cube{% endblock %}
 
 {% block page_actions %}
-  <div class="desk-toolbar">
-    <button type="button" class="btn" onclick="window.__cubeAdmin && window.__cubeAdmin.load()">↻ Refresh</button>
-    <button type="button" class="btn danger" onclick="window.__cubeAdmin && window.__cubeAdmin.resetAll()">Reset to auto</button>
-    <a href="/admin/cube" class="btn btn-ghost" style="border-color:transparent;background:transparent">← All cubes</a>
+  <div class="bo-toolbar">
+    <button type="button" class="t-btn" onclick="window.__cubeAdmin && window.__cubeAdmin.load()">Refresh</button>
+    <button type="button" class="t-btn danger" onclick="window.__cubeAdmin && window.__cubeAdmin.resetAll()">Reset to automatic</button>
+    <a href="/admin/cube" class="t-btn t-link" style="background:transparent;border-color:transparent">← All cubes</a>
   </div>
 {% endblock %}
 
 {% block content %}
-<div x-data="cubeAdmin()" x-init="init()" class="cube-desk">
+<div x-data="cubeAdmin()" x-init="init()" class="bo">
+ <div class="bo-wrap">
 
-  <div class="desk-banner is-error" x-show="error" x-cloak>
+  <div class="bo-alert err" x-show="error" x-cloak>
     <span x-text="error"></span>
-    <button @click="error=''">✕</button>
+    <span class="x" @click="error=''">✕</span>
   </div>
-
-  <div class="desk-banner is-ok" x-show="toast" x-cloak x-transition.opacity>
+  <div class="bo-alert ok" x-show="toast" x-cloak x-transition.opacity>
     <span x-text="toast"></span>
-    <a class="undo" x-show="undoIdx !== null" @click.prevent="undo()" href="#">Undo</a>
+    <span class="undo" x-show="undoIdx !== null" @click="undo()">Undo</span>
   </div>
 
-  <p class="desk-lede">
-    Slots fill <b>automatically</b> by hot-score. Hit <b>Remove</b> to empty a slot — it
-    stays blank and the match drops out, then <b>+ Add</b> the one you want from the pool.
-    <b>Restore auto</b> on an empty slot puts everything back. <span class="key">▲ ▼</span> sets the order.
+  <p class="bo-hint">
+    Slots fill <b>automatically</b> by hot-score. Use <b>Remove</b> to empty a slot (it stays blank and
+    the match drops out), then <b>Add</b> the one you want from the pool below. <b>Restore auto</b> on an
+    empty slot puts everything back. The <code>▲ ▼</code> buttons set the order.
   </p>
 
-  <!-- ON AIR ───────────────────────────────────────────────────── -->
-  <section class="panel air">
-    <header class="panel-head">
-      <span class="panel-title"><span class="tally"></span>On air <span class="sub">showing now</span></span>
-      <span class="panel-meta" x-show="loading || busy" x-text="busy ? 'saving…' : 'loading…'"></span>
-    </header>
-    <ul class="rundown">
-      <template x-for="(m, idx) in top" :key="'slot-' + idx">
-        <li class="slot"
-            :class="m ? (m.status === 'live' ? 'filled live' : 'filled') : (blockedSlots.includes(idx) ? 'blank reserved' : 'blank')"
-            :style="`--row-stagger:${idx * 45}ms`">
-          <div class="slot-no" x-text="idx + 1"></div>
+  <!-- Showing now -->
+  <section class="bo-card">
+    <div class="bo-card-head">
+      <h2>Showing now <span class="sub">— slots on this cube</span></h2>
+      <span class="meta" x-show="loading || busy" x-text="busy ? 'saving…' : 'loading…'"></span>
+    </div>
+    <table class="bo-table">
+      <thead>
+        <tr><th class="c-no">#</th><th class="c-st">Status</th><th>Match</th><th class="c-act">Actions</th></tr>
+      </thead>
+      <tbody>
+        <template x-for="(m, idx) in top" :key="'slot-' + idx">
+          <tr :class="!m ? (blockedSlots.includes(idx) ? 'bo-blank-row' : 'bo-blank-row plain') : (m.status === 'live' ? 'live' : '')">
+            <td class="c-no" x-text="idx + 1"></td>
 
-          <!-- filled -->
-          <template x-if="m">
-            <div class="slot-body">
-              <span class="chip" :class="m.status === 'live' ? 'live' : 'pre'">
-                <span class="dot"></span><span x-text="m.status === 'live' ? 'Live' : 'Pre'"></span>
-              </span>
-              <div class="fixture">
-                <div class="teams">
-                  <span x-text="m.home_name"></span><span class="vs">vs</span><span x-text="m.away_name"></span>
+            <template x-if="m">
+              <td class="c-st">
+                <span class="bo-badge" :class="m.status === 'live' ? 'live' : 'pre'" x-text="m.status === 'live' ? 'Live' : 'Pre'"></span>
+              </td>
+            </template>
+            <template x-if="m">
+              <td>
+                <div class="bo-match"><span x-text="m.home_name"></span><span class="vs">vs</span><span x-text="m.away_name"></span></div>
+                <div class="bo-tourney" x-text="m.tournament_name || '—'"></div>
+              </td>
+            </template>
+            <template x-if="m">
+              <td class="c-act">
+                <div class="bo-actions">
+                  <button class="bo-btn icon" @click="move(idx, -1)" :disabled="idx === 0 || busy" title="Move up">▲</button>
+                  <button class="bo-btn icon" @click="move(idx, 1)" :disabled="idx === lastFilledIdx || busy" title="Move down">▼</button>
+                  <button class="bo-btn danger" @click="blankSlot(idx, m)" :disabled="busy">Remove</button>
                 </div>
-                <div class="tourney" x-text="m.tournament_name || '—'"></div>
-              </div>
-              <div class="acts">
-                <button class="btn btn-icon" @click="move(idx, -1)" :disabled="idx === 0 || busy" title="Move up">▲</button>
-                <button class="btn btn-icon" @click="move(idx, 1)" :disabled="idx === lastFilledIdx || busy" title="Move down">▼</button>
-                <button class="btn btn-danger" @click="blankSlot(idx, m)" :disabled="busy" title="Empty this slot">Remove</button>
-              </div>
-            </div>
-          </template>
+              </td>
+            </template>
 
-          <!-- blank -->
-          <template x-if="!m">
-            <div class="slot-body">
-              <template x-if="blockedSlots.includes(idx)">
-                <span class="blank-label"><span class="mk">▢</span> Empty — add a match below, or restore auto</span>
-              </template>
-              <template x-if="!blockedSlots.includes(idx)">
-                <span class="blank-label" style="color:var(--faint)"><span class="mk">▢</span> Empty — no match available</span>
-              </template>
-              <div class="acts" x-show="blockedSlots.includes(idx)">
-                <button class="btn btn-gold btn-sm" @click="unblock(idx)" :disabled="busy">↺ Restore auto</button>
-              </div>
-            </div>
-          </template>
-        </li>
-      </template>
-    </ul>
+            <template x-if="!m">
+              <td colspan="3">
+                <div class="bo-actions" style="justify-content:space-between;width:100%">
+                  <span class="bo-blank" :class="blockedSlots.includes(idx) ? 'reserved' : ''">
+                    <span class="mk">▢</span>
+                    <span x-show="blockedSlots.includes(idx)">Empty — add a match below, or restore auto</span>
+                    <span x-show="!blockedSlots.includes(idx)">Empty — no match available</span>
+                  </span>
+                  <button class="bo-btn primary" x-show="blockedSlots.includes(idx)" @click="unblock(idx)" :disabled="busy">Restore auto</button>
+                </div>
+              </td>
+            </template>
+          </tr>
+        </template>
+      </tbody>
+    </table>
   </section>
 
-  <!-- AVAILABLE ─────────────────────────────────────────────────── -->
-  <section class="panel queue">
-    <header class="panel-head">
-      <span class="panel-title">Available <span class="sub">in-theme matches</span></span>
-      <span class="panel-meta" x-text="hasBlank ? 'fills the empty slot' : 'takes the last slot'"></span>
-    </header>
-    <div class="search-wrap">
-      <span class="mag">⌕</span>
-      <input class="search" x-model="addQuery" placeholder="Search a team or tournament…">
+  <!-- Available -->
+  <section class="bo-card">
+    <div class="bo-card-head">
+      <h2>Available <span class="sub">— in-theme matches</span></h2>
+      <span class="meta" x-text="hasBlank ? 'adds to the empty slot' : 'takes the last slot'"></span>
     </div>
-    <ul class="pool">
-      <template x-for="m in filteredCandidates" :key="'cand-' + m.event_id">
-        <li>
-          <span class="chip" :class="m.status === 'live' ? 'live' : 'pre'">
-            <span class="dot"></span><span x-text="m.status === 'live' ? 'Live' : 'Pre'"></span>
-          </span>
-          <div class="fixture">
-            <div class="teams">
-              <span x-text="m.home_name"></span><span class="vs">vs</span><span x-text="m.away_name"></span>
-            </div>
-            <div class="tourney" x-text="m.tournament_name || '—'"></div>
-          </div>
-          <button class="btn btn-gold btn-sm" @click="addMatch(m.event_id)" :disabled="busy">+ Add</button>
-        </li>
-      </template>
-      <li class="empty-note" x-show="filteredCandidates.length === 0">
+    <div class="bo-search">
+      <span class="mag">⌕</span>
+      <input x-model="addQuery" placeholder="Search a team or tournament…">
+    </div>
+    <div class="bo-scroll">
+      <table class="bo-table">
+        <tbody>
+          <template x-for="m in filteredCandidates" :key="'cand-' + m.event_id">
+            <tr>
+              <td class="c-st"><span class="bo-badge" :class="m.status === 'live' ? 'live' : 'pre'" x-text="m.status === 'live' ? 'Live' : 'Pre'"></span></td>
+              <td>
+                <div class="bo-match"><span x-text="m.home_name"></span><span class="vs">vs</span><span x-text="m.away_name"></span></div>
+                <div class="bo-tourney" x-text="m.tournament_name || '—'"></div>
+              </td>
+              <td class="c-act"><button class="bo-btn primary" @click="addMatch(m.event_id)" :disabled="busy">Add</button></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+      <div class="bo-empty" x-show="filteredCandidates.length === 0">
         <span x-show="addQuery">No match for "<b x-text="addQuery"></b>".</span>
         <span x-show="!addQuery">No other in-theme matches available right now.</span>
-      </li>
-    </ul>
+      </div>
+    </div>
   </section>
 
-  <!-- DROPPED ───────────────────────────────────────────────────── -->
-  <section class="panel killed" x-show="suppressedMatches.length > 0" x-cloak>
-    <header class="panel-head">
-      <span class="panel-title">Dropped <span class="sub">hidden from this cube</span></span>
-    </header>
-    <ul class="pool">
-      <template x-for="m in suppressedMatches" :key="'sup-' + m.event_id">
-        <li>
-          <div class="fixture">
-            <div class="teams">
-              <span x-text="m.home_name"></span><span class="vs">vs</span><span x-text="m.away_name"></span>
-            </div>
-            <div class="tourney" x-text="m.tournament_name || '—'"></div>
-          </div>
-          <button class="btn btn-sm" @click="restoreMatch(m.event_id)" :disabled="busy">↺ Bring back</button>
-        </li>
-      </template>
-    </ul>
+  <!-- Dropped -->
+  <section class="bo-card kill" x-show="suppressedMatches.length > 0" x-cloak>
+    <div class="bo-card-head"><h2>Dropped <span class="sub">— hidden from this cube</span></h2></div>
+    <table class="bo-table">
+      <tbody>
+        <template x-for="m in suppressedMatches" :key="'sup-' + m.event_id">
+          <tr>
+            <td>
+              <div class="bo-match"><span x-text="m.home_name"></span><span class="vs">vs</span><span x-text="m.away_name"></span></div>
+              <div class="bo-tourney" x-text="m.tournament_name || '—'"></div>
+            </td>
+            <td class="c-act"><button class="bo-btn" @click="restoreMatch(m.event_id)" :disabled="busy">Bring back</button></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
   </section>
+
+ </div>
 </div>
 {% endblock %}
 
@@ -227,7 +229,6 @@ function cubeAdmin() {
     pin(eventId, slot) { return this._post(`/pin/${encodeURIComponent(eventId)}`, { position: slot }); },
     reorderPins(pins) { return this._post(`/reorder`, { pins }); },
 
-    // Remove: empty the slot + drop the match (optimistic), and offer one-tap Undo.
     blankSlot(idx, m) {
       this.top = this.top.map((x, i) => (i === idx ? null : x));
       if (!this.blockedSlots.includes(idx)) this.blockedSlots = [...this.blockedSlots, idx];
@@ -240,7 +241,6 @@ function cubeAdmin() {
 
     undo() { const i = this.undoIdx; this.undoIdx = null; if (i !== null) this.unblock(i); },
 
-    // Restore auto: reopen the slot AND bring the removed match back (server-side).
     unblock(idx) {
       this._do(async () => {
         const r = await this._post(`/unblock/${idx}`, {});
