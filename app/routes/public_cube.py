@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import hashlib
 import json as _json
+import threading
 from dataclasses import asdict
 from io import BytesIO
 from pathlib import Path
@@ -592,6 +593,12 @@ def invalidate_all_cubes() -> int:
     return n
 
 
+def prewarm_cube_gif(theme: CubeTheme) -> None:
+    """Render the DEFAULT email GIF for one theme to disk + memory."""
+    frame_ms = _compute_frame_ms(GIF_SECONDS_DEFAULT, GIF_FRAMES)
+    _render_and_store_gif(theme, GIF_SIZE, GIF_FRAMES, frame_ms, False)
+
+
 def prewarm_cube_gifs() -> int:
     """Re-render the DEFAULT email GIF for every theme to disk + memory.
 
@@ -605,13 +612,43 @@ def prewarm_cube_gifs() -> int:
     on-disk GIF in place (slightly stale but still loads instantly). Returns the
     number of themes successfully warmed.
     """
-    frame_ms = _compute_frame_ms(GIF_SECONDS_DEFAULT, GIF_FRAMES)
     warmed = 0
     for slug, theme in CUBE_THEMES.items():
         try:
-            _render_and_store_gif(theme, GIF_SIZE, GIF_FRAMES, frame_ms, False)
+            prewarm_cube_gif(theme)
             warmed += 1
         except Exception:
             logger.exception("cube gif pre-warm failed theme=%s", slug)
     logger.info("cube gif pre-warm complete themes=%d", warmed)
     return warmed
+
+
+def _gif_disk_delete_theme(slug: str) -> None:
+    """Delete every on-disk GIF variant for one theme (all size/frame combos)."""
+    try:
+        for p in _GIF_DISK_DIR.glob(f"cube_gif_{slug}_*.gif"):
+            p.unlink(missing_ok=True)
+    except Exception:
+        logger.exception("cube gif: disk delete failed slug=%s", slug)
+
+
+def refresh_cube_gif(slug: str) -> None:
+    """Drop the stale on-disk + in-memory GIF for one theme and re-render the
+    default variant off-thread. Called when an admin override changes the
+    cube's matches, so the GIF reflects the change instead of serving the old
+    pre-rendered file. Non-blocking: the re-render runs in a daemon thread."""
+    t = get_theme(slug)
+    if t is None:
+        return
+    png_cache.invalidate_prefix(f"cube_gif:{slug}")
+    _gif_disk_delete_theme(slug)
+
+    def _job() -> None:
+        try:
+            prewarm_cube_gif(t)
+        except Exception:
+            logger.exception("cube gif refresh re-warm failed slug=%s", slug)
+
+    threading.Thread(
+        target=_job, name=f"cube-gif-refresh-{slug}", daemon=True
+    ).start()

@@ -121,15 +121,23 @@ def _reason(m: Match, position: Optional[int], suppressed: bool) -> str:
 
 
 def _invalidate_theme_cache(theme_slug: str) -> None:
-    """Drop both render and odds-face caches so the next request renders fresh.
+    """Drop render + odds-face caches so the next request renders fresh, and
+    refresh the pre-rendered email GIF so overrides actually change it.
 
     Uses invalidate_prefix on `cube_odds:{slug}` because the odds endpoint
     keys per-slot (`cube_odds:{slug}:0`, `:1`, `:2` …) and a pin in any
     slot can shift downstream slots. Cheap — bounded by the cube's slot count.
+
+    The GIF needs more than a cache drop: it's served from a durable on-disk
+    pre-render, so we delete that file AND kick off a background re-render
+    (`refresh_cube_gif`) — otherwise the stale GIF on disk would keep being
+    served and the override would appear to change only the web cube.
     """
     png_cache.invalidate(f"cube:{theme_slug}")
     png_cache.invalidate_prefix(f"cube_odds:{theme_slug}")
-    png_cache.invalidate_prefix(f"cube_gif:{theme_slug}")
+    # Lazy import: public_cube owns the GIF disk store + render helpers.
+    from .public_cube import refresh_cube_gif
+    refresh_cube_gif(theme_slug)
 
 
 # ════════════════════════════════════════════════════════════════════════

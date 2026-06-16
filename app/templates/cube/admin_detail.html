@@ -41,6 +41,43 @@
   </p>
 
   <!-- ═══════════════════════════════════════════════════════════════════
+       Live preview — the static web-cube PNG and the actual email GIF, both
+       refreshed after every pin/suppress so you can SEE the override land
+       (the GIF re-renders in the background, hence the brief delay).
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="bg-ink-900 border border-ink-600/60 rounded-lg overflow-hidden mb-5">
+    <header class="px-4 py-2 bg-ink-950/40 border-b border-ink-600/30 flex items-center justify-between">
+      <h3 class="text-label uppercase text-muted-400">
+        Live preview <span class="text-muted-500 normal-case tracking-normal">· updates after each change</span>
+      </h3>
+      <button @click="reloadPreview()"
+              class="text-meta text-muted-400 hover:text-zinc-200 border border-ink-600 rounded px-2 py-1">
+        ↻ Reload
+      </button>
+    </header>
+    <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <div class="text-meta uppercase tracking-wide text-muted-500 mb-1">Static PNG · web cube</div>
+        <img :src="`/cube/${theme}.png?t=${previewBust}`" alt="cube PNG preview"
+             class="w-full max-w-[260px] rounded border border-ink-600 bg-ink-950"/>
+      </div>
+      <div>
+        <div class="text-meta uppercase tracking-wide text-muted-500 mb-1">
+          Email GIF <span class="text-muted-600 normal-case">· what recipients see</span>
+        </div>
+        <div class="relative w-full max-w-[260px]">
+          <img :src="`/cube/${theme}.gif?t=${gifBust}`" alt="cube GIF preview"
+               class="w-full rounded border border-ink-600 bg-ink-950"/>
+          <span x-show="gifRefreshing" x-cloak
+                class="absolute top-1 right-1 text-[10px] bg-ink-950/80 text-amber-300 px-1.5 py-0.5 rounded">
+            re-rendering…
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
        Current cube slots — N independent drop targets, one per slot.
        Each slot accepts ONE match; dropping a second match displaces the
        first (server-side `set_position` handles the displacement).
@@ -239,6 +276,7 @@
     </ul>
   </section>
 </div>
+{% endblock %}
 
 {% block scripts %}{{ super() }}
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
@@ -257,6 +295,10 @@ function cubeAdmin() {
     searching: false,
     error: '',
     toast: '',
+    previewBust: Date.now(),
+    gifBust: Date.now(),
+    gifRefreshing: false,
+    _gifTimer: null,
     _sortables: [],
     // Serialize pin/suppress writes so two fast drags don't fire in
     // parallel and race each other (which could leave the DB with two
@@ -275,6 +317,21 @@ function cubeAdmin() {
       setTimeout(() => {
         if (this.toast === msg) this.toast = '';
       }, 2500);
+    },
+
+    reloadPreview() {
+      // PNG cache is dropped server-side on every override, so it re-renders
+      // on the next request — bust the browser cache immediately.
+      this.previewBust = Date.now();
+      // The GIF is re-rendered in a background thread after the override, so
+      // wait briefly before reloading it (cancel any pending reload first so
+      // rapid drags collapse into one refresh).
+      this.gifRefreshing = true;
+      if (this._gifTimer) clearTimeout(this._gifTimer);
+      this._gifTimer = setTimeout(() => {
+        this.gifBust = Date.now();
+        this.gifRefreshing = false;
+      }, 1600);
     },
 
     async resetAll() {
@@ -318,6 +375,9 @@ function cubeAdmin() {
         if (this.searchQuery.trim()) {
           await this.performSearch();
         }
+        // Every mutation (pin/suppress/swap/reset) funnels through load(),
+        // so refreshing the preview here covers them all.
+        this.reloadPreview();
         this.$nextTick(() => {
           if (window.lucide) lucide.createIcons();
           this._wireSortables();
@@ -614,6 +674,4 @@ function cubeAdmin() {
     box-shadow: 0 6px 16px -2px rgba(0,0,0,0.4);
   }
 </style>
-{% endblock %}
-
 {% endblock %}
