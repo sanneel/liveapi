@@ -14,7 +14,7 @@
 
 {% block content %}
 
-<div x-data="cubeAdmin()" x-init="init()" class="max-w-3xl">
+<div x-data="cubeAdmin()" x-init="init()" class="max-w-2xl">
 
   <!-- Error banner -->
   <div x-show="error" x-cloak
@@ -31,19 +31,13 @@
     <span x-text="toast" class="flex-1"></span>
   </div>
 
-  <p class="text-sm text-muted-400 mb-4 max-w-2xl">
-    This cube ranks matches <span class="text-zinc-300">automatically</span>. You only step in when you
-    want to: use <span class="text-zinc-300">Change ▾</span> to swap a specific match into a slot, or
-    <span class="text-zinc-300">✕</span> to drop one you don't want. Anything you don't touch stays
-    automatic, and a match you chose goes back to automatic once it finishes.
+  <p class="text-sm text-muted-400 mb-4">
+    Automatic by default. Use <span class="text-zinc-300">▲ ▼</span> to set the order,
+    <span class="text-zinc-300">✕</span> to drop a match, and the search below to add one.
+    Anything you don't touch stays automatic.
   </p>
 
-  <!-- ═══════════════════════════════════════════════════════════════════
-       The N slots the cube shows. Each is AUTOMATIC unless you change it.
-       Change ▾ = pick a specific match for this slot. ✕ = drop this match
-       (auto picks the next). Every action reloads from the server, so the
-       list is always the real state — nothing "disappears".
-       ═══════════════════════════════════════════════════════════════════ -->
+  <!-- ═══════════════════════ SHOWING NOW ═══════════════════════ -->
   <section class="bg-ink-900 border border-ink-600/60 rounded-lg overflow-hidden mb-5">
     <header class="px-4 py-2 bg-ink-950/40 border-b border-ink-600/30 flex items-center justify-between">
       <h3 class="text-label uppercase text-muted-400">Showing now</h3>
@@ -52,7 +46,7 @@
     <ul class="divide-y divide-ink-600/30">
       <template x-for="(m, idx) in top" :key="'slot-' + idx">
         <li class="px-3 py-3 flex items-center gap-3">
-          <span class="w-6 text-center text-sm font-mono tabular-nums text-zinc-400 flex-shrink-0" x-text="idx + 1"></span>
+          <span class="w-5 text-center text-sm font-mono tabular-nums text-zinc-500 flex-shrink-0" x-text="idx + 1"></span>
 
           <template x-if="m">
             <div class="flex-1 flex items-center gap-3 min-w-0">
@@ -61,11 +55,6 @@
                       ? 'bg-red-500/10 text-red-300/80 ring-1 ring-red-500/20'
                       : 'bg-sky-500/10 text-sky-300/80 ring-1 ring-sky-500/20'"
                     x-text="m.status === 'live' ? 'Live' : 'Pre'"></span>
-              <span class="text-[10px] px-1.5 py-0.5 rounded uppercase flex-shrink-0"
-                    :class="(m.position !== null && m.position !== undefined)
-                      ? 'bg-orange-500/10 text-orange-300/90 ring-1 ring-orange-500/20'
-                      : 'bg-ink-700 text-muted-400'"
-                    x-text="(m.position !== null && m.position !== undefined) ? 'chosen' : 'auto'"></span>
               <div class="flex-1 min-w-0">
                 <div class="text-body text-zinc-200 truncate">
                   <span x-text="m.home_name"></span>
@@ -74,39 +63,70 @@
                 </div>
                 <div class="text-meta text-muted-500 truncate" x-text="m.tournament_name || '—'"></div>
               </div>
-
-              <!-- Change ▾ : pick a specific match for this slot, or back to automatic -->
-              <select :disabled="busy"
-                      @change="changeSlot(idx, $event.target.value); $event.target.value=''"
-                      class="flex-shrink-0 bg-ink-800 border border-ink-600 text-xs text-zinc-200 rounded px-2 py-1.5 max-w-[150px] focus:outline-none focus:border-brand-500 disabled:opacity-40">
-                <option value="" selected>Change ▾</option>
-                <template x-if="m.position !== null && m.position !== undefined">
-                  <option value="__auto__">⟳ Back to automatic</option>
-                </template>
-                <template x-for="c in candidates" :key="'opt-' + idx + '-' + c.event_id">
-                  <option :value="c.event_id" x-text="(c.home_name || '?') + ' vs ' + (c.away_name || '?')"></option>
-                </template>
-              </select>
-
-              <button @click="remove(m)" :disabled="busy" title="Drop this match (auto picks the next)"
-                      class="p-1.5 rounded text-muted-400 hover:text-red-300 hover:bg-red-950/40 disabled:opacity-30 flex-shrink-0">
-                <i data-lucide="x" class="!w-4 !h-4"></i>
-              </button>
+              <div class="flex items-center gap-0.5 flex-shrink-0">
+                <button @click="move(idx, -1)" :disabled="idx === 0 || busy" title="Move up"
+                        class="p-1.5 rounded text-muted-400 hover:text-zinc-100 hover:bg-ink-700 disabled:opacity-25 disabled:hover:bg-transparent">
+                  <i data-lucide="chevron-up" class="!w-4 !h-4"></i>
+                </button>
+                <button @click="move(idx, 1)" :disabled="idx === lastFilledIdx || busy" title="Move down"
+                        class="p-1.5 rounded text-muted-400 hover:text-zinc-100 hover:bg-ink-700 disabled:opacity-25 disabled:hover:bg-transparent">
+                  <i data-lucide="chevron-down" class="!w-4 !h-4"></i>
+                </button>
+                <button @click="remove(m)" :disabled="busy" title="Drop this match (auto picks the next)"
+                        class="p-1.5 rounded text-muted-400 hover:text-red-300 hover:bg-red-950/40 disabled:opacity-30">
+                  <i data-lucide="x" class="!w-4 !h-4"></i>
+                </button>
+              </div>
             </div>
           </template>
 
           <template x-if="!m">
-            <span class="flex-1 text-meta text-muted-600 italic">empty — no match available for this slot</span>
+            <span class="flex-1 text-meta text-muted-600 italic">empty — no match available</span>
           </template>
         </li>
       </template>
     </ul>
   </section>
 
-  <!-- ═══════════════════════════════════════════════════════════════════
-       Dropped matches — excluded from the cube. Restore to let them rank
-       again.
-       ═══════════════════════════════════════════════════════════════════ -->
+  <!-- ═══════════════════════ ADD A MATCH ═══════════════════════ -->
+  <section class="bg-ink-900 border border-ink-600/60 rounded-lg overflow-hidden mb-5">
+    <header class="px-4 py-2 bg-ink-950/40 border-b border-ink-600/30">
+      <h3 class="text-label uppercase text-muted-400">Add a match</h3>
+    </header>
+    <div class="p-3 border-b border-ink-600/30">
+      <input x-model="addQuery" placeholder="Search a match to add…"
+             class="w-full bg-ink-950/60 text-sm text-zinc-100 placeholder-muted-500 border border-ink-600 rounded px-3 py-2 focus:outline-none focus:border-brand-500"/>
+    </div>
+    <ul class="divide-y divide-ink-600/30 max-h-80 overflow-y-auto">
+      <template x-for="m in filteredCandidates" :key="'cand-' + m.event_id">
+        <li class="px-3 py-2 flex items-center gap-3">
+          <span class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase flex-shrink-0"
+                :class="m.status === 'live'
+                  ? 'bg-red-500/10 text-red-300/80 ring-1 ring-red-500/20'
+                  : 'bg-sky-500/10 text-sky-300/80 ring-1 ring-sky-500/20'"
+                x-text="m.status === 'live' ? 'Live' : 'Pre'"></span>
+          <div class="flex-1 min-w-0">
+            <div class="text-body text-zinc-200 truncate">
+              <span x-text="m.home_name"></span>
+              <span class="text-muted-500"> vs </span>
+              <span x-text="m.away_name"></span>
+            </div>
+            <div class="text-meta text-muted-500 truncate" x-text="m.tournament_name || '—'"></div>
+          </div>
+          <button @click="addMatch(m.event_id)" :disabled="busy"
+                  class="text-xs bg-brand-500/90 hover:bg-brand-400 text-ink-950 font-semibold px-3 py-1 rounded disabled:opacity-40 flex-shrink-0">
+            + Add
+          </button>
+        </li>
+      </template>
+      <li x-show="filteredCandidates.length === 0" class="px-4 py-3 text-meta text-muted-500 italic">
+        <span x-show="addQuery">No matches for "<span x-text="addQuery" class="text-zinc-300"></span>".</span>
+        <span x-show="!addQuery">No other in-theme matches available right now.</span>
+      </li>
+    </ul>
+  </section>
+
+  <!-- ═══════════════════════ DROPPED ═══════════════════════ -->
   <section x-show="suppressedMatches.length > 0" class="bg-ink-900 border border-ink-600/60 rounded-lg overflow-hidden mb-5">
     <header class="px-4 py-2 bg-ink-950/40 border-b border-ink-600/30">
       <h3 class="text-label uppercase text-muted-400">
@@ -143,16 +163,38 @@ function cubeAdmin() {
     theme: {{ theme.slug | tojson }},
     slotCount: {{ slot_count }},
     top: [],                 // length slotCount, each = match or null (what renders)
-    candidates: [],          // in-theme matches not currently shown (the Change ▾ pool)
+    candidates: [],          // in-theme matches not currently shown (the add pool)
     suppressedMatches: [],
+    addQuery: '',
     loading: false,
-    busy: false,             // disables controls while a write + reload is in flight
+    busy: false,
     error: '',
     toast: '',
 
     async init() {
-      window.__cubeAdmin = this;   // header "Reset" button lives outside x-data
+      window.__cubeAdmin = this;   // header "Reset" button is outside x-data
       await this.load();
+    },
+
+    get lastFilledIdx() {
+      let last = -1;
+      this.top.forEach((m, i) => { if (m) last = i; });
+      return last;
+    },
+
+    get filteredCandidates() {
+      const q = this._norm(this.addQuery).trim();
+      const list = this.candidates;
+      if (!q) return list.slice(0, 40);
+      const toks = q.split(/\s+/).filter(Boolean);
+      return list.filter(m => {
+        const hay = this._norm(`${m.home_name} ${m.away_name} ${m.tournament_name || ''}`);
+        return toks.every(t => hay.includes(t));
+      }).slice(0, 40);
+    },
+
+    _norm(s) {
+      return (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
     },
 
     _flash(msg) {
@@ -171,8 +213,7 @@ function cubeAdmin() {
         const padded = [];
         for (let i = 0; i < this.slotCount; i++) padded.push(top[i] || null);
         this.top = padded;
-        // Change ▾ pool = addable matches only; dropped (suppressed) ones live
-        // in the Dropped section with a Restore button instead.
+        // Add pool = addable matches only (dropped ones live in the Dropped list).
         this.candidates = (data.candidates || []).filter(c => !c.suppressed);
         this.suppressedMatches = data.suppressed || [];
         this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
@@ -184,10 +225,7 @@ function cubeAdmin() {
       }
     },
 
-    // ── Writes ─────────────────────────────────────────────────────────
-    // Every write disables controls (busy) and ALWAYS reloads from the
-    // server afterwards, so the rendered list is server truth — no optimistic
-    // state, nothing disappears.
+    // ── Writes: disable controls + always reload from server truth ──────
     async _post(path, body) {
       const r = await fetch(`/api/admin/cube/${this.theme}${path}`, {
         method: 'POST', credentials: 'same-origin',
@@ -207,24 +245,37 @@ function cubeAdmin() {
     },
 
     pin(eventId, slot) { return this._post(`/pin/${encodeURIComponent(eventId)}`, { position: slot }); },
+    reorderPins(pins) { return this._post(`/reorder`, { pins }); },
     suppress(eventId, value) { return this._post(`/suppress/${encodeURIComponent(eventId)}`, { suppress: value }); },
 
-    // Change ▾ — pick a specific match for this slot, or revert it to automatic.
-    changeSlot(idx, value) {
-      if (!value) return;
-      if (value === '__auto__') {
-        const m = this.top[idx];
-        if (m && m.position !== null && m.position !== undefined) {
-          this._do(() => this.pin(m.event_id, null), `Slot ${idx + 1} back to automatic`);
-        }
-        return;
+    // + Add — feature this match. Drops it into the first empty/automatic slot
+    // so it appears without bumping a match you've already chosen.
+    addMatch(eventId) {
+      let slot = this.slotCount - 1;
+      for (let i = 0; i < this.slotCount; i++) {
+        const m = this.top[i];
+        if (!m || m.position === null || m.position === undefined) { slot = i; break; }
       }
-      this._do(() => this.pin(value, idx), `Slot ${idx + 1} updated`);
+      this._do(() => this.pin(eventId, slot), 'Added');
     },
 
-    // ✕ — drop this match from the cube. Suppress (which also clears any pin)
-    // hides it so it won't auto-return; the slot refills from the next ranked
-    // match. Restore it from the Dropped list.
+    // ▲ / ▼ — set the order. Swaps two slots atomically (pins both); a slot
+    // left empty just receives the moved match.
+    move(idx, dir) {
+      const to = idx + dir;
+      if (to < 0 || to >= this.slotCount) return;
+      const a = this.top[idx];
+      if (!a) return;
+      const b = this.top[to];
+      this._do(() => b
+        ? this.reorderPins([
+            { event_id: a.event_id, position: to },
+            { event_id: b.event_id, position: idx },
+          ])
+        : this.pin(a.event_id, to), 'Order updated');
+    },
+
+    // ✕ — drop this match (suppress); the slot refills from the next ranked.
     remove(m) { this._do(() => this.suppress(m.event_id, true), 'Removed — auto picked the next'); },
 
     restoreMatch(eventId) { this._do(() => this.suppress(eventId, false), 'Restored'); },
