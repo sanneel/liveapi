@@ -35,7 +35,10 @@ from fastapi import APIRouter, Body, Depends, Form, HTTPException, Request, stat
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+from datetime import datetime
+
 from ..auth.dependencies import require_login, require_role
+from ..config import get_settings
 from ..database import db_session
 from ..logging_config import get_logger
 from ..models import User
@@ -48,6 +51,7 @@ from .public_render import (
     DEFAULT_AUTO_LIMIT,
     _cache_invalidate,
     _clamp_limit,
+    is_past_kickoff_cutoff,
     manual_render_stats,
 )
 
@@ -61,6 +65,11 @@ router = APIRouter()
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,49}$")
 VALID_SPORTS = ("football", "basketball", "tennis", "cybersport", "fights", "ufc", "mma", "boxing")
 VALID_MODES = ("manual", "auto")
+
+# Public host that serves the /r/{slug}.png email image. The Copy-URL helper
+# always points here regardless of which origin the admin panel runs on, so
+# the link pasted into a journey/email works in production.
+PUBLIC_RENDER_BASE = "https://jb-service.cl"
 
 
 def _validate_slug(slug: str) -> str:
@@ -191,6 +200,20 @@ def campaigns_edit(
             else None
         )
 
+    # Copy-URL formula for the journey/email template. The limit is dynamic:
+    #   auto   → the campaign's saved default limit (hot_limit)
+    #   manual → the number of matches currently in the campaign
+    # The {{JourneyActivityId}} / {{playerID}} placeholders are filled in by
+    # the downstream journey tool, so they're emitted literally.
+    if campaign.mode == "auto":
+        copy_limit = _clamp_limit(campaign.hot_limit)
+    else:
+        copy_limit = max(1, len(selected_matches))
+    copy_url = (
+        f"{PUBLIC_RENDER_BASE}/r/{campaign.slug}.png"
+        f"?limit={copy_limit}&v={{{{JourneyActivityId}}}}&u={{{{playerID}}}}"
+    )
+
     return templates.TemplateResponse(
         request,
         "campaigns/edit.html",
@@ -202,6 +225,8 @@ def campaigns_edit(
             "valid_sports": VALID_SPORTS,
             "tournaments": tournaments,
             "render_stats": render_stats,
+            "copy_url": copy_url,
+            "copy_limit": copy_limit,
         },
     )
 
@@ -226,6 +251,7 @@ def campaigns_update(
     title: str = Form(...),
     sport: str = Form(...),
     league: Optional[str] = Form(None),
+    limit: Optional[int] = Form(None),
     enabled: Optional[str] = Form(None),
     vip: Optional[str] = Form(None),
     user: User = Depends(require_role("editor")),
@@ -237,20 +263,24 @@ def campaigns_update(
         c = repo.find_by_slug(slug)
         if not c:
             raise HTTPException(404)
-        # `mode` is fixed at create time. Auto campaigns may change league.
+        # `mode` is fixed at create time. Auto campaigns may change league
+        # and their default render limit; manual campaigns keep neither.
         league_v = _normalise_league(league) if c.mode == "auto" else None
-        repo.update(
-            slug,
+        fields = dict(
             title=(title or slug).strip()[:120],
             sport=sport,
             league=league_v,
             enabled=bool(enabled),
             vip=bool(vip),
         )
+        if c.mode == "auto" and limit is not None:
+            fields["hot_limit"] = _clamp_limit(limit)
+        repo.update(slug, **fields)
         LogRepository(session).record(
             "campaign.update", username=user.username,
             target=slug, payload={
                 "sport": sport, "league": league_v,
+                "limit": fields.get("hot_limit"),
                 "enabled": bool(enabled), "vip": bool(vip),
             },
         )
@@ -355,6 +385,8 @@ def api_preview(
     """
     slug = _validate_slug(slug)
     n = _clamp_limit(limit) if limit is not None else DEFAULT_AUTO_LIMIT
+    now = datetime.utcnow()
+    hide_hours = get_settings().campaign_hide_after_start_hours
     warning: Optional[str] = None
     with db_session() as session:
         repo = CampaignRepository(session)
@@ -362,10 +394,14 @@ def api_preview(
         if not c:
             raise HTTPException(404)
         if c.mode == "manual":
-            matches = [m for m in repo.get_matches(slug) if m.is_active]
+            matches = [
+                m for m in repo.get_matches(slug)
+                if m.is_active and not is_past_kickoff_cutoff(m, now, hide_hours)
+            ]
         else:
             engine = HotEngine(session, c.sport, league=c.league)
-            matches = engine.resolve(n)
+            pool = engine.resolve(20)
+            matches = [m for m in pool if not is_past_kickoff_cutoff(m, now, hide_hours)][:n]
             if not matches:
                 if c.league:
                     active_sport_matches = MatchRepository(session).find_active_by_sport(c.sport)

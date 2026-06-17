@@ -49,6 +49,12 @@ class Settings(BaseSettings):
     # without keeping truly-finished matches active for the whole next day.
     match_deactivate_after_hours: int = 12
 
+    # Hours after start_time_utc a match stops appearing in a rendered
+    # campaign / hot PNG, even while the parser still keeps the row active.
+    # A match kicking off at 18:00 vanishes from the PNG at 20:00 (default 2h)
+    # so finished games drop off without waiting for full deactivation.
+    campaign_hide_after_start_hours: int = 2
+
     # ── Logging ──────────────────────────────────────────────────────
     log_level: str = "INFO"
     log_dir: str = str(BASE_DIR / "logs")

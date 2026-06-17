@@ -40,12 +40,15 @@
   </div>
 {% endif %}
 
-{# Public URL bar #}
+{# Public URL bar — Copy yields the full journey formula with a dynamic limit:
+   auto → saved default limit · manual → current match count. #}
 <div class="card card-pad" style="display:flex; align-items:center; gap:12px; margin-bottom:18px; padding:14px 22px">
-  <span class="stat-label" style="text-transform:uppercase; letter-spacing:.06em">Public URL</span>
-  <code class="slug r mono" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">/r/{{ campaign.slug }}.png{% if campaign.mode == 'auto' %}?limit=5{% endif %}</code>
-  <span class="tag {% if campaign.mode == 'auto' %}warn{% else %}club{% endif %}">{% if campaign.mode == 'auto' %}Auto{% else %}Manual{% endif %}</span>
-  <button onclick="copyToClipboard(location.origin + '/r/{{ campaign.slug }}.png', 'URL copied')" class="btn sm">Copy</button>
+  <span class="stat-label" style="text-transform:uppercase; letter-spacing:.06em">Copy URL</span>
+  <code class="slug r mono" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="{{ copy_url }}">{{ copy_url }}</code>
+  <span class="tag {% if campaign.mode == 'auto' %}warn{% else %}club{% endif %}">
+    {% if campaign.mode == 'auto' %}Auto · limit {{ copy_limit }}{% else %}Manual · {{ copy_limit }} match{{ '' if copy_limit == 1 else 'es' }}{% endif %}
+  </span>
+  <button data-copy-url="{{ copy_url }}" onclick="copyCampaignUrl(this)" class="btn sm">Copy</button>
   {% if campaign.enabled %}
     <span class="pill pos"><span class="dot"></span>Live</span>
   {% else %}
@@ -81,6 +84,12 @@
             <datalist id="league-options">
               {% for t in tournaments %}<option value="{{ t }}"></option>{% endfor %}
             </datalist>
+          </div>
+
+          <div class="field">
+            <span class="lbl">Default limit</span>
+            <input class="input" type="number" name="limit" min="1" max="20" value="{{ campaign.hot_limit }}"/>
+            <span class="help" style="color:var(--t-faint)">Matches shown when the URL has no <span class="mono">?limit=</span> (1–20). Used by the Copy URL above.</span>
           </div>
         {% endif %}
 
@@ -127,7 +136,7 @@
         <a href="/admin/hot" class="link" style="color:inherit; text-decoration:underline">hot dashboard</a>.
       </div>
 
-      <section class="card" style="overflow:hidden" x-data="autoPreview('{{ campaign.slug }}')" x-init="load()">
+      <section class="card" style="overflow:hidden" x-data="autoPreview('{{ campaign.slug }}', {{ campaign.hot_limit }})" x-init="load()">
         <div class="card-head">
           <div>
             <h2 class="card-title">Live preview</h2>
@@ -364,9 +373,13 @@
     navigator.clipboard.writeText(text).then(() => toast(label || 'Copied'));
   }
 
-  function autoPreview(slug) {
+  function copyCampaignUrl(btn) {
+    copyToClipboard(btn.dataset.copyUrl, 'Campaign URL copied');
+  }
+
+  function autoPreview(slug, initialLimit) {
     return {
-      slug, limit: 5, loading: false, error: null, warning: null, matches: [],
+      slug, limit: initialLimit || 5, loading: false, error: null, warning: null, matches: [],
       async load() {
         this.loading = true; this.error = null; this.warning = null;
         try {

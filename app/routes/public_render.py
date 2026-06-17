@@ -27,7 +27,7 @@ import hashlib
 import re
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, Request, Response
@@ -201,10 +201,22 @@ def _clamp_limit(limit: Optional[int]) -> int:
     return max(1, min(n, MAX_AUTO_LIMIT))
 
 
+def is_past_kickoff_cutoff(match: Match, now: datetime, hours: int) -> bool:
+    """True once a match is `hours` past its kickoff — old enough to be
+    treated as finished and hidden from a rendered campaign. Matches with no
+    known start time are never hidden by this rule (we can't judge them)."""
+    if not match.start_time_utc:
+        return False
+    return match.start_time_utc + timedelta(hours=hours) < now
+
+
 def _resolve_matches(session, campaign: Campaign, auto_limit: int) -> List[Match]:
     """Return the matches that this campaign should render right now.
 
-    Manual-mode silently drops:
+    Both modes drop matches more than `campaign_hide_after_start_hours` past
+    kickoff (finished games disappear from the PNG without being deleted).
+
+    Manual-mode additionally drops:
       * `is_active=False` rows (the parser stopped seeing the match)
       * `is_synthetic=True` rows (virtual / replay / esports — never public)
 
@@ -212,9 +224,17 @@ def _resolve_matches(session, campaign: Campaign, auto_limit: int) -> List[Match
     `manual_render_stats()` to surface WHY a campaign's render is empty,
     so a synthetic-only or all-stale selection doesn't ship a silent 1×1.
     """
+    now = datetime.utcnow()
+    hide_hours = get_settings().campaign_hide_after_start_hours
+
     if campaign.mode == "auto":
         engine = HotEngine(session, campaign.sport, league=campaign.league)
-        candidates = engine.resolve(auto_limit)
+        # Over-fetch then drop past-kickoff matches and trim, so a finished
+        # game in the top slots is backfilled by the next fresh match rather
+        # than leaving the PNG short.
+        pool = engine.resolve(MAX_AUTO_LIMIT)
+        fresh = [m for m in pool if not is_past_kickoff_cutoff(m, now, hide_hours)]
+        candidates = fresh[:auto_limit]
         if not candidates and campaign.league:
             # Surface silent breakage: campaign pinned to a league the feed
             # no longer emits (renamed/dropped) shows zero matches.
@@ -229,7 +249,11 @@ def _resolve_matches(session, campaign: Campaign, auto_limit: int) -> List[Match
     # mode == "manual" — editor's selection in order
     repo = CampaignRepository(session)
     matches = repo.get_matches(campaign.slug)
-    return [m for m in matches if m.is_active and not m.is_synthetic]
+    return [
+        m for m in matches
+        if m.is_active and not m.is_synthetic
+        and not is_past_kickoff_cutoff(m, now, hide_hours)
+    ]
 
 
 def manual_render_stats(matches: List[Match]) -> Dict[str, Any]:
@@ -270,9 +294,10 @@ def render_campaign_png(
     if not SLUG_RE.match(slug):
         return _png_response(TRANSPARENT_PNG_1X1, cache_status="BAD_SLUG", status_code=404)
 
-    auto_limit = _clamp_limit(limit)
-    # Auto campaigns vary by `?limit=`; key the cache on it. Manual ignores it.
-    cache_key = f"{slug}:{auto_limit}"
+    # Key the cache on the *requested* limit (None → "def"); the effective
+    # count for "def" comes from the campaign's stored hot_limit, resolved
+    # after the DB lookup below.
+    cache_key = f"{slug}:{limit if limit is not None else 'def'}"
 
     cached = _cache_get(cache_key)
     if cached is not None:
@@ -290,6 +315,8 @@ def render_campaign_png(
             logger.info(f"campaign /r/{slug}.png expired → 1x1")
             return _png_response(TRANSPARENT_PNG_1X1, cache_status="EXPIRED", status_code=410)
 
+        # No explicit ?limit= → fall back to the campaign's saved default.
+        auto_limit = _clamp_limit(limit if limit is not None else campaign.hot_limit)
         matches = _resolve_matches(session, campaign, auto_limit)
         events = [m.to_event_dict() for m in matches]
         sport = campaign.sport
