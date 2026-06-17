@@ -102,25 +102,44 @@
   </main>
 </div>
 
-{# ── Help / tutorial-video modal ── #}
+{# ── Help / tutorial library modal ── #}
 <div x-data="helpModal()" x-on:help-open.window="open()" x-on:keydown.escape.window="show=false">
   <div class="modal-overlay" x-show="show" @click.self="show=false" style="display:none" x-cloak>
     <div class="modal">
       <div class="modal-head">
-        <h2 class="modal-title">How to use the admin</h2>
+        <h2 class="modal-title" x-text="current ? current.title : 'Tutorials'"></h2>
         <button type="button" class="modal-x" @click="show=false" aria-label="Close">&times;</button>
       </div>
       <div class="modal-body">
-        <template x-if="hasVideo">
-          <video class="modal-video" controls preload="metadata" playsinline src="/static/tutorial.mp4"></video>
+        <template x-if="current">
+          <video class="modal-video" controls preload="metadata" playsinline :src="current.url" x-ref="vid"></video>
         </template>
-        <template x-if="!hasVideo">
+
+        <template x-if="!loading && items.length">
+          <ul style="list-style:none; margin:14px 0 0; padding:0; display:flex; flex-direction:column; gap:6px; max-height:240px; overflow:auto">
+            <template x-for="t in items" :key="t.id">
+              <li>
+                <button type="button" @click="play(t)"
+                        style="width:100%; display:flex; align-items:center; gap:10px; text-align:left; cursor:pointer; border:1px solid var(--bd,#e6e8ee); background:var(--surface,#fff); color:inherit; border-radius:10px; padding:10px 12px; font:600 13px/1.3 'Plus Jakarta Sans',sans-serif"
+                        :style="current && current.id===t.id ? 'border-color:var(--ac,#F0613C); box-shadow:inset 0 0 0 1px var(--ac,#F0613C)' : ''">
+                  <i data-lucide="play-circle" style="width:18px;height:18px;flex:none"></i>
+                  <span x-text="t.title" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap"></span>
+                </button>
+              </li>
+            </template>
+          </ul>
+        </template>
+
+        <template x-if="!loading && !items.length">
           <div class="modal-empty">
             <i data-lucide="video"></i>
-            <div>No tutorial video uploaded yet.</div>
+            <div>No tutorials uploaded yet.</div>
           </div>
         </template>
-        <p class="modal-note">Upload your screen-recording to <code>app/static/tutorial.mp4</code> and it'll show here for everyone.</p>
+
+        {% if current_user and current_user.role == 'admin' %}
+          <a href="/admin/tutorials" class="modal-note" style="display:inline-block; margin-top:14px">Manage tutorials &rarr;</a>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -153,18 +172,30 @@
     window.applyTheme(next);
   };
 
-  // ── Help modal ── probes for an uploaded tutorial video the first time it opens.
+  // ── Help modal ── loads the tutorial library the first time it opens.
   window.helpModal = function() {
     return {
-      show: false, hasVideo: false, _checked: false,
+      show: false, loading: true, items: [], current: null, _loaded: false,
       async open() {
         this.show = true;
-        if (!this._checked) {
-          this._checked = true;
-          try { const r = await fetch('/static/tutorial.mp4', { method: 'HEAD' }); this.hasVideo = r.ok; }
-          catch (e) { this.hasVideo = false; }
+        if (!this._loaded) {
+          this._loaded = true;
+          try {
+            const r = await fetch('/api/tutorials');
+            if (r.ok) this.items = await r.json();
+          } catch (e) { /* keep empty */ }
+          this.loading = false;
+          if (this.items.length) this.current = this.items[0];
         }
         this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+      },
+      play(t) {
+        this.current = t;
+        this.$nextTick(() => {
+          const v = this.$refs.vid;
+          if (v) { v.load(); v.play().catch(() => {}); }
+          if (window.lucide) lucide.createIcons();
+        });
       },
     };
   };

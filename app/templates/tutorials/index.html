@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Tutorials · Jugabet Admin{% endblock %}
+{% block content_theme %}content-light{% endblock %}
+{% block page_title %}Tutorials{% endblock %}
+{% block page_subtitle %}Upload help videos with a title — they appear in the Help library for everyone.{% endblock %}
+
+{% block content %}
+
+{% if saved %}<div class="alert ok">Tutorial uploaded.</div>{% endif %}
+{% if deleted %}<div class="alert ok">Tutorial removed.</div>{% endif %}
+{% if error %}<div class="alert err">{{ error }}</div>{% endif %}
+
+<div class="row-flex">
+  <form method="post" action="/admin/tutorials" enctype="multipart/form-data"
+        class="card card-pad col-rail" style="gap:14px; display:flex; flex-direction:column">
+    <div>
+      <h2 class="card-title">Upload tutorial</h2>
+      <p class="card-sub">MP4, WebM, MOV or OGG · up to {{ max_mb }} MB.</p>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Title</span>
+      <input class="input" name="title" required maxlength="120" placeholder="e.g. Managing PNG campaigns"/>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Video file</span>
+      <input class="input" type="file" name="video" required accept="video/*"/>
+    </div>
+
+    <button class="btn primary" style="justify-content:center">Upload tutorial</button>
+  </form>
+
+  <section class="card col-main" style="overflow:hidden">
+    <div class="card-head">
+      <h2 class="card-title">Library</h2>
+      <span class="card-sub" style="margin:0">{{ tutorials|length }} tutorial{{ '' if tutorials|length == 1 else 's' }}</span>
+    </div>
+    {% if tutorials %}
+      <div class="dt-wrap">
+        <table class="dt">
+          <thead>
+            <tr><th>Title</th><th>File</th><th>Size</th><th>Uploaded by</th><th>Added</th><th class="right">Action</th></tr>
+          </thead>
+          <tbody>
+            {% for t in tutorials %}
+              <tr>
+                <td><span class="m-title">{{ t.title }}</span></td>
+                <td>
+                  <a href="/static/tutorials/{{ t.filename }}" target="_blank" class="m-meta mono link">
+                    {{ t.original_name or t.filename }}
+                  </a>
+                </td>
+                <td>{% if t.size_bytes %}{{ (t.size_bytes / 1048576) | round(1) }} MB{% else %}—{% endif %}</td>
+                <td><span class="m-meta">{{ t.uploaded_by or '—' }}</span></td>
+                <td><span class="m-meta">{{ t.created_at.strftime('%Y-%m-%d') if t.created_at else '—' }}</span></td>
+                <td class="right">
+                  <form method="post" action="/admin/tutorials/{{ t.id }}/delete"
+                        onsubmit="return confirm('Delete this tutorial?')">
+                    <button class="btn sm danger">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty"><b>No tutorials yet.</b> Upload your first screen-recording with a title and it'll show in the Help library.</div>
+    {% endif %}
+  </section>
+</div>
+
+{% endblock %}

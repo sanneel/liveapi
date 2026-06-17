@@ -12,6 +12,7 @@ from .hot_boost import HotBoost
 from .hot_override import HotOverrideConfig, HotOverrideMatch
 from .hot_weight import HotWeight
 from .match import Match
+from .tutorial import Tutorial
 from .user import User
 
 __all__ = [
@@ -28,5 +29,6 @@ __all__ = [
     "HotOverrideMatch",
     "HotWeight",
     "Match",
+    "Tutorial",
     "User",
 ]
