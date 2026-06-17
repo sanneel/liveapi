@@ -89,8 +89,18 @@ def dashboard(request: Request, user: User = Depends(require_login)) -> HTMLResp
 
         latest = match_repo.search(limit=5)
 
+        # Active matches split by sport — feeds the dashboard donut.
+        sport_rows = (
+            session.query(Match.sport, func.count(Match.event_id))
+            .filter(Match.is_active.is_(True))
+            .group_by(Match.sport)
+            .order_by(func.count(Match.event_id).desc())
+            .all()
+        )
+
     # Health signals based on real data, not hard-coded strings.
     parser_state = _parser_freshness(age_sec)
+    sport_breakdown = _sport_breakdown(sport_rows, matches_active)
 
     return templates.TemplateResponse(
         request,
@@ -109,11 +119,46 @@ def dashboard(request: Request, user: User = Depends(require_login)) -> HTMLResp
                 "hot_suppressed": hot_suppressed,
             },
             "parser_state": parser_state,
+            "sport_breakdown": sport_breakdown,
             "last_update_age_sec": age_sec,
             "latest_matches": [m for m in latest],
             "current_user": user,
         },
     )
+
+
+# Donut circumference for r=52 (2·π·52), matching the design reference.
+_DONUT_CIRC = 326.726
+
+
+def _sport_breakdown(rows, total: int):
+    """Top 2 sports by active count + an 'Other' bucket, as donut segments
+    (percentage + stroke-dasharray/offset). Returns [] when there's nothing
+    active so the template can hide the chart."""
+    if not total or not rows:
+        return []
+    top = rows[:2]
+    other = sum(int(c) for _, c in rows[2:])
+    buckets = [((s or "Other").capitalize(), int(c)) for s, c in top]
+    if other:
+        buckets.append(("Other", other))
+    roles = ["accent", "dark", "muted"]
+    segments = []
+    cumulative = 0.0
+    for i, (name, count) in enumerate(buckets):
+        pct = count / total * 100.0
+        segments.append(
+            {
+                "name": name,
+                "count": count,
+                "pct": round(pct),
+                "dash": round(pct / 100.0 * _DONUT_CIRC, 1),
+                "offset": round(-cumulative / 100.0 * _DONUT_CIRC, 1),
+                "role": roles[i % len(roles)],
+            }
+        )
+        cumulative += pct
+    return segments
 
 
 def _parser_freshness(age_sec):
