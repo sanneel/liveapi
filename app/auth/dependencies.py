@@ -30,6 +30,12 @@ logger = get_logger("app.auth.deps")
 
 COOKIE_NAME = "jugabet_session"
 
+# A user flagged with must_change_password is confined to this page (plus
+# logout) until they set a new password. Keep in sync with the routes in
+# app/auth/routes.py.
+PWCHANGE_PATH = "/admin/account/password"
+_PWCHANGE_EXEMPT = frozenset({PWCHANGE_PATH, "/admin/logout"})
+
 
 ROLE_RANK = {"viewer": 1, "editor": 2, "admin": 3}
 
@@ -135,6 +141,21 @@ def _auth_challenge(request: Request) -> HTTPException:
     return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="session_expired")
 
 
+def _pwchange_challenge(request: Request) -> HTTPException:
+    """Confine a must-change-password user to the change-password page.
+
+    Browser navigation → 303 to the change page; API/fetch → 403 with a
+    machine-readable detail so the SPA can surface a clear notice.
+    """
+    if _wants_html(request):
+        return HTTPException(
+            status_code=status.HTTP_303_SEE_OTHER,
+            detail="Password change required",
+            headers={"Location": PWCHANGE_PATH},
+        )
+    return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="password_change_required")
+
+
 def require_login(request: Request) -> User:
     """Require a valid logged-in user.
 
@@ -150,6 +171,8 @@ def require_login(request: Request) -> User:
     if user is None:
         raise _auth_challenge(request)
     request.state.current_user = user
+    if user.must_change_password and request.url.path not in _PWCHANGE_EXEMPT:
+        raise _pwchange_challenge(request)
     return user
 
 

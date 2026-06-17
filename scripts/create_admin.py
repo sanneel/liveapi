@@ -34,7 +34,14 @@ def main() -> int:
     parser.add_argument("--username", help="Username (lowercase)")
     parser.add_argument("--password", help="Password (omit to be prompted)")
     parser.add_argument("--role", choices=VALID_ROLES, default="admin")
+    parser.add_argument(
+        "--no-force-change",
+        action="store_true",
+        help="Do NOT require the user to change this password on first login "
+        "(default: a one-time password they must change).",
+    )
     args = parser.parse_args()
+    force_change = not args.no_force_change
 
     username = args.username
     if not username:
@@ -65,13 +72,22 @@ def main() -> int:
         user = repo.find(username)
         pw_hash = hash_password(password)
         if user is None:
-            repo.create(username=username, password_hash=pw_hash, role=role)
+            repo.create(
+                username=username,
+                password_hash=pw_hash,
+                role=role,
+                must_change_password=force_change,
+            )
             print(f"[success] Created user '{username}' with role '{role}'.")
         else:
-            user.password_hash = pw_hash
+            repo.set_password(user, pw_hash, must_change_password=force_change)
             user.role = role
             user.is_active = True
             print(f"[success] Updated user '{username}' (role={role}).")
+
+        if force_change:
+            print("[note] This is a ONE-TIME password — the user must set a new "
+                  "one on first login before reaching the admin.")
 
     return 0
 

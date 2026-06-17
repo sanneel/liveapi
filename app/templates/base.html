@@ -77,7 +77,11 @@
         <span class="av">{{ (current_user.username or '?')[:1]|upper }}</span>
         <div class="label">
           <div class="nm">{{ current_user.username }}</div>
-          <form method="post" action="/admin/logout" style="line-height:1"><button type="submit" class="so" style="background:none;border:0;padding:0;cursor:pointer">Sign out</button></form>
+          <div style="display:flex;gap:8px;align-items:center;line-height:1">
+            <a href="/admin/account/password" class="so" style="text-decoration:none">Change password</a>
+            <span class="so" style="opacity:.4">·</span>
+            <form method="post" action="/admin/logout" style="line-height:1"><button type="submit" class="so" style="background:none;border:0;padding:0;cursor:pointer">Sign out</button></form>
+          </div>
         </div>
       </div>
       {% else %}
