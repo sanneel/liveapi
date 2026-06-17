@@ -1,57 +1,32 @@
 {% extends "base.html" %}
 {% block title %}Hot · Jugabet Admin{% endblock %}
+{% block content_theme %}content-light{% endblock %}
 {% block page_title %}Hot Matches{% endblock %}
-
-{% block page_actions %}
-  <span class="text-xs text-muted-500">Pick a sport to manage its top {{ top_n }}.</span>
-{% endblock %}
+{% block page_subtitle %}Pick a sport to manage its top {{ top_n }}.{% endblock %}
 
 {% block content %}
 
-<p class="text-sm text-muted-400 mb-5 max-w-3xl">
-  Each sport has an auto-ranked hot list. Open a sport to drag-and-drop the
-  top {{ top_n }}, browse the leaderboard, hide matches, or clear overrides.
-  <span class="block mt-1 text-meta text-muted-500">
-    The "active" count is every candidate the parser sees.
-    <code class="font-mono">/hot/&lt;sport&gt;.png</code> renders <code class="font-mono">limit=N</code>
-    (default 5, max 50) — UFC / boxing accept the full board if you ask for it.
-  </span>
+<p class="lede">
+  Each sport has an auto-ranked hot list. Open a sport to drag-and-drop the top {{ top_n }},
+  browse the leaderboard, hide matches, or clear overrides. The <b>active</b> count is every
+  candidate the parser sees. <span class="mono">/hot/&lt;sport&gt;.png</span> renders
+  <span class="mono">limit=N</span> (default 5, max 50).
 </p>
 
-<div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">
-  <ul class="divide-y divide-ink-600">
-    {% for row in sport_rows %}
-      <li class="px-5 py-4 flex items-center justify-between hover:bg-ink-800/40">
-        <div class="flex items-center gap-3 min-w-0">
-          <span class="text-base font-semibold text-zinc-100 capitalize w-32">{{ row.sport }}</span>
-          <span class="text-xs px-2 py-0.5 rounded-full bg-ink-700 text-muted-300">
-            {{ row.active }} active
-          </span>
-          {% if row.pinned > 0 %}
-            <span class="text-xs px-2 py-0.5 rounded-full bg-orange-900/40 text-orange-300">
-              {{ row.pinned }} pinned
-            </span>
-          {% endif %}
-          {% if row.suppressed > 0 %}
-            <span class="text-xs px-2 py-0.5 rounded-full bg-red-900/40 text-red-300">
-              {{ row.suppressed }} suppressed
-            </span>
-          {% endif %}
-          {% if row.active == 0 %}
-            <span class="text-xs text-muted-500 italic">no matches yet — waiting on parser</span>
-          {% endif %}
-        </div>
-        <div class="flex items-center gap-2 flex-shrink-0">
-          <a href="/hot/{{ row.sport }}.png" target="_blank"
-             class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 text-zinc-300 px-3 py-1.5 rounded">PNG ↗</a>
-          <a href="/admin/hot/{{ row.sport }}"
-             class="text-sm bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold px-4 py-1.5 rounded">
-            Browse →
-          </a>
-        </div>
-      </li>
-    {% endfor %}
-  </ul>
-</div>
+<section class="card" style="overflow:hidden">
+  {% for row in sport_rows %}
+    <div class="lrow">
+      <span class="m-title" style="width:128px; text-transform:capitalize; flex:none">{{ row.sport }}</span>
+      <span class="tag">{{ row.active }} active</span>
+      {% if row.pinned > 0 %}<span class="tag warn">{{ row.pinned }} pinned</span>{% endif %}
+      {% if row.suppressed > 0 %}<span class="tag live">{{ row.suppressed }} suppressed</span>{% endif %}
+      {% if row.active == 0 %}<span class="m-meta" style="font-style:italic">no matches yet — waiting on parser</span>{% endif %}
+      <div class="row-actions" style="margin-left:auto; flex:none">
+        <a href="/hot/{{ row.sport }}.png" target="_blank" class="btn sm">PNG ↗</a>
+        <a href="/admin/hot/{{ row.sport }}" class="btn sm primary">Browse →</a>
+      </div>
+    </div>
+  {% endfor %}
+</section>
 
 {% endblock %}

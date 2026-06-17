@@ -1,101 +1,87 @@
 {% extends "base.html" %}
 {% block title %}Campaigns · Jugabet Admin{% endblock %}
+{% block content_theme %}content-light{% endblock %}
 {% block page_title %}Campaigns{% endblock %}
+{% block page_subtitle %}Dynamic /r/ URLs — manual hand-picked lists or auto-by-league.{% endblock %}
 
 {% block page_actions %}
-  <a href="/admin/campaigns/new"
-     class="bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold text-sm px-4 py-2 rounded-lg">
-    + New campaign
+  <a href="/admin/campaigns/new" class="btn primary">
+    <i data-lucide="plus" style="width:15px;height:15px"></i> New campaign
   </a>
 {% endblock %}
 
 {% block content %}
 
-<div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">
+<section class="card" style="overflow:hidden">
   {% if campaigns %}
-    <table class="w-full text-sm">
-      <thead class="bg-ink-800 text-xs uppercase tracking-wider text-muted-400">
-        <tr>
-          <th class="px-5 py-3 text-left">Slug / URL</th>
-          <th class="px-5 py-3 text-left">Title</th>
-          <th class="px-5 py-3 text-left">Sport</th>
-          <th class="px-5 py-3 text-left">Mode</th>
-          <th class="px-5 py-3 text-left">Matches</th>
-          <th class="px-5 py-3 text-left">Status</th>
-          <th class="px-5 py-3 text-right">Actions</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-ink-600">
-      {% for c in campaigns %}
-        <tr class="hover:bg-ink-800/50">
-          <td class="px-5 py-3 font-mono text-brand-400">
-            <a href="/admin/campaigns/{{ c.slug }}" class="hover:underline">/r/{{ c.slug }}.png</a>
-          </td>
-          <td class="px-5 py-3 text-zinc-200">{{ c.title }}</td>
-          <td class="px-5 py-3 text-xs uppercase text-muted-400">{{ c.sport }}</td>
-          <td class="px-5 py-3">
-            {% if c.mode == 'auto' %}
-              <span class="text-xs px-2 py-0.5 rounded-full bg-orange-900/40 text-orange-300">
-                Auto{% if c.league %} · {{ c.league }}{% endif %}
-              </span>
-            {% else %}
-              <span class="text-xs px-2 py-0.5 rounded-full bg-blue-900/40 text-blue-300">Manual</span>
-            {% endif %}
-          </td>
-          <td class="px-5 py-3 text-zinc-300">
-            {% if c.mode == 'auto' %}
-              —
-            {% else %}
-              {% set stats = manual_stats.get(c.slug) %}
-              <div class="flex items-center gap-2 min-w-0">
-                <span>{{ match_counts[c.slug] }}</span>
-                {% if stats and stats.will_render_blank %}
-                  <span class="text-[10px] px-1.5 py-0.5 rounded bg-red-900/40 text-red-200 ring-1 ring-red-700/50"
-                        title="No renderable matches — PNG returns a 1×1 transparent. {{ stats.synthetic }} hidden as synthetic, {{ stats.inactive }} inactive (dropped from feed).">
-                    PNG empty
-                  </span>
-                {% elif stats and (stats.synthetic or stats.inactive) %}
-                  <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-900/40 text-amber-200 ring-1 ring-amber-700/50"
-                        title="{{ stats.renderable }} of {{ stats.total }} will render. {{ stats.synthetic }} hidden as synthetic, {{ stats.inactive }} inactive.">
-                    {{ stats.renderable }}/{{ stats.total }} live
-                  </span>
-                {% endif %}
+    <div class="dt-wrap">
+      <table class="dt">
+        <thead>
+          <tr>
+            <th>Slug / URL</th>
+            <th>Title</th>
+            <th style="width:84px">Sport</th>
+            <th>Mode</th>
+            <th>Matches</th>
+            <th style="width:96px">Status</th>
+            <th class="right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for c in campaigns %}
+          <tr>
+            <td>
+              <a href="/admin/campaigns/{{ c.slug }}" class="slug r" style="display:inline-block">/r/{{ c.slug }}.png</a>
+            </td>
+            <td><span class="m-title">{{ c.title }}</span></td>
+            <td><span class="cell-sport">{{ c.sport }}</span></td>
+            <td>
+              {% if c.mode == 'auto' %}
+                <span class="tag warn">Auto{% if c.league %} · {{ c.league }}{% endif %}</span>
+              {% else %}
+                <span class="tag club">Manual</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if c.mode == 'auto' %}
+                <span class="m-meta">—</span>
+              {% else %}
+                {% set stats = manual_stats.get(c.slug) %}
+                <div style="display:flex; align-items:center; gap:8px">
+                  <span class="mono" style="font-weight:600">{{ match_counts[c.slug] }}</span>
+                  {% if stats and stats.will_render_blank %}
+                    <span class="tag live" title="No renderable matches — PNG returns a 1×1 transparent. {{ stats.synthetic }} hidden as synthetic, {{ stats.inactive }} inactive.">PNG empty</span>
+                  {% elif stats and (stats.synthetic or stats.inactive) %}
+                    <span class="tag warn" title="{{ stats.renderable }} of {{ stats.total }} will render. {{ stats.synthetic }} hidden as synthetic, {{ stats.inactive }} inactive.">{{ stats.renderable }}/{{ stats.total }} live</span>
+                  {% endif %}
+                </div>
+              {% endif %}
+            </td>
+            <td>
+              {% if c.enabled %}
+                <span class="pill pos"><span class="dot"></span>Live</span>
+              {% else %}
+                <span class="pill neu"><span class="dot"></span>Off</span>
+              {% endif %}
+            </td>
+            <td class="right">
+              <div class="row-actions">
+                <a href="/admin/campaigns/{{ c.slug }}" class="btn sm">Edit</a>
+                <a href="/r/{{ c.slug }}.png" target="_blank" class="btn sm accent-soft">PNG ↗</a>
               </div>
-            {% endif %}
-          </td>
-          <td class="px-5 py-3">
-            {% if c.enabled %}
-              <span class="text-xs text-green-400 flex items-center gap-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-green-400"></span> Live
-              </span>
-            {% else %}
-              <span class="text-xs text-muted-500 flex items-center gap-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-muted-500"></span> Disabled
-              </span>
-            {% endif %}
-          </td>
-          <td class="px-5 py-3 text-right">
-            <div class="inline-flex gap-1">
-              <a href="/admin/campaigns/{{ c.slug }}"
-                 class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 px-2.5 py-1 rounded">Edit</a>
-              <a href="/r/{{ c.slug }}.png" target="_blank"
-                 class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 px-2.5 py-1 rounded">PNG ↗</a>
-            </div>
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
   {% else %}
-    <div class="px-5 py-20 text-center text-muted-500 text-sm">
-      <div class="text-zinc-300 mb-1">No campaigns yet</div>
-      <div class="text-xs">Create your first dynamic URL to start sending live odds in emails.</div>
-      <a href="/admin/campaigns/new"
-         class="inline-block mt-5 bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold text-sm px-4 py-2 rounded-lg">
-        Create your first campaign
-      </a>
+    <div class="empty" style="text-align:center; padding:60px 22px">
+      <div style="font-size:14px"><b>No campaigns yet.</b></div>
+      <div style="margin-top:4px">Create your first dynamic URL to start sending live odds in emails.</div>
+      <a href="/admin/campaigns/new" class="btn primary" style="margin-top:18px">Create your first campaign</a>
     </div>
   {% endif %}
-</div>
+</section>
 
 {% endblock %}

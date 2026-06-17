@@ -1,83 +1,67 @@
 {% extends "base.html" %}
-{% block title %}Live Parses - Jugabet Admin{% endblock %}
+{% block title %}Live Parses · Jugabet Admin{% endblock %}
+{% block content_theme %}content-light{% endblock %}
 {% block page_title %}Live Parses{% endblock %}
+{% block page_subtitle %}The feeds that pull live odds, and what's live right now.{% endblock %}
 
 {% block page_actions %}
-  <a href="/admin/live-parses"
-     class="text-xs bg-ink-700 hover:bg-ink-600 text-zinc-300 px-3 py-1.5 rounded border border-ink-600">
-    Refresh
+  <a href="/admin/live-parses" class="btn">
+    <i data-lucide="rotate-cw" style="width:14px;height:14px"></i> Refresh
   </a>
-  <a href="/admin/parser-feeds"
-     class="text-xs bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold px-3 py-1.5 rounded">
-    + Add a league
+  <a href="/admin/parser-feeds" class="btn primary">
+    <i data-lucide="plus" style="width:15px;height:15px"></i> Add a league
   </a>
 {% endblock %}
 
 {% block content %}
 
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-  <div class="bg-ink-850 border border-ink-600 rounded-xl p-4">
-    <div class="text-xs text-muted-400">Live-bearing feeds</div>
-    <div class="text-2xl font-semibold text-white mt-1">{{ feeds_total }}</div>
+<div class="stat-grid">
+  <div class="stat">
+    <div class="stat-top"><span class="stat-label">Live-bearing feeds</span></div>
+    <div class="stat-num">{{ feeds_total }}</div>
   </div>
-  <div class="bg-ink-850 border border-ink-600 rounded-xl p-4">
-    <div class="text-xs text-muted-400">Feeds healthy</div>
-    <div class="text-2xl font-semibold {% if healthy == feeds_total %}text-emerald-300{% else %}text-amber-300{% endif %} mt-1">
-      {{ healthy }} / {{ feeds_total }}
-    </div>
+  <div class="stat">
+    <div class="stat-top"><span class="stat-label">Feeds healthy</span></div>
+    <div class="stat-num" style="color:{% if healthy == feeds_total %}var(--pos-t){% else %}var(--warn-t){% endif %}">{{ healthy }}<span class="slash">/</span>{{ feeds_total }}</div>
   </div>
-  <div class="bg-ink-850 border border-ink-600 rounded-xl p-4">
-    <div class="text-xs text-muted-400">Live matches tracked now</div>
-    <div class="text-2xl font-semibold text-white mt-1">{{ live_total }}</div>
+  <div class="stat">
+    <div class="stat-top"><span class="stat-label">Live matches tracked now</span></div>
+    <div class="stat-num">{{ live_total }}</div>
   </div>
 </div>
 
-<p class="text-xs text-muted-500 mb-4">
-  These are the feeds that pull <span class="text-red-300">live</span> odds — the per-sport live firehose
-  plus any tournament overlay (<span class="font-mono">/all/?tournaments=…</span>), which serve live and
-  prematch for a league. If a league has live games on jugabet but isn't listed below,
-  <a href="/admin/parser-feeds" class="text-brand-400 hover:text-brand-300">add its URL</a>.
+<p class="lede">
+  These feeds pull <b>live</b> odds — the per-sport live firehose plus any tournament overlay
+  (<span class="mono">/all/?tournaments=…</span>). If a league has live games on jugabet but isn't listed,
+  <a href="/admin/parser-feeds" class="link">add its URL</a>.
 </p>
 
-<div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden mb-8">
-  <div class="px-5 py-4 border-b border-ink-600">
-    <h2 class="text-sm font-semibold text-white">Feeds parsed for live</h2>
-  </div>
+<section class="card" style="overflow:hidden; margin-bottom:18px">
+  <div class="card-head"><h2 class="card-title">Feeds parsed for live</h2></div>
   {% if feeds %}
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="bg-ink-800 text-xs uppercase tracking-wider text-muted-400">
+    <div class="dt-wrap">
+      <table class="dt">
+        <thead>
           <tr>
-            <th class="px-5 py-3 text-left">Sport</th>
-            <th class="px-5 py-3 text-left">Mode</th>
-            <th class="px-5 py-3 text-left">URL</th>
-            <th class="px-5 py-3 text-right">Matches</th>
-            <th class="px-5 py-3 text-left">Status</th>
+            <th>Sport</th><th>Mode</th><th>URL</th>
+            <th class="right">Matches</th><th>Status</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-ink-600">
+        <tbody>
           {% for f in feeds %}
-            <tr class="hover:bg-ink-800/40">
-              <td class="px-5 py-3 text-muted-300">{{ f.sport }}</td>
-              <td class="px-5 py-3">
-                <span class="text-xs px-2 py-0.5 rounded-full {% if f.mode == 'live' %}bg-red-900/40 text-red-300{% else %}bg-purple-900/40 text-purple-300{% endif %}">
-                  {{ f.mode }}
-                </span>
-              </td>
-              <td class="px-5 py-3 text-muted-400 font-mono text-xs max-w-md truncate">
-                <a href="{{ f.url }}" target="_blank" class="hover:text-brand-400">{{ f.url }}</a>
-              </td>
-              <td class="px-5 py-3 text-right text-zinc-200">{{ f.count }}</td>
-              <td class="px-5 py-3">
+            <tr>
+              <td><span class="cell-sport">{{ f.sport }}</span></td>
+              <td><span class="tag {% if f.mode == 'live' %}live{% else %}club{% endif %}">{{ f.mode }}</span></td>
+              <td><a href="{{ f.url }}" target="_blank" class="m-meta mono link" style="max-width:28rem; display:inline-block">{{ f.url }}</a></td>
+              <td class="num">{{ f.count }}</td>
+              <td>
                 {% if f.ok and f.age_sec is not none and f.age_sec < 180 %}
-                  <span class="text-emerald-300">● OK</span>
-                  <span class="text-muted-500 text-xs">· {{ f.age_sec }}s ago</span>
+                  <span class="pill pos"><span class="dot"></span>OK</span> <span class="m-meta" style="display:inline">· {{ f.age_sec }}s ago</span>
                 {% elif f.ok %}
-                  <span class="text-amber-300">● stale</span>
-                  <span class="text-muted-500 text-xs">· {% if f.age_sec is not none %}{{ f.age_sec }}s ago{% else %}never{% endif %}</span>
+                  <span class="pill warn">stale</span> <span class="m-meta" style="display:inline">· {% if f.age_sec is not none %}{{ f.age_sec }}s ago{% else %}never{% endif %}</span>
                 {% else %}
-                  <span class="text-red-300">● failing</span>
-                  {% if f.error %}<span class="text-muted-500 text-xs">· {{ f.error|truncate(48) }}</span>{% endif %}
+                  <span class="pill live"><span class="dot"></span>failing</span>
+                  {% if f.error %}<span class="m-meta" style="display:inline">· {{ f.error|truncate(48) }}</span>{% endif %}
                 {% endif %}
               </td>
             </tr>
@@ -86,39 +70,35 @@
       </table>
     </div>
   {% else %}
-    <div class="px-5 py-12 text-center text-muted-500 text-sm">No live-bearing feeds configured.</div>
+    <div class="empty">No live-bearing feeds configured.</div>
   {% endif %}
-</div>
+</section>
 
-<div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">
-  <div class="px-5 py-4 border-b border-ink-600 flex items-center justify-between">
-    <h2 class="text-sm font-semibold text-white">Live right now, by league</h2>
-    <span class="text-xs text-muted-500">{{ live_by_league|length }} leagues · {{ live_total }} matches</span>
+<section class="card" style="overflow:hidden">
+  <div class="card-head">
+    <h2 class="card-title">Live right now, by league</h2>
+    <span class="card-sub" style="margin:0">{{ live_by_league|length }} leagues · {{ live_total }} matches</span>
   </div>
   {% if live_by_league %}
-    <div class="overflow-x-auto max-h-[28rem] overflow-y-auto">
-      <table class="w-full text-sm">
-        <thead class="bg-ink-800 text-xs uppercase tracking-wider text-muted-400 sticky top-0">
-          <tr>
-            <th class="px-5 py-3 text-left">Sport</th>
-            <th class="px-5 py-3 text-left">League</th>
-            <th class="px-5 py-3 text-right">Live matches</th>
-          </tr>
+    <div class="dt-wrap" style="max-height:28rem; overflow-y:auto">
+      <table class="dt">
+        <thead>
+          <tr><th>Sport</th><th>League</th><th class="right">Live matches</th></tr>
         </thead>
-        <tbody class="divide-y divide-ink-600">
+        <tbody>
           {% for row in live_by_league %}
-            <tr class="hover:bg-ink-800/40">
-              <td class="px-5 py-3 text-muted-300">{{ row.sport }}</td>
-              <td class="px-5 py-3 text-zinc-200">{{ row.league }}</td>
-              <td class="px-5 py-3 text-right text-zinc-200">{{ row.count }}</td>
+            <tr>
+              <td><span class="cell-sport">{{ row.sport }}</span></td>
+              <td><span class="m-title" style="font-weight:600">{{ row.league }}</span></td>
+              <td class="num">{{ row.count }}</td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   {% else %}
-    <div class="px-5 py-12 text-center text-muted-500 text-sm">No live matches being tracked right now.</div>
+    <div class="empty">No live matches being tracked right now.</div>
   {% endif %}
-</div>
+</section>
 
 {% endblock %}

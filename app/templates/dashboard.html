@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block content %}
-{% set seg_color = {'accent':'var(--ac)', 'dark':'#2D3138', 'muted':'#C9CED7'} %}
+{% set seg_color = {'accent':'var(--ac)', 'dark':'var(--donut-2)', 'muted':'var(--donut-3)'} %}
 {% set pf = parser_state.color %}
 {% set pf_color = '#1F9D57' if pf == 'green' else ('#C9531F' if pf == 'yellow' else ('#D8434D' if pf == 'red' else '#8A909C')) %}
 
@@ -77,7 +77,7 @@
       <div class="donut-wrap" style="margin-top:16px">
         <div class="donut">
           <svg viewBox="0 0 132 132">
-            <circle cx="66" cy="66" r="52" fill="none" stroke="#EEF0F4" stroke-width="16"></circle>
+            <circle cx="66" cy="66" r="52" fill="none" stroke="var(--donut-track)" stroke-width="16"></circle>
             {% for s in sport_breakdown %}
               <circle cx="66" cy="66" r="52" fill="none" stroke="{{ seg_color[s.role] }}" stroke-width="16"
                       stroke-dasharray="{{ s.dash }} 326.726" stroke-dashoffset="{{ s.offset }}"></circle>

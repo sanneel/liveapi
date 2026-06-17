@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Jugabet Admin{% endblock %}</title>
 
+  <!-- Apply saved theme before paint to avoid a flash of the wrong mode -->
+  <script>try{if(localStorage.getItem('jb-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
+
   <!-- Pre-built Tailwind bundle (legacy pages). Rebuild: npm run build:css -->
   <link rel="stylesheet" href="/static/admin.tw.css">
 
@@ -17,9 +20,9 @@
   <script defer src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
   <link rel="stylesheet" href="/static/admin.css">
-  <link rel="stylesheet" href="/static/redesign.css?v=3">
+  <link rel="stylesheet" href="/static/redesign.css?v=7">
   <style>
-    html,body{margin:0;background:#F3F4F7;}
+    html,body{margin:0;background:var(--canvas);}
     *:focus-visible { outline: 2px solid var(--ac,#F0613C); outline-offset: 2px; border-radius: 4px; }
     ::-webkit-scrollbar { width: 10px; height: 10px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -60,11 +63,15 @@
       {% endfor %}
 
       <div class="side-sec sup label">SUPPORT</div>
-      <a href="/health" target="_blank" class="nav-item"><i data-lucide="help-circle"></i><span class="label">Help</span></a>
-      <a href="/admin" class="nav-item"><i data-lucide="settings"></i><span class="label">Setting</span></a>
+      <button type="button" class="nav-item as-btn" onclick="window.dispatchEvent(new CustomEvent('help-open'))">
+        <i data-lucide="help-circle"></i><span class="label">Help</span>
+      </button>
     </nav>
 
     <div class="side-foot">
+      <button type="button" class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+        <i data-lucide="moon" id="theme-icon"></i><span class="label" id="theme-label">Dark mode</span>
+      </button>
       {% if current_user %}
       <div class="side-user">
         <span class="av">{{ (current_user.username or '?')[:1]|upper }}</span>
@@ -91,6 +98,30 @@
   </main>
 </div>
 
+{# ── Help / tutorial-video modal ── #}
+<div x-data="helpModal()" x-on:help-open.window="open()" x-on:keydown.escape.window="show=false">
+  <div class="modal-overlay" x-show="show" @click.self="show=false" style="display:none" x-cloak>
+    <div class="modal">
+      <div class="modal-head">
+        <h2 class="modal-title">How to use the admin</h2>
+        <button type="button" class="modal-x" @click="show=false" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <template x-if="hasVideo">
+          <video class="modal-video" controls preload="metadata" playsinline src="/static/tutorial.mp4"></video>
+        </template>
+        <template x-if="!hasVideo">
+          <div class="modal-empty">
+            <i data-lucide="video"></i>
+            <div>No tutorial video uploaded yet.</div>
+          </div>
+        </template>
+        <p class="modal-note">Upload your screen-recording to <code>app/static/tutorial.mp4</code> and it'll show here for everyone.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 {# ── Toast ── #}
 <div x-data="{ msg: '', kind: 'info', show: false }"
      x-on:toast.window="msg = $event.detail?.msg ?? $event.detail; kind = $event.detail?.kind || 'info'; show = true; clearTimeout($el._t); $el._t = setTimeout(() => show = false, kind === 'error' ? 4000 : 2500)"
@@ -102,7 +133,42 @@
 </div>
 <script>
   window.toast = function(detail) { window.dispatchEvent(new CustomEvent('toast', { detail })); };
-  document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });
+
+  // ── Dark mode ── persisted in localStorage as jb-theme; applied to <html>.
+  window.applyTheme = function(t) {
+    document.documentElement.classList.toggle('dark', t === 'dark');
+    var icon = document.getElementById('theme-icon');
+    var label = document.getElementById('theme-label');
+    if (icon)  { icon.setAttribute('data-lucide', t === 'dark' ? 'sun' : 'moon'); }
+    if (label) { label.textContent = t === 'dark' ? 'Light mode' : 'Dark mode'; }
+    if (window.lucide) lucide.createIcons();
+  };
+  window.toggleTheme = function() {
+    var next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+    try { localStorage.setItem('jb-theme', next); } catch (e) {}
+    window.applyTheme(next);
+  };
+
+  // ── Help modal ── probes for an uploaded tutorial video the first time it opens.
+  window.helpModal = function() {
+    return {
+      show: false, hasVideo: false, _checked: false,
+      async open() {
+        this.show = true;
+        if (!this._checked) {
+          this._checked = true;
+          try { const r = await fetch('/static/tutorial.mp4', { method: 'HEAD' }); this.hasVideo = r.ok; }
+          catch (e) { this.hasVideo = false; }
+        }
+        this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+      },
+    };
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    window.applyTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    if (window.lucide) lucide.createIcons();
+  });
   document.body.addEventListener('htmx:afterSwap', () => { if (window.lucide) lucide.createIcons(); });
 </script>
 

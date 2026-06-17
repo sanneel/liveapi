@@ -1,323 +1,188 @@
 {% extends "base.html" %}
 {% block title %}Hot · {{ sport|capitalize }} · Jugabet{% endblock %}
+{% block content_theme %}content-light{% endblock %}
 
 {% block page_title %}
-  <div class="flex items-baseline gap-2 min-w-0">
-    <a href="/admin/hot" class="text-meta text-muted-400 hover:text-zinc-200 flex-shrink-0">Hot</a>
-    <i data-lucide="chevron-right" class="!w-3 !h-3 text-muted-500 flex-shrink-0"></i>
-    <span class="text-h-md text-zinc-100 capitalize truncate">{{ sport }}</span>
-  </div>
+  <span style="display:inline-flex; align-items:baseline; gap:8px">
+    <a href="/admin/hot" class="link" style="font-size:14px; font-weight:600">Hot</a>
+    <i data-lucide="chevron-right" style="width:13px;height:13px;color:var(--t-disabled)"></i>
+    <span style="text-transform:capitalize">{{ sport }}</span>
+  </span>
 {% endblock %}
+{% block page_subtitle %}Drag to reorder the top {{ top_n }}, hide matches, or clear overrides.{% endblock %}
 
 {% block page_actions %}
-  <a href="/hot/{{ sport }}.png" target="_blank"
-     class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-meta text-muted-300 border border-ink-600 hover:bg-ink-800 hover:text-zinc-100">
-    <i data-lucide="image" class="!w-3.5 !h-3.5"></i> PNG
+  <a href="/hot/{{ sport }}.png" target="_blank" class="btn">
+    <i data-lucide="image" style="width:14px;height:14px"></i> PNG
   </a>
-  <button @click="$dispatch('hot:refresh')"
-          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-meta text-muted-300 border border-ink-600 hover:bg-ink-800 hover:text-zinc-100">
-    <i data-lucide="refresh-cw" class="!w-3.5 !h-3.5"></i> Refresh
+  <button @click="$dispatch('hot:refresh')" class="btn">
+    <i data-lucide="refresh-cw" style="width:14px;height:14px"></i> Refresh
   </button>
 {% endblock %}
 
 {% block content %}
 
+<style>
+  /* hot/sport-specific row chrome on the light system */
+  .content-light .hrow { display:flex; align-items:center; gap:12px; padding:11px 18px; border-bottom:1px solid var(--border-soft); transition:background .12s; }
+  .content-light .hrow:last-child { border-bottom:0; }
+  .content-light .hrow:hover { background:var(--row-hover); }
+  .content-light .hrow .grip { cursor:grab; color:var(--t-disabled); flex:none; }
+  .content-light .hrow .grip:hover { color:var(--t-faint); }
+  .content-light .hrow .idx { width:22px; text-align:right; font-size:12px; font-weight:600; color:var(--t-faint); font-variant-numeric:tabular-nums; flex:none; }
+  .content-light .iconbtn { padding:6px; border-radius:8px; color:var(--t-faint); background:none; border:0; cursor:pointer; display:inline-flex; }
+  .content-light .iconbtn:hover { background:var(--neu-bg); color:var(--t-body); }
+  .content-light .iconbtn.danger:hover { background:var(--live-bg); color:var(--live-t); }
+  .content-light .iconbtn.ok:hover { background:var(--pos-bg); color:var(--pos-t); }
+  .content-light .hsec-head { display:flex; align-items:center; gap:10px; padding:11px 18px; border-bottom:1px solid var(--border-soft); }
+  .content-light .hsec-lbl { font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--t-faint2); }
+  .content-light .summary { display:flex; flex-wrap:wrap; gap:24px; padding-bottom:16px; margin-bottom:18px; border-bottom:1px solid var(--border); }
+  .content-light .summary .n { font-size:22px; font-weight:800; color:var(--t-strong); font-variant-numeric:tabular-nums; }
+  .content-light .summary .k { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--t-faint); margin-left:6px; }
+</style>
+
 <div x-data="hotCard('{{ sport }}', {{ top_n }}, {{ leaderboard_max }})"
-     x-init="load()"
-     x-on:hot:refresh.window="load()"
-     x-cloak
-     class="max-w-4xl mx-auto">
+     x-init="load()" x-on:hot:refresh.window="load()" x-cloak
+     style="max-width:880px; margin:0 auto">
 
   {# ── Summary strip ── #}
-  <div class="flex flex-wrap items-center gap-x-6 gap-y-2 mb-5 pb-4 border-b border-ink-600/60">
-    <div class="flex items-baseline gap-1.5">
-      <span class="text-num text-zinc-100 tabular-nums" x-text="topMatches.length"></span>
-      <span class="text-label uppercase text-muted-400">in top {{ top_n }}</span>
-    </div>
-    <div class="flex items-baseline gap-1.5">
-      <span class="text-num text-zinc-100 tabular-nums" x-text="pinCount"></span>
-      <span class="text-label uppercase text-muted-400">pinned</span>
-    </div>
-    <div class="flex items-baseline gap-1.5">
-      <span class="text-num text-zinc-100 tabular-nums" x-text="suppressedMatches.length"></span>
-      <span class="text-label uppercase text-muted-400">suppressed</span>
-    </div>
-    <div class="flex items-baseline gap-1.5">
-      <span class="text-num text-zinc-100 tabular-nums" x-text="restMatches.length + topMatches.length"></span>
-      <span class="text-label uppercase text-muted-400">candidates</span>
-    </div>
-    <div class="ml-auto text-meta text-muted-500"
-         x-show="loading && topMatches.length === 0 && restMatches.length === 0"
-         style="display:none">Loading…</div>
-    <div class="ml-auto text-meta text-muted-500"
-         x-show="loading && (topMatches.length > 0 || restMatches.length > 0)"
-         style="display:none">Refreshing…</div>
+  <div class="summary">
+    <div><span class="n" x-text="topMatches.length"></span><span class="k">in top {{ top_n }}</span></div>
+    <div><span class="n" x-text="pinCount"></span><span class="k">pinned</span></div>
+    <div><span class="n" x-text="suppressedMatches.length"></span><span class="k">suppressed</span></div>
+    <div><span class="n" x-text="restMatches.length + topMatches.length"></span><span class="k">candidates</span></div>
+    <div style="margin-left:auto"><span class="m-meta" x-show="loading" style="display:none">Loading…</span></div>
   </div>
 
   {# ── Error banner ── #}
-  <div x-show="error" x-transition
-       class="mb-4 px-3 py-2 rounded-md border border-red-800/60 bg-red-950/40 flex items-start gap-2"
-       style="display:none">
-    <i data-lucide="alert-triangle" class="!w-4 !h-4 text-red-300 mt-0.5"></i>
-    <div class="text-body text-red-200 flex-1" x-text="error"></div>
-    <button class="text-meta text-red-300 hover:text-red-100" @click="error=null">Dismiss</button>
+  <div x-show="error" x-transition class="alert err" style="display:none" x-cloak>
+    <i data-lucide="alert-triangle" style="width:16px;height:16px"></i>
+    <div style="flex:1" x-text="error"></div>
+    <button class="alert-x" @click="error=null" style="background:none;border:0;cursor:pointer;color:inherit">Dismiss</button>
   </div>
 
   {# ── Top N table ── #}
-  <section class="bg-ink-900 border border-ink-600/60 rounded-lg overflow-hidden mb-4">
-    <header class="sticky top-0 z-10 bg-ink-900/95 backdrop-blur-sm border-b border-ink-600/60">
-      <div class="px-4 py-2 flex items-center gap-3">
-        <h2 class="text-label uppercase text-muted-400">Top {{ top_n }} · drag to reorder</h2>
-        <div class="ml-auto text-meta text-muted-500 hidden sm:flex items-center gap-3">
-          <span class="flex items-center gap-1.5">
-            <kbd class="px-1 py-px text-[10px] rounded border border-ink-600 bg-ink-800 font-mono">⠿</kbd> drag to reorder
-          </span>
-          <span class="flex items-center gap-1.5">
-            <kbd class="px-1 py-px text-[10px] rounded border border-ink-600 bg-ink-800 font-mono">⊘</kbd> hide
-          </span>
-        </div>
-      </div>
-    </header>
+  <section class="card" style="overflow:hidden; margin-bottom:16px">
+    <div class="hsec-head">
+      <h2 class="hsec-lbl">Top {{ top_n }} · drag to reorder</h2>
+      <span class="m-meta" style="margin-left:auto">⠿ drag · ⊘ hide</span>
+    </div>
 
-    {# Skeleton while initial load — show 3 placeholder rows. #}
     <template x-if="loading && topMatches.length === 0">
-      <ul>
+      <ul style="margin:0;padding:0;list-style:none">
         <template x-for="i in 3" :key="'sk' + i">
-          <li class="px-3 py-2.5 flex items-center gap-3 border-b border-ink-600/30 last:border-0">
-            <div class="w-4"></div>
-            <div class="w-5 h-3 rounded bg-ink-700/60 animate-pulse"></div>
-            <div class="w-10 h-3 rounded bg-ink-700/60 animate-pulse"></div>
-            <div class="flex-1">
-              <div class="h-3 w-2/3 rounded bg-ink-700/60 animate-pulse"></div>
-              <div class="h-2 w-1/3 mt-1.5 rounded bg-ink-700/40 animate-pulse"></div>
+          <li class="hrow">
+            <div style="width:18px"></div>
+            <div class="animate-pulse" style="width:40px;height:12px;border-radius:6px;background:var(--neu-bg)"></div>
+            <div style="flex:1">
+              <div class="animate-pulse" style="height:12px;width:66%;border-radius:6px;background:var(--neu-bg)"></div>
+              <div class="animate-pulse" style="height:9px;width:33%;margin-top:6px;border-radius:6px;background:var(--border)"></div>
             </div>
           </li>
         </template>
       </ul>
     </template>
 
-    <ul :id="'top-list-' + sport"
-        x-show="!loading || topMatches.length > 0">
+    <ul :id="'top-list-' + sport" style="margin:0;padding:0;list-style:none" x-show="!loading || topMatches.length > 0">
       <template x-for="(m, idx) in topMatches" :key="m.event_id">
-        <li class="group px-3 py-2 flex items-center gap-3 border-b border-ink-600/30 last:border-0 hover:bg-ink-800/40 transition-colors"
-            :data-event-id="m.event_id">
-          <span class="drag-handle cursor-grab text-muted-500 hover:text-muted-300 flex-shrink-0">
-            <i data-lucide="grip-vertical" class="!w-4 !h-4"></i>
-          </span>
-          <span class="w-5 text-right text-meta text-muted-400 font-mono tabular-nums flex-shrink-0"
-                x-text="idx + 1"></span>
-
-          <span class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase flex-shrink-0"
-                :class="m.status === 'live'
-                  ? 'bg-red-500/15 text-red-300 ring-1 ring-red-500/30'
-                  : 'bg-sky-500/15 text-sky-300 ring-1 ring-sky-500/30'"
-                x-text="m.status === 'live' ? 'Live' : 'Pre'"></span>
-
-          <span x-show="m.position"
-                class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30 flex-shrink-0">
-            Pinned
-          </span>
-
-          <div class="flex-1 min-w-0">
-            <div class="text-body text-zinc-100 truncate">
-              <span x-text="m.home_name"></span>
-              <span class="text-muted-500"> vs </span>
-              <span x-text="m.away_name"></span>
-            </div>
-            <div class="text-meta text-muted-400 truncate">
+        <li class="hrow group" :data-event-id="m.event_id">
+          <span class="drag-handle grip"><i data-lucide="grip-vertical" style="width:16px;height:16px"></i></span>
+          <span class="idx" x-text="idx + 1"></span>
+          <span class="badge" :class="m.status === 'live' ? 'live' : 'pre'" x-text="m.status === 'live' ? 'Live' : 'Pre'"></span>
+          <span x-show="m.position" class="tag warn">Pinned</span>
+          <div style="flex:1; min-width:0">
+            <div class="m-title"><span x-text="m.home_name"></span><span class="vs">vs</span><span x-text="m.away_name"></span></div>
+            <div class="m-meta">
               <span x-text="m.tournament_name || '—'"></span>
-              <span x-show="m.time_raw" class="text-muted-600"> · </span>
-              <span x-text="m.time_raw || ''"></span>
-              <span x-show="m.reason && m.reason !== 'auto'" class="text-muted-600"> · </span>
-              <span x-show="m.reason && m.reason !== 'auto'"
-                    class="text-[10px] uppercase tracking-wider text-muted-500"
-                    x-text="m.reason"></span>
+              <span x-show="m.time_raw"> · <span x-text="m.time_raw"></span></span>
+              <span x-show="m.reason && m.reason !== 'auto'"> · <span x-text="m.reason" style="text-transform:uppercase"></span></span>
             </div>
           </div>
-
-          <div class="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-            <button x-show="m.position"
-                    @click="clearOverride(m.event_id)"
-                    title="Unpin"
-                    class="p-1.5 rounded text-muted-400 hover:text-zinc-100 hover:bg-ink-700">
-              <i data-lucide="pin-off" class="!w-3.5 !h-3.5"></i>
-            </button>
-            <button @click="suppress(m.event_id, true)"
-                    title="Hide from hot"
-                    class="p-1.5 rounded text-muted-400 hover:text-red-300 hover:bg-red-950/40">
-              <i data-lucide="eye-off" class="!w-3.5 !h-3.5"></i>
-            </button>
+          <div style="display:flex; gap:4px">
+            <button x-show="m.position" @click="clearOverride(m.event_id)" title="Unpin" class="iconbtn"><i data-lucide="pin-off" style="width:15px;height:15px"></i></button>
+            <button @click="suppress(m.event_id, true)" title="Hide from hot" class="iconbtn danger"><i data-lucide="eye-off" style="width:15px;height:15px"></i></button>
           </div>
         </li>
       </template>
-
-      <li x-show="!loading && topMatches.length === 0"
-          class="px-4 py-12 text-center">
-        <i data-lucide="inbox" class="!w-6 !h-6 text-muted-500 mx-auto mb-3"></i>
-        <div class="text-body text-zinc-300">No active matches</div>
-        <div class="text-meta text-muted-500 mt-1">
-          Waiting for the parser to fetch <span class="text-zinc-300 capitalize">{{ sport }}</span> feeds.
-        </div>
+      <li x-show="!loading && topMatches.length === 0" class="empty" style="text-align:center; padding:48px 18px">
+        <i data-lucide="inbox" style="width:24px;height:24px;color:var(--t-disabled)"></i>
+        <div class="m-title" style="margin-top:10px">No active matches</div>
+        <div class="m-meta">Waiting for the parser to fetch <span style="text-transform:capitalize">{{ sport }}</span> feeds.</div>
       </li>
     </ul>
   </section>
 
-  {# ── Search matches ── Always available, even when top is empty,
-       so admins can find and pin a match the scorer hasn't surfaced. #}
-  <section class="bg-ink-900 border border-ink-600/60 rounded-lg overflow-hidden mb-4">
-    <div class="px-4 py-3 border-b border-ink-600/60 flex items-center justify-between gap-3 bg-ink-950/20">
-      <div class="flex-1 min-w-0">
-        <label for="match-search" class="sr-only">Search matches</label>
-        <div class="relative">
-          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <i data-lucide="search" class="!w-4 !h-4 text-muted-500"></i>
-          </div>
-          <input type="text"
-                 id="match-search"
-                 x-model="searchQuery"
-                 @input.debounce.300ms="performSearch()"
-                 placeholder="Search active matches to override (e.g. Colo-Colo)..."
-                 class="block w-full pl-9 pr-3 py-1.5 bg-ink-950 text-body text-zinc-100 rounded-md border border-ink-600/80 focus:border-zinc-400 focus:outline-none focus:ring-0 placeholder-muted-500 text-meta">
-        </div>
-      </div>
-      <div class="text-meta text-muted-500 flex-shrink-0"
-           x-show="searching && searchResults.length === 0"
-           style="display:none">Searching…</div>
-      <div class="text-meta text-muted-500 flex-shrink-0"
-           x-show="!searching && searchQuery.trim() && searchResults.length > 0"
-           style="display:none"
-           x-text="searchResults.length + ' match' + (searchResults.length === 1 ? '' : 'es')"></div>
+  {# ── Search matches ── #}
+  <section class="card" style="overflow:hidden; margin-bottom:16px">
+    <div class="search">
+      <i data-lucide="search" class="mag" style="left:34px"></i>
+      <input type="text" id="match-search" x-model="searchQuery" @input.debounce.300ms="performSearch()"
+             placeholder="Search active matches to override (e.g. Colo-Colo)…"/>
     </div>
 
     <div x-show="searchResults.length > 0">
-      <header class="px-4 py-1.5 bg-ink-950/40 border-b border-ink-600/30">
-        <h3 class="text-[10px] font-semibold uppercase tracking-wider text-muted-400">Search Results · drag to top to promote</h3>
-      </header>
-      <ul :id="'search-list-' + sport">
+      <div class="hsec-head"><h3 class="hsec-lbl">Search results · drag to top to promote</h3></div>
+      <ul :id="'search-list-' + sport" style="margin:0;padding:0;list-style:none">
         <template x-for="m in searchResults" :key="'search-' + m.event_id">
-          <li class="group px-3 py-2 flex items-center gap-3 border-b border-ink-600/30 last:border-0 hover:bg-ink-800/40 transition-colors"
-              :class="m.is_active === false && 'opacity-60'"
-              :data-event-id="m.event_id">
-            <span class="drag-handle cursor-grab text-muted-500 hover:text-muted-300 flex-shrink-0">
-              <i data-lucide="grip-vertical" class="!w-4 !h-4"></i>
-            </span>
-            <span class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase flex-shrink-0"
-                  :class="m.status === 'live'
-                    ? 'bg-red-500/10 text-red-300/80 ring-1 ring-red-500/20'
-                    : 'bg-sky-500/10 text-sky-300/80 ring-1 ring-sky-500/20'"
-                  x-text="m.status === 'live' ? 'Live' : 'Pre'"></span>
-            <span x-show="m.is_active === false"
-                  class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase flex-shrink-0
-                         bg-zinc-700/40 text-zinc-300 ring-1 ring-zinc-500/30"
-                  title="Match is no longer in the feed. You can still pin/suppress it."
-                  style="display:none">Inactive</span>
-            <span x-show="m.is_synthetic"
-                  class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase flex-shrink-0
-                         bg-amber-500/10 text-amber-300/80 ring-1 ring-amber-500/20"
-                  title="Synthetic / virtual / replay inventory. Default-hidden from public renders."
-                  style="display:none">Syn</span>
-            <div class="flex-1 min-w-0">
-              <div class="text-body text-zinc-200 truncate">
-                <span x-text="m.home_name"></span>
-                <span class="text-muted-500"> vs </span>
-                <span x-text="m.away_name"></span>
-              </div>
-              <div class="text-meta text-muted-500 truncate" x-text="m.tournament_name || '—'"></div>
+          <li class="hrow group" :style="m.is_active === false && 'opacity:.6'" :data-event-id="m.event_id">
+            <span class="drag-handle grip"><i data-lucide="grip-vertical" style="width:16px;height:16px"></i></span>
+            <span class="badge" :class="m.status === 'live' ? 'live' : 'pre'" x-text="m.status === 'live' ? 'Live' : 'Pre'"></span>
+            <span x-show="m.is_active === false" class="tag" title="No longer in the feed. You can still pin/suppress it." style="display:none">Inactive</span>
+            <span x-show="m.is_synthetic" class="tag warn" title="Synthetic / virtual / replay inventory." style="display:none">Syn</span>
+            <div style="flex:1; min-width:0">
+              <div class="m-title"><span x-text="m.home_name"></span><span class="vs">vs</span><span x-text="m.away_name"></span></div>
+              <div class="m-meta" x-text="m.tournament_name || '—'"></div>
             </div>
-            <button @click="suppress(m.event_id, true)" title="Hide from hot"
-                    class="p-1.5 rounded text-muted-500 hover:text-red-300 hover:bg-red-950/40 opacity-0 group-hover:opacity-100 transition-opacity">
-              <i data-lucide="eye-off" class="!w-3.5 !h-3.5"></i>
-            </button>
+            <button @click="suppress(m.event_id, true)" title="Hide from hot" class="iconbtn danger"><i data-lucide="eye-off" style="width:15px;height:15px"></i></button>
           </li>
         </template>
       </ul>
     </div>
-    <div x-show="searchQuery && searchResults.length === 0 && !searching"
-         class="px-4 py-4 text-center text-meta text-muted-500">
-      No matches found matching "<span x-text="searchQuery" class="text-zinc-300"></span>"
+    <div x-show="searchQuery && searchResults.length === 0 && !searching" class="empty">
+      No matches found matching "<b x-text="searchQuery"></b>"
     </div>
   </section>
 
-  {# ── Leaderboard expandable ── Always visible so admins can browse the
-       full candidate pool, including when the top is empty (the engine's
-       fallback to raw active matches fills `restMatches` only if there are
-       more than `topN` active rows; an empty `restMatches` shows its own
-       message below). #}
-  <section class="bg-ink-900 border border-ink-600/60 rounded-lg overflow-hidden mb-4">
-    <button @click="expanded = !expanded"
-            class="w-full px-4 py-2 flex items-center justify-between text-left hover:bg-ink-800/40 transition-colors"
-            :class="expanded && 'border-b border-ink-600/60'">
-      <span class="text-label uppercase text-muted-400">
-        Leaderboard Candidates <span class="text-muted-500 normal-case tracking-normal">· drag into top to promote</span>
-      </span>
-      <i data-lucide="chevron-down" class="!w-4 !h-4 text-muted-500 transition-transform"
-         :class="expanded && 'rotate-180'"></i>
+  {# ── Leaderboard expandable ── #}
+  <section class="card" style="overflow:hidden; margin-bottom:16px">
+    <button @click="expanded = !expanded" class="hsec-head" style="width:100%; background:none; border-bottom:1px solid var(--border-soft); cursor:pointer; text-align:left">
+      <span class="hsec-lbl">Leaderboard candidates · drag into top to promote</span>
+      <i data-lucide="chevron-down" style="width:16px;height:16px;color:var(--t-faint);margin-left:auto;transition:transform .15s" :style="expanded && 'transform:rotate(180deg)'"></i>
     </button>
-
     <div x-show="expanded" x-transition.duration.150ms>
-      <ul :id="'rest-list-' + sport">
+      <ul :id="'rest-list-' + sport" style="margin:0;padding:0;list-style:none">
         <template x-for="(m, idx) in restMatches" :key="m.event_id">
-          <li class="group px-3 py-2 flex items-center gap-3 border-b border-ink-600/30 last:border-0 hover:bg-ink-800/40 transition-colors"
-              :data-event-id="m.event_id">
-            <span class="drag-handle cursor-grab text-muted-500 hover:text-muted-300 flex-shrink-0">
-              <i data-lucide="grip-vertical" class="!w-4 !h-4"></i>
-            </span>
-            <span class="w-5 text-right text-meta text-muted-500 font-mono tabular-nums flex-shrink-0"
-                  x-text="topMatches.length + idx + 1"></span>
-            <span class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase flex-shrink-0"
-                  :class="m.status === 'live'
-                    ? 'bg-red-500/10 text-red-300/80 ring-1 ring-red-500/20'
-                    : 'bg-sky-500/10 text-sky-300/80 ring-1 ring-sky-500/20'"
-                  x-text="m.status === 'live' ? 'Live' : 'Pre'"></span>
-            <div class="flex-1 min-w-0">
-              <div class="text-body text-zinc-200 truncate">
-                <span x-text="m.home_name"></span>
-                <span class="text-muted-500"> vs </span>
-                <span x-text="m.away_name"></span>
-              </div>
-              <div class="text-meta text-muted-500 truncate" x-text="m.tournament_name || '—'"></div>
+          <li class="hrow group" :data-event-id="m.event_id">
+            <span class="drag-handle grip"><i data-lucide="grip-vertical" style="width:16px;height:16px"></i></span>
+            <span class="idx" x-text="topMatches.length + idx + 1"></span>
+            <span class="badge" :class="m.status === 'live' ? 'live' : 'pre'" x-text="m.status === 'live' ? 'Live' : 'Pre'"></span>
+            <div style="flex:1; min-width:0">
+              <div class="m-title"><span x-text="m.home_name"></span><span class="vs">vs</span><span x-text="m.away_name"></span></div>
+              <div class="m-meta" x-text="m.tournament_name || '—'"></div>
             </div>
-            <button @click="suppress(m.event_id, true)" title="Hide from hot"
-                    class="p-1.5 rounded text-muted-500 hover:text-red-300 hover:bg-red-950/40 opacity-0 group-hover:opacity-100 transition-opacity">
-              <i data-lucide="eye-off" class="!w-3.5 !h-3.5"></i>
-            </button>
+            <button @click="suppress(m.event_id, true)" title="Hide from hot" class="iconbtn danger"><i data-lucide="eye-off" style="width:15px;height:15px"></i></button>
           </li>
         </template>
-        <li x-show="restMatches.length === 0"
-            class="px-4 py-8 text-center text-meta text-muted-500">
-          No more candidates beyond the top {{ top_n }}.
-        </li>
+        <li x-show="restMatches.length === 0" class="empty">No more candidates beyond the top {{ top_n }}.</li>
       </ul>
     </div>
   </section>
 
   {# ── Suppressed bucket ── #}
-  <section class="bg-ink-900 border border-ink-600/60 rounded-lg overflow-hidden"
-           x-show="suppressedMatches.length > 0">
-    <header class="px-4 py-2 border-b border-ink-600/60 flex items-center gap-2">
-      <i data-lucide="eye-off" class="!w-3.5 !h-3.5 text-muted-400"></i>
-      <h2 class="text-label uppercase text-muted-400">
-        Hidden from hot <span class="text-muted-500 normal-case tracking-normal">· click to restore</span>
-      </h2>
-    </header>
-    <ul>
+  <section class="card" style="overflow:hidden" x-show="suppressedMatches.length > 0">
+    <div class="hsec-head">
+      <i data-lucide="eye-off" style="width:14px;height:14px;color:var(--t-faint)"></i>
+      <h2 class="hsec-lbl">Hidden from hot · click to restore</h2>
+    </div>
+    <ul style="margin:0;padding:0;list-style:none">
       <template x-for="m in suppressedMatches" :key="'sup-' + m.event_id">
-        <li class="px-3 py-2 flex items-center gap-3 border-b border-ink-600/30 last:border-0 hover:bg-ink-800/40">
-          <span class="w-4"></span>
-          <span class="w-5"></span>
-          <span class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase bg-ink-700 text-muted-400 ring-1 ring-ink-600">Hidden</span>
-          <div class="flex-1 min-w-0">
-            <div class="text-body text-muted-300 truncate">
-              <span x-text="m.home_name"></span>
-              <span class="text-muted-500"> vs </span>
-              <span x-text="m.away_name"></span>
-            </div>
-            <div class="text-meta text-muted-500 truncate" x-text="m.tournament_name || '—'"></div>
+        <li class="hrow">
+          <span class="tag">Hidden</span>
+          <div style="flex:1; min-width:0">
+            <div class="m-title" style="color:var(--t-muted)"><span x-text="m.home_name"></span><span class="vs">vs</span><span x-text="m.away_name"></span></div>
+            <div class="m-meta" x-text="m.tournament_name || '—'"></div>
           </div>
-          <button @click="suppress(m.event_id, false)" title="Restore to hot"
-                  class="p-1.5 rounded text-muted-400 hover:text-emerald-300 hover:bg-emerald-950/40">
-            <i data-lucide="rotate-ccw" class="!w-3.5 !h-3.5"></i>
-          </button>
+          <button @click="suppress(m.event_id, false)" title="Restore to hot" class="iconbtn ok"><i data-lucide="rotate-ccw" style="width:15px;height:15px"></i></button>
         </li>
       </template>
     </ul>
@@ -347,7 +212,6 @@ function hotCard(sport, topN, leaderboardMax) {
       try {
         const r = await fetch(url, { credentials: 'same-origin' });
         if (r.redirected || r.status === 401 || r.status === 403) {
-          // Session expired → API redirected to /login. Don't try to parse HTML as JSON.
           throw new Error('Session expired — reload the page and sign in again.');
         }
         if (!r.ok) throw new Error(`HTTP ${r.status} from ${url}`);
@@ -375,8 +239,6 @@ function hotCard(sport, topN, leaderboardMax) {
           if (window.lucide) lucide.createIcons();
         });
       } catch (e) {
-        // Silent failures here were the #1 reported bug — surface to console
-        // AND to the in-page error banner so admins see what went wrong.
         console.error('[hotCard.load]', e, 'url=', url);
         this.error = `Failed to load: ${e.message}`;
       } finally {
@@ -387,9 +249,7 @@ function hotCard(sport, topN, leaderboardMax) {
     async performSearch() {
       if (!this.searchQuery.trim()) {
         this.searchResults = [];
-        this.$nextTick(() => {
-          this._wireSortable();
-        });
+        this.$nextTick(() => { this._wireSortable(); });
         return;
       }
       this.searching = true;
@@ -432,9 +292,6 @@ function hotCard(sport, topN, leaderboardMax) {
       if (searchEl) this._sortableSearch = new Sortable(searchEl, opts);
     },
 
-    // Single-item pin/unpin on drag, instead of the old "save full order"
-    // semantic that pinned every match in the top-N. SortableJS gives us
-    // the moved element and its old / new index — that's all we need.
     async onDragEnd(evt) {
       const movedEl = evt.item;
       if (!movedEl) return;
@@ -443,8 +300,6 @@ function hotCard(sport, topN, leaderboardMax) {
 
       const topEl = document.getElementById('top-list-' + this.sport);
       const toTop = evt.to === topEl;
-      // Slot is 1-based within the destination list. If dropped past the
-      // top-N cutoff (shouldn't happen — we cap top list visually), bail.
       const slot = toTop ? (evt.newIndex + 1) : null;
       if (toTop && (slot < 1 || slot > this.topN)) return;
 

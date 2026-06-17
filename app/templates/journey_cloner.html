@@ -1,90 +1,69 @@
 {% extends "base.html" %}
-{% block title %}Journey Cloner - Jugabet Admin{% endblock %}
+{% block title %}Journey Cloner · Jugabet Admin{% endblock %}
+{% block content_theme %}content-light{% endblock %}
 {% block page_title %}Journey Cloner{% endblock %}
+{% block page_subtitle %}Build Journey Builder drafts from the stored templates.{% endblock %}
 
 {% block page_actions %}
-  <a href="/admin/journey-cloner"
-     class="text-xs bg-ink-700 hover:bg-ink-600 text-zinc-300 px-3 py-1.5 rounded border border-ink-600">
-    Clear
-  </a>
+  <a href="/admin/journey-cloner" class="btn">Clear</a>
 {% endblock %}
 
 {% block content %}
 
-{% if error %}
-  <div class="mb-4 border border-red-700/60 bg-red-950/30 text-red-200 text-sm px-4 py-3 rounded-lg">
-    {{ error }}
-  </div>
-{% endif %}
-
+{% if error %}<div class="alert err">{{ error }}</div>{% endif %}
 {% if result %}
-  <div class="mb-4 border {% if result.ok %}border-emerald-700/60 bg-emerald-950/30 text-emerald-200{% else %}border-red-700/60 bg-red-950/30 text-red-200{% endif %} text-sm px-4 py-3 rounded-lg">
+  <div class="alert {% if result.ok %}ok{% else %}err{% endif %}">
     {% if result.ok %}Journey cloner finished successfully.{% else %}Journey cloner exited with code {{ result.exit_code }}.{% endif %}
   </div>
 {% endif %}
-{% if template_saved %}
-  <div class="mb-4 border border-emerald-700/60 bg-emerald-950/30 text-emerald-200 text-sm px-4 py-3 rounded-lg">
-    {{ template_saved }}
-  </div>
-{% endif %}
-{% if template_error %}
-  <div class="mb-4 border border-red-700/60 bg-red-950/30 text-red-200 text-sm px-4 py-3 rounded-lg">
-    {{ template_error }}
-  </div>
-{% endif %}
+{% if template_saved %}<div class="alert ok">{{ template_saved }}</div>{% endif %}
+{% if template_error %}<div class="alert err">{{ template_error }}</div>{% endif %}
 
-<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-  <form method="post" action="/admin/journey-cloner"
-        class="xl:col-span-1 bg-ink-850 border border-ink-600 rounded-xl p-5 space-y-4">
+<div class="row-flex">
+  <form method="post" action="/admin/journey-cloner" class="card card-pad col-rail" style="display:flex; flex-direction:column; gap:14px">
     <div>
-      <h2 class="text-sm font-semibold text-white">Create Drafts</h2>
-      <p class="text-xs text-muted-500 mt-1">Build Journey Builder drafts from the stored templates.</p>
+      <h2 class="card-title">Create Drafts</h2>
+      <p class="card-sub">Build Journey Builder drafts from the stored templates.</p>
     </div>
 
-    <label class="block">
-      <span class="block text-xs text-muted-400 mb-1.5">Bearer token</span>
-      <input name="token" type="password" autocomplete="off" placeholder="Required for real creation"
-             class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
-    </label>
-
-    <div class="grid grid-cols-2 gap-3">
-      <label class="block">
-        <span class="block text-xs text-muted-400 mb-1.5">Home club</span>
-        <input name="home" required value="{{ form.home or '' }}" placeholder="Colo Colo"
-               class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
-      </label>
-      <label class="block">
-        <span class="block text-xs text-muted-400 mb-1.5">Away club</span>
-        <input name="away" required value="{{ form.away or '' }}" placeholder="Audax"
-               class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
-      </label>
+    <div class="field">
+      <span class="lbl">Bearer token</span>
+      <input class="input" name="token" type="password" autocomplete="off" placeholder="Required for real creation"/>
     </div>
 
-    <div class="grid grid-cols-2 gap-3">
-      <label class="block">
-        <span class="block text-xs text-muted-400 mb-1.5">Date</span>
-        <input name="date" type="date" required value="{{ form.date or '' }}"
-               class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
-      </label>
-      <label class="block">
-        <span class="block text-xs text-muted-400 mb-1.5">Chile time</span>
-        <input name="chile_time" type="time" required value="{{ form.chile_time or '' }}"
-               class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
-      </label>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+      <div class="field">
+        <span class="lbl">Home club</span>
+        <input class="input" name="home" required value="{{ form.home or '' }}" placeholder="Colo Colo"/>
+      </div>
+      <div class="field">
+        <span class="lbl">Away club</span>
+        <input class="input" name="away" required value="{{ form.away or '' }}" placeholder="Audax"/>
+      </div>
     </div>
 
-    <label class="block">
-      <span class="block text-xs text-muted-400 mb-1.5">Promocode</span>
-      <input name="code" required value="{{ form.code or '' }}" placeholder="VAMOSBULLA"
-             class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 uppercase focus:outline-none focus:border-brand-500">
-    </label>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+      <div class="field">
+        <span class="lbl">Date</span>
+        <input class="input" name="date" type="date" required value="{{ form.date or '' }}"/>
+      </div>
+      <div class="field">
+        <span class="lbl">Chile time</span>
+        <input class="input" name="chile_time" type="time" required value="{{ form.chile_time or '' }}"/>
+      </div>
+    </div>
 
-    <div>
-      <span class="block text-xs text-muted-400 mb-1.5">Draft types</span>
-      <div class="grid grid-cols-2 gap-2">
+    <div class="field">
+      <span class="lbl">Promocode</span>
+      <input class="input" name="code" required value="{{ form.code or '' }}" placeholder="VAMOSBULLA" style="text-transform:uppercase"/>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Draft types</span>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
         {% set labels = {'followup':'FollowUp','bfr':'BFR','two_hours':'2H','aft':'AFT'} %}
         {% for t in ['followup','bfr','two_hours','aft'] %}
-          <label class="flex items-center gap-2 bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-sm text-zinc-200">
+          <label class="check" style="border:1px solid var(--border-in); border-radius:10px; padding:9px 12px">
             <input type="checkbox" name="types" value="{{ t }}" {% if t in selected_types %}checked{% endif %}>
             <span>{{ labels[t] }}</span>
           </label>
@@ -92,143 +71,111 @@
       </div>
     </div>
 
-    <label class="flex items-center gap-2 bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-sm text-zinc-200">
+    <label class="check" style="border:1px solid var(--border-in); border-radius:10px; padding:9px 12px">
       <input type="checkbox" name="dry_run" value="1" {% if dry_run %}checked{% endif %}>
       <span>Dry run only</span>
     </label>
 
-    <button class="w-full bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold text-sm px-4 py-2 rounded-lg">
-      Run journey cloner
-    </button>
-
-    <button formaction="/admin/journey-cloner/console-script"
-            class="w-full bg-ink-700 hover:bg-ink-600 border border-ink-600 text-zinc-200 font-semibold text-sm px-4 py-2 rounded-lg">
-      Generate console script
-    </button>
-    <p class="text-xs text-muted-500 leading-relaxed">
-      Console script: for creating the drafts from a computer on the office VPN.
-      No token or dry run needed here — the script grabs the token by itself in the backoffice.
-    </p>
+    <button class="btn primary" style="justify-content:center">Run journey cloner</button>
+    <button formaction="/admin/journey-cloner/console-script" class="btn" style="justify-content:center">Generate console script</button>
+    <p class="help">Console script: for creating the drafts from a computer on the office VPN. No token or dry run needed — the script grabs the token by itself in the backoffice.</p>
   </form>
 
-  <div class="xl:col-span-2 space-y-6">
-    <form method="post" action="/admin/journey-cloner/templates"
-          class="bg-ink-850 border border-ink-600 rounded-xl p-5 space-y-4">
-      <div class="flex items-center justify-between gap-3">
+  <div class="col-main stack">
+    <form method="post" action="/admin/journey-cloner/templates" class="card card-pad" style="display:flex; flex-direction:column; gap:14px">
+      <div class="card-head" style="padding:0">
         <div>
-          <h2 class="text-sm font-semibold text-white">Save Template</h2>
-          <p class="text-xs text-muted-500 mt-1">Paste Chrome DevTools Copy-as-fetch for POST /journey-drafts.</p>
+          <h2 class="card-title">Save Template</h2>
+          <p class="card-sub">Paste Chrome DevTools Copy-as-fetch for POST /journey-drafts.</p>
         </div>
-        <select name="template_type"
-                class="bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
+        <select name="template_type" style="flex:0 0 130px">
           <option value="followup">FollowUp</option>
           <option value="bfr">BFR</option>
           <option value="two_hours">2H</option>
           <option value="aft">AFT</option>
         </select>
       </div>
-      <textarea name="fetch_text" required rows="8"
-                placeholder="fetch('https://.../journey-drafts', { ... body: '...' })"
-                class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-xs font-mono rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500"></textarea>
-      <button class="bg-ink-700 hover:bg-ink-600 border border-ink-600 text-zinc-200 font-semibold text-sm px-4 py-2 rounded-lg">
-        Save selected template
-      </button>
+      <textarea class="input mono" name="fetch_text" required rows="8" placeholder="fetch('https://.../journey-drafts', { ... body: '...' })" style="font-size:12px"></textarea>
+      <div class="form-actions"><button class="btn">Save selected template</button></div>
     </form>
 
-    <div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">
-      <div class="px-5 py-4 border-b border-ink-600 flex items-center justify-between">
-        <h2 class="text-sm font-semibold text-white">Template Status</h2>
-        <span class="text-xs text-muted-500">journey-cloner/templates</span>
+    <section class="card" style="overflow:hidden">
+      <div class="card-head">
+        <h2 class="card-title">Template Status</h2>
+        <span class="card-sub" style="margin:0">journey-cloner/templates</span>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-5">
+      <div class="card-pad" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px">
         {% set labels = {'followup':'FollowUp','bfr':'BFR','two_hours':'2H','aft':'AFT'} %}
         {% for key, exists in template_status.items() %}
-          <div class="bg-ink-800 border border-ink-600 rounded-lg px-4 py-3">
-            <div class="text-sm text-zinc-200">{{ labels.get(key, key) }}</div>
-            <div class="text-xs mt-1 {% if exists %}text-emerald-300{% else %}text-red-300{% endif %}">
+          <div class="arch" style="display:block">
+            <div class="m-title" style="font-size:13px">{{ labels.get(key, key) }}</div>
+            <div class="m-meta" style="color:{% if exists %}var(--pos-t){% else %}var(--live-t){% endif %}; font-weight:600">
               {% if exists %}template ready{% else %}missing {{ key }}.json{% endif %}
             </div>
           </div>
         {% endfor %}
       </div>
-    </div>
+    </section>
 
     {% if console_script %}
-      <div class="bg-ink-850 border border-emerald-700/60 rounded-xl overflow-hidden">
-        <div class="px-5 py-4 border-b border-ink-600 flex items-center justify-between gap-3">
+      <section class="card" style="overflow:hidden">
+        <div class="card-head">
           <div>
-            <h2 class="text-sm font-semibold text-white">Console Script Ready</h2>
-            <p class="text-xs text-muted-500 mt-1">{{ console_script.name }}</p>
+            <h2 class="card-title">Console Script Ready</h2>
+            <p class="card-sub">{{ console_script.name }}</p>
           </div>
-          <button type="button" id="copy-console-script"
-                  class="bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold text-sm px-4 py-2 rounded-lg shrink-0">
-            Copy script
-          </button>
+          <button type="button" id="copy-console-script" class="btn primary">Copy script</button>
         </div>
-        <div class="p-5 space-y-4">
-          <ol class="text-xs text-muted-400 leading-relaxed list-decimal list-inside space-y-1">
-            <li>Click <span class="text-zinc-200 font-semibold">Copy script</span> above.</li>
+        <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+          <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
+            <li>Click <b>Copy script</b> above.</li>
             <li>On the computer with the office VPN, open the Journey Builder backoffice in Chrome (logged in).</li>
-            <li>Press <span class="font-mono text-muted-300">F12</span> and open the <span class="text-zinc-200">Console</span> tab. If Chrome warns about pasting, type <span class="font-mono text-muted-300">allow pasting</span> and press Enter.</li>
+            <li>Press <span class="mono">F12</span> and open the <b>Console</b> tab. If Chrome warns about pasting, type <span class="mono">allow pasting</span> and press Enter.</li>
             <li>Paste the script and press Enter.</li>
-            <li>If it says <span class="text-yellow-300">"Waiting for a token"</span>, click anything in the backoffice (e.g. refresh the journeys list). The script picks the token up by itself.</li>
-            <li>Wait for the green <span class="text-emerald-300">DONE</span> message with the created JRN ids, then open the 2H draft and check its campaign connector points at the new FollowUp.</li>
+            <li>If it says <b>"Waiting for a token"</b>, click anything in the backoffice. The script picks the token up by itself.</li>
+            <li>Wait for the green <b>DONE</b> message with the created JRN ids.</li>
           </ol>
-          <textarea id="console-script-text" readonly rows="10" spellcheck="false"
-                    class="w-full bg-ink-950 border border-ink-600 text-muted-300 text-xs font-mono rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">{{ console_script.text }}</textarea>
+          <textarea id="console-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ console_script.text }}</textarea>
         </div>
-      </div>
+      </section>
       <script>
         (function () {
           var btn = document.getElementById('copy-console-script');
           var area = document.getElementById('console-script-text');
           if (!btn || !area) return;
           btn.addEventListener('click', function () {
-            var done = function () {
-              btn.textContent = 'Copied!';
-              setTimeout(function () { btn.textContent = 'Copy script'; }, 2000);
-            };
+            var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
             if (navigator.clipboard && navigator.clipboard.writeText) {
-              navigator.clipboard.writeText(area.value).then(done, function () {
-                area.select();
-                document.execCommand('copy');
-                done();
-              });
-            } else {
-              area.select();
-              document.execCommand('copy');
-              done();
-            }
+              navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); });
+            } else { area.select(); document.execCommand('copy'); done(); }
           });
         })();
       </script>
     {% endif %}
 
     {% if result %}
-      <div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">
-        <div class="px-5 py-4 border-b border-ink-600">
-          <h2 class="text-sm font-semibold text-white">Run Output</h2>
-        </div>
-        <div class="p-5 space-y-4">
+      <section class="card" style="overflow:hidden">
+        <div class="card-head"><h2 class="card-title">Run Output</h2></div>
+        <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
           <div>
-            <div class="text-xs text-muted-400 mb-1">Command</div>
-            <pre class="bg-ink-950 border border-ink-600 rounded-lg p-3 text-xs text-muted-300 overflow-x-auto whitespace-pre-wrap">{{ result.command }}</pre>
+            <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Command</div>
+            <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0">{{ result.command }}</pre>
           </div>
           <div>
-            <div class="text-xs text-muted-400 mb-1">Output</div>
-            <pre class="bg-ink-950 border border-ink-600 rounded-lg p-3 text-xs text-zinc-200 overflow-x-auto whitespace-pre-wrap max-h-[32rem]">{{ result.output }}</pre>
+            <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Output</div>
+            <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:32rem; margin:0">{{ result.output }}</pre>
           </div>
         </div>
-      </div>
+      </section>
     {% else %}
-      <div class="bg-ink-850 border border-ink-600 rounded-xl p-5">
-        <h2 class="text-sm font-semibold text-white mb-2">Before Running</h2>
-        <div class="space-y-2 text-xs text-muted-400 leading-relaxed">
-          <p>Keep dry run enabled first. Dry runs generate JSON under <span class="font-mono text-muted-300">journey-cloner/out</span> and do not call the Journey Builder API.</p>
-          <p>For real creation, paste a fresh bearer token and uncheck dry run.</p>
-          <p>Copied fetch bodies should be extracted into <span class="font-mono text-muted-300">journey-cloner/templates</span> before using this page.</p>
+      <section class="card card-pad">
+        <h2 class="card-title" style="margin-bottom:8px">Before Running</h2>
+        <div class="help" style="line-height:1.7">
+          <p style="margin:0 0 8px">Keep dry run enabled first. Dry runs generate JSON under <span class="mono">journey-cloner/out</span> and do not call the Journey Builder API.</p>
+          <p style="margin:0 0 8px">For real creation, paste a fresh bearer token and uncheck dry run.</p>
+          <p style="margin:0">Copied fetch bodies should be extracted into <span class="mono">journey-cloner/templates</span> before using this page.</p>
         </div>
-      </div>
+      </section>
     {% endif %}
   </div>
 </div>

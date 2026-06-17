@@ -1,60 +1,46 @@
 {# HTMX partial: search results in the match picker. #}
 {# Expects: results (list of Match), slug, include_synthetic (bool). #}
 
-<div class="px-4 py-2 text-meta text-muted-500 flex items-center justify-between border-b border-ink-600/40 bg-ink-900/50">
-  <span>
+<div class="search" style="padding:10px 16px; display:flex; align-items:center; justify-content:space-between; gap:8px">
+  <span class="m-meta" style="margin:0">
     {% if results %}
-      <span class="text-zinc-300 font-medium">{{ results|length }}</span>
-      result{{ '' if results|length == 1 else 's' }}
+      <b style="color:var(--t-body)">{{ results|length }}</b> result{{ '' if results|length == 1 else 's' }}
     {% else %}
       No matches
     {% endif %}
-    {% if include_synthetic %}
-      <span class="ml-2 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30 text-[10px] uppercase tracking-wide">
-        incl. virtual / replays
-      </span>
-    {% endif %}
   </span>
+  {% if include_synthetic %}
+    <span class="tag warn">incl. virtual / replays</span>
+  {% endif %}
 </div>
 
 {% if results %}
-  <ul class="divide-y divide-ink-600">
+  <ul style="margin:0; padding:0; list-style:none">
     {% for m in results %}
       {% set odds = m.odds() %}
-      <li data-event-id="{{ m.event_id }}"
-          class="px-4 py-2.5 hover:bg-ink-800/40 flex items-center gap-3">
+      <li data-event-id="{{ m.event_id }}" class="lrow" style="padding:11px 16px; gap:10px">
         {% if m.status == 'live' %}
-          <span class="text-[9px] font-bold text-red-300 bg-red-900/40 px-1.5 py-0.5 rounded">LIVE</span>
+          <span class="badge live"><span class="dot"></span>Live</span>
         {% else %}
-          <span class="text-[9px] text-blue-300 bg-blue-900/40 px-1.5 py-0.5 rounded">PRE</span>
+          <span class="badge pre"><span class="dot"></span>Pre</span>
         {% endif %}
         {% if m.is_synthetic %}
-          <span class="text-[9px] font-semibold text-amber-300 bg-amber-900/30 px-1.5 py-0.5 rounded ring-1 ring-amber-700/40" title="Virtual / replay / esports inventory">SYN</span>
+          <span class="tag warn" title="Virtual / replay / esports inventory">Syn</span>
         {% endif %}
 
-        <div class="flex-1 min-w-0">
-          <div class="text-sm text-zinc-100 truncate">
-            {{ m.home_name }} <span class="text-muted-400 text-xs">vs</span> {{ m.away_name }}
-          </div>
-          <div class="text-xs text-muted-500 truncate">
-            {{ m.tournament_name or '—' }} · {{ m.time_raw or '—' }}
-          </div>
+        <div style="flex:1; min-width:0">
+          <div class="m-title">{{ m.home_name }}<span class="vs">vs</span>{{ m.away_name }}</div>
+          <div class="m-meta">{{ m.tournament_name or '—' }} · {{ m.time_raw or '—' }}</div>
         </div>
 
         {% if not preview_mode %}
-          <button type="button" onclick="addMatch('{{ m.event_id }}')"
-                  class="text-xs bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold px-2.5 py-1 rounded">
-            Add
-          </button>
+          <button type="button" onclick="addMatch('{{ m.event_id }}')" class="btn sm primary">Add</button>
         {% endif %}
       </li>
     {% endfor %}
   </ul>
 {% else %}
-  <div class="px-5 py-10 text-center text-muted-500 text-xs">
-    No matches found.<br>
-    <span class="text-muted-600">
-      Try a different search term{% if not include_synthetic %}, or toggle <em class="text-zinc-300">Show virtual / replays</em> if you specifically want synthetic inventory{% endif %}.
-    </span>
+  <div class="empty">
+    No matches found. Try a different search term{% if not include_synthetic %}, or toggle <b>Show virtual / replays</b> if you specifically want synthetic inventory{% endif %}.
   </div>
 {% endif %}
