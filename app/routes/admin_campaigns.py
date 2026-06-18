@@ -190,7 +190,7 @@ def campaigns_create(
 @router.post("/admin/campaigns/bulk-delete")
 def campaigns_bulk_delete(
     slugs: List[str] = Form(default=[]),
-    user: User = Depends(require_role("admin")),
+    user: User = Depends(require_role("editor")),
 ) -> RedirectResponse:
     """Delete every selected campaign in one request. Invalid/unknown slugs
     are skipped silently; the redirect reports how many were removed."""
@@ -322,7 +322,7 @@ def campaigns_update(
 
 @router.post("/admin/campaigns/{slug}/delete")
 def campaigns_delete(
-    slug: str, user: User = Depends(require_role("admin"))
+    slug: str, user: User = Depends(require_role("editor"))
 ) -> RedirectResponse:
     slug = _validate_slug(slug)
     with db_session() as session:
@@ -355,7 +355,7 @@ def campaigns_toggle(
 
 @router.post("/admin/campaigns/{slug}/duplicate")
 def campaigns_duplicate(
-    slug: str, user: User = Depends(require_role("admin"))
+    slug: str, user: User = Depends(require_role("editor"))
 ) -> RedirectResponse:
     slug = _validate_slug(slug)
     new_slug = f"{slug}-copy"

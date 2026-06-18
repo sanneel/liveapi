@@ -4,8 +4,10 @@
 {% block page_title %}{{ campaign.title }}{% endblock %}
 {% block page_subtitle %}{% if campaign.mode == 'auto' %}Auto campaign{% else %}Manual campaign{% endif %} · /r/{{ campaign.slug }}.png{% endblock %}
 
+{% set can_edit = current_user and current_user.role in ['editor','admin'] %}
 {% block page_actions %}
   <a href="/r/{{ campaign.slug }}.png" target="_blank" class="btn">Open PNG</a>
+  {% if can_edit %}
   <form method="POST" action="/admin/campaigns/{{ campaign.slug }}/duplicate" style="display:inline">
     <button class="btn">Duplicate</button>
   </form>
@@ -16,6 +18,7 @@
         onsubmit="return confirm('Delete campaign {{ campaign.slug }}? This cannot be undone.');">
     <button class="btn danger">Delete</button>
   </form>
+  {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -104,9 +107,11 @@
         </label>
       </div>
 
+      {% if can_edit %}
       <div class="form-actions" style="margin-top:18px">
         <button type="submit" class="btn primary">Save settings</button>
       </div>
+      {% endif %}
     </form>
 
     {% if campaign.mode == 'manual' %}

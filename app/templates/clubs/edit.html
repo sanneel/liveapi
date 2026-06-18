@@ -7,7 +7,7 @@
 {% block page_actions %}
   <a href="/admin/clubs" class="btn">← Back</a>
   <a href="/club/{{ club.slug }}.png" target="_blank" class="btn">Open PNG</a>
-  {% if current_user.role == 'admin' %}
+  {% if current_user and current_user.role in ['editor','admin'] %}
     <form method="POST" action="/admin/clubs/{{ club.slug }}/delete" style="display:inline"
           onsubmit="return confirm('Delete club {{ club.slug }}? This cannot be undone.');">
       <button class="btn danger">Delete</button>
@@ -56,9 +56,11 @@
         </label>
       </div>
 
+      {% if current_user and current_user.role in ['editor','admin'] %}
       <div class="form-actions">
         <button type="submit" class="btn primary">Save club</button>
       </div>
+      {% endif %}
     </form>
   </div>
 

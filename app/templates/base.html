@@ -34,18 +34,22 @@
 
 <body class="h-full">
 
+{% set _rank = {'viewer': 1, 'editor': 2, 'admin': 3} %}
+{% set _urank = _rank.get(current_user.role, 0) if current_user else 0 %}
+{# 5th field = minimum role needed to reach the page; nav hides what a role
+   can't open so it never lands on a Forbidden. #}
 {% set nav = [
-  ('dashboard',     '/admin',                'layout-grid',        'Dashboard'),
-  ('matches',       '/admin/matches',        'list',               'Matches'),
-  ('campaigns',     '/admin/campaigns',      'megaphone',          'Campaigns'),
-  ('hot',           '/admin/hot',            'flame',              'Hot'),
-  ('journey_cloner','/admin/journey-cloner', 'copy',               'Journey Cloner'),
-  ('parser_feeds',  '/admin/parser-feeds',   'link',               'Parser Links'),
-  ('live_parses',   '/admin/live-parses',    'radio',              'Live Parses'),
-  ('weights',       '/admin/weights',        'sliders-horizontal', 'Weights'),
-  ('cube',          '/admin/cube',           'box',                'Cubes'),
-  ('clubs',         '/admin/clubs',          'shield',             'Clubs'),
-  ('logs',          '/admin/logs',           'file-text',          'Logs'),
+  ('dashboard',     '/admin',                'layout-grid',        'Dashboard',      'viewer'),
+  ('matches',       '/admin/matches',        'list',               'Matches',        'viewer'),
+  ('campaigns',     '/admin/campaigns',      'megaphone',          'Campaigns',      'viewer'),
+  ('hot',           '/admin/hot',            'flame',              'Hot',            'viewer'),
+  ('journey_cloner','/admin/journey-cloner', 'copy',               'Journey Cloner', 'editor'),
+  ('parser_feeds',  '/admin/parser-feeds',   'link',               'Parser Links',   'editor'),
+  ('live_parses',   '/admin/live-parses',    'radio',              'Live Parses',    'viewer'),
+  ('weights',       '/admin/weights',        'sliders-horizontal', 'Weights',        'viewer'),
+  ('cube',          '/admin/cube',           'box',                'Cubes',          'viewer'),
+  ('clubs',         '/admin/clubs',          'shield',             'Clubs',          'viewer'),
+  ('logs',          '/admin/logs',           'file-text',          'Logs',           'admin'),
 ] %}
 
 <div class="app">
@@ -57,10 +61,12 @@
 
     <nav class="side-nav">
       <div class="side-sec label">MENU</div>
-      {% for key, url, icon, label in nav %}
+      {% for key, url, icon, label, minrole in nav %}
+        {% if _urank >= _rank[minrole] %}
         <a href="{{ url }}" title="{{ label }}" class="nav-item {% if active_page == key %}active{% endif %}">
           <i data-lucide="{{ icon }}"></i><span class="label">{{ label }}</span>
         </a>
+        {% endif %}
       {% endfor %}
 
       <div class="side-sec sup label">SUPPORT</div>

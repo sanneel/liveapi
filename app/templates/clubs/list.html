@@ -4,10 +4,13 @@
 {% block page_title %}Clubs{% endblock %}
 {% block page_subtitle %}{{ stats.total }} total · {{ stats.with_upcoming }} with upcoming · {{ stats.no_upcoming }} dormant{% endblock %}
 
+{% set can_edit = current_user and current_user.role in ['editor','admin'] %}
 {% block page_actions %}
+  {% if can_edit %}
   <button type="button" onclick="document.getElementById('create-club-form').classList.toggle('hidden')" class="btn primary">
     <i data-lucide="plus" style="width:15px;height:15px"></i> Create club
   </button>
+  {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -19,6 +22,7 @@
   sees it on jugabet.cl.
 </p>
 
+{% if can_edit %}
 <form id="create-club-form" method="POST" action="/admin/clubs"
       class="hidden card card-pad" style="margin-bottom:18px"
       onsubmit="this.querySelector('button[type=submit]').disabled = true;">
@@ -47,6 +51,7 @@
     <span class="help" style="margin:0 0 0 auto; max-width:340px">The fallback message and "hide opponent logo" toggle live on the edit page after creation.</span>
   </div>
 </form>
+{% endif %}
 
 <form method="get" action="/admin/clubs" class="toolbar">
   <div class="ibox">
@@ -104,7 +109,7 @@
         No clubs matched "<b>{{ q }}</b>". <a href="/admin/clubs" class="link">Clear search</a>
       {% else %}
         <div style="font-size:14px"><b>No clubs yet.</b></div>
-        <div style="margin-top:4px">Click "Create club" above to add your first club slug.</div>
+        {% if can_edit %}<div style="margin-top:4px">Click "Create club" above to add your first club slug.</div>{% endif %}
       {% endif %}
     </div>
   {% endif %}

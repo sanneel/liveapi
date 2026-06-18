@@ -5,14 +5,16 @@
 {% block page_subtitle %}Dynamic /r/ URLs — manual hand-picked lists or auto-by-league.{% endblock %}
 
 {% block page_actions %}
+  {% if current_user and current_user.role in ['editor','admin'] %}
   <a href="/admin/campaigns/new" class="btn primary">
     <i data-lucide="plus" style="width:15px;height:15px"></i> New campaign
   </a>
+  {% endif %}
 {% endblock %}
 
 {% block content %}
 
-{% set can_bulk = current_user.role == 'admin' %}
+{% set can_bulk = current_user and current_user.role in ['editor','admin'] %}
 
 {% if deleted %}<div class="alert ok">Deleted {{ deleted }} campaign{{ 's' if deleted != 1 else '' }}.</div>{% endif %}
 
