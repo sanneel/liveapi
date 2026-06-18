@@ -420,6 +420,28 @@ html.dark {
 .modal-x { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border:0; background:none; cursor:pointer; color:var(--t-faint); border-radius:8px; font-size:18px; line-height:1; }
 .modal-x:hover { background:var(--hover); color:var(--t-body); }
 .modal-body { padding:20px; overflow-y:auto; }
+/* ── Welcome / onboarding nudge ── */
+.welcome-modal { width:min(460px,100%); }
+.welcome-icon {
+  width:46px; height:46px; border-radius:13px; background:var(--acw);
+  display:flex; align-items:center; justify-content:center; margin-bottom:16px;
+}
+.welcome-icon svg { width:23px; height:23px; color:var(--ac); }
+.welcome-modal .modal-title { font-size:19px; }
+.welcome-lead { margin:6px 0 22px; font-size:14.5px; line-height:1.55; color:var(--t-body); }
+.welcome-lead b { color:var(--t-strong); font-weight:700; }
+.welcome-actions { display:flex; gap:10px; }
+.welcome-btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:11px 18px; border-radius:11px; border:1px solid transparent;
+  font:700 13.5px/1 var(--font); cursor:pointer; transition:filter .15s, background .15s, border-color .15s;
+}
+.welcome-btn svg { width:16px; height:16px; }
+.welcome-btn.primary { flex:1; background:var(--ac); color:#fff; box-shadow:0 6px 16px var(--acw); }
+.welcome-btn.primary:hover { filter:brightness(1.06); }
+.welcome-btn.ghost { background:transparent; color:var(--t-muted); border-color:var(--border-in); }
+.welcome-btn.ghost:hover { background:var(--hover); color:var(--t-body); }
+
 .modal-video { display:block; width:100%; aspect-ratio:16/9; border-radius:12px; background:#000; border:1px solid var(--border); }
 .modal-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; aspect-ratio:16/9; border-radius:12px; border:1px dashed var(--border-in); background:var(--subtle); color:var(--t-faint); text-align:center; padding:24px; }
 .modal-note { margin:12px 0 0; font-size:12.5px; line-height:1.55; color:var(--t-faint); }

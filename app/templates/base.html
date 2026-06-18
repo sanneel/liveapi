@@ -21,7 +21,7 @@
   <script defer src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
   <link rel="stylesheet" href="/static/admin.css">
-  <link rel="stylesheet" href="/static/redesign.css?v=9">
+  <link rel="stylesheet" href="/static/redesign.css?v=10">
   <style>
     html,body{margin:0;background:var(--canvas);}
     *:focus-visible { outline: 2px solid var(--ac,#F0613C); outline-offset: 2px; border-radius: 4px; }
@@ -155,22 +155,23 @@
 <div x-data="welcomeNudge()" x-init="init()"
      x-on:keydown.escape.window="show=false">
   <div class="modal-overlay" x-show="show" @click.self="show=false" style="display:none" x-cloak>
-    <div class="modal" style="max-width:440px">
+    <div class="modal welcome-modal">
       <div class="modal-head">
         <h2 class="modal-title">Welcome aboard 👋</h2>
         <button type="button" class="modal-x" @click="show=false" aria-label="Close">&times;</button>
       </div>
       <div class="modal-body">
-        <p style="margin:0 0 18px; line-height:1.5; color:var(--ink-soft,#5a6072)">
+        <div class="welcome-icon"><i data-lucide="graduation-cap"></i></div>
+        <p class="welcome-lead">
           Your password is set. New here? Take a couple of minutes to watch the
-          quick tutorials — or skip and explore, the <b>Help</b> button in the
+          quick tutorials — or skip and explore; the <b>Help</b> button in the
           sidebar opens them anytime.
         </p>
-        <div style="display:flex; gap:10px; flex-wrap:wrap">
-          <button type="button" class="btn primary" @click="watch()">
-            <i data-lucide="play" style="width:15px;height:15px"></i> Watch tutorials
+        <div class="welcome-actions">
+          <button type="button" class="welcome-btn primary" @click="watch()">
+            <i data-lucide="play"></i> Watch tutorials
           </button>
-          <button type="button" class="btn" @click="show=false">Maybe later</button>
+          <button type="button" class="welcome-btn ghost" @click="show=false">Maybe later</button>
         </div>
       </div>
     </div>
