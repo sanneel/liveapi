@@ -2,13 +2,22 @@
 # Auto-deploy: when origin/main moves, pull it and restart the :8000 app.
 # Safe no-op when there's nothing new. Meant to run from cron every minute.
 #
-# The restart command is configurable WITHOUT editing this (git-tracked) file —
-# set RESTART_CMD in the crontab line if `systemctl restart jugabet` is wrong:
-#   * * * * * RESTART_CMD="systemctl restart yourunit" /usr/bin/flock -n /tmp/autodeploy.lock /home/admin/staging_html/scripts/auto_deploy.sh
+# OFF BY DEFAULT. Continuously deploying whatever lands on main is appropriate
+# for STAGING, not production. To enable, set AUTODEPLOY_ENABLED=1 in the
+# crontab line (alongside RESTART_CMD if the unit name differs):
+#   * * * * * AUTODEPLOY_ENABLED=1 RESTART_CMD="systemctl restart yourunit" /usr/bin/flock -n /tmp/autodeploy.lock /home/admin/staging_html/scripts/auto_deploy.sh
+# For production, prefer an explicit, gated deploy instead:
+#   git fetch && git checkout <known-good-tag> && ./deploy/deploy.sh
 set -u
 REPO=/home/admin/staging_html
 RESTART_CMD="${RESTART_CMD:-systemctl restart jugabet}"
+AUTODEPLOY_ENABLED="${AUTODEPLOY_ENABLED:-0}"
 LOG="$REPO/logs/autodeploy.log"
+
+if [ "$AUTODEPLOY_ENABLED" != "1" ]; then
+  echo "$(date -u) auto-deploy disabled (set AUTODEPLOY_ENABLED=1 to enable; staging only)" >>"$LOG" 2>/dev/null
+  exit 0
+fi
 
 cd "$REPO" 2>/dev/null || { echo "$(date -u) no repo at $REPO" >>"$LOG"; exit 1; }
 exec >>"$LOG" 2>&1
@@ -36,6 +45,15 @@ else
   else
     echo "$(date -u) ERROR: could not restart automatically — set RESTART_CMD in the crontab line"
   fi
+fi
+
+# Post-restart health gate: surface a bad deploy in the log instead of silently
+# leaving a broken service running.
+sleep 2
+if curl -fsS -m 5 http://127.0.0.1:8000/health >/dev/null 2>&1; then
+  echo "$(date -u) health OK after deploy"
+else
+  echo "$(date -u) WARNING: /health not OK after deploy at $(git rev-parse --short HEAD) — investigate"
 fi
 
 echo "$(date -u) now at $(git rev-parse --short HEAD)"
