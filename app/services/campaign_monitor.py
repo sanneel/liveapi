@@ -32,6 +32,7 @@ from ..config import get_settings
 from ..database import db_session
 from ..logging_config import get_logger
 from ..models import Match
+from ..parser import drift_canary
 from ..repositories.campaign_repo import CampaignRepository
 from ..repositories.log_repo import LogRepository
 from .telegram_notify import is_configured, send_telegram
@@ -42,6 +43,10 @@ logger = get_logger("app.services.campaign_monitor")
 # every currently-dead campaign re-alerts once, which is the desired behaviour.
 _last_state: Dict[str, str] = {}
 _state_lock = threading.Lock()
+
+# Parser drift canary state: "ok" | "drifted". Only ok<->drifted transitions
+# alert; "unreachable"/"no_events" are inconclusive and never flip the state.
+_canary_last_state: Optional[str] = None
 _monitor_started = False
 
 
@@ -141,6 +146,24 @@ def _format_recovered(h: CampaignHealth) -> str:
     )
 
 
+def _format_drift(res: dict) -> str:
+    return (
+        "🔴 <b>Parser format drift</b>\n"
+        f"{res.get('url')}\n"
+        "The page still advertises events but the extractor returned 0 — "
+        "jugabet likely changed their embedded JSON shape. Odds will go stale "
+        "until the parser is updated."
+    )
+
+
+def _format_drift_recovered(res: dict) -> str:
+    return (
+        "🟢 <b>Parser format drift cleared</b>\n"
+        f"{res.get('url')}\n"
+        f"Extractor is reading odds again ({res.get('events_with_odds')} events)."
+    )
+
+
 def _format_disabled(slug: str, title: str) -> str:
     return (
         "🟠 <b>Campaign auto-disabled</b>\n"
@@ -203,9 +226,35 @@ def auto_disable_finished() -> List[tuple]:
     return disabled
 
 
+def _run_canary_and_alert() -> int:
+    """Run the parser drift canary and alert on ok<->drifted transitions.
+
+    "unreachable"/"no_events"/"unknown" are inconclusive (network, geo-block,
+    off-hours) and must never cry wolf, so they leave the last state untouched.
+    """
+    global _canary_last_state
+    if not get_settings().parser_canary_enabled:
+        return 0
+    res = drift_canary.run_canary_once()
+    status = res.get("status")
+    if status not in ("ok", "drifted"):
+        return 0
+    alerts = 0
+    with _state_lock:
+        prev = _canary_last_state
+        if status == "drifted" and prev != "drifted":
+            if send_telegram(_format_drift(res)):
+                alerts += 1
+        elif status == "ok" and prev == "drifted":
+            if send_telegram(_format_drift_recovered(res)):
+                alerts += 1
+        _canary_last_state = status
+    return alerts
+
+
 def run_monitor_once() -> dict:
-    """Auto-disable finished manual campaigns, then evaluate the rest and
-    alert on any ok↔dead transition."""
+    """Auto-disable finished manual campaigns, evaluate the rest, run the parser
+    drift canary, and alert on any ok↔dead or ok↔drifted transition."""
     alerts = 0
     disabled = auto_disable_finished()
     for slug, title in disabled:
@@ -234,6 +283,7 @@ def run_monitor_once() -> dict:
         # fire a spurious "recovered" if re-created later.
         for slug in [s for s in _last_state if s not in live_slugs]:
             _last_state.pop(slug, None)
+    alerts += _run_canary_and_alert()
     dead = sum(1 for h in healths if h.dead)
     return {
         "checked": len(healths),

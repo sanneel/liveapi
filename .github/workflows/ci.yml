@@ -35,6 +35,9 @@ jobs:
       - name: Match deactivation logic test
         run: python scripts/test_deactivate_not_seen.py
 
+      - name: Parser drift canary classification test
+        run: python scripts/test_drift_canary.py
+
       # Migrations must apply cleanly from scratch on a temp database.
       - name: Alembic migrations apply
         env:

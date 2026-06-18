@@ -11,6 +11,13 @@ with the DB snapshot + `git reset` commands printed by that script.
 ## [Unreleased]
 
 ### Added
+- **Parser drift canary** (`app/parser/drift_canary.py`): each campaign-monitor
+  cycle probes a live jugabet listing URL and classifies the result as
+  `ok` / `drifted` / `unreachable` / `no_events`. A `drifted` result (the page
+  still advertises events but the extractor returns 0 — i.e. jugabet changed
+  their embedded JSON shape) flips `/health` to degraded and fires a Telegram
+  alert on the ok↔drifted transition. Configurable via `PARSER_CANARY_ENABLED`
+  / `PARSER_CANARY_URL`; covered by `scripts/test_drift_canary.py` in CI.
 - Deep post-deploy verification is now a **hard gate** in `deploy/deploy.sh`:
   after the service health check it runs `scripts/phase_b_health.py` and aborts
   the deploy (with rollback guidance) on a real failure. The admin-override
