@@ -1,20 +1,64 @@
 # Live Odds Management
 
 Backoffice and image-rendering service for live sports odds. A background parser
-scrapes jugabet.cl, stores every match in one database, and serves on-demand PNG
-images that get embedded in marketing emails and journeys. An admin panel lets
-operators curate what those images show.
+scrapes jugabet.cl, stores every match in a single database, and serves
+on-demand PNG images that are embedded in marketing emails and customer
+journeys. An admin panel lets operators curate what those images show.
 
-For the deep technical write-up see [ARCHITECTURE_REPORT.md](ARCHITECTURE_REPORT.md).
-For server setup and deploys see [DEPLOY.md](DEPLOY.md) and
-[deploy/STAGING_RUNBOOK.md](deploy/STAGING_RUNBOOK.md).
+## At a glance
+
+| | |
+|---|---|
+| **Purpose** | Turn live odds into curated, cache-friendly marketing images (email + journeys). |
+| **Core** | One FastAPI process: HTTP app + parser + database + render caches. |
+| **Stack** | Python 3 · FastAPI/uvicorn · SQLAlchemy 2 + SQLite · Alembic · Playwright · Pillow · Jinja2 + Alpine.js. |
+| **Auth** | bcrypt + JWT cookie sessions, three-tier roles, audit log. |
+| **Storage** | Single SQLite database (WAL mode), one `matches` table feeding every render surface. |
+| **Deploy** | systemd-managed uvicorn behind a TLS reverse proxy on a VPS. See [DEPLOY.md](DEPLOY.md). |
+| **Maturity** | Production, single-tenant, single-process by design. See [Project status](#project-status--design-notes). |
+
+---
+
+## System architecture
+
+The whole service runs as **one process**. A single `uvicorn server:app
+--workers 1` owns the HTTP app, the parser, the SQLite connection, and the
+in-memory image caches. Everything renders from one `matches` table.
+
+```mermaid
+flowchart TD
+    C["Email clients & browsers"] --> PX["TLS reverse proxy (HTTPS)"]
+    PX -->|"proxy to :8000"| APP
+
+    subgraph PROC["Single process · uvicorn server:app · --workers 1"]
+        APP["FastAPI app<br/>admin + public routes"]
+        PAR["Parser<br/>Playwright Chromium · background threads"]
+        MON["Campaign monitor<br/>+ Telegram alerts"]
+    end
+
+    PAR -->|writes| DB[("SQLite<br/>matches · campaigns · clubs · users")]
+    APP -->|reads| DB
+    MON -->|reads| DB
+
+    APP --> S1["/r/slug.png · Campaigns"]
+    APP --> S2["/hot/sport.png · Hot"]
+    APP --> S3["/club/slug.png · Clubs"]
+    APP --> S4["/cube/theme · Cubes"]
+```
+
+**Why one process:** the parser keeps a single shared Chromium worker and the
+renderers depend on in-process PNG caches. Running more than one uvicorn worker
+would spawn duplicate parsers, contend on SQLite, and break local cache
+invalidation. A pidfile guard enforces the singleton; `--workers 1` is the rule.
+Splitting the parser into its own service is the planned next step (see
+[Project status](#project-status--design-notes)).
 
 ---
 
 ## What it produces
 
-Everything renders from a single `matches` table. There are four public,
-cache-friendly image surfaces, each independent of the others:
+There are four public, cache-friendly image surfaces, each independent of the
+others and all rendered from the same `matches` table:
 
 | Surface | URL | What it renders |
 |---|---|---|
@@ -25,17 +69,6 @@ cache-friendly image surfaces, each independent of the others:
 
 Campaigns also carry the journey URL used in emails:
 `https://<host>/r/{slug}.png?limit=N&v={{JourneyActivityId}}&u={{playerID}}`.
-
----
-
-## Tech stack
-
-- Python 3, FastAPI, served by uvicorn (`server:app`).
-- SQLAlchemy 2 over SQLite, with Alembic migrations.
-- Playwright (headless Chromium) for the parser.
-- Pillow for image rendering.
-- Jinja2 templates and a little Alpine.js for the admin UI.
-- bcrypt + JWT cookie sessions for auth.
 
 ---
 
@@ -56,11 +89,12 @@ app/
   static/                 redesign.css (the live design system), favicon, admin bundle
 scripts/                  Operational CLI tools (see "Scripts" below)
 alembic/                  Database migrations
+deploy/                   systemd unit, reverse-proxy config, runbooks, deploy scripts
 ```
 
 Note: the various `*_render_server.py` and `server_v2.py` files at the repo root
-are legacy or standalone experiments. The live service is `server.py` on port
-8000.
+are legacy or standalone rendering harnesses, useful for isolated template work.
+The live service is `server.py` on port 8000; production never runs the others.
 
 ---
 
@@ -76,8 +110,8 @@ playwright install chromium      # one-time, for the parser
 # 2. Initialize the database (creates the SQLite file + runs migrations)
 python scripts/init_db.py
 
-# 3. Create your first admin account
-python scripts/create_admin.py --username sandros7 --role admin
+# 3. Create the first admin account
+python scripts/create_admin.py --username admin1 --role admin
 
 # 4. Run the app
 uvicorn server:app --host 127.0.0.1 --port 8000 --workers 1
@@ -85,22 +119,39 @@ uvicorn server:app --host 127.0.0.1 --port 8000 --workers 1
 
 Then open `http://127.0.0.1:8000/admin/login`.
 
-Always run with `--workers 1`. The parser uses background threads inside the
-process; more than one worker would spawn duplicate parsers (a pidfile guard
-also blocks this, but one worker is the rule).
+Always run with `--workers 1` (see [System architecture](#system-architecture)).
+To run without the parser for UI-only work, set `PARSER_ENABLED=false`.
 
-To run without the parser (UI-only work), set `PARSER_ENABLED=false`.
+---
+
+## Operations quick reference
+
+For a service deployed per [DEPLOY.md](DEPLOY.md) (systemd unit `jugabet`):
+
+| Need | Command |
+|---|---|
+| Is it alive? | `curl -s localhost:8000/health` → expects `{"ok": true, ...}` |
+| Service status | `systemctl status jugabet` |
+| Restart | `systemctl restart jugabet` |
+| Live logs | `journalctl -u jugabet -f` (or the files under `LOG_DIR`) |
+| Deploy an update | `git pull --ff-only && ./deploy/deploy.sh` (snapshots DB, migrates, restarts, health-checks) |
+| Post-deploy verify | `python scripts/phase_b_health.py` |
+
+Service name, paths, and proxy details are owned by [DEPLOY.md](DEPLOY.md) and
+[deploy/STAGING_RUNBOOK.md](deploy/STAGING_RUNBOOK.md) — treat those as the
+source of truth over any older notes.
 
 ---
 
 ## Configuration
 
 Settings live in `app/config.py` and can be overridden with environment
-variables (a `.env` file is loaded automatically). The common ones:
+variables (a `.env` file is loaded automatically; start from
+[.env.example](.env.example)). The common ones:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `APP_ENV` | `development` | `production` enables stricter checks at startup. |
+| `APP_ENV` | `development` | `production` enables stricter startup checks (fails fast on unsafe secrets/cookies/hosts). |
 | `DATABASE_URL` | local SQLite file | Database connection string. |
 | `PARSER_ENABLED` | `true` | Set `false` to run the UI without scraping. |
 | `PARSER_REFRESH_SECONDS` | `120` | How often each feed re-parses. |
@@ -116,14 +167,14 @@ variables (a `.env` file is loaded automatically). The common ones:
 | `ADMIN_LOGIN_MAX_ATTEMPTS` | `5` | Failed logins before a temporary lockout. |
 | `ADMIN_LOGIN_LOCKOUT_MINUTES` | `15` | Lockout duration. |
 
-Never commit real secrets. `.env` is gitignored.
+Real secrets are never committed. `.env` is gitignored.
 
 ---
 
 ## The admin panel
 
-Sign in at `/admin/login`. The sidebar adapts to the signed-in user's role, so
-people only see pages they can open.
+Sign-in is at `/admin/login`. The sidebar adapts to the signed-in user's role,
+so each operator only sees pages they can open.
 
 ### Roles and permissions
 
@@ -159,10 +210,10 @@ Watching tutorials (the Help button) is available to every signed-in user.
 
 Accounts are created with a one-time password (see Scripts). The flow:
 
-1. The operator signs in with the password you give them.
+1. The operator signs in with the issued password.
 2. They are sent straight to the change-password page and confined there until
    they set a new password. The forced change only asks for the new password,
-   not the temporary one they just used to sign in.
+   not the temporary one just used to sign in.
 3. After the change they land on the dashboard with a welcome prompt that points
    them at the tutorials. They can watch or dismiss it and keep working.
 
@@ -175,7 +226,7 @@ All run from the project root. On the server, prefix with `.venv/bin/python`.
 Create one admin (interactive or with flags):
 
 ```bash
-python scripts/create_admin.py --username adminusername --role admin
+python scripts/create_admin.py --username admin1 --role admin
 ```
 
 Create operator accounts with generated one-time passwords:
@@ -185,9 +236,10 @@ Create operator accounts with generated one-time passwords:
 python scripts/new_user.py
 
 # batch
-python scripts/new_user.py --role editor user1 user2 user3
+python scripts/new_user.py --role editor alice bob carol
+
 # re-issue a password for someone who lost theirs
-python scripts/new_user.py --reset user1
+python scripts/new_user.py --reset alice
 ```
 
 List and remove accounts:
@@ -196,16 +248,16 @@ List and remove accounts:
 python scripts/manage_users.py list
 
 # delete specific account(s); dry run, then add --yes to confirm
-python scripts/manage_users.py delete --user user1
-python scripts/manage_users.py delete --user user1 user2 --yes
+python scripts/manage_users.py delete --user bob
+python scripts/manage_users.py delete --user bob carol --yes
 
 # delete everyone except the named account(s)
-python scripts/manage_users.py delete-others --keep user1 --yes
+python scripts/manage_users.py delete-others --keep admin1 --yes
 ```
 
 Both delete commands refuse to run if a named account does not exist, or if the
-deletion would leave no active admin, so you cannot lock yourself out. Without
-`--yes` they only preview.
+deletion would leave no active admin, so an operator cannot be locked out.
+Without `--yes` they only preview.
 
 ---
 
@@ -240,8 +292,8 @@ checks every enabled campaign on an interval and:
   one-time notice. Empty-by-design campaigns are left alone.
 
 The monitor loop also runs the auto-disable pass when Telegram is unconfigured;
-the alerts simply become no-ops. Use the "Test Telegram alert" button on the
-Parser Links page to confirm the bot credentials work.
+the alerts simply become no-ops. The "Test Telegram alert" button on the Parser
+Links page confirms the bot credentials work.
 
 ---
 
@@ -255,30 +307,55 @@ Parser Links page to confirm the bot credentials work.
 | `scripts/manage_users.py` | List, delete, or prune accounts. |
 | `scripts/import_tutorial.py` | Add a tutorial video from the server (bypasses upload size limits). |
 | `scripts/reset_hot.py` | Clear hot overrides for a sport. |
-| `scripts/reset_2fa.py` | Clear legacy 2FA state on an account. |
+| `scripts/phase_b_health.py` | Deep health check: DB, public JSON/PNG endpoints, club + legacy render parity. |
 | `scripts/test_all_endpoints.py` | Smoke-test every endpoint against a running server. |
 
 Several `scripts/probe_*.py` and `scripts/capture_*.py` files are parser
-investigation tools, not part of normal operations.
+investigation tools, not part of normal operations. `scripts/wipe_matches.py` is
+destructive (it deletes `matches` and `campaign_matches`) and should be used with
+care.
 
 ---
 
 ## Deployment
 
-Production runs on a VPS behind nginx, which proxies to uvicorn on port 8000,
-managed by systemd. Updates are a pull plus restart:
+Production runs on a VPS behind a TLS-terminating reverse proxy, which forwards
+to uvicorn on port 8000, managed by systemd. A routine update is a pull plus a
+guarded deploy:
 
 ```bash
 cd /home/admin/<app-dir>
 git pull --ff-only origin <branch>
-systemctl restart <service>
+./deploy/deploy.sh        # snapshots the DB, installs deps, migrates, restarts, health-checks
 ```
 
-Full first-time setup, backups, monitoring, and rollback are in
-[DEPLOY.md](DEPLOY.md). The staging procedure is in
-[deploy/STAGING_RUNBOOK.md](deploy/STAGING_RUNBOOK.md). The runbook is the source
-of truth for hostnames and service names; treat any conflicting older notes with
-caution.
+First-time setup, backups, monitoring, and rollback are in [DEPLOY.md](DEPLOY.md).
+The staging procedure is in [deploy/STAGING_RUNBOOK.md](deploy/STAGING_RUNBOOK.md),
+which is the source of truth for hostnames and service names.
+
+---
+
+## Project status & design notes
+
+Honest current state, for anyone evaluating or inheriting the system:
+
+- **Single-process by design.** The web app, parser, and database share one
+  process. This is deliberate (shared Chromium worker, in-process caches) and
+  works well at the current single-tenant scale. The main architectural ceiling
+  is throughput: the next serious upgrade is splitting the parser into its own
+  systemd service (`web` + `parser`), not adding queues or Postgres.
+- **SQLite is intentional.** WAL-mode SQLite is sufficient for this workload and
+  keeps operations simple (file-level backups, no separate DB server). Postgres
+  is not needed yet.
+- **Security posture.** Production config fails fast on unsafe JWT secret,
+  insecure cookies, missing allowed hosts, or non-HTTPS public URL. Auth has a
+  role hierarchy, forced first-login password change, login rate-limiting, and
+  anti-enumeration behavior. The systemd unit is hardened (`NoNewPrivileges`,
+  `PrivateTmp`, `ProtectSystem`, memory limits, restart-on-failure).
+- **Known follow-ups.** No CI yet — the existing `scripts/test_*.py` and
+  `phase_b_health.py` checks are run manually and are the obvious basis for a
+  GitHub Actions pipeline. Legacy root-level render servers and `server_v2.py`
+  remain as harnesses and could move to a `legacy/` directory.
 
 ---
 
@@ -291,4 +368,3 @@ caution.
 - Renderers share `app/render/logos.py` for logo caching and fallback.
 - The three image systems (Campaigns, Hot, Clubs) are intentionally independent
   and must not be merged.
-```

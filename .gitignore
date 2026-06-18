@@ -64,6 +64,10 @@ cybersport_*.png
 # Audit / architecture reports — keep local.
 ARCHITECTURE_REPORT.md
 
+# Editor/agent workspace and preview artifacts — not part of the app.
+.claude/
+ci_test.db
+
 # Local snapshots / backups
 _phase_c_backup/
 v1public_html/
