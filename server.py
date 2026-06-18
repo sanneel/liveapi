@@ -2520,6 +2520,14 @@ def startup() -> None:
     # (campaign / hot / World Cup) odds live without Playwright, so featured
     # matches stay fresh even when the heavy browser feeds are failing.
     start_priority_odds_thread()
+    # Campaign data-health monitor → Telegram alerts. No-op unless
+    # TELEGRAM_BOT_TOKEN/CHAT_ID are set. Started only here (parser-holding
+    # process) so the other uvicorn workers don't duplicate alerts.
+    try:
+        from app.services.campaign_monitor import start_monitor_thread
+        start_monitor_thread()
+    except Exception:
+        logger.exception("campaign monitor: failed to start")
     print(
         f"[STARTUP] step 8/8: ALL DONE. parser_threads={len(sorted_keys)} "
         f"pid={_os.getpid()}",

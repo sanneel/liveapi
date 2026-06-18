@@ -253,8 +253,11 @@ def parser_feeds_page(
     saved: int = 0,
     deleted: int = 0,
     sync_error: str = "",
+    tg: str = "",
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
+    from ..services.telegram_notify import is_configured as _tg_configured
+
     feeds = load_extra_feeds()
     now_dt = datetime.utcnow()
     with db_session() as session:
@@ -272,6 +275,8 @@ def parser_feeds_page(
             "saved": bool(saved),
             "deleted": bool(deleted),
             "sync_error": sync_error,
+            "tg": tg,
+            "telegram_configured": _tg_configured(),
         },
     )
 
@@ -621,6 +626,35 @@ def parser_feeds_delete(
         qs["sync_error"] = sync_error
     return RedirectResponse(
         f"/admin/parser-feeds?{urlencode(qs)}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/admin/parser-feeds/test-telegram")
+def parser_feeds_test_telegram(
+    user: User = Depends(require_role("editor")),
+) -> RedirectResponse:
+    """Send a test alert + a live summary of currently-dead campaigns so the
+    operator can confirm their Telegram bot is wired up correctly."""
+    from ..services.campaign_monitor import evaluate
+    from ..services.telegram_notify import is_configured, send_telegram
+
+    if not is_configured():
+        return RedirectResponse(
+            f"/admin/parser-feeds?{urlencode({'tg': 'unconfigured'})}",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    healths = evaluate()
+    dead = [h for h in healths if h.dead]
+    if dead:
+        lines = "\n".join(f"• {h.title} (/{h.slug}) — {h.reason}" for h in dead[:10])
+        body = f"\n\n<b>{len(dead)} campaign(s) currently dead:</b>\n{lines}"
+    else:
+        body = f"\n\nAll {len(healths)} campaigns healthy ✅"
+    ok = send_telegram("✅ <b>Jugabet Admin</b> — test alert." + body)
+    return RedirectResponse(
+        f"/admin/parser-feeds?{urlencode({'tg': 'ok' if ok else 'fail'})}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

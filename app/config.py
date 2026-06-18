@@ -79,6 +79,15 @@ class Settings(BaseSettings):
     # allow-list; override via env to add a CDN host. Validated at write time.
     allowed_fallback_image_hosts: str = "jugabet.cl,www.jugabet.cl"
 
+    # ── Telegram alerts / campaign monitor ───────────────────────────
+    # Create a bot with @BotFather → telegram_bot_token; get your numeric
+    # chat id from @userinfobot → telegram_chat_id. Blank disables alerts.
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
+    campaign_monitor_enabled: bool = True
+    campaign_monitor_interval_seconds: int = 300   # how often to re-check
+    campaign_stale_minutes: int = 20               # data older than this = "dead"
+
     # ── Rate limits ──────────────────────────────────────────────────
     admin_login_max_attempts: int = 5
     admin_login_lockout_minutes: int = 15

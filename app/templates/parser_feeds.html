@@ -5,6 +5,9 @@
 {% block page_subtitle %}Extra league / tournament URLs the parser pulls beyond the defaults.{% endblock %}
 
 {% block page_actions %}
+  <form method="post" action="/admin/parser-feeds/test-telegram" style="display:inline">
+    <button class="btn" type="submit"><i data-lucide="send" style="width:14px;height:14px"></i> Test Telegram alert</button>
+  </form>
   <a href="/health" target="_blank" class="btn">Health JSON</a>
 {% endblock %}
 
@@ -13,6 +16,10 @@
 {% if saved %}<div class="alert ok">Parser link saved — the parser is now pulling it. Refresh in ~30s to see its match count.</div>{% endif %}
 {% if deleted %}<div class="alert ok">Parser link removed from the extra-feed list.</div>{% endif %}
 {% if sync_error %}<div class="alert err">{{ sync_error }}</div>{% endif %}
+{% if tg == 'ok' %}<div class="alert ok">Test alert sent to Telegram ✅</div>{% endif %}
+{% if tg == 'fail' %}<div class="alert err">Telegram send failed — check the bot token / chat id in <code>.env</code> (details in logs).</div>{% endif %}
+{% if tg == 'unconfigured' %}<div class="alert err">Telegram isn't configured. Set <code>telegram_bot_token</code> and <code>telegram_chat_id</code> in <code>.env</code>, then restart.</div>{% endif %}
+{% if not telegram_configured %}<div class="alert" style="background:var(--acw); color:var(--ac)">Campaign-down alerts are <b>off</b> — add <code>telegram_bot_token</code> + <code>telegram_chat_id</code> to <code>.env</code> to get Telegram notifications when a campaign's league goes dead.</div>{% endif %}
 
 <div class="row-flex">
   <form method="post" action="/admin/parser-feeds" class="card card-pad col-rail" style="gap:14px; display:flex; flex-direction:column">
