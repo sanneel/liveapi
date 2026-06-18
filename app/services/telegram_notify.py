@@ -7,7 +7,7 @@ If either is blank, sending is a no-op so the rest of the app is unaffected.
 
 from __future__ import annotations
 
-import httpx
+import requests
 
 from ..config import get_settings
 from ..logging_config import get_logger
@@ -31,7 +31,7 @@ def send_telegram(text: str) -> bool:
         logger.info("telegram: not configured; skipping message")
         return False
     try:
-        resp = httpx.post(
+        resp = requests.post(
             _API.format(token=s.telegram_bot_token),
             json={
                 "chat_id": s.telegram_chat_id,
