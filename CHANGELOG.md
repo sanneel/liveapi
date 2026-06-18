@@ -10,6 +10,8 @@ with the DB snapshot + `git reset` commands printed by that script.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-06-18
+
 ### Added
 - **Parser drift canary** (`app/parser/drift_canary.py`): each campaign-monitor
   cycle probes a live jugabet listing URL and classifies the result as
@@ -59,5 +61,6 @@ First tagged release: the verified-good baseline.
 - `scripts/wipe_matches.py` is now safe by default: it previews row counts and
   requires `--yes` to delete.
 
-[Unreleased]: https://github.com/sanneel/liveapi/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/sanneel/liveapi/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/sanneel/liveapi/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/sanneel/liveapi/releases/tag/v1.0.0
