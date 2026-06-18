@@ -89,10 +89,53 @@ def cmd_delete_others(keep: list[str], yes: bool) -> int:
     return 0
 
 
+def cmd_delete(usernames: list[str], yes: bool) -> int:
+    targets = {u.strip().lower() for u in usernames if u.strip()}
+    if not targets:
+        print("Refusing: name at least one account to delete.", file=sys.stderr)
+        return 1
+
+    with db_session() as session:
+        repo = UserRepository(session)
+        users = repo.all()
+        present = {u.username for u in users}
+
+        missing = targets - present
+        if missing:
+            print(f"Refusing: unknown account(s): {', '.join(sorted(missing))}", file=sys.stderr)
+            return 1
+
+        # Don't let the last active admin be deleted.
+        remaining_admins = [
+            u for u in users
+            if u.role == "admin" and u.is_active and u.username not in targets
+        ]
+        if not remaining_admins:
+            print("Refusing: that would leave no active admin account.", file=sys.stderr)
+            return 1
+
+        to_delete = [u for u in users if u.username in targets]
+        print(f"Will delete {len(to_delete)}:")
+        for u in to_delete:
+            print(_fmt(u))
+
+        if not yes:
+            print("\nDry run. Re-run with --yes to actually delete.")
+            return 0
+
+        for u in to_delete:
+            repo.delete(u.username)
+        print(f"\nDeleted {len(to_delete)} account(s).")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="List and prune accounts.")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("list", help="Show all accounts.")
+    rm = sub.add_parser("delete", help="Delete specific account(s) by name.")
+    rm.add_argument("--user", nargs="+", required=True, help="Username(s) to delete.")
+    rm.add_argument("--yes", action="store_true", help="Actually delete (otherwise dry run).")
     d = sub.add_parser("delete-others", help="Delete every account except --keep.")
     d.add_argument("--keep", nargs="+", required=True, help="Username(s) to keep.")
     d.add_argument("--yes", action="store_true", help="Actually delete (otherwise dry run).")
@@ -100,6 +143,8 @@ def main() -> int:
 
     if args.command == "list":
         return cmd_list()
+    if args.command == "delete":
+        return cmd_delete(args.user, args.yes)
     if args.command == "delete-others":
         return cmd_delete_others(args.keep, args.yes)
     return 1
