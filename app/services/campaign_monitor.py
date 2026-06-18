@@ -23,7 +23,7 @@ from __future__ import annotations
 import threading
 import time
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 from sqlalchemy import func
@@ -173,32 +173,42 @@ def _format_disabled(slug: str, title: str) -> str:
     )
 
 
-def _match_still_live(match, now_dt: datetime, stale_seconds: int) -> bool:
-    """True only if a picked match is genuinely still going.
+def _match_still_live(match, now_dt: datetime) -> bool:
+    """True until a match's scheduled end has passed.
 
-    We do NOT trust ``is_active``/``status`` alone: a finished live match
-    often gets stuck with ``is_active=True, status='live'`` because it simply
-    vanished from the live feed and nothing ever flipped the flag (observed on
-    worldcupprm — both matches frozen 'live' but not refreshed for 10+ hours).
-    A match only counts as live if it is active AND its odds were refreshed
-    within the stale window; otherwise the game is over.
+    Deterministic "is the game over by the clock" rule: a match counts as
+    finished once ``start_time_utc + campaign_hide_after_start_hours`` is in the
+    past. A football match runs ~2h, so a kickoff that was 2h+ ago is over.
+
+    This replaces the old "active AND refreshed within N minutes" heuristic,
+    which wrongly flagged *upcoming* matches as finished whenever the parser
+    briefly stopped refreshing them (e.g. during a deploy/restart) — that is
+    what auto-disabled campaigns whose games hadn't even started yet.
+
+    A match with no known start time is treated as live, so a campaign is never
+    auto-disabled on missing data.
     """
-    if not match.is_active or match.last_updated_at is None:
-        return False
-    return (now_dt - match.last_updated_at).total_seconds() <= stale_seconds
+    if match.start_time_utc is None:
+        return True
+    finished_at = match.start_time_utc + timedelta(
+        hours=get_settings().campaign_hide_after_start_hours
+    )
+    return finished_at > now_dt
 
 
 def auto_disable_finished() -> List[tuple]:
     """Disable manual campaigns whose every picked match has finished, so they
     stop rendering a blank/stale PNG and the operator can delete them.
 
-    A match is "finished" when it is inactive, was removed, OR is frozen
-    (still flagged live but not refreshed within the stale window — see
-    ``_match_still_live``). Empty-by-design campaigns (no matches ever picked)
-    are left alone. Returns ``[(slug, title)]`` for the campaigns just turned off.
+    A match is "finished" when its scheduled end has passed — i.e.
+    ``start_time_utc + campaign_hide_after_start_hours`` is in the past (see
+    ``_match_still_live``) — or when it was removed (``get_matches`` returns
+    nothing). Upcoming matches are never "finished", so a campaign whose games
+    haven't started yet is never auto-disabled, even if the parser briefly
+    stalls. Empty-by-design campaigns (no matches ever picked) are left alone.
+    Returns ``[(slug, title)]`` for the campaigns just turned off.
     """
     now_dt = datetime.utcnow()
-    stale_seconds = max(60, get_settings().campaign_stale_minutes * 60)
     disabled: List[tuple] = []
     with db_session() as session:
         repo = CampaignRepository(session)
@@ -209,8 +219,8 @@ def auto_disable_finished() -> List[tuple]:
             if not repo.get_match_rows(campaign.slug):
                 continue  # never had matches — not "finished"
             matches = repo.get_matches(campaign.slug)
-            if any(_match_still_live(m, now_dt, stale_seconds) for m in matches):
-                continue  # at least one match still live and fresh
+            if any(_match_still_live(m, now_dt) for m in matches):
+                continue  # at least one match has not finished yet (by the clock)
             if repo.disable(campaign.slug):
                 disabled.append((campaign.slug, campaign.title))
                 log.record(
