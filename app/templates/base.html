@@ -148,6 +148,34 @@
   </div>
 </div>
 
+{# ── Welcome nudge ── auto-opens once after a forced first-login password
+   change (?welcome=1). Soft onboarding: it points at the tutorials but the
+   operator can dismiss it and keep working. #}
+<div x-data="welcomeNudge()" x-init="init()"
+     x-on:keydown.escape.window="show=false">
+  <div class="modal-overlay" x-show="show" @click.self="show=false" style="display:none" x-cloak>
+    <div class="modal" style="max-width:440px">
+      <div class="modal-head">
+        <h2 class="modal-title">Welcome aboard 👋</h2>
+        <button type="button" class="modal-x" @click="show=false" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin:0 0 18px; line-height:1.5; color:var(--ink-soft,#5a6072)">
+          Your password is set. New here? Take a couple of minutes to watch the
+          quick tutorials — or skip and explore, the <b>Help</b> button in the
+          sidebar opens them anytime.
+        </p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap">
+          <button type="button" class="btn primary" @click="watch()">
+            <i data-lucide="play" style="width:15px;height:15px"></i> Watch tutorials
+          </button>
+          <button type="button" class="btn" @click="show=false">Maybe later</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 {# ── Toast ── #}
 <div x-data="{ msg: '', kind: 'info', show: false }"
      x-on:toast.window="msg = $event.detail?.msg ?? $event.detail; kind = $event.detail?.kind || 'info'; show = true; clearTimeout($el._t); $el._t = setTimeout(() => show = false, kind === 'error' ? 4000 : 2500)"
@@ -199,6 +227,30 @@
           if (v) { v.load(); v.play().catch(() => {}); }
           if (window.lucide) lucide.createIcons();
         });
+      },
+    };
+  };
+
+  // ── Welcome nudge ── shows once when the URL carries ?welcome=1 (set by
+  // the forced-password-change redirect), then strips the param so a refresh
+  // won't reopen it. "Watch tutorials" hands off to the Help modal.
+  window.welcomeNudge = function() {
+    return {
+      show: false,
+      init() {
+        try {
+          const u = new URL(window.location.href);
+          if (u.searchParams.get('welcome') === '1') {
+            this.show = true;
+            u.searchParams.delete('welcome');
+            window.history.replaceState({}, '', u.pathname + u.search + u.hash);
+            this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+          }
+        } catch (e) { /* no-op */ }
+      },
+      watch() {
+        this.show = false;
+        window.dispatchEvent(new CustomEvent('help-open'));
       },
     };
   };

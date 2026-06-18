@@ -198,10 +198,15 @@ def change_password_submit(
         if verify_password(new_password, user.password_hash):
             return _retry("New password must be different from the current one.")
 
+        # A forced first-login change earns the new operator a one-time
+        # welcome that points them at the tutorial library. A voluntary
+        # change (operator updating their own password later) does not.
+        was_forced = bool(user.must_change_password)
         users.set_password(user, hash_password(new_password), must_change_password=False)
         logs.record("password.change", username=user.username, ip=ip)
 
-    return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
+    dest = "/admin?welcome=1" if was_forced else "/admin"
+    return RedirectResponse(url=dest, status_code=status.HTTP_303_SEE_OTHER)
 
 
 def _redirect_to_login(next_url: str, error: str) -> RedirectResponse:
