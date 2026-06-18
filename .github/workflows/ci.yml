@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Compile check: catches syntax errors and bad imports across the app.
+      - name: Compile sources
+        run: python -m compileall -q app server.py
+
+      # Standalone unit tests (no network, no browser, no live server).
+      - name: Embedded odds extraction test
+        run: python scripts/test_embedded_odds.py
+
+      - name: Match deactivation logic test
+        run: python scripts/test_deactivate_not_seen.py
+
+      # Migrations must apply cleanly from scratch on a temp database.
+      - name: Alembic migrations apply
+        env:
+          DATABASE_URL: "sqlite:///./ci_test.db"
+        run: |
+          python scripts/init_db.py

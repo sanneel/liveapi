@@ -7,22 +7,40 @@ lose their selected-match list and need to be re-picked once the parser
 repopulates matches.
 
 Preserves: campaigns, clubs, users, admin_logs, hot_override*, campaign_hits.
+
+Safe by default: running without --yes only previews the row counts and makes
+no changes. Pass --yes to actually delete.
+
+    python scripts/wipe_matches.py            # preview only
+    python scripts/wipe_matches.py --yes      # actually wipe
 """
 
-from sqlalchemy import text
+from __future__ import annotations
 
-from app.database import db_session
+import argparse
 
 
-def main() -> None:
+def _counts(cursor) -> tuple[int, int]:
+    cursor.execute("SELECT COUNT(*) FROM matches")
+    matches = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM campaign_matches")
+    campaign_matches = cursor.fetchone()[0]
+    return matches, campaign_matches
+
+
+def main(confirmed: bool) -> None:
     from app.database import engine
+
     dbapi_conn = engine.raw_connection()
     try:
         cursor = dbapi_conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM matches")
-        m_before = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(*) FROM campaign_matches")
-        cm_before = cursor.fetchone()[0]
+        m_before, cm_before = _counts(cursor)
+
+        if not confirmed:
+            print("DRY RUN - nothing deleted. Re-run with --yes to wipe.")
+            print(f"  matches:          {m_before} rows would be deleted")
+            print(f"  campaign_matches: {cm_before} rows would be deleted")
+            return
 
         cursor.execute("PRAGMA foreign_keys = OFF")
         cursor.execute("BEGIN TRANSACTION")
@@ -30,19 +48,22 @@ def main() -> None:
         cursor.execute("DELETE FROM matches")
         dbapi_conn.commit()
 
-        cursor.execute("SELECT COUNT(*) FROM matches")
-        m_after = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(*) FROM campaign_matches")
-        cm_after = cursor.fetchone()[0]
-
+        m_after, cm_after = _counts(cursor)
         print(f"matches:          {m_before} -> {m_after}  (deleted {m_before - m_after})")
         print(f"campaign_matches: {cm_before} -> {cm_after}  (deleted {cm_before - cm_after})")
-    except Exception as e:
+    except Exception:
         dbapi_conn.rollback()
-        raise e
+        raise
     finally:
         dbapi_conn.close()
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Actually delete. Without this flag the script only previews counts.",
+    )
+    args = parser.parse_args()
+    main(confirmed=args.yes)

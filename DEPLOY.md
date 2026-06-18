@@ -29,6 +29,16 @@ Assumes Ubuntu 22.04 or Debian 12. Everything is copy-paste.
 > `alembic upgrade head` step is needed for the standard deploy flow,
 > but you can still run it by hand for ad-hoc schema work.
 
+> **Reverse proxy — read this before following section 1.7.** The app only
+> requires *some* TLS-terminating reverse proxy forwarding to `uvicorn` on
+> `127.0.0.1:8000`. This guide installs **Caddy** because it auto-provisions
+> certificates, and that is the recommended setup for a fresh VPS. **The
+> current production host instead runs nginx in front of uvicorn.** If you are
+> working on that existing host, treat its live nginx config as the source of
+> truth and skip the Caddy steps (1.7, 2.4); the app, systemd, backup, and
+> health-check steps are identical regardless of proxy. For a brand-new
+> environment, either proxy is fine — pick one.
+
 ---
 
 ## 1. First-time VPS setup (do this once)
