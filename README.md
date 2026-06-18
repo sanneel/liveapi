@@ -352,10 +352,14 @@ Honest current state, for anyone evaluating or inheriting the system:
   role hierarchy, forced first-login password change, login rate-limiting, and
   anti-enumeration behavior. The systemd unit is hardened (`NoNewPrivileges`,
   `PrivateTmp`, `ProtectSystem`, memory limits, restart-on-failure).
-- **Known follow-ups.** No CI yet — the existing `scripts/test_*.py` and
-  `phase_b_health.py` checks are run manually and are the obvious basis for a
-  GitHub Actions pipeline. Legacy root-level render servers and `server_v2.py`
-  remain as harnesses and could move to a `legacy/` directory.
+- **CI.** A GitHub Actions workflow ([.github/workflows/ci.yml](.github/workflows/ci.yml))
+  runs on every push: a compile check, the standalone parser/deactivation tests
+  (`scripts/test_embedded_odds.py`, `scripts/test_deactivate_not_seen.py`), and a
+  from-scratch Alembic migration. Converting the remaining `scripts/test_*.py`
+  smoke checks into `pytest` coverage is the next testing step.
+- **Known follow-ups.** Legacy root-level render servers and `server_v2.py`
+  remain imported as render harnesses (`render_hot_png`) and would need a small
+  refactor before they could move to a `legacy/` directory.
 
 ---
 
