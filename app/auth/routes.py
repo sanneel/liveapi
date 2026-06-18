@@ -165,9 +165,9 @@ def change_password_page(request: Request, error: Optional[str] = None) -> HTMLR
 @limiter.limit("10/minute")
 def change_password_submit(
     request: Request,
-    current_password: str = Form(...),
     new_password: str = Form(...),
     confirm_password: str = Form(...),
+    current_password: str = Form(""),
 ) -> RedirectResponse:
     auth_user = require_login(request)
     ip = _client_ip(request)
@@ -183,7 +183,12 @@ def change_password_submit(
         if user is None or not user.is_active:
             return _retry("Account unavailable. Please sign in again.")
 
-        if not verify_password(current_password, user.password_hash):
+        was_forced = bool(user.must_change_password)
+        # A forced first-login change skips the current-password prompt — the
+        # operator just authenticated with their one-time password at login, so
+        # re-typing it adds friction without adding security. A voluntary change
+        # (already logged in) still requires it, to thwart a hijacked session.
+        if not was_forced and not verify_password(current_password, user.password_hash):
             logs.record("password.change.failed", username=user.username, ip=ip,
                         payload={"reason": "bad_current"})
             return _retry("Current password is incorrect.")
@@ -198,10 +203,8 @@ def change_password_submit(
         if verify_password(new_password, user.password_hash):
             return _retry("New password must be different from the current one.")
 
-        # A forced first-login change earns the new operator a one-time
-        # welcome that points them at the tutorial library. A voluntary
-        # change (operator updating their own password later) does not.
-        was_forced = bool(user.must_change_password)
+        # A forced first-login change earns the new operator a one-time welcome
+        # that points them at the tutorial library; a voluntary change does not.
         users.set_password(user, hash_password(new_password), must_change_password=False)
         logs.record("password.change", username=user.username, ip=ip)
 
