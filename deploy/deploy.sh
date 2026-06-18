@@ -66,5 +66,21 @@ else
   exit 1
 fi
 
+# ── 7. Deep post-deploy verification (hard gate) ──────────────────────
+# Exercises DB health, /hot JSON, PNG endpoints, club + legacy render parity.
+# The admin-override check SKIPs unless PHASE_B_USERNAME/PHASE_B_PASSWORD are
+# exported. Exit code is non-zero only on a real FAIL (WARN/SKIP still pass).
+echo ""
+echo "▶ deep health check (phase_b_health.py)"
+if .venv/bin/python scripts/phase_b_health.py; then
+  echo "✓ Deep health checks passed"
+else
+  echo "✗ DEEP HEALTH CHECK FAILED — service is up but behaving incorrectly"
+  echo ""
+  echo "To roll back the DB:    mv $SNAPSHOT data/jugabet.db && sudo systemctl restart jugabet"
+  echo "To roll back the code:  git reset --hard HEAD~1 && ./deploy/deploy.sh"
+  exit 1
+fi
+
 echo ""
 echo "✅ Deployed successfully at $(date)"

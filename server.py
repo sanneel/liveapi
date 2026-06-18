@@ -2860,10 +2860,22 @@ def health() -> Dict[str, Any]:
         "jobs_failed": _pw_jobs_failed,
     }
 
-    # Parser freshness via DB
+    # Parser freshness + live match volume via DB
     try:
         with _db_session() as s:
             last = s.query(_sa.func.max(_Match.last_updated_at)).scalar()
+            active_count = (
+                s.query(_sa.func.count())
+                .select_from(_Match)
+                .filter(_Match.is_active.is_(True))
+                .scalar()
+            )
+            inactive_count = (
+                s.query(_sa.func.count())
+                .select_from(_Match)
+                .filter(_Match.is_active.is_(False))
+                .scalar()
+            )
         if last:
             age = int((now_utc - last).total_seconds())
             out["parser_freshness_seconds"] = age
@@ -2871,6 +2883,13 @@ def health() -> Dict[str, Any]:
         else:
             out["parser_freshness_seconds"] = None
             out["last_parser_cycle_utc"] = None
+        active = int(active_count or 0)
+        inactive = int(inactive_count or 0)
+        out["matches"] = {
+            "active": active,
+            "inactive": inactive,
+            "total": active + inactive,
+        }
         out["db"] = {"ok": True}
     except Exception as e:
         overall_ok = False
