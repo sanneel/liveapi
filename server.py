@@ -2921,6 +2921,15 @@ def health() -> Dict[str, Any]:
     out["refresh_seconds"] = REFRESH_SECONDS
     out["timezone"] = FORCED_TIMEZONE
 
+    # Parser drift canary (cached; never fetches inline). Surfaces a jugabet
+    # embedded-JSON format change before campaigns silently render blank.
+    try:
+        from app.parser import drift_canary as _drift_canary
+
+        out["parser_canary"] = _drift_canary.get_last_result()
+    except Exception as e:
+        out["parser_canary"] = {"status": "unknown", "error": str(e)}
+
     # Degraded detection: the parser can be "running" yet producing nothing
     # (anti-bot soft-block -> every feed empty), which used to still report
     # ok=true while the UI froze. Flag it so monitors actually fire and the
@@ -2933,6 +2942,10 @@ def health() -> Dict[str, Any]:
     _fresh = out.get("parser_freshness_seconds")
     if _fresh is not None and _fresh > 6 * REFRESH_SECONDS:
         degraded_reasons.append(f"parser freshness {_fresh}s exceeds {6 * REFRESH_SECONDS}s")
+    if out.get("parser_canary", {}).get("status") == "drifted":
+        degraded_reasons.append(
+            "parser canary: jugabet format drift (page has events but extractor returned 0)"
+        )
     if degraded_reasons:
         overall_ok = False
         out["degraded"] = True

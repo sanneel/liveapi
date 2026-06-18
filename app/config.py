@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     parser_js_settle_ms: int = 1200
     parser_enabled: bool = True
     parser_max_concurrency: int = 8
+    # Drift canary: probes a live jugabet listing URL each monitor cycle and
+    # flags when the page still advertises events but our extractor yields none
+    # (i.e. jugabet changed their embedded JSON shape). See app/parser/drift_canary.py.
+    parser_canary_enabled: bool = True
+    parser_canary_url: str = "https://jugabet.cl/football/all/1"
 
     # ── Match lifecycle ──────────────────────────────────────────────
     # Hours after start_time_utc a match is considered expired. Was 6,
