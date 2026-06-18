@@ -33,6 +33,7 @@ from ..database import db_session
 from ..logging_config import get_logger
 from ..models import Match
 from ..repositories.campaign_repo import CampaignRepository
+from ..repositories.log_repo import LogRepository
 from .telegram_notify import is_configured, send_telegram
 
 logger = get_logger("app.services.campaign_monitor")
@@ -140,10 +141,64 @@ def _format_recovered(h: CampaignHealth) -> str:
     )
 
 
+def _format_disabled(slug: str, title: str) -> str:
+    return (
+        "🟠 <b>Campaign auto-disabled</b>\n"
+        f"<b>{title}</b> (/{slug})\n"
+        "Every picked match has finished — turned off so it won't render "
+        "blank. Safe to delete from the Campaigns page."
+    )
+
+
+def auto_disable_finished() -> List[tuple]:
+    """Disable manual campaigns whose every picked match has finished
+    (``is_active=False``) or was removed, so they stop rendering blank PNGs
+    and the operator can delete them.
+
+    Empty-by-design campaigns (no matches ever picked) are left alone — only
+    campaigns that *had* matches and have since gone fully inactive qualify.
+    Returns ``[(slug, title)]`` for the campaigns it just turned off.
+    """
+    disabled: List[tuple] = []
+    with db_session() as session:
+        repo = CampaignRepository(session)
+        log = LogRepository(session)
+        for campaign in repo.list_all(enabled_only=True):
+            if campaign.mode != "manual":
+                continue
+            if not repo.get_match_rows(campaign.slug):
+                continue  # never had matches — not "finished"
+            matches = repo.get_matches(campaign.slug)
+            if any(m.is_active for m in matches):
+                continue  # at least one match still live
+            if repo.disable(campaign.slug):
+                disabled.append((campaign.slug, campaign.title))
+                log.record(
+                    "campaign.auto_disable",
+                    username="monitor",
+                    target=campaign.slug,
+                    payload={"reason": "all matches finished"},
+                )
+                logger.info(
+                    "campaign monitor: auto-disabled %s (all matches finished)",
+                    campaign.slug,
+                )
+    return disabled
+
+
 def run_monitor_once() -> dict:
-    """Evaluate all campaigns and alert on any ok↔dead transition."""
-    healths = evaluate()
+    """Auto-disable finished manual campaigns, then evaluate the rest and
+    alert on any ok↔dead transition."""
     alerts = 0
+    disabled = auto_disable_finished()
+    for slug, title in disabled:
+        # A campaign disabled here drops out of evaluate() (enabled-only), so
+        # it won't also fire a "dead" alert — this is its single notification.
+        with _state_lock:
+            _last_state.pop(slug, None)
+        if send_telegram(_format_disabled(slug, title)):
+            alerts += 1
+    healths = evaluate()
     with _state_lock:
         live_slugs = set()
         for h in healths:
@@ -163,12 +218,21 @@ def run_monitor_once() -> dict:
         for slug in [s for s in _last_state if s not in live_slugs]:
             _last_state.pop(slug, None)
     dead = sum(1 for h in healths if h.dead)
-    return {"checked": len(healths), "dead": dead, "alerts_sent": alerts}
+    return {
+        "checked": len(healths),
+        "dead": dead,
+        "disabled": len(disabled),
+        "alerts_sent": alerts,
+    }
 
 
 def start_monitor_thread() -> bool:
-    """Start the background loop. No-op if disabled, unconfigured, or already
-    running. Returns True only when a thread was actually started."""
+    """Start the background loop. No-op if disabled via config or already
+    running. Returns True only when a thread was actually started.
+
+    Note: the loop runs even when Telegram is unconfigured — auto-disabling
+    finished manual campaigns is useful on its own, and the Telegram sends
+    simply become no-ops until a token/chat id is set."""
     global _monitor_started
     settings = get_settings()
     if _monitor_started:
@@ -177,8 +241,10 @@ def start_monitor_thread() -> bool:
         logger.info("campaign monitor: disabled via config")
         return False
     if not is_configured():
-        logger.info("campaign monitor: Telegram not configured; not starting")
-        return False
+        logger.info(
+            "campaign monitor: Telegram not configured — alerts off, but "
+            "auto-disable of finished campaigns still runs"
+        )
 
     _monitor_started = True
 
@@ -188,7 +254,7 @@ def start_monitor_thread() -> bool:
             interval = max(60, get_settings().campaign_monitor_interval_seconds)
             try:
                 result = run_monitor_once()
-                if result["alerts_sent"]:
+                if result["alerts_sent"] or result["disabled"]:
                     logger.info("campaign monitor: %s", result)
             except Exception:  # noqa: BLE001 — loop must never die
                 logger.exception("campaign monitor: cycle failed")

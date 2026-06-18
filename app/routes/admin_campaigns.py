@@ -104,7 +104,9 @@ def _validate_mode(mode: str) -> str:
 # ═════════════════════════════════════════════════════════════════════
 
 @router.get("/admin/campaigns", response_class=HTMLResponse)
-def campaigns_list(request: Request, user: User = Depends(require_login)) -> HTMLResponse:
+def campaigns_list(
+    request: Request, deleted: int = 0, user: User = Depends(require_login)
+) -> HTMLResponse:
     with db_session() as session:
         repo = CampaignRepository(session)
         campaigns = repo.list_all()
@@ -126,6 +128,7 @@ def campaigns_list(request: Request, user: User = Depends(require_login)) -> HTM
             "campaigns": campaigns,
             "match_counts": match_counts,
             "manual_stats": manual_stats,
+            "deleted": deleted,
             "current_user": user,
         },
     )
@@ -180,6 +183,34 @@ def campaigns_create(
         )
 
     return RedirectResponse(f"/admin/campaigns/{slug}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+# NOTE: registered before POST /admin/campaigns/{slug} so the literal
+# "bulk-delete" path isn't swallowed by the {slug} update route.
+@router.post("/admin/campaigns/bulk-delete")
+def campaigns_bulk_delete(
+    slugs: List[str] = Form(default=[]),
+    user: User = Depends(require_role("admin")),
+) -> RedirectResponse:
+    """Delete every selected campaign in one request. Invalid/unknown slugs
+    are skipped silently; the redirect reports how many were removed."""
+    valid = [s.strip().lower() for s in slugs if SLUG_RE.match((s or "").strip().lower())]
+    deleted = 0
+    with db_session() as session:
+        repo = CampaignRepository(session)
+        log = LogRepository(session)
+        for slug in valid:
+            if repo.delete(slug):
+                log.record(
+                    "campaign.delete", username=user.username,
+                    target=slug, payload={"bulk": True},
+                )
+                deleted += 1
+    for slug in valid:
+        _cache_invalidate(slug)
+    return RedirectResponse(
+        f"/admin/campaigns?deleted={deleted}", status_code=status.HTTP_303_SEE_OTHER
+    )
 
 
 @router.get("/admin/campaigns/{slug}", response_class=HTMLResponse)

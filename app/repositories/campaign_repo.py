@@ -76,6 +76,17 @@ class CampaignRepository:
         logger.info(f"campaign.delete slug={slug}")
         return True
 
+    def disable(self, slug: str) -> bool:
+        """Turn a campaign off. Returns True only if it was enabled and is
+        now disabled (idempotent: a no-op on an already-off campaign)."""
+        c = self.find_by_slug(slug)
+        if c is None or not c.enabled:
+            return False
+        c.enabled = False
+        c.updated_at = datetime.utcnow()
+        logger.info(f"campaign.disable slug={slug}")
+        return True
+
     def count(self, enabled_only: bool = False) -> int:
         q = self.session.query(Campaign)
         if enabled_only:

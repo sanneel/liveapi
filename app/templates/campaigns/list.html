@@ -12,12 +12,27 @@
 
 {% block content %}
 
+{% set can_bulk = current_user.role == 'admin' %}
+
+{% if deleted %}<div class="alert ok">Deleted {{ deleted }} campaign{{ 's' if deleted != 1 else '' }}.</div>{% endif %}
+
+<form id="bulk-form" method="post" action="/admin/campaigns/bulk-delete">
 <section class="card" style="overflow:hidden">
   {% if campaigns %}
+    {% if can_bulk %}
+    <div id="bulk-bar" class="card-head" style="display:none; align-items:center; justify-content:space-between; gap:12px">
+      <span class="card-sub" style="margin:0"><b id="bulk-count">0</b> selected</span>
+      <button type="submit" class="btn sm danger"
+              onclick="return confirm('Delete the selected campaigns? This cannot be undone.')">
+        Delete selected
+      </button>
+    </div>
+    {% endif %}
     <div class="dt-wrap">
       <table class="dt">
         <thead>
           <tr>
+            {% if can_bulk %}<th style="width:34px"><input type="checkbox" id="bulk-all" aria-label="Select all"></th>{% endif %}
             <th>Slug / URL</th>
             <th>Title</th>
             <th style="width:84px">Sport</th>
@@ -30,6 +45,7 @@
         <tbody>
         {% for c in campaigns %}
           <tr>
+            {% if can_bulk %}<td><input type="checkbox" class="bulk-cb" name="slugs" value="{{ c.slug }}" aria-label="Select {{ c.slug }}"></td>{% endif %}
             <td>
               <a href="/admin/campaigns/{{ c.slug }}" class="slug r" style="display:inline-block">/r/{{ c.slug }}.png</a>
             </td>
@@ -83,5 +99,32 @@
     </div>
   {% endif %}
 </section>
+</form>
+
+{% if can_bulk %}
+<script>
+(function () {
+  const form = document.getElementById('bulk-form');
+  if (!form) return;
+  const all = document.getElementById('bulk-all');
+  const bar = document.getElementById('bulk-bar');
+  const count = document.getElementById('bulk-count');
+  const boxes = () => Array.from(form.querySelectorAll('.bulk-cb'));
+
+  function refresh() {
+    const checked = boxes().filter(b => b.checked);
+    count.textContent = checked.length;
+    bar.style.display = checked.length ? 'flex' : 'none';
+    if (all) all.checked = checked.length > 0 && checked.length === boxes().length;
+  }
+  if (all) all.addEventListener('change', () => {
+    boxes().forEach(b => { b.checked = all.checked; });
+    refresh();
+  });
+  boxes().forEach(b => b.addEventListener('change', refresh));
+  refresh();
+})();
+</script>
+{% endif %}
 
 {% endblock %}
