@@ -49,6 +49,12 @@ class Settings(BaseSettings):
     # without keeping truly-finished matches active for the whole next day.
     match_deactivate_after_hours: int = 12
 
+    # Hours after start_time_utc a match stops appearing in a rendered
+    # campaign / hot PNG, even while the parser still keeps the row active.
+    # A match kicking off at 18:00 vanishes from the PNG at 20:00 (default 2h)
+    # so finished games drop off without waiting for full deactivation.
+    campaign_hide_after_start_hours: int = 2
+
     # ── Logging ──────────────────────────────────────────────────────
     log_level: str = "INFO"
     log_dir: str = str(BASE_DIR / "logs")
@@ -72,6 +78,15 @@ class Settings(BaseSettings):
     # Hosts permitted for Campaign.fallback_image_url. Defaults match logo
     # allow-list; override via env to add a CDN host. Validated at write time.
     allowed_fallback_image_hosts: str = "jugabet.cl,www.jugabet.cl"
+
+    # ── Telegram alerts / campaign monitor ───────────────────────────
+    # Create a bot with @BotFather → telegram_bot_token; get your numeric
+    # chat id from @userinfobot → telegram_chat_id. Blank disables alerts.
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
+    campaign_monitor_enabled: bool = True
+    campaign_monitor_interval_seconds: int = 300   # how often to re-check
+    campaign_stale_minutes: int = 20               # data older than this = "dead"
 
     # ── Rate limits ──────────────────────────────────────────────────
     admin_login_max_attempts: int = 5

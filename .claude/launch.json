@@ -6,6 +6,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "7788", "--directory", ".claude/preview"],
       "port": 7788
+    },
+    {
+      "name": "admin",
+      "runtimeExecutable": "venv_win\\Scripts\\python.exe",
+      "runtimeArgs": ["-m", "uvicorn", "server:app", "--host", "127.0.0.1", "--port", "8000"],
+      "port": 8000
     }
   ]
 }

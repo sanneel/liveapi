@@ -174,8 +174,42 @@ def _invalidate_post_parse(sport: str, touched_slugs: Set[str]) -> None:
             png_cache.invalidate_prefix("cube:")
             png_cache.invalidate_prefix("cube_odds:")
             png_cache.invalidate_prefix("cube_gif:")
+            # Clear cube pins whose match has finished — the parser owns this
+            # write so the (now background-threaded) render paths stay read-only.
+            # Runs before the pre-warm so the GIF re-renders with cleaned pins.
+            _release_finished_cube_pins()
+            # Re-render the default email GIF in the background so the cache is
+            # warm BEFORE the next inbox open — emails fetch the GIF once with a
+            # short timeout and won't wait for a cold render (the "must refresh"
+            # bug). Daemon thread so it never blocks the parse cycle.
+            _schedule_cube_gif_prewarm()
     except Exception:
         logger.exception("post-parse hot/club cache invalidation failed")
+
+
+def _schedule_cube_gif_prewarm() -> None:
+    """Kick off cube GIF pre-warming off the parse-cycle critical path."""
+    try:
+        from ..routes.public_cube import prewarm_cube_gifs
+        threading.Thread(
+            target=prewarm_cube_gifs, name="cube-gif-prewarm", daemon=True
+        ).start()
+    except Exception:
+        logger.exception("failed to schedule cube gif pre-warm")
+
+
+def _release_finished_cube_pins() -> None:
+    """Clear cube pins for finished/gone matches in a parser-owned write.
+
+    Synchronous (parser thread) with its own short session; best-effort so a
+    transient lock just skips this cycle and retries next time. Replaces the
+    old write that happened inside the render path."""
+    try:
+        from ..repositories.cube_override_repo import CubeOverrideRepository
+        with db_session() as session:
+            CubeOverrideRepository(session).release_finished_pins()
+    except Exception:
+        logger.exception("post-parse cube pin release failed")
 
 
 

@@ -3,149 +3,270 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}Jugabet Admin{% endblock %}</title>
+  <title>{% block title %}Live Odds Management{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 
-  <!-- Pre-built Tailwind bundle — replaces the runtime Play CDN (which
-       recompiled all CSS in-browser on every page load). Rebuild after
-       changing template classes with: npm run build:css -->
+  <!-- Apply saved theme before paint to avoid a flash of the wrong mode -->
+  <script>try{if(localStorage.getItem('jb-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
+
+  <!-- Pre-built Tailwind bundle (legacy pages). Rebuild: npm run build:css -->
   <link rel="stylesheet" href="/static/admin.tw.css">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
 
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script defer src="https://unpkg.com/htmx.org@1.9.10"></script>
   <script defer src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
   <link rel="stylesheet" href="/static/admin.css">
+  <link rel="stylesheet" href="/static/redesign.css?v=10">
   <style>
-    /* Design-language baseline — kept tiny on purpose. */
-    body { font-feature-settings: 'cv11','ss01'; }
-    *:focus-visible { outline: 2px solid #C2E325; outline-offset: 2px; border-radius: 4px; }
-    /* Scrollbars match the ink palette. */
+    html,body{margin:0;background:var(--canvas);}
+    *:focus-visible { outline: 2px solid var(--ac,#F0613C); outline-offset: 2px; border-radius: 4px; }
     ::-webkit-scrollbar { width: 10px; height: 10px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #262C3D; border-radius: 6px; border: 2px solid transparent; background-clip: content-box; }
-    ::-webkit-scrollbar-thumb:hover { background: #3A4258; background-clip: content-box; border: 2px solid transparent; }
-    /* Disable text selection on drag handles for cleaner drag UX. */
-    .drag-handle, [data-drag-handle] { user-select: none; -webkit-user-select: none; }
-    .lucide { width: 16px; height: 16px; stroke-width: 1.75; }
-    /* Alpine x-cloak — hide elements until Alpine has booted and applied
-       x-show / x-if. Without this rule, components flash visible during
-       page load (root cause of the "Loading… stuck" report). */
+    ::-webkit-scrollbar-thumb { background: #D7DAE0; border-radius: 8px; border: 3px solid #F3F4F7; }
     [x-cloak] { display: none !important; }
   </style>
 </head>
 
-<body class="h-full bg-ink-950 text-zinc-200 font-sans antialiased text-body"
-      x-data="{ navOpen: false }">
+<body class="h-full">
 
-<div class="flex h-full">
-  {# ── Off-canvas backdrop (mobile) ── #}
-  <div class="fixed inset-0 bg-black/60 z-20 md:hidden"
-       x-show="navOpen" x-transition.opacity @click="navOpen=false" style="display:none"></div>
+{% set _rank = {'viewer': 1, 'editor': 2, 'admin': 3} %}
+{% set _urank = _rank.get(current_user.role, 0) if current_user else 0 %}
+{# 5th field = minimum role needed to reach the page; nav hides what a role
+   can't open so it never lands on a Forbidden. #}
+{% set nav = [
+  ('dashboard',     '/admin',                'layout-grid',        'Dashboard',      'viewer'),
+  ('matches',       '/admin/matches',        'list',               'Matches',        'viewer'),
+  ('campaigns',     '/admin/campaigns',      'megaphone',          'Campaigns',      'viewer'),
+  ('hot',           '/admin/hot',            'flame',              'Hot',            'viewer'),
+  ('journey_cloner','/admin/journey-cloner', 'copy',               'Journey Cloner', 'editor'),
+  ('parser_feeds',  '/admin/parser-feeds',   'link',               'Parser Links',   'editor'),
+  ('live_parses',   '/admin/live-parses',    'radio',              'Live Parses',    'viewer'),
+  ('weights',       '/admin/weights',        'sliders-horizontal', 'Weights',        'viewer'),
+  ('cube',          '/admin/cube',           'box',                'Cubes',          'viewer'),
+  ('clubs',         '/admin/clubs',          'shield',             'Clubs',          'viewer'),
+  ('logs',          '/admin/logs',           'file-text',          'Logs',           'admin'),
+] %}
 
-  {# ── Sidebar: full on lg+, icon-rail on md, off-canvas on sm ── #}
-  <aside class="bg-ink-900 border-r border-ink-600/60 flex flex-col
-                fixed md:static inset-y-0 left-0 z-30
-                w-56 lg:w-56 md:w-14
-                transition-transform md:translate-x-0"
-         :class="navOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'">
-    <div class="h-14 px-4 md:px-3 lg:px-4 flex items-center border-b border-ink-600/60">
-      <span class="text-brand-500 font-bold text-h-sm tracking-tight whitespace-nowrap md:hidden lg:inline">Jugabet</span>
-      <span class="hidden md:inline lg:hidden text-brand-500 font-bold text-h-md">J</span>
-      <button class="ml-auto md:hidden text-muted-400 hover:text-zinc-200"
-              @click="navOpen=false" aria-label="Close menu">
-        <i data-lucide="x"></i>
-      </button>
+<div class="app">
+  <aside class="side">
+    <div class="side-logo">
+      <span class="mark"><i data-lucide="activity"></i></span>
+      <span class="word label">Live Odds<br>Management</span>
     </div>
 
-    <nav class="flex-1 py-2 overflow-y-auto">
-      {% set nav = [
-        ('dashboard',    '/admin',               'layout-dashboard',  'Dashboard'),
-        ('matches',      '/admin/matches',       'list',              'Matches'),
-        ('campaigns',    '/admin/campaigns',     'megaphone',         'Campaigns'),
-        ('hot',          '/admin/hot',           'flame',             'Hot'),
-        ('journey_cloner','/admin/journey-cloner','copy-plus',         'Journey Cloner'),
-        ('parser_feeds', '/admin/parser-feeds',  'link',              'Parser Links'),
-        ('live_parses',  '/admin/live-parses',   'radio',             'Live Parses'),
-        ('weights',      '/admin/weights',       'sliders-horizontal','Weights'),
-        ('cube',         '/admin/cube',          'box',               'Cubes'),
-        ('clubs',        '/admin/clubs',         'shield',            'Clubs'),
-        ('logs',         '/admin/logs',          'scroll-text',       'Logs'),
-      ] %}
-      {% for key, url, icon, label in nav %}
-        {% set active = active_page == key %}
-        <a href="{{ url }}" title="{{ label }}"
-           class="group relative flex items-center gap-3 mx-2 px-2.5 py-2 text-body rounded-md transition-colors
-                  {% if active %}bg-ink-800 text-zinc-100{% else %}text-muted-400 hover:bg-ink-800/60 hover:text-zinc-100{% endif %}">
-          {% if active %}<span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-brand-500"></span>{% endif %}
-          <i data-lucide="{{ icon }}" class="flex-shrink-0"></i>
-          <span class="md:hidden lg:inline whitespace-nowrap">{{ label }}</span>
+    <nav class="side-nav">
+      <div class="side-sec label">MENU</div>
+      {% for key, url, icon, label, minrole in nav %}
+        {% if _urank >= _rank[minrole] %}
+        <a href="{{ url }}" title="{{ label }}" class="nav-item {% if active_page == key %}active{% endif %}">
+          <i data-lucide="{{ icon }}"></i><span class="label">{{ label }}</span>
         </a>
+        {% endif %}
       {% endfor %}
+
+      <div class="side-sec sup label">SUPPORT</div>
+      <button type="button" class="nav-item as-btn" onclick="window.dispatchEvent(new CustomEvent('help-open'))">
+        <i data-lucide="help-circle"></i><span class="label">Help</span>
+      </button>
     </nav>
 
-    <div class="border-t border-ink-600/60 px-3 py-3">
+    <div class="side-foot">
+      <button type="button" class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+        <i data-lucide="moon" id="theme-icon"></i><span class="label" id="theme-label">Dark mode</span>
+      </button>
       {% if current_user %}
-        <div class="flex items-center gap-2 md:justify-center lg:justify-start">
-          <div class="w-7 h-7 rounded-md bg-ink-700 text-muted-300 flex items-center justify-center text-meta font-semibold flex-shrink-0"
-               title="{{ current_user.username }}">
-            {{ (current_user.username or '?')[:1]|upper }}
-          </div>
-          <div class="min-w-0 flex-1 md:hidden lg:flex lg:flex-col lg:gap-0.5">
-            <div class="text-body text-zinc-200 truncate leading-tight">{{ current_user.username }}</div>
-            <form method="post" action="/admin/logout" class="leading-none">
-              <button type="submit" class="text-meta text-muted-400 hover:text-red-400">Sign out</button>
-            </form>
+      <div class="side-user">
+        <span class="av">{{ (current_user.username or '?')[:1]|upper }}</span>
+        <div class="label">
+          <div class="nm">{{ current_user.username }}</div>
+          <div style="display:flex;gap:8px;align-items:center;line-height:1">
+            <a href="/admin/account/password" class="so" style="text-decoration:none">Change password</a>
+            <span class="so" style="opacity:.4">·</span>
+            <form method="post" action="/admin/logout" style="line-height:1"><button type="submit" class="so" style="background:none;border:0;padding:0;cursor:pointer">Sign out</button></form>
           </div>
         </div>
+      </div>
       {% else %}
-        <a href="/admin/login" class="text-meta text-muted-400 hover:text-brand-500">Sign in →</a>
+      <a href="/admin/login" class="side-user"><span class="av">?</span><span class="nm label">Sign in</span></a>
       {% endif %}
     </div>
   </aside>
 
-  <main class="flex-1 flex flex-col min-w-0 md:ml-0">
-    <header class="h-14 bg-ink-900 border-b border-ink-600/60 px-4 md:px-6 flex items-center gap-3 flex-shrink-0">
-      <button class="md:hidden text-muted-400 hover:text-zinc-200"
-              @click="navOpen=true" aria-label="Open menu">
-        <i data-lucide="menu"></i>
-      </button>
-      <h1 class="text-h-md text-zinc-100 truncate flex-1">{% block page_title %}{% endblock %}</h1>
-      <div class="flex items-center gap-2">
-        {% block page_actions %}{% endblock %}
+  <main class="content {% block content_theme %}content-legacy{% endblock %}">
+    <header class="page-head">
+      <div>
+        <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
+        <p class="page-sub">{% block page_subtitle %}{% endblock %}</p>
       </div>
+      <div class="page-actions">{% block page_actions %}{% endblock %}</div>
     </header>
-
-    <div class="flex-1 overflow-y-auto px-4 md:px-6 py-6">
-      {% block content %}{% endblock %}
-    </div>
+    <div class="page-body">{% block content %}{% endblock %}</div>
   </main>
+</div>
+
+{# ── Help / tutorial library modal ── #}
+<div x-data="helpModal()" x-on:help-open.window="open()" x-on:keydown.escape.window="show=false">
+  <div class="modal-overlay" x-show="show" @click.self="show=false" style="display:none" x-cloak>
+    <div class="modal">
+      <div class="modal-head">
+        <h2 class="modal-title" x-text="current ? current.title : 'Tutorials'"></h2>
+        <button type="button" class="modal-x" @click="show=false" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <template x-if="current">
+          <video class="modal-video" controls preload="metadata" playsinline :src="current.url" x-ref="vid"></video>
+        </template>
+
+        <template x-if="!loading && items.length">
+          <div>
+            <div class="tut-grid-label" x-text="items.length + (items.length === 1 ? ' tutorial' : ' tutorials')"></div>
+            <div class="tut-grid">
+              <template x-for="t in items" :key="t.id">
+                <button type="button" class="tut-card" @click="play(t)"
+                        :class="current && current.id === t.id ? 'is-active' : ''">
+                  <span class="tut-thumb">
+                    <video :src="t.url + '#t=1'" muted preload="metadata" playsinline tabindex="-1"></video>
+                    <span class="tut-thumb-play"><span class="tut-thumb-badge"><i data-lucide="play"></i></span></span>
+                  </span>
+                  <span class="tut-card-title" x-text="t.title"></span>
+                </button>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <template x-if="!loading && !items.length">
+          <div class="modal-empty">
+            <i data-lucide="video"></i>
+            <div>No tutorials uploaded yet.</div>
+          </div>
+        </template>
+
+        {% if current_user and current_user.role == 'admin' %}
+          <a href="/admin/tutorials" class="modal-note" style="display:inline-block; margin-top:14px">Manage tutorials &rarr;</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Welcome nudge ── auto-opens once after a forced first-login password
+   change (?welcome=1). Soft onboarding: it points at the tutorials but the
+   operator can dismiss it and keep working. #}
+<div x-data="welcomeNudge()" x-init="init()"
+     x-on:keydown.escape.window="show=false">
+  <div class="modal-overlay" x-show="show" @click.self="show=false" style="display:none" x-cloak>
+    <div class="modal welcome-modal">
+      <div class="modal-head">
+        <h2 class="modal-title">Welcome aboard 👋</h2>
+        <button type="button" class="modal-x" @click="show=false" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="welcome-icon"><i data-lucide="graduation-cap"></i></div>
+        <p class="welcome-lead">
+          Your password is set. New here? Take a couple of minutes to watch the
+          quick tutorials, or skip and explore; the <b>Help</b> button in the
+          sidebar opens them anytime.
+        </p>
+        <div class="welcome-actions">
+          <button type="button" class="welcome-btn primary" @click="watch()">
+            <i data-lucide="play"></i> Watch tutorials
+          </button>
+          <button type="button" class="welcome-btn ghost" @click="show=false">Maybe later</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 {# ── Toast ── #}
 <div x-data="{ msg: '', kind: 'info', show: false }"
      x-on:toast.window="msg = $event.detail?.msg ?? $event.detail; kind = $event.detail?.kind || 'info'; show = true; clearTimeout($el._t); $el._t = setTimeout(() => show = false, kind === 'error' ? 4000 : 2500)"
      x-show="show" x-transition.opacity
-     class="fixed bottom-5 right-5 max-w-sm px-4 py-2.5 rounded-md text-body shadow-pop z-40
-            border bg-ink-800"
-     :class="{
-       'border-ink-600 text-zinc-100': kind === 'info',
-       'border-red-700/60 text-red-200': kind === 'error',
-       'border-emerald-700/60 text-emerald-200': kind === 'success',
-     }"
-     style="display:none">
+     class="toast-pop"
+     style="display:none; position:fixed; bottom:20px; right:20px; max-width:360px; padding:11px 15px; border-radius:10px; font:600 13px/1.4 'Plus Jakarta Sans',sans-serif; background:#15171D; color:#fff; box-shadow:0 6px 20px rgba(16,24,40,.18); z-index:50;"
+     :style="kind==='error' ? 'border-left:3px solid #E5484D' : (kind==='success' ? 'border-left:3px solid #1F9D57' : 'border-left:3px solid var(--ac,#F0613C)')">
   <span x-text="msg"></span>
 </div>
 <script>
-  // Helper used by templates: toast('saved') or toast({msg:'oops',kind:'error'})
-  window.toast = function(detail) {
-    window.dispatchEvent(new CustomEvent('toast', { detail }));
+  window.toast = function(detail) { window.dispatchEvent(new CustomEvent('toast', { detail })); };
+
+  // ── Dark mode ── persisted in localStorage as jb-theme; applied to <html>.
+  window.applyTheme = function(t) {
+    document.documentElement.classList.toggle('dark', t === 'dark');
+    var icon = document.getElementById('theme-icon');
+    var label = document.getElementById('theme-label');
+    if (icon)  { icon.setAttribute('data-lucide', t === 'dark' ? 'sun' : 'moon'); }
+    if (label) { label.textContent = t === 'dark' ? 'Light mode' : 'Dark mode'; }
+    if (window.lucide) lucide.createIcons();
   };
-  // Render Lucide icons after page + each HTMX swap.
-  document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });
+  window.toggleTheme = function() {
+    var next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+    try { localStorage.setItem('jb-theme', next); } catch (e) {}
+    window.applyTheme(next);
+  };
+
+  // ── Help modal ── loads the tutorial library the first time it opens.
+  window.helpModal = function() {
+    return {
+      show: false, loading: true, items: [], current: null, _loaded: false,
+      async open() {
+        this.show = true;
+        if (!this._loaded) {
+          this._loaded = true;
+          try {
+            const r = await fetch('/api/admin/tutorials');
+            if (r.ok) this.items = await r.json();
+          } catch (e) { /* keep empty */ }
+          this.loading = false;
+          if (this.items.length) this.current = this.items[0];
+        }
+        this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+      },
+      play(t) {
+        this.current = t;
+        this.$nextTick(() => {
+          const v = this.$refs.vid;
+          if (v) { v.load(); v.play().catch(() => {}); }
+          if (window.lucide) lucide.createIcons();
+        });
+      },
+    };
+  };
+
+  // ── Welcome nudge ── shows once when the URL carries ?welcome=1 (set by
+  // the forced-password-change redirect), then strips the param so a refresh
+  // won't reopen it. "Watch tutorials" hands off to the Help modal.
+  window.welcomeNudge = function() {
+    return {
+      show: false,
+      init() {
+        try {
+          const u = new URL(window.location.href);
+          if (u.searchParams.get('welcome') === '1') {
+            this.show = true;
+            u.searchParams.delete('welcome');
+            window.history.replaceState({}, '', u.pathname + u.search + u.hash);
+            this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+          }
+        } catch (e) { /* no-op */ }
+      },
+      watch() {
+        this.show = false;
+        window.dispatchEvent(new CustomEvent('help-open'));
+      },
+    };
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    window.applyTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    if (window.lucide) lucide.createIcons();
+  });
   document.body.addEventListener('htmx:afterSwap', () => { if (window.lucide) lucide.createIcons(); });
 </script>
 

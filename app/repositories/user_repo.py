@@ -59,20 +59,47 @@ class UserRepository:
         return self.session.get(User, username.strip().lower())
 
     def create(
-        self, username: str, password_hash: str, role: str = "viewer"
+        self,
+        username: str,
+        password_hash: str,
+        role: str = "viewer",
+        must_change_password: bool = False,
     ) -> User:
         user = User(
             username=username.strip().lower(),
             password_hash=password_hash,
             role=role,
             is_active=True,
+            must_change_password=must_change_password,
         )
         self.session.add(user)
-        logger.info(f"user.create username={user.username} role={role}")
+        logger.info(
+            f"user.create username={user.username} role={role} "
+            f"must_change_password={must_change_password}"
+        )
         return user
+
+    def set_password(
+        self, user: User, password_hash: str, must_change_password: bool = False
+    ) -> None:
+        """Set a new password hash and the one-time-password flag together."""
+        user.password_hash = password_hash
+        user.must_change_password = must_change_password
+        logger.info(
+            f"user.set_password username={user.username} "
+            f"must_change_password={must_change_password}"
+        )
 
     def all(self) -> List[User]:
         return self.session.query(User).order_by(User.username).all()
+
+    def delete(self, username: str) -> bool:
+        user = self.find(username)
+        if user is None:
+            return False
+        self.session.delete(user)
+        logger.info(f"user.delete username={user.username}")
+        return True
 
     def count(self) -> int:
         return self.session.query(User).count()

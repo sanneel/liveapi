@@ -20,6 +20,10 @@ class User(Base, TimestampMixin):
     is_active = Column(Boolean, nullable=False, default=True)
     last_login_at = Column(DateTime, nullable=True)
 
+    # When True, the user is handed a one-time password and must set a new one
+    # before reaching any other admin page. Cleared on a successful change.
+    must_change_password = Column(Boolean, nullable=False, default=False)
+
     # 2FA — populated when the user enrolls; not enforced yet
     totp_secret = Column(String, nullable=True)
     totp_enabled = Column(Boolean, nullable=False, default=False)

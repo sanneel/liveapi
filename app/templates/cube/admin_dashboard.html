@@ -1,69 +1,45 @@
 {% extends "base.html" %}
 {% block title %}Cubes · Jugabet Admin{% endblock %}
-{% block page_title %}Cube Overrides{% endblock %}
-
-{% block page_actions %}
-  <span class="text-xs text-muted-500">Pick a cube to manage its slot pins.</span>
-{% endblock %}
+{% block content_theme %}content-light{% endblock %}
+{% block page_title %}Cubes{% endblock %}
+{% block page_subtitle %}Promotional cubes, each auto-picks matches by hot-score.{% endblock %}
 
 {% block content %}
-
-<p class="text-sm text-muted-400 mb-5 max-w-3xl">
-  Each cube theme auto-picks matches from the active feed using the same
-  hot-score ranking as <code class="font-mono">/hot/&lt;sport&gt;.png</code>,
-  filtered to that competition's tournament patterns. Open a cube to:
+<p class="lede">
+  Each cube auto-picks matches by hot-score, filtered to its competition. Open one to
+  <b>pin</b> a match to a slot, <b>remove</b> matches you don't want, or <b>reset</b> back to automatic.
 </p>
-<ul class="list-disc list-inside text-sm text-muted-400 mb-6 ml-2 max-w-3xl">
-  <li>Pin specific matches to specific slots (e.g. lock PSG vs Arsenal into slot 1)</li>
-  <li>Suppress matches that the auto-rank would otherwise show</li>
-  <li>Reset to fully automatic — just clear all overrides</li>
-</ul>
 
-<div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">
-  <ul class="divide-y divide-ink-600">
-    {% for row in cube_rows %}
-      <li class="px-5 py-4 flex items-center justify-between hover:bg-ink-800/40">
-        <div class="flex items-center gap-3 min-w-0 flex-wrap">
-          <span class="text-base font-semibold text-zinc-100 capitalize">{{ row.display_name }}</span>
-          <span class="text-xs px-2 py-0.5 rounded-full bg-ink-700 text-muted-300">
-            {{ row.sport }}
-          </span>
-          <span class="text-xs px-2 py-0.5 rounded-full bg-ink-700 text-muted-300">
-            {{ row.slots }} slot{{ '' if row.slots == 1 else 's' }}
-          </span>
-          <span class="text-xs px-2 py-0.5 rounded-full bg-ink-700 text-muted-300">
-            {{ row.in_theme }} candidate{{ '' if row.in_theme == 1 else 's' }}
-          </span>
-          {% if row.prefer_live %}
-            <span class="text-xs px-2 py-0.5 rounded-full bg-red-900/40 text-red-300">live-first</span>
-          {% endif %}
-          {% if row.pinned > 0 %}
-            <span class="text-xs px-2 py-0.5 rounded-full bg-orange-900/40 text-orange-300">
-              {{ row.pinned }} pinned
-            </span>
-          {% endif %}
-          {% if row.suppressed > 0 %}
-            <span class="text-xs px-2 py-0.5 rounded-full bg-red-900/40 text-red-300">
-              {{ row.suppressed }} suppressed
-            </span>
-          {% endif %}
-          {% if row.in_theme == 0 %}
-            <span class="text-xs text-muted-500 italic">no in-scope matches right now</span>
-          {% endif %}
-        </div>
-        <div class="flex items-center gap-2 flex-shrink-0">
-          <a href="/cube/{{ row.slug }}.png" target="_blank"
-             class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 text-zinc-300 px-3 py-1.5 rounded">PNG ↗</a>
-          <a href="/cube/{{ row.slug }}" target="_blank"
-             class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 text-zinc-300 px-3 py-1.5 rounded">Preview ↗</a>
-          <a href="/admin/cube/{{ row.slug }}"
-             class="text-sm bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold px-4 py-1.5 rounded">
-            Manage →
-          </a>
-        </div>
-      </li>
-    {% endfor %}
-  </ul>
-</div>
-
+<section class="card" style="overflow:hidden; max-width:1040px">
+  <div class="dt-wrap">
+    <table class="dt">
+      <thead>
+        <tr><th>Cube</th><th>Sport</th><th>Slots</th><th>Candidates</th><th>Overrides</th><th class="right">Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for row in cube_rows %}
+          <tr>
+            <td><span style="font-weight:700;color:var(--t-strong);text-transform:capitalize">{{ row.display_name }}</span></td>
+            <td class="cell-sport">{{ row.sport }}</td>
+            <td>{{ row.slots }}</td>
+            <td>{{ row.in_theme }}{% if row.in_theme == 0 %} <span class="pill neu">none live</span>{% endif %}</td>
+            <td>
+              {% if row.prefer_live %}<span class="pill live"><span class="dot"></span>live-first</span> {% endif %}
+              {% if row.pinned > 0 %}<span class="pill warn">{{ row.pinned }} pinned</span> {% endif %}
+              {% if row.suppressed > 0 %}<span class="pill live">{{ row.suppressed }} dropped</span>{% endif %}
+              {% if not row.prefer_live and row.pinned == 0 and row.suppressed == 0 %}<span style="color:var(--t-disabled)">—</span>{% endif %}
+            </td>
+            <td>
+              <div class="row-actions">
+                <a href="/cube/{{ row.slug }}.png" target="_blank" class="btn sm" title="Rendered PNG">PNG ↗</a>
+                <a href="/cube/{{ row.slug }}" target="_blank" class="btn sm" title="Live preview">View ↗</a>
+                <a href="/admin/cube/{{ row.slug }}" class="btn sm primary">Manage →</a>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
 {% endblock %}

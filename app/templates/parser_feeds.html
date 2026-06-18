@@ -1,112 +1,94 @@
 {% extends "base.html" %}
-{% block title %}Parser Links - Jugabet Admin{% endblock %}
+{% block title %}Parser Links · Jugabet Admin{% endblock %}
+{% block content_theme %}content-light{% endblock %}
 {% block page_title %}Parser Links{% endblock %}
+{% block page_subtitle %}Extra league / tournament URLs the parser pulls beyond the defaults.{% endblock %}
 
 {% block page_actions %}
-  <a href="/health" target="_blank"
-     class="text-xs bg-ink-700 hover:bg-ink-600 text-zinc-300 px-3 py-1.5 rounded border border-ink-600">
-    Health JSON
-  </a>
+  <form method="post" action="/admin/parser-feeds/test-telegram" style="display:inline">
+    <button class="btn" type="submit"><i data-lucide="send" style="width:14px;height:14px"></i> Test Telegram alert</button>
+  </form>
+  <a href="/health" target="_blank" class="btn">Health JSON</a>
 {% endblock %}
 
 {% block content %}
 
-{% if saved %}
-  <div class="mb-4 border border-emerald-700/60 bg-emerald-950/30 text-emerald-200 text-sm px-4 py-3 rounded-lg">
-    Parser link saved and synced.
-  </div>
-{% endif %}
-{% if deleted %}
-  <div class="mb-4 border border-amber-700/60 bg-amber-950/30 text-amber-200 text-sm px-4 py-3 rounded-lg">
-    Parser link removed from the extra-feed list.
-  </div>
-{% endif %}
-{% if sync_error %}
-  <div class="mb-4 border border-red-700/60 bg-red-950/30 text-red-200 text-sm px-4 py-3 rounded-lg">
-    {{ sync_error }}
-  </div>
-{% endif %}
+{% if saved %}<div class="alert ok">Parser link saved, the parser is now pulling it. Refresh in ~30s to see its match count.</div>{% endif %}
+{% if deleted %}<div class="alert ok">Parser link removed from the extra-feed list.</div>{% endif %}
+{% if sync_error %}<div class="alert err">{{ sync_error }}</div>{% endif %}
+{% if tg == 'ok' %}<div class="alert ok">Test alert sent to Telegram ✅</div>{% endif %}
+{% if tg == 'fail' %}<div class="alert err">Telegram send failed, check the bot token / chat id in <code>.env</code> (details in logs).</div>{% endif %}
+{% if tg == 'unconfigured' %}<div class="alert err">Telegram isn't configured. Set <code>telegram_bot_token</code> and <code>telegram_chat_id</code> in <code>.env</code>, then restart.</div>{% endif %}
+{% if not telegram_configured %}<div class="alert" style="background:var(--acw); color:var(--ac)">Campaign-down alerts are <b>off</b>, add <code>telegram_bot_token</code> + <code>telegram_chat_id</code> to <code>.env</code> to get Telegram notifications when a campaign's league goes dead.</div>{% endif %}
 
-<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-  <form method="post" action="/admin/parser-feeds"
-        class="xl:col-span-1 bg-ink-850 border border-ink-600 rounded-xl p-5 space-y-4">
+<div class="row-flex">
+  <form method="post" action="/admin/parser-feeds" class="card card-pad col-rail" style="gap:14px; display:flex; flex-direction:column">
     <div>
-      <h2 class="text-sm font-semibold text-white">Add Link</h2>
-      <p class="text-xs text-muted-500 mt-1">Use a Jugabet league, tournament, sport, live, or prematch URL.</p>
+      <h2 class="card-title">Add Link</h2>
+      <p class="card-sub">Use a Jugabet league, tournament, sport, live, or prematch URL.</p>
     </div>
 
-    <label class="block">
-      <span class="block text-xs text-muted-400 mb-1.5">Label</span>
-      <input name="label" required placeholder="Chile Primera"
-             class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
-    </label>
+    <div class="field">
+      <span class="lbl">Label</span>
+      <input class="input" name="label" required placeholder="Chile Primera"/>
+    </div>
 
-    <div class="grid grid-cols-2 gap-3">
-      <label class="block">
-        <span class="block text-xs text-muted-400 mb-1.5">Sport</span>
-        <select name="sport"
-                class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+      <div class="field">
+        <span class="lbl">Sport</span>
+        <select name="sport">
           {% for sport in ['football','basketball','tennis','cybersport','boxing','mma','ufc'] %}
             <option value="{{ sport }}">{{ sport|title }}</option>
           {% endfor %}
         </select>
-      </label>
-      <label class="block">
-        <span class="block text-xs text-muted-400 mb-1.5">Mode</span>
-        <select name="mode"
-                class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
+      </div>
+      <div class="field">
+        <span class="lbl">Mode</span>
+        <select name="mode">
           <option value="prematch">Prematch</option>
           <option value="live">Live</option>
         </select>
-      </label>
+      </div>
     </div>
 
-    <label class="block">
-      <span class="block text-xs text-muted-400 mb-1.5">Jugabet URL</span>
-      <input name="url" required type="url" placeholder="https://jugabet.cl/football/all/1?tournaments=..."
-             class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
-    </label>
+    <div class="field">
+      <span class="lbl">Jugabet URL</span>
+      <input class="input" name="url" required type="url" placeholder="https://jugabet.cl/football/all/1?tournaments=..."/>
+    </div>
 
-    <button class="w-full bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold text-sm px-4 py-2 rounded-lg">
-      Add parser link
-    </button>
+    <button class="btn primary" style="justify-content:center">Add parser link</button>
   </form>
 
-  <div class="xl:col-span-2 bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">
-    <div class="px-5 py-4 border-b border-ink-600 flex items-center justify-between">
-      <h2 class="text-sm font-semibold text-white">Extra Links</h2>
-      <span class="text-xs text-muted-500">{{ feeds|length }} configured</span>
+  <section class="card col-main" style="overflow:hidden">
+    <div class="card-head">
+      <h2 class="card-title">Extra Links</h2>
+      <span class="card-sub" style="margin:0">{{ feeds|length }} configured</span>
     </div>
-
     {% if feeds %}
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-ink-800 text-xs uppercase tracking-wider text-muted-400">
-            <tr>
-              <th class="px-5 py-3 text-left">Link</th>
-              <th class="px-5 py-3 text-left">Sport</th>
-              <th class="px-5 py-3 text-left">Mode</th>
-              <th class="px-5 py-3 text-left">URL</th>
-              <th class="px-5 py-3 text-right">Action</th>
-            </tr>
+      <div class="dt-wrap">
+        <table class="dt">
+          <thead>
+            <tr><th>Link</th><th>Sport</th><th>Mode</th><th>URL</th><th class="right">Matches</th><th>Status</th><th class="right">Action</th></tr>
           </thead>
-          <tbody class="divide-y divide-ink-600">
+          <tbody>
             {% for feed in feeds %}
-              <tr class="hover:bg-ink-800/40">
-                <td class="px-5 py-3 text-zinc-200 whitespace-nowrap">{{ feed.label }}</td>
-                <td class="px-5 py-3 text-muted-300">{{ feed.sport }}</td>
-                <td class="px-5 py-3">
-                  <span class="text-xs px-2 py-0.5 rounded-full {% if feed.mode == 'live' %}bg-red-900/40 text-red-300{% else %}bg-blue-900/40 text-blue-300{% endif %}">
-                    {{ feed.mode }}
-                  </span>
+              <tr>
+                <td><span class="m-title">{{ feed.label }}</span></td>
+                <td><span class="cell-sport">{{ feed.sport }}</span></td>
+                <td><span class="tag {% if feed.mode == 'live' %}live{% else %}club{% endif %}">{{ feed.mode }}</span></td>
+                <td><a href="{{ feed.url }}" target="_blank" class="m-meta mono link" style="max-width:24rem; display:inline-block">{{ feed.url }}</a></td>
+                <td class="num">{{ feed.status.count }}</td>
+                <td>
+                  {% if feed.status.ok %}
+                    <span class="pill pos"><span class="dot"></span>parsing</span>
+                    {% if feed.status.age_sec is not none %}<span class="m-meta" style="display:inline">· {{ feed.status.age_sec }}s ago</span>{% endif %}
+                  {% else %}
+                    <span class="pill warn">no matches yet</span>
+                  {% endif %}
                 </td>
-                <td class="px-5 py-3 text-muted-400 font-mono text-xs max-w-md truncate">
-                  <a href="{{ feed.url }}" target="_blank" class="hover:text-brand-400">{{ feed.url }}</a>
-                </td>
-                <td class="px-5 py-3 text-right">
-                  <form method="post" action="/admin/parser-feeds/{{ feed.id }}/delete"
-                        onsubmit="return confirm('Remove this parser link?')">
-                    <button class="text-xs text-red-300 hover:text-red-200">Remove</button>
+                <td class="right">
+                  <form method="post" action="/admin/parser-feeds/{{ feed.id }}/delete" onsubmit="return confirm('Remove this parser link?')">
+                    <button class="btn sm danger">Remove</button>
                   </form>
                 </td>
               </tr>
@@ -115,12 +97,9 @@
         </table>
       </div>
     {% else %}
-      <div class="px-5 py-16 text-center text-muted-500 text-sm">
-        <div class="text-zinc-300 mb-1">No extra parser links</div>
-        <span class="text-xs">Add league or tournament links when a game is missing from the default feeds.</span>
-      </div>
+      <div class="empty"><b>No extra parser links.</b> Add league or tournament links when a game is missing from the default feeds.</div>
     {% endif %}
-  </div>
+  </section>
 </div>
 
 {% endblock %}

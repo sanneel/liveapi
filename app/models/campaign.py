@@ -12,7 +12,7 @@ A campaign represents a dynamic URL like `xxxx.com/r/random1`.
 
 from __future__ import annotations
 
-from sqlalchemy import Boolean, Column, DateTime, String
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
 
 from .base import Base, TimestampMixin
 
@@ -25,6 +25,13 @@ class Campaign(Base, TimestampMixin):
     sport = Column(String, nullable=False, index=True)
     mode = Column(String, nullable=False, default="manual")
     league = Column(String, nullable=True)
+    # Default render count for auto campaigns: used when the URL carries no
+    # explicit `?limit=`, and as the limit baked into the edit-page Copy URL.
+    # Manual campaigns ignore it (they render their selected match list).
+    hot_limit = Column(Integer, nullable=False, default=5)
+    # VIP toggle: when True the public PNG renders with the "vip" color theme
+    # (purple/violet); when False it uses the original "default" navy theme.
+    vip = Column(Boolean, nullable=False, default=False)
     enabled = Column(Boolean, nullable=False, default=True, index=True)
     expires_at = Column(DateTime, nullable=True, index=True)
     created_by = Column(String, nullable=True)

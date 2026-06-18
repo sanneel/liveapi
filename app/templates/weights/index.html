@@ -1,218 +1,190 @@
 {% extends "base.html" %}
 {% block title %}Weights · Jugabet Admin{% endblock %}
+{% block content_theme %}content-light{% endblock %}
 {% block page_title %}Scoring Weights{% endblock %}
-
-{% block page_actions %}
-  <span class="text-xs text-muted-500">Tune how matches earn hot points.</span>
-{% endblock %}
+{% block page_subtitle %}Tune how matches earn hot points, edits go live within ~15s, no restart.{% endblock %}
 
 {% block content %}
+
+<style>
+  .content-light .seg { display:inline-flex; border:1px solid var(--border-in); background:var(--surface); border-radius:10px; padding:2px; }
+  .content-light .seg button { padding:7px 12px; border:0; background:none; border-radius:8px; font:600 13px/1 var(--font); color:var(--t-faint); cursor:pointer; transition:background .12s, color .12s; }
+  .content-light .seg button.on { color:#fff; }
+  .content-light .seg button.on.league { background:#3B6FD4; }
+  .content-light .seg button.on.team   { background:var(--pos-t); }
+  .content-light .seg button.on.word   { background:#7A5AF0; }
+  .content-light .kc-league { color:#3B6FD4; }
+  .content-light .kc-team   { color:var(--pos-t); }
+  .content-light .kc-word   { color:#7A5AF0; }
+  .content-light .kd-league { background:#3B6FD4; }
+  .content-light .kd-team   { background:var(--pos-t); }
+  .content-light .kd-word   { background:#7A5AF0; }
+  .content-light .kchip-league { background:var(--club-bg); color:var(--club-t); border-color:transparent; }
+  .content-light .kchip-team   { background:var(--pos-bg);  color:var(--pos-t);  border-color:transparent; }
+  .content-light .kchip-word   { background:rgba(122,90,240,.12); color:#6A4AE0; border-color:transparent; }
+  .content-light .wtoggle { position:relative; display:inline-flex; height:20px; width:36px; align-items:center; border-radius:999px; border:0; cursor:pointer; transition:background .12s; }
+  .content-light .wtoggle .knob { display:inline-block; height:16px; width:16px; border-radius:50%; background:#fff; transition:transform .14s; box-shadow:0 1px 2px rgba(0,0,0,.2); }
+  .content-light .cell-in { width:100%; background:transparent; border:1px solid transparent; border-radius:8px; padding:6px 8px; font:500 13px/1.2 var(--font); color:var(--t-strong); }
+  .content-light .cell-in:hover { border-color:var(--border-in); }
+  .content-light .cell-in:focus { outline:none; border-color:var(--ac); box-shadow:0 0 0 3px var(--acw); }
+  .content-light .medal-1 { background:#FCEFC7; color:#9A6B00; font-weight:800; }
+  .content-light .medal-2 { background:#E9ECF1; color:#5B6472; font-weight:800; }
+  .content-light .medal-3 { background:#F7E2D2; color:#A85A22; font-weight:800; }
+</style>
+
 <div x-data='weightsPage("{{ sport }}", {{ sports|tojson }}, {{ kinds|tojson }}, {{ top_n }})'
-     x-init="init()" x-cloak class="max-w-5xl mx-auto">
+     x-init="init()" x-cloak style="max-width:1000px; margin:0 auto">
 
   {# ── Sport tabs ── #}
-  <div class="flex flex-wrap gap-1.5 mb-4">
+  <div class="chips">
     <template x-for="s in sports" :key="s">
-      <a :href="'/admin/weights?sport=' + s"
-         class="px-3 py-1.5 rounded-md text-sm capitalize border transition"
-         :class="s === sport
-            ? 'bg-brand-500 text-ink-950 border-brand-500 font-semibold'
-            : 'bg-ink-800 text-muted-300 border-ink-600 hover:text-zinc-100 hover:border-ink-500'"
-         x-text="s"></a>
+      <a :href="'/admin/weights?sport=' + s" class="chip" style="text-transform:capitalize" :class="s === sport && 'on'" x-text="s"></a>
     </template>
   </div>
 
-  {# ── Help line ── #}
-  <p class="text-sm text-muted-400 mb-5 max-w-3xl leading-relaxed">
+  <p class="lede">
     Each row adds (or subtracts) points when its name matches a live match.
-    <span class="text-sky-300 font-medium">League</span> matches the tournament,
-    <span class="text-emerald-300 font-medium">Team</span> matches either side,
-    <span class="text-violet-300 font-medium">Keyword</span> matches anywhere. Use a
-    negative number to bury a match (e.g. <code class="font-mono text-zinc-300">Junior = -200</code>).
-    Edits go live within ~15&nbsp;seconds — no restart.
-    <span x-show="!managed" class="block mt-1 text-meta text-amber-400">
-      Note: this sport keeps a few fixed structural bonuses in code (e.g. combo /
-      promotion bonuses) on top of these editable weights.
+    <b class="kc-league">League</b> matches the tournament,
+    <b class="kc-team">Team</b> matches either side,
+    <b class="kc-word">Keyword</b> matches anywhere. Use a negative number to bury a match.
+    <span x-show="!managed" style="display:block; margin-top:6px; color:var(--warn-t)">
+      Note: this sport keeps a few fixed structural bonuses in code on top of these editable weights.
     </span>
   </p>
 
   {# ── Add weight ── #}
-  <div class="bg-ink-850 border border-ink-600 rounded-xl p-4 mb-6">
-    <div class="text-label uppercase text-muted-400 mb-3">Add weight</div>
-    <div class="flex flex-col md:flex-row md:items-end gap-3">
-      {# segmented kind selector #}
-      <div>
-        <label class="block text-meta text-muted-500 mb-1">Type</label>
-        <div class="inline-flex rounded-lg border border-ink-600 bg-ink-900 p-0.5">
-          <button type="button" @click="form.kind = 'league'"
-            class="px-3 py-1.5 rounded-md text-sm transition"
-            :class="form.kind === 'league' ? 'bg-sky-500/20 text-sky-200 font-semibold ring-1 ring-sky-500/40' : 'text-muted-400 hover:text-zinc-100'">League</button>
-          <button type="button" @click="form.kind = 'team'"
-            class="px-3 py-1.5 rounded-md text-sm transition"
-            :class="form.kind === 'team' ? 'bg-emerald-500/20 text-emerald-200 font-semibold ring-1 ring-emerald-500/40' : 'text-muted-400 hover:text-zinc-100'">Team</button>
-          <button type="button" @click="form.kind = 'word'"
-            class="px-3 py-1.5 rounded-md text-sm transition"
-            :class="form.kind === 'word' ? 'bg-violet-500/20 text-violet-200 font-semibold ring-1 ring-violet-500/40' : 'text-muted-400 hover:text-zinc-100'">Keyword</button>
+  <div class="card card-pad" style="margin-bottom:18px">
+    <div class="stat-label" style="margin-bottom:12px; text-transform:uppercase; letter-spacing:.06em">Add weight</div>
+    <div style="display:flex; flex-wrap:wrap; align-items:flex-end; gap:12px">
+      <div class="field">
+        <span class="lbl">Type</span>
+        <div class="seg">
+          <button type="button" @click="form.kind = 'league'" class="league" :class="form.kind === 'league' && 'on'">League</button>
+          <button type="button" @click="form.kind = 'team'" class="team" :class="form.kind === 'team' && 'on'">Team</button>
+          <button type="button" @click="form.kind = 'word'" class="word" :class="form.kind === 'word' && 'on'">Keyword</button>
         </div>
       </div>
-      <div class="flex-1">
-        <label class="block text-meta text-muted-500 mb-1">Name / pattern</label>
-        <input x-model="form.pattern" placeholder="e.g. argentina liga profesional" @keydown.enter="create()"
-               class="w-full bg-ink-900 border border-ink-600 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:border-brand-500 focus:outline-none">
+      <div class="field" style="flex:1; min-width:200px">
+        <span class="lbl">Name / pattern</span>
+        <input class="input" x-model="form.pattern" placeholder="e.g. argentina liga profesional" @keydown.enter="create()"/>
       </div>
-      <div class="w-full md:w-28">
-        <label class="block text-meta text-muted-500 mb-1">Points</label>
-        <input x-model.number="form.points" type="number" placeholder="50" @keydown.enter="create()"
-               class="w-full bg-ink-900 border border-ink-600 rounded-lg px-3 py-2 text-sm text-zinc-100 tabular-nums focus:border-brand-500 focus:outline-none">
+      <div class="field" style="width:110px">
+        <span class="lbl">Points</span>
+        <input class="input mono" x-model.number="form.points" type="number" placeholder="50" @keydown.enter="create()"/>
       </div>
-      <button @click="create()" :disabled="busy"
-              class="inline-flex items-center justify-center gap-1.5 bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold px-4 py-2 rounded-lg text-sm disabled:opacity-50 transition">
-        <i data-lucide="plus" class="!w-4 !h-4"></i> Add
+      <button @click="create()" :disabled="busy" class="btn primary">
+        <i data-lucide="plus" style="width:15px;height:15px"></i> Add
       </button>
     </div>
   </div>
 
   {# ── Weights table ── #}
-  <div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden mb-8">
-    <div class="px-4 py-3 border-b border-ink-600 flex flex-wrap items-center gap-3 justify-between">
-      {# kind filter chips with live counts #}
-      <div class="flex flex-wrap items-center gap-1.5">
-        <button @click="kindFilter = 'all'"
-          class="px-2.5 py-1 rounded-full text-meta border transition"
-          :class="kindFilter === 'all' ? 'bg-ink-700 text-zinc-100 border-ink-500' : 'text-muted-400 border-ink-600 hover:text-zinc-100'">
-          All <span class="tabular-nums opacity-70" x-text="counts().all"></span>
+  <section class="card" style="overflow:hidden; margin-bottom:18px">
+    <div class="card-head" style="flex-wrap:wrap">
+      <div class="chips" style="margin:0">
+        <button @click="kindFilter = 'all'" class="chip" :class="kindFilter === 'all' && 'on'">
+          All <span class="mono" style="opacity:.7" x-text="counts().all"></span>
         </button>
         <template x-for="k in ['league','team','word']" :key="k">
-          <button @click="kindFilter = k"
-            class="px-2.5 py-1 rounded-full text-meta border transition inline-flex items-center gap-1.5"
-            :class="kindFilter === k ? kindMeta[k].chipOn : 'text-muted-400 border-ink-600 hover:text-zinc-100'">
-            <span class="w-1.5 h-1.5 rounded-full" :class="kindMeta[k].dot"></span>
+          <button @click="kindFilter = k" class="chip" :class="kindFilter === k && ('kchip-' + k)" style="display:inline-flex; align-items:center; gap:6px">
+            <span class="dot" style="width:6px;height:6px;border-radius:50%" :class="'kd-' + k"></span>
             <span x-text="kindMeta[k].label"></span>
-            <span class="tabular-nums opacity-70" x-text="counts()[k]"></span>
+            <span class="mono" style="opacity:.7" x-text="counts()[k]"></span>
           </button>
         </template>
       </div>
-      <div class="relative">
-        <i data-lucide="search" class="!w-3.5 !h-3.5 text-muted-500 absolute left-2.5 top-1/2 -translate-y-1/2"></i>
-        <input x-model="filter" placeholder="filter…"
-               class="bg-ink-900 border border-ink-600 rounded-lg pl-8 pr-2 py-1.5 text-xs text-zinc-100 w-44 focus:border-brand-500 focus:outline-none">
+      <div class="ibox" style="flex:0 0 200px">
+        <i data-lucide="search" class="mag"></i>
+        <input class="input" x-model="filter" placeholder="filter…"/>
       </div>
     </div>
 
-    <div class="max-h-[520px] overflow-y-auto">
-      <table class="w-full text-sm">
-        <thead class="text-meta uppercase text-muted-500 bg-ink-900 sticky top-0 z-10">
+    <div style="max-height:520px; overflow-y:auto">
+      <table class="dt">
+        <thead>
           <tr>
-            <th class="text-left px-4 py-2 font-medium">Type</th>
-            <th class="text-left px-3 py-2 font-medium">Name / pattern</th>
-            <th class="text-right px-3 py-2 font-medium">Points</th>
-            <th class="text-center px-3 py-2 font-medium">On</th>
-            <th class="px-3 py-2 w-10"></th>
+            <th style="width:110px">Type</th>
+            <th>Name / pattern</th>
+            <th class="right" style="width:110px">Points</th>
+            <th style="width:60px; text-align:center">On</th>
+            <th style="width:40px"></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-ink-700/60">
+        <tbody>
           <template x-for="w in filtered()" :key="w.id">
-            <tr class="group hover:bg-ink-800/40 transition" :class="!w.enabled && 'opacity-45'">
-              <td class="px-4 py-1.5">
-                <select x-model="w.kind" @change="save(w)"
-                        class="bg-transparent border-0 rounded px-1 py-1 text-xs font-medium cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-500"
-                        :class="kindMeta[w.kind] ? kindMeta[w.kind].text : 'text-zinc-300'">
-                  <option value="league" class="bg-ink-900 text-zinc-100">League</option>
-                  <option value="team" class="bg-ink-900 text-zinc-100">Team</option>
-                  <option value="word" class="bg-ink-900 text-zinc-100">Keyword</option>
+            <tr class="group" :style="!w.enabled && 'opacity:.5'">
+              <td>
+                <select x-model="w.kind" @change="save(w)" class="cell-in" style="font-weight:600; cursor:pointer" :class="'kc-' + w.kind">
+                  <option value="league">League</option>
+                  <option value="team">Team</option>
+                  <option value="word">Keyword</option>
                 </select>
               </td>
-              <td class="px-3 py-1.5">
-                <input x-model="w.pattern" @change="save(w)"
-                       class="w-full bg-transparent border border-transparent hover:border-ink-600 focus:border-brand-500 rounded px-2 py-1 text-zinc-100 focus:outline-none">
+              <td><input class="cell-in" x-model="w.pattern" @change="save(w)"/></td>
+              <td class="right" style="white-space:nowrap">
+                <input class="cell-in mono" x-model.number="w.points" @change="save(w)" type="number" style="width:80px; text-align:right" :style="w.points < 0 ? 'color:var(--live-t)' : 'color:var(--pos-t)'"/>
+                <i data-lucide="check" x-show="w._saved" x-transition.opacity style="width:14px;height:14px;color:var(--pos-t);vertical-align:middle;margin-left:4px"></i>
               </td>
-              <td class="px-3 py-1.5 text-right whitespace-nowrap">
-                <input x-model.number="w.points" @change="save(w)" type="number"
-                       class="w-20 text-right bg-transparent border border-transparent hover:border-ink-600 focus:border-brand-500 rounded px-2 py-1 tabular-nums focus:outline-none"
-                       :class="w.points < 0 ? 'text-red-400' : 'text-emerald-300'">
-                <i data-lucide="check" x-show="w._saved" x-transition.opacity
-                   class="!w-3.5 !h-3.5 text-emerald-400 inline-block align-middle ml-1"></i>
-              </td>
-              <td class="px-3 py-1.5 text-center">
-                <button @click="w.enabled = !w.enabled; save(w)"
-                        class="relative inline-flex h-5 w-9 items-center rounded-full transition"
-                        :class="w.enabled ? 'bg-brand-500' : 'bg-ink-600'"
-                        :title="w.enabled ? 'Enabled — click to disable' : 'Disabled — click to enable'">
-                  <span class="inline-block h-4 w-4 transform rounded-full bg-white transition"
-                        :class="w.enabled ? 'translate-x-4' : 'translate-x-0.5'"></span>
+              <td style="text-align:center">
+                <button @click="w.enabled = !w.enabled; save(w)" class="wtoggle" :style="w.enabled ? 'background:var(--ac)' : 'background:var(--border-in)'" :title="w.enabled ? 'Enabled, click to disable' : 'Disabled, click to enable'">
+                  <span class="knob" :style="w.enabled ? 'transform:translateX(17px)' : 'transform:translateX(2px)'"></span>
                 </button>
               </td>
-              <td class="px-3 py-1.5 text-right">
-                <button @click="remove(w)"
-                        class="text-muted-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition"
-                        title="Delete">
-                  <i data-lucide="trash-2" class="!w-4 !h-4"></i>
+              <td class="right">
+                <button @click="remove(w)" class="iconbtn danger" title="Delete" style="opacity:0" :style="'opacity:1'">
+                  <i data-lucide="trash-2" style="width:15px;height:15px"></i>
                 </button>
               </td>
             </tr>
           </template>
-          <tr x-show="weights.length === 0">
-            <td colspan="5" class="px-3 py-10 text-center text-muted-500 italic">No weights yet — add one above.</td>
-          </tr>
-          <tr x-show="weights.length > 0 && filtered().length === 0">
-            <td colspan="5" class="px-3 py-10 text-center text-muted-500 italic">No weights match this filter.</td>
-          </tr>
+          <tr x-show="weights.length === 0"><td colspan="5"><div class="empty" style="font-style:italic">No weights yet, add one above.</div></td></tr>
+          <tr x-show="weights.length > 0 && filtered().length === 0"><td colspan="5"><div class="empty" style="font-style:italic">No weights match this filter.</div></td></tr>
         </tbody>
       </table>
     </div>
 
-    <div class="px-4 py-2 border-t border-ink-600 text-meta text-muted-500 flex items-center justify-between">
-      <span>Showing <span class="text-muted-300 tabular-nums" x-text="filtered().length"></span>
-        of <span class="text-muted-300 tabular-nums" x-text="weights.length"></span></span>
-      <span class="inline-flex items-center gap-1.5">
-        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> live — edits affect scoring
-      </span>
+    <div style="padding:10px 22px; border-top:1px solid var(--border-soft); display:flex; align-items:center; justify-content:space-between">
+      <span class="m-meta">Showing <span class="mono" x-text="filtered().length"></span> of <span class="mono" x-text="weights.length"></span></span>
+      <span class="m-meta" style="display:inline-flex; align-items:center; gap:6px"><span class="dot" style="width:6px;height:6px;border-radius:50%;background:var(--pos-t)"></span> live, edits affect scoring</span>
     </div>
-  </div>
+  </section>
 
   {# ── Leaderboard ── #}
-  <div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">
-    <div class="px-4 py-2.5 border-b border-ink-600 flex items-center justify-between">
-      <span class="text-label uppercase text-muted-400">Top {{ top_n }} by points (live)</span>
-      <button @click="loadBoard()" :disabled="boardBusy"
-              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-meta text-muted-300 border border-ink-600 hover:bg-ink-800 hover:text-zinc-100 disabled:opacity-50 transition">
-        <i data-lucide="refresh-cw" class="!w-3.5 !h-3.5" :class="boardBusy && 'animate-spin'"></i> Recompute
+  <section class="card" style="overflow:hidden">
+    <div class="card-head">
+      <span class="hsec-lbl" style="font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--t-faint2)">Top {{ top_n }} by points (live)</span>
+      <button @click="loadBoard()" :disabled="boardBusy" class="btn sm">
+        <i data-lucide="refresh-cw" style="width:14px;height:14px" :class="boardBusy && 'animate-spin'"></i> Recompute
       </button>
     </div>
-    <ul class="divide-y divide-ink-700/60">
+    <ul style="margin:0;padding:0;list-style:none">
       <template x-for="r in board" :key="r.event_id">
-        <li class="px-4 py-3">
-          <div class="flex items-center gap-3 cursor-pointer" @click="r._open = !r._open">
-            <span class="flex items-center justify-center w-6 h-6 rounded-full text-num tabular-nums shrink-0"
-                  :class="r.rank <= 3 ? medalClass(r.rank) : 'text-muted-500'"
-                  x-text="r.rank"></span>
-            <div class="min-w-0 flex-1">
-              <div class="text-zinc-100 truncate">
-                <span x-text="r.home_name"></span> <span class="text-muted-500">vs</span> <span x-text="r.away_name"></span>
-                <span class="ml-2 text-meta px-1.5 py-0.5 rounded"
-                      :class="r.status === 'live' ? 'bg-red-900/40 text-red-300' : 'bg-ink-700 text-muted-300'"
-                      x-text="r.status"></span>
+        <li style="padding:13px 22px; border-bottom:1px solid var(--border-soft)">
+          <div style="display:flex; align-items:center; gap:12px; cursor:pointer" @click="r._open = !r._open">
+            <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; font-size:12px; font-weight:700; flex:none; font-variant-numeric:tabular-nums" :class="r.rank <= 3 ? medalClass(r.rank) : ''" :style="r.rank > 3 && 'color:var(--t-faint)'" x-text="r.rank"></span>
+            <div style="min-width:0; flex:1">
+              <div class="m-title"><span x-text="r.home_name"></span><span class="vs">vs</span><span x-text="r.away_name"></span>
+                <span class="badge" :class="r.status === 'live' ? 'live' : 'pre'" style="margin-left:6px" x-text="r.status"></span>
               </div>
-              <div class="text-meta text-muted-500 truncate" x-text="r.tournament_name"></div>
+              <div class="m-meta" x-text="r.tournament_name"></div>
             </div>
-            <span class="text-num tabular-nums px-2 py-0.5 rounded-md bg-brand-500/15 text-brand-400 font-semibold shrink-0" x-text="r.score"></span>
-            <i data-lucide="chevron-down" class="!w-4 !h-4 text-muted-500 transition-transform shrink-0"
-               :class="r._open && 'rotate-180'"></i>
+            <span class="odd" style="flex:none" x-text="r.score"></span>
+            <i data-lucide="chevron-down" style="width:16px;height:16px;color:var(--t-faint);flex:none;transition:transform .15s" :style="r._open && 'transform:rotate(180deg)'"></i>
           </div>
-          <div x-show="r._open" x-transition class="mt-2 ml-9 flex flex-wrap gap-1.5">
+          <div x-show="r._open" x-transition style="margin-top:8px; margin-left:36px; display:flex; flex-wrap:wrap; gap:6px">
             <template x-for="reason in r.reasons" :key="reason">
-              <span class="text-meta font-mono px-1.5 py-0.5 rounded bg-ink-900 border border-ink-700 text-muted-300" x-text="reason"></span>
+              <span class="tag mono" x-text="reason"></span>
             </template>
-            <span x-show="!r.reasons || r.reasons.length === 0" class="text-meta text-muted-600 italic">no weighted reasons</span>
+            <span x-show="!r.reasons || r.reasons.length === 0" class="m-meta" style="font-style:italic">no weighted reasons</span>
           </div>
         </li>
       </template>
-      <li x-show="board.length === 0" class="px-4 py-8 text-center text-muted-500 italic">
+      <li x-show="board.length === 0" class="empty" style="font-style:italic">
         <span x-show="!boardBusy">No scored matches.</span>
         <span x-show="boardBusy">Computing…</span>
       </li>
     </ul>
-  </div>
+  </section>
 </div>
 {% endblock %}
 
@@ -225,12 +197,9 @@ function weightsPage(sport, sports, kinds, topN) {
     board: [], boardBusy: false, busy: false,
     form: { kind: 'league', pattern: '', points: null },
     kindMeta: {
-      league: { label: 'League',  text: 'text-sky-300',     dot: 'bg-sky-400',
-                chipOn: 'bg-sky-500/15 text-sky-200 border-sky-500/40' },
-      team:   { label: 'Team',     text: 'text-emerald-300', dot: 'bg-emerald-400',
-                chipOn: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/40' },
-      word:   { label: 'Keyword',  text: 'text-violet-300',  dot: 'bg-violet-400',
-                chipOn: 'bg-violet-500/15 text-violet-200 border-violet-500/40' },
+      league: { label: 'League' },
+      team:   { label: 'Team' },
+      word:   { label: 'Keyword' },
     },
 
     async init() {
@@ -254,20 +223,12 @@ function weightsPage(sport, sports, kinds, topN) {
     },
 
     medalClass(rank) {
-      return {
-        1: 'bg-amber-400/20 text-amber-300 font-bold',
-        2: 'bg-zinc-300/20 text-zinc-200 font-bold',
-        3: 'bg-orange-700/30 text-orange-300 font-bold',
-      }[rank] || 'text-muted-500';
+      return { 1: 'medal-1', 2: 'medal-2', 3: 'medal-3' }[rank] || '';
     },
 
-    // The admin session (60-min access token) can lapse mid-edit. The API then
-    // answers 401 `session_expired` (see app/auth/dependencies.py). Turn that
-    // into a clear notice + bounce to login instead of a cryptic error toast.
-    // Returns true when it handled an expiry, so callers can stop early.
     _expired(res) {
       if (res.status !== 401) return false;
-      toast({ msg: 'Session expired — taking you to the login page…', kind: 'error' });
+      toast({ msg: 'Session expired, taking you to the login page…', kind: 'error' });
       const next = encodeURIComponent(location.pathname + location.search);
       setTimeout(() => { window.location.href = '/admin/login?next=' + next; }, 900);
       return true;
@@ -295,7 +256,6 @@ function weightsPage(sport, sports, kinds, topN) {
           body: JSON.stringify(this.form),
         });
         if (this._expired(res)) return;
-        // Handle duplicate explicitly — don't let json() swallow the error.
         if (res.status === 409) {
           toast({ msg: `"${this.form.pattern}" already exists as a ${this.form.kind} weight.`, kind: 'error' });
           return;
@@ -307,8 +267,6 @@ function weightsPage(sport, sports, kinds, topN) {
         const kept = this.form.kind;
         this.form = { kind: kept, pattern: '', points: null };
         await this.load();
-        // Keep the new row visible: if a kind filter is active and hides it,
-        // switch to that kind. Leave "All" untouched.
         if (this.kindFilter !== 'all' && this.kindFilter !== kept) this.kindFilter = kept;
         toast({ msg: 'Weight added', kind: 'success' });
       } catch (e) { toast({ msg: 'Add failed: ' + e.message, kind: 'error' }); }

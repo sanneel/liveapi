@@ -121,15 +121,23 @@ def _reason(m: Match, position: Optional[int], suppressed: bool) -> str:
 
 
 def _invalidate_theme_cache(theme_slug: str) -> None:
-    """Drop both render and odds-face caches so the next request renders fresh.
+    """Drop render + odds-face caches so the next request renders fresh, and
+    refresh the pre-rendered email GIF so overrides actually change it.
 
     Uses invalidate_prefix on `cube_odds:{slug}` because the odds endpoint
     keys per-slot (`cube_odds:{slug}:0`, `:1`, `:2` …) and a pin in any
     slot can shift downstream slots. Cheap — bounded by the cube's slot count.
+
+    The GIF needs more than a cache drop: it's served from a durable on-disk
+    pre-render, so we delete that file AND kick off a background re-render
+    (`refresh_cube_gif`) — otherwise the stale GIF on disk would keep being
+    served and the override would appear to change only the web cube.
     """
     png_cache.invalidate(f"cube:{theme_slug}")
     png_cache.invalidate_prefix(f"cube_odds:{theme_slug}")
-    png_cache.invalidate_prefix(f"cube_gif:{theme_slug}")
+    # Lazy import: public_cube owns the GIF disk store + render helpers.
+    from .public_cube import refresh_cube_gif
+    refresh_cube_gif(theme_slug)
 
 
 # ════════════════════════════════════════════════════════════════════════
@@ -220,14 +228,21 @@ def api_cube_leaderboard(
         match_repo = MatchRepository(session)
         override_repo = CubeOverrideRepository(session)
 
-        # 1. The current cube output (resolver-decided slots).
+        # 1. The current cube output (resolver-decided slots). POSITIONAL —
+        # entry i is the match for slot i, or None for a blank slot (operator
+        # blocked, or no match available). The UI renders None as an empty slot.
         top_matches = resolve_for_theme(session, t, limit=slot_count)
-        top_ids = [m.event_id for m in top_matches]
-        top_positions = {m.event_id: i for i, m in enumerate(top_matches)}
+        top_positions = {
+            m.event_id: i for i, m in enumerate(top_matches) if m is not None
+        }
         pinned_map = override_repo.all_pinned(t.slug)  # {slot: eid}
         suppressed_set = override_repo.all_suppressed(t.slug)
-        top_rows = []
+        blocked = override_repo.blocked_slots(t.slug)
+        top_rows: List[Optional[Dict[str, Any]]] = []
         for i, m in enumerate(top_matches):
+            if m is None:
+                top_rows.append(None)  # blank slot
+                continue
             pinned_here = next(
                 (slot for slot, eid in pinned_map.items() if eid == m.event_id),
                 None,
@@ -339,6 +354,7 @@ def api_cube_leaderboard(
         "candidates": candidate_rows,
         "suppressed": suppressed_rows,
         "search_results": search_rows,
+        "blocked_slots": sorted(blocked),
     }
 
 
@@ -407,6 +423,9 @@ def api_cube_pin(
                 override_repo.set_suppress(
                     t.slug, event_id, False, by=user.username
                 )
+                # Filling a slot clears any "blank" reservation on it, so
+                # "+ Add" into a blanked slot just works.
+                override_repo.unblock_slot(t.slug, position)
             LogRepository(session).record(
                 "cube.pin",
                 username=user.username,
@@ -551,6 +570,75 @@ def api_cube_suppress(
         )
     _invalidate_theme_cache(t.slug)
     return {"ok": True, "cube": t.slug, "event_id": event_id, "suppress": suppress}
+
+
+@router.post("/api/admin/cube/{theme}/block/{slot}")
+@limiter.limit("60/minute")
+def api_cube_block_slot(
+    theme: str,
+    slot: int,
+    request: Request,
+    body: dict = Body(default={}),
+    user: User = Depends(require_role("editor")),
+) -> Dict[str, Any]:
+    """Reserve slot `slot` as BLANK — the resolver leaves it empty instead of
+    auto-filling, so the operator can place a specific match next. Optionally
+    suppresses the match that was there (`event_id` in the body) so it doesn't
+    just reappear in another slot."""
+    t = _validate_theme(theme)
+    slot = int(slot)
+    if not (0 <= slot < _max_match_slots(t)):
+        raise HTTPException(400, f"slot must be 0..{_max_match_slots(t) - 1}")
+    drop_event = str((body or {}).get("event_id") or "").strip()
+    with db_session() as session:
+        override_repo = CubeOverrideRepository(session)
+        # Remember the dropped match on the slot so "restore auto" can bring it
+        # back (un-suppress) in one click.
+        override_repo.block_slot(
+            t.slug, slot, by=user.username, dropped_event_id=drop_event or None
+        )
+        if drop_event:
+            # Hide the removed match so auto-rank can't slot it elsewhere.
+            override_repo.set_suppress(t.slug, drop_event, True, by=user.username)
+            override_repo.set_position(t.slug, drop_event, None, by=user.username)
+        LogRepository(session).record(
+            "cube.block", username=user.username, target=t.slug,
+            payload={"slot": slot, "dropped": drop_event or None},
+            ip=_client_ip(request),
+        )
+    _invalidate_theme_cache(t.slug)
+    return {"ok": True, "cube": t.slug, "slot": slot}
+
+
+@router.post("/api/admin/cube/{theme}/unblock/{slot}")
+@limiter.limit("60/minute")
+def api_cube_unblock_slot(
+    theme: str,
+    slot: int,
+    request: Request,
+    user: User = Depends(require_role("editor")),
+) -> Dict[str, Any]:
+    """Release a blank slot back to automatic, and bring back the match that
+    was removed from it (un-suppress) so emptying a slot is fully reversible."""
+    t = _validate_theme(theme)
+    with db_session() as session:
+        override_repo = CubeOverrideRepository(session)
+        dropped = override_repo.unblock_slot(t.slug, int(slot))
+        restored = None
+        if dropped:
+            override_repo.set_suppress(t.slug, dropped, False, by=user.username)
+            restored = dropped
+        LogRepository(session).record(
+            "cube.unblock", username=user.username, target=t.slug,
+            payload={
+                "slot": int(slot),
+                "was_blocked": dropped is not None,
+                "restored": restored,
+            },
+            ip=_client_ip(request),
+        )
+    _invalidate_theme_cache(t.slug)
+    return {"ok": True, "cube": t.slug, "slot": int(slot), "restored": restored}
 
 
 @router.delete("/api/admin/cube/{theme}/override/{event_id}")

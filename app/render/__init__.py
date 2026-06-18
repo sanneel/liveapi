@@ -11,6 +11,7 @@ This module loads renderers lazily on first use to keep cold-start fast.
 
 from __future__ import annotations
 
+import inspect
 from copy import deepcopy
 from typing import Any, Callable, Dict, List
 from urllib.parse import urlsplit
@@ -47,10 +48,20 @@ def _load(sport: str) -> Callable[[List[Dict[str, Any]]], bytes]:
     return fn
 
 
-def render_for_sport(sport: str, events: List[Dict[str, Any]]) -> bytes:
-    """Render an event list to PNG bytes using the renderer for that sport."""
+def render_for_sport(
+    sport: str, events: List[Dict[str, Any]], theme: str = "default"
+) -> bytes:
+    """Render an event list to PNG bytes using the renderer for that sport.
+
+    `theme` selects a color palette (e.g. "default" or "vip"). It is only
+    forwarded to renderers whose signature accepts a `theme` argument, so
+    sport renderers that don't support theming yet are unaffected.
+    """
     fn = _load((sport or "football").lower().strip())
-    return fn(_sanitize_events(events))
+    sanitized = _sanitize_events(events)
+    if "theme" in inspect.signature(fn).parameters:
+        return fn(sanitized, theme=theme)
+    return fn(sanitized)
 
 
 def _safe_logo_url(url: Any) -> str | None:

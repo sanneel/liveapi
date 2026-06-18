@@ -1,44 +1,41 @@
 {% extends "base.html" %}
 {% block title %}{{ campaign.title }} · Edit · Jugabet Admin{% endblock %}
+{% block content_theme %}content-light{% endblock %}
 {% block page_title %}{{ campaign.title }}{% endblock %}
+{% block page_subtitle %}{% if campaign.mode == 'auto' %}Auto campaign{% else %}Manual campaign{% endif %} · /r/{{ campaign.slug }}.png{% endblock %}
 
+{% set can_edit = current_user and current_user.role in ['editor','admin'] %}
 {% block page_actions %}
-  <div class="flex items-center gap-2">
-    <a href="/r/{{ campaign.slug }}.png" target="_blank"
-       class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 text-zinc-300 px-3 py-1.5 rounded">Open PNG</a>
-    <form method="POST" action="/admin/campaigns/{{ campaign.slug }}/duplicate" class="inline">
-      <button class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 text-zinc-300 px-3 py-1.5 rounded">Duplicate</button>
-    </form>
-    <form method="POST" action="/admin/campaigns/{{ campaign.slug }}/toggle" class="inline">
-      <button class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 text-zinc-300 px-3 py-1.5 rounded">
-        {% if campaign.enabled %}Disable{% else %}Enable{% endif %}
-      </button>
-    </form>
-    <form method="POST" action="/admin/campaigns/{{ campaign.slug }}/delete" class="inline"
-          onsubmit="return confirm('Delete campaign {{ campaign.slug }}? This cannot be undone.');">
-      <button class="text-xs bg-red-950/40 hover:bg-red-900/40 border border-red-900/50 text-red-300 px-3 py-1.5 rounded">Delete</button>
-    </form>
-  </div>
+  <a href="/r/{{ campaign.slug }}.png" target="_blank" class="btn">Open PNG</a>
+  {% if can_edit %}
+  <form method="POST" action="/admin/campaigns/{{ campaign.slug }}/duplicate" style="display:inline">
+    <button class="btn">Duplicate</button>
+  </form>
+  <form method="POST" action="/admin/campaigns/{{ campaign.slug }}/toggle" style="display:inline">
+    <button class="btn">{% if campaign.enabled %}Disable{% else %}Enable{% endif %}</button>
+  </form>
+  <form method="POST" action="/admin/campaigns/{{ campaign.slug }}/delete" style="display:inline"
+        onsubmit="return confirm('Delete campaign {{ campaign.slug }}? This cannot be undone.');">
+    <button class="btn danger">Delete</button>
+  </form>
+  {% endif %}
 {% endblock %}
 
 {% block content %}
 
 {% if render_stats and render_stats.total > 0 and (render_stats.will_render_blank or render_stats.synthetic or render_stats.inactive) %}
-  <div class="mb-4 px-4 py-3 rounded-lg border flex items-start gap-3
-              {% if render_stats.will_render_blank %}bg-red-950/40 border-red-800/60 text-red-100
-              {% else %}bg-amber-950/40 border-amber-800/60 text-amber-100{% endif %}">
-    <i data-lucide="alert-triangle" class="!w-4 !h-4 mt-0.5 flex-shrink-0"></i>
-    <div class="text-sm flex-1">
+  <div class="alert {% if render_stats.will_render_blank %}err{% else %}warn{% endif %}" style="align-items:flex-start">
+    <i data-lucide="alert-triangle" style="width:16px;height:16px;margin-top:1px"></i>
+    <div>
       {% if render_stats.will_render_blank %}
-        <div class="font-semibold">PNG will render blank (1&times;1 transparent).</div>
-        <div class="text-xs mt-1">
-          {{ render_stats.total }} match{{ '' if render_stats.total == 1 else 'es' }} selected, but none are renderable —
-          {% if render_stats.synthetic %}{{ render_stats.synthetic }} hidden as virtual / replay / esports{% endif %}{% if render_stats.synthetic and render_stats.inactive %}, {% endif %}{% if render_stats.inactive %}{{ render_stats.inactive }} dropped from the parser feed{% endif %}.
-          Add real, currently-active fixtures from the picker on the right.
+        <div style="font-weight:700">PNG will render blank (1×1 transparent).</div>
+        <div class="help" style="margin-top:3px; color:inherit; opacity:.85">
+          {{ render_stats.total }} match{{ '' if render_stats.total == 1 else 'es' }} selected, but none are renderable:
+          {% if render_stats.synthetic %}{{ render_stats.synthetic }} hidden as virtual / replay / esports{% endif %}{% if render_stats.synthetic and render_stats.inactive %}, {% endif %}{% if render_stats.inactive %}{{ render_stats.inactive }} dropped from the parser feed{% endif %}. Add real, currently-active fixtures from the picker on the right.
         </div>
       {% else %}
-        <div class="font-semibold">{{ render_stats.renderable }} of {{ render_stats.total }} selected matches will render.</div>
-        <div class="text-xs mt-1">
+        <div style="font-weight:700">{{ render_stats.renderable }} of {{ render_stats.total }} selected matches will render.</div>
+        <div class="help" style="margin-top:3px; color:inherit; opacity:.85">
           {% if render_stats.synthetic %}{{ render_stats.synthetic }} hidden as virtual / replay / esports{% endif %}{% if render_stats.synthetic and render_stats.inactive %}, {% endif %}{% if render_stats.inactive %}{{ render_stats.inactive }} no longer in the parser feed{% endif %}.
         </div>
       {% endif %}
@@ -46,263 +43,192 @@
   </div>
 {% endif %}
 
-{# Public URL bar #}
-<div class="bg-ink-850 border border-ink-600 rounded-xl px-5 py-3 mb-6 flex items-center gap-3">
-  <span class="text-xs uppercase text-muted-400 tracking-wider">Public URL</span>
-  <code class="flex-1 font-mono text-brand-400 text-sm truncate">
-    /r/{{ campaign.slug }}.png{% if campaign.mode == 'auto' %}?limit=5{% endif %}
-  </code>
-  <span class="text-xs px-2 py-0.5 rounded-full
-        {% if campaign.mode == 'auto' %}bg-orange-900/40 text-orange-300{% else %}bg-blue-900/40 text-blue-300{% endif %}">
-    {% if campaign.mode == 'auto' %}Auto{% else %}Manual{% endif %}
+{# Public URL bar, Copy yields the full journey formula with a dynamic limit:
+   auto → saved default limit · manual → current match count. #}
+<div class="card card-pad" style="display:flex; align-items:center; gap:12px; margin-bottom:18px; padding:14px 22px">
+  <span class="stat-label" style="text-transform:uppercase; letter-spacing:.06em">Copy URL</span>
+  <code class="slug r mono" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="{{ copy_url }}">{{ copy_url }}</code>
+  <span class="tag {% if campaign.mode == 'auto' %}warn{% else %}club{% endif %}">
+    {% if campaign.mode == 'auto' %}Auto · limit {{ copy_limit }}{% else %}Manual · {{ copy_limit }} match{{ '' if copy_limit == 1 else 'es' }}{% endif %}
   </span>
-  <button onclick="copyToClipboard(location.origin + '/r/{{ campaign.slug }}.png', 'URL copied')"
-          class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 px-3 py-1 rounded">Copy</button>
+  <button data-copy-url="{{ copy_url }}" onclick="copyCampaignUrl(this)" class="btn sm">Copy</button>
   {% if campaign.enabled %}
-    <span class="text-xs text-green-400 flex items-center gap-1">
-      <span class="w-1.5 h-1.5 rounded-full bg-green-400"></span> Live
-    </span>
+    <span class="pill pos"><span class="dot"></span>Live</span>
   {% else %}
-    <span class="text-xs text-muted-500 flex items-center gap-1">
-      <span class="w-1.5 h-1.5 rounded-full bg-muted-500"></span> Disabled
-    </span>
+    <span class="pill neu"><span class="dot"></span>Off</span>
   {% endif %}
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="row-flex">
 
   {# ═══ LEFT: Settings + Selected Matches ═══ #}
-  <div class="lg:col-span-2 space-y-6">
+  <div class="col-main stack">
 
-    {# Settings — fields depend on campaign.mode, but mode itself is not editable. #}
-    <form method="POST" action="/admin/campaigns/{{ campaign.slug }}"
-          class="bg-ink-850 border border-ink-600 rounded-xl p-5">
-      <h2 class="text-sm font-semibold text-white mb-4">Settings</h2>
+    <form method="POST" action="/admin/campaigns/{{ campaign.slug }}" class="card card-pad">
+      <h2 class="card-title" style="margin-bottom:16px">Settings</h2>
 
-      <div class="grid grid-cols-2 gap-4">
-        <div class="col-span-2">
-          <label class="block text-xs uppercase text-muted-400 mb-1">Title</label>
-          <input type="text" name="title" value="{{ campaign.title }}" required maxlength="120"
-                 class="w-full bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"/>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px">
+        <div class="field" style="grid-column:1 / -1">
+          <span class="lbl">Title</span>
+          <input class="input" type="text" name="title" value="{{ campaign.title }}" required maxlength="120"/>
         </div>
 
-        <div>
-          <label class="block text-xs uppercase text-muted-400 mb-1">Sport</label>
-          <select name="sport" class="w-full bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
-            {% for s in valid_sports %}
-              <option value="{{ s }}" {% if campaign.sport == s %}selected{% endif %}>{{ s|capitalize }}</option>
-            {% endfor %}
+        <div class="field">
+          <span class="lbl">Sport</span>
+          <select name="sport">
+            {% for s in valid_sports %}<option value="{{ s }}" {% if campaign.sport == s %}selected{% endif %}>{{ s|capitalize }}</option>{% endfor %}
           </select>
         </div>
 
         {% if campaign.mode == 'auto' %}
-          <div>
-            <label class="block text-xs uppercase text-muted-400 mb-1">League / Tournament</label>
-            <input name="league" list="league-options" autocomplete="off"
-                   value="{{ campaign.league or '' }}"
-                   placeholder="All leagues in sport — type to search…"
-                   class="w-full bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"/>
+          <div class="field">
+            <span class="lbl">League / Tournament</span>
+            <input class="input" name="league" list="league-options" autocomplete="off" value="{{ campaign.league or '' }}" placeholder="All leagues in sport, type to search…"/>
             <datalist id="league-options">
-              {% for t in tournaments %}
-                <option value="{{ t }}"></option>
-              {% endfor %}
+              {% for t in tournaments %}<option value="{{ t }}"></option>{% endfor %}
             </datalist>
+          </div>
+
+          <div class="field">
+            <span class="lbl">Default limit</span>
+            <input class="input" type="number" name="limit" min="1" max="20" value="{{ campaign.hot_limit }}"/>
+            <span class="help" style="color:var(--t-faint)">Matches shown when the URL has no <span class="mono">?limit=</span> (1–20). Used by the Copy URL above.</span>
           </div>
         {% endif %}
 
-        <div class="col-span-2">
-          <label class="inline-flex items-center gap-2 text-sm text-zinc-300">
-            <input type="checkbox" name="enabled" value="1" {% if campaign.enabled %}checked{% endif %} class="accent-brand-500"/>
-            Enabled (URL renders publicly)
-          </label>
-        </div>
+        <label class="check" style="grid-column:1 / -1">
+          <input type="checkbox" name="enabled" value="1" {% if campaign.enabled %}checked{% endif %}/>
+          <span>Enabled (URL renders publicly)</span>
+        </label>
+
+        <label class="check" style="grid-column:1 / -1">
+          <input type="checkbox" name="vip" value="1" {% if campaign.vip %}checked{% endif %}/>
+          <span><b style="color:var(--t-strong)">VIP theme</b>, ON = purple VIP look · OFF = classic navy theme</span>
+        </label>
       </div>
 
-      <button type="submit"
-              class="mt-5 bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold px-5 py-2 rounded-lg text-sm">
-        Save settings
-      </button>
+      {% if can_edit %}
+      <div class="form-actions" style="margin-top:18px">
+        <button type="submit" class="btn primary">Save settings</button>
+      </div>
+      {% endif %}
     </form>
 
     {% if campaign.mode == 'manual' %}
-      {# Selected matches list — manual only. #}
-      <div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">
-        <div class="px-5 py-4 border-b border-ink-600 flex items-center justify-between">
-          <h2 class="text-sm font-semibold text-white">
+      <section class="card" style="overflow:hidden">
+        <div class="card-head">
+          <h2 class="card-title">
             Selected matches
-            <span id="selected-count" class="text-xs bg-ink-700 text-muted-400 px-2 py-0.5 rounded-full ml-1">
-              {{ selected_matches|length }}
-            </span>
+            <span id="selected-count" class="tag" style="margin-left:6px">{{ selected_matches|length }}</span>
           </h2>
-          <span class="text-xs text-muted-500">Drag ⠿ to reorder</span>
+          <span class="card-sub" style="margin:0">Drag ⠿ to reorder</span>
         </div>
-
-        <ul id="selected-list" class="divide-y divide-ink-600 min-h-[80px]">
+        <ul id="selected-list" style="margin:0; padding:0; list-style:none; min-height:80px">
           {% for m in selected_matches %}
             {% include "campaigns/_selected_match.html" %}
           {% endfor %}
           {% if not selected_matches %}
-            <li id="empty-selected" class="px-5 py-10 text-center text-muted-500 text-sm">
-              No matches selected yet. Search and add from the panel on the right →
-            </li>
+            <li id="empty-selected" class="empty">No matches selected yet. Search and add from the panel on the right →</li>
           {% endif %}
         </ul>
-      </div>
+      </section>
     {% else %}
-      {# Auto explainer + live preview. #}
-      <div class="bg-orange-950/30 border border-orange-900/50 rounded-xl p-5 text-sm text-orange-200">
-        <strong>Auto campaign.</strong>
+      <div class="alert warn" style="align-items:flex-start; display:block">
+        <b>Auto campaign.</b>
         Renders the hottest {{ campaign.sport }} matches
-        {% if campaign.league %}from <span class="font-mono">{{ campaign.league }}</span>{% else %}across all leagues in the sport{% endif %}.
-        Add <code class="font-mono">?limit=N</code> to the URL to control how many appear (default 5, max 20).
-        Match ordering comes from the
-        <a href="/admin/hot" class="underline text-orange-100 hover:text-white">hot dashboard</a>
-        — drag and pin matches there to lock specific slots.
+        {% if campaign.league %}from <span class="mono">{{ campaign.league }}</span>{% else %}across all leagues in the sport{% endif %}.
+        Add <span class="mono">?limit=N</span> to the URL to control how many appear (default 5, max 20). Match ordering comes from the
+        <a href="/admin/hot" class="link" style="color:inherit; text-decoration:underline">hot dashboard</a>.
       </div>
 
-      <div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden"
-           x-data="autoPreview('{{ campaign.slug }}')"
-           x-init="load()">
-        <div class="px-5 py-4 border-b border-ink-600 flex items-center justify-between">
+      <section class="card" style="overflow:hidden" x-data="autoPreview('{{ campaign.slug }}', {{ campaign.hot_limit }})" x-init="load()">
+        <div class="card-head">
           <div>
-            <h2 class="text-sm font-semibold text-white">Live preview</h2>
-            <p class="text-xs text-muted-500 mt-0.5">
-              What this campaign will render right now at <code class="font-mono">?limit=<span x-text="limit"></span></code>.
-            </p>
+            <h2 class="card-title">Live preview</h2>
+            <p class="card-sub">What this campaign will render right now at <span class="mono">?limit=<span x-text="limit"></span></span>.</p>
           </div>
-          <div class="flex items-center gap-2">
-            <label class="text-xs text-muted-400">Limit</label>
-            <select x-model.number="limit" @change="load()"
-                    class="bg-ink-700 border border-ink-600 rounded px-2 py-1 text-xs text-zinc-200">
-              <template x-for="n in [1,3,5,7,10,15,20]" :key="n">
-                <option :value="n" x-text="n"></option>
-              </template>
+          <div style="display:flex; align-items:center; gap:8px">
+            <label class="lbl" style="color:var(--t-faint)">Limit</label>
+            <select x-model.number="limit" @change="load()" style="width:auto; padding:6px 28px 6px 10px">
+              <template x-for="n in [1,3,5,7,10,15,20]" :key="n"><option :value="n" x-text="n"></option></template>
             </select>
-            <button @click="load()" :disabled="loading"
-                    class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 text-zinc-300 px-2 py-1 rounded">↻</button>
+            <button @click="load()" :disabled="loading" class="btn icon">↻</button>
           </div>
         </div>
-        <div class="px-5 py-3 text-xs text-red-300" x-show="error" x-text="error"></div>
-        <div class="mx-5 my-3 px-3 py-2 text-xs bg-amber-950/40 border border-amber-900/60 text-amber-200 rounded"
-             x-show="warning" x-text="warning"></div>
-        <ul class="divide-y divide-ink-600/60 min-h-[60px]">
+        <div class="alert err" style="margin:14px 22px 0" x-show="error" x-text="error" x-cloak></div>
+        <div class="alert" style="margin:14px 22px 0; background:var(--warn-bg); color:var(--warn-t)" x-show="warning" x-text="warning" x-cloak></div>
+        <ul style="margin:0; padding:0; list-style:none; min-height:60px">
           <template x-for="(m, idx) in matches" :key="m.event_id">
-            <li class="px-5 py-2.5 flex items-center gap-3">
-              <span class="w-6 text-right text-xs font-mono text-muted-400" x-text="idx + 1"></span>
-              <span class="text-[9px] px-1.5 py-0.5 rounded font-bold"
-                    :class="m.status === 'live' ? 'bg-red-900/40 text-red-300' : 'bg-blue-900/40 text-blue-300'"
-                    x-text="m.status === 'live' ? 'LIVE' : 'PRE'"></span>
-              <div class="flex-1 min-w-0">
-                <div class="text-sm text-zinc-100 truncate">
-                  <span x-text="m.home_name"></span>
-                  <span class="text-muted-400 text-xs"> vs </span>
-                  <span x-text="m.away_name"></span>
-                </div>
-                <div class="text-xs text-muted-500 truncate">
-                  <span x-text="m.tournament_name || '—'"></span>
-                  <span class="text-muted-600"> · </span>
-                  <span x-text="m.time_raw || '—'"></span>
-                </div>
+            <li class="lrow" style="gap:10px">
+              <span class="slot-no" style="width:24px; font-size:13px" x-text="idx + 1"></span>
+              <span class="badge" :class="m.status === 'live' ? 'live' : 'pre'"><span class="dot"></span><span x-text="m.status === 'live' ? 'Live' : 'Pre'"></span></span>
+              <div style="flex:1; min-width:0">
+                <div class="m-title"><span x-text="m.home_name"></span><span class="vs">vs</span><span x-text="m.away_name"></span></div>
+                <div class="m-meta"><span x-text="m.tournament_name || '—'"></span> · <span x-text="m.time_raw || '—'"></span></div>
               </div>
             </li>
           </template>
-          <li x-show="!loading && matches.length === 0"
-              class="px-5 py-8 text-center text-xs text-muted-500">
-            <template x-if="'{{ campaign.league }}'">
-              <span>No matches in <span class="font-mono">{{ campaign.league }}</span> right now.
-                The campaign will render an empty PNG until the parser sees one.</span>
-            </template>
-            <template x-if="!'{{ campaign.league }}'">
-              <span>No active {{ campaign.sport }} matches in the DB. Wait for the parser.</span>
-            </template>
+          <li x-show="!loading && matches.length === 0" class="empty">
+            <template x-if="'{{ campaign.league }}'"><span>No matches in <span class="mono">{{ campaign.league }}</span> right now. The campaign will render an empty PNG until the parser sees one.</span></template>
+            <template x-if="!'{{ campaign.league }}'"><span>No active {{ campaign.sport }} matches in the DB. Wait for the parser.</span></template>
           </li>
         </ul>
-      </div>
+      </section>
     {% endif %}
   </div>
 
   {# ═══ RIGHT: Match Picker (manual only) + PNG Preview ═══ #}
-  <div class="space-y-6">
+  <div class="col-rail">
 
     {% if campaign.mode == 'manual' %}
-      <div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden"
-           x-data="pickerState()"
-           x-init="wireHtmxLifecycle()">
-        <div class="px-5 py-4 border-b border-ink-600 flex items-center justify-between gap-3">
-          <h2 class="text-sm font-semibold text-white">Add matches</h2>
-          {# Searching… ONLY while a real fetch is in flight. When the
-             request finishes the indicator is removed entirely (not just
-             opacity-hidden), so the operator never sees stale loading
-             text next to populated results. #}
-          <span x-show="loading" x-cloak
-                class="text-[11px] text-muted-400 inline-flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></span>
-            Searching…
+      <section class="card" style="overflow:hidden" x-data="pickerState()" x-init="wireHtmxLifecycle()">
+        <div class="card-head">
+          <h2 class="card-title">Add matches</h2>
+          <span x-show="loading" x-cloak class="m-meta" style="margin:0; display:inline-flex; align-items:center; gap:6px">
+            <span class="dot" style="width:6px;height:6px;border-radius:50%;background:var(--ac)"></span> Searching…
           </span>
         </div>
 
-        <div class="p-4 border-b border-ink-600 space-y-2"
+        <div style="padding:14px 16px; border-bottom:1px solid var(--border-soft); display:flex; flex-direction:column; gap:8px"
              hx-get="/api/admin/campaigns/{{ campaign.slug }}/picker"
              hx-trigger="keyup changed delay:250ms from:input[name='q'], change from:select[name='sport'], change from:select[name='tournament'], change delay:250ms from:input[name='team'], change from:input[name='include_synthetic'], load"
              hx-include="input[name='q'], select[name='sport'], select[name='tournament'], input[name='team'], input[name='include_synthetic']:checked"
              hx-target="#picker-results">
-          <input type="text" name="q"
-                 placeholder="Search team or league…"
-                 class="w-full bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"/>
-          <div class="grid grid-cols-2 gap-2">
-            {# Sport selector — defaults to this campaign's sport. Switch it (or
-               pick "All sports") to add fixtures from other sports to the same
-               PNG, e.g. combine football + basketball. The league list below
-               stays scoped to the campaign's own sport, so for cross-sport
-               picks search by team / keyword with "All leagues" selected. #}
-            <select name="sport"
-                    class="bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-xs focus:border-brand-500 focus:outline-none">
-              {% for s in valid_sports %}
-                <option value="{{ s }}" {% if s == campaign.sport %}selected{% endif %}>{{ s|capitalize }}</option>
-              {% endfor %}
+          <input class="input" type="text" name="q" placeholder="Search team or league…"/>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+            <select name="sport">
+              {% for s in valid_sports %}<option value="{{ s }}" {% if s == campaign.sport %}selected{% endif %}>{{ s|capitalize }}</option>{% endfor %}
               <option value="all">All sports</option>
             </select>
-            <select name="tournament"
-                    class="bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-xs focus:border-brand-500 focus:outline-none">
+            <select name="tournament">
               <option value="">All leagues</option>
-              {% for t in tournaments %}
-                <option value="{{ t }}">{{ t }}</option>
-              {% endfor %}
+              {% for t in tournaments %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
             </select>
           </div>
-          <input type="text" name="team"
-                 placeholder="Team slug or name…"
-                 class="w-full bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-xs focus:border-brand-500 focus:outline-none"/>
-          <label class="flex items-center gap-2 text-[11px] text-muted-400 select-none cursor-pointer mt-1">
-            <input type="checkbox" name="include_synthetic" value="1"
-                   class="accent-brand-500"/>
+          <input class="input" type="text" name="team" placeholder="Team slug or name…"/>
+          <label class="check" style="margin-top:2px">
+            <input type="checkbox" name="include_synthetic" value="1"/>
             <span>Show virtual / replays / esports inventory</span>
-            <span class="text-muted-600">(hidden by default — keeps fake fixtures out of public PNGs)</span>
           </label>
         </div>
 
-        <div id="picker-results" class="max-h-[480px] overflow-y-auto">
-          <div x-show="!loaded" x-cloak class="px-5 py-10 text-center text-muted-500 text-xs">Loading…</div>
+        <div id="picker-results" style="max-height:480px; overflow-y:auto">
+          <div x-show="!loaded" x-cloak class="empty">Loading…</div>
         </div>
-      </div>
+      </section>
     {% endif %}
 
     {# PNG Preview #}
-    <div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">
-      <div class="px-5 py-4 border-b border-ink-600 flex items-center justify-between">
-        <h2 class="text-sm font-semibold text-white">PNG Preview</h2>
-        <button onclick="reloadPreview()"
-                class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 px-3 py-1 rounded">↺ Reload</button>
+    <section class="card" style="overflow:hidden">
+      <div class="card-head">
+        <h2 class="card-title">PNG Preview</h2>
+        <button onclick="reloadPreview()" class="btn sm">↺ Reload</button>
       </div>
-      <div class="p-4 bg-ink-950">
-        <img id="preview-img" src="/r/{{ campaign.slug }}.png" alt="PNG preview"
-             class="w-full rounded shadow-2xl"
-             onerror="this.style.opacity=0.3"/>
+      <div class="card-pad" style="background:var(--subtle)">
+        <img id="preview-img" src="/r/{{ campaign.slug }}.png" alt="PNG preview" style="width:100%; border-radius:8px; box-shadow:0 4px 14px rgba(16,24,40,.12)" onerror="this.style.opacity=0.3"/>
       </div>
-      <div class="px-5 py-2 text-xs text-muted-500 text-center border-t border-ink-600">
-        Cached briefly. Click reload to force a fresh render.
-      </div>
-    </div>
+      <div style="padding:9px 22px; border-top:1px solid var(--border-soft)"><span class="m-meta" style="text-align:center; display:block">Cached briefly. Click reload to force a fresh render.</span></div>
+    </section>
 
   </div>
 </div>
@@ -311,7 +237,6 @@
 <script>
   const SLUG = "{{ campaign.slug }}";
 
-  // ── Selected list: rendered from the JSON API every time it changes ──
   function escapeHTML(s) {
     return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
@@ -323,30 +248,23 @@
     const timeRaw = escapeHTML(m.time?.raw || m.time_raw || '—');
     const status = m.status;
     const liveBadge = status === 'live'
-      ? '<span class="text-[10px] font-bold text-red-300 bg-red-900/40 px-1.5 py-0.5 rounded">LIVE</span>'
+      ? '<span class="badge live"><span class="dot"></span>Live</span>'
       : '';
-    // Render-state badge: INACTIVE wins (worse than SYN — parser totally
-    // dropped the row); SYN is only shown when still active but filtered
-    // out of the public PNG.
     let stateBadge = '';
     if (m.is_active === false) {
-      stateBadge = '<span class="text-[10px] font-bold text-zinc-300 bg-zinc-700/60 px-1.5 py-0.5 rounded ring-1 ring-zinc-600" title="Parser dropped this match from the feed. It will not appear in the rendered PNG.">INACTIVE</span>';
+      stateBadge = '<span class="tag" title="Parser dropped this match from the feed. It will not appear in the rendered PNG.">Inactive</span>';
     } else if (m.is_synthetic === true) {
-      stateBadge = '<span class="text-[10px] font-semibold text-amber-300 bg-amber-900/30 px-1.5 py-0.5 rounded ring-1 ring-amber-700/40" title="Virtual / replay / esports inventory. Filtered out of the public PNG.">SYN</span>';
+      stateBadge = '<span class="tag warn" title="Virtual / replay / esports inventory. Filtered out of the public PNG.">Syn</span>';
     }
-    return `<li data-event-id="${escapeHTML(m.event_id)}"
-        class="px-5 py-3 flex items-center gap-3 hover:bg-ink-800/40 transition-colors">
-      <span class="drag-handle cursor-grab text-muted-500 text-lg select-none">⠿</span>
+    return `<li data-event-id="${escapeHTML(m.event_id)}" class="lrow" style="gap:10px">
+      <span class="drag-handle" style="cursor:grab; color:var(--t-disabled); font-size:16px; user-select:none">⠿</span>
       ${liveBadge}
       ${stateBadge}
-      <div class="flex-1 min-w-0">
-        <div class="text-sm text-zinc-100 truncate">
-          ${home} <span class="text-muted-400">vs</span> ${away}
-        </div>
-        <div class="text-xs text-muted-400 truncate">${league} · ${timeRaw}</div>
+      <div style="flex:1; min-width:0">
+        <div class="m-title">${home}<span class="vs">vs</span>${away}</div>
+        <div class="m-meta">${league} · ${timeRaw}</div>
       </div>
-      <button type="button" onclick="removeMatch('${escapeHTML(m.event_id)}')"
-              class="text-xs bg-red-950/40 hover:bg-red-900/40 border border-red-900/50 text-red-300 px-2 py-1 rounded">✕</button>
+      <button type="button" onclick="removeMatch('${escapeHTML(m.event_id)}')" class="btn icon danger" title="Remove">✕</button>
     </li>`;
   }
 
@@ -366,13 +284,8 @@
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({event_ids: ids}),
         });
-        if (!r.ok) {
-          toast('Reorder failed');
-          await refreshSelected();
-        } else {
-          toast('Order saved');
-          reloadPreview();
-        }
+        if (!r.ok) { toast('Reorder failed'); await refreshSelected(); }
+        else { toast('Order saved'); reloadPreview(); }
       },
     });
   }
@@ -386,24 +299,17 @@
       const data = await r.json();
       const matches = data.matches || [];
       if (matches.length === 0) {
-        list.innerHTML = `<li id="empty-selected" class="px-5 py-10 text-center text-muted-500 text-sm">
-          No matches selected yet. Search and add from the panel on the right →
-        </li>`;
+        list.innerHTML = `<li id="empty-selected" class="empty">No matches selected yet. Search and add from the panel on the right →</li>`;
       } else {
         list.innerHTML = matches.map(renderSelectedRow).join('');
       }
       const counter = document.getElementById('selected-count');
       if (counter) counter.textContent = String(matches.length);
       wireSortable();
-    } catch (e) {
-      toast('Failed to refresh selected list');
-    }
+    } catch (e) { toast('Failed to refresh selected list'); }
   }
 
   function refreshPicker() {
-    // Direct htmx.ajax — bypasses the picker's `changed` filter on the
-    // search input (which would otherwise refuse to re-fire when the query
-    // value hasn't changed since the previous fetch).
     if (typeof htmx === 'undefined') return;
     const q = document.querySelector('input[name="q"]')?.value || '';
     const tournament = document.querySelector('select[name="tournament"]')?.value || '';
@@ -411,27 +317,16 @@
     const synthEl = document.querySelector('input[name="include_synthetic"]');
     const values = { q, tournament, team };
     if (synthEl && synthEl.checked) values.include_synthetic = '1';
-    htmx.ajax('GET', `/api/admin/campaigns/${SLUG}/picker`, {
-      target: '#picker-results',
-      values,
-      swap: 'innerHTML',
-    });
+    htmx.ajax('GET', `/api/admin/campaigns/${SLUG}/picker`, { target: '#picker-results', values, swap: 'innerHTML' });
   }
 
-  // Alpine factory backing the picker's loading indicator. We listen for
-  // htmx lifecycle events scoped to the picker panel so "Searching…" is
-  // ONLY visible during an in-flight request — the previous CSS
-  // `htmx-indicator` approach left the element occupying vertical space
-  // (opacity: 0) which read as a stale loading row beside the results.
   function pickerState() {
     return {
       loading: false,
       loaded: false,
       wireHtmxLifecycle() {
         const root = this.$el;
-        root.addEventListener('htmx:beforeRequest', () => {
-          this.loading = true;
-        });
+        root.addEventListener('htmx:beforeRequest', () => { this.loading = true; });
         const end = () => { this.loading = false; this.loaded = true; };
         root.addEventListener('htmx:afterRequest', end);
         root.addEventListener('htmx:responseError', end);
@@ -441,59 +336,40 @@
   }
 
   async function addMatch(eventId) {
-    // Optimistic: hide the row in the picker immediately
     const pickerRow = document.querySelector(`#picker-results [data-event-id="${eventId}"]`);
     if (pickerRow) pickerRow.style.opacity = '0.4';
     try {
       const res = await fetch(`/api/admin/campaigns/${SLUG}/matches`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({event_id: eventId}),
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({event_id: eventId}),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       toast('Match added');
       await refreshSelected();
       reloadPreview();
       refreshPicker();
-    } catch (e) {
-      if (pickerRow) pickerRow.style.opacity = '1';
-      toast('Failed to add match');
-    }
+    } catch (e) { if (pickerRow) pickerRow.style.opacity = '1'; toast('Failed to add match'); }
   }
 
   async function removeMatch(eventId) {
-    // Optimistic: hide the row from selected list immediately
     const row = document.querySelector(`#selected-list [data-event-id="${eventId}"]`);
     if (row) row.style.opacity = '0.3';
     try {
-      const res = await fetch(`/api/admin/campaigns/${SLUG}/matches/${encodeURIComponent(eventId)}`, {
-        method: 'DELETE',
-      });
+      const res = await fetch(`/api/admin/campaigns/${SLUG}/matches/${encodeURIComponent(eventId)}`, { method: 'DELETE' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       toast('Match removed');
       await refreshSelected();
       reloadPreview();
       refreshPicker();
-    } catch (e) {
-      if (row) row.style.opacity = '1';
-      toast('Failed to remove');
-    }
+    } catch (e) { if (row) row.style.opacity = '1'; toast('Failed to remove'); }
   }
 
-  // Initial drag-reorder wiring for the server-rendered rows.
   wireSortable();
 
-  // `limit` is optional. When passed (from the auto-campaign Live
-  // Preview spinner) we propagate it to the PNG so the rendered image
-  // matches the JSON match-list shown above it. Manual campaigns don't
-  // honour ?limit=, so we omit it there.
   function reloadPreview(limit) {
     const img = document.getElementById('preview-img');
     if (!img) return;
     const qs = new URLSearchParams({ t: Date.now() });
-    if (limit !== undefined && limit !== null && limit !== '') {
-      qs.set('limit', String(limit));
-    }
+    if (limit !== undefined && limit !== null && limit !== '') { qs.set('limit', String(limit)); }
     img.src = `/r/${SLUG}.png?${qs.toString()}`;
     img.style.opacity = 1;
   }
@@ -502,36 +378,24 @@
     navigator.clipboard.writeText(text).then(() => toast(label || 'Copied'));
   }
 
-  function autoPreview(slug) {
+  function copyCampaignUrl(btn) {
+    copyToClipboard(btn.dataset.copyUrl, 'Campaign URL copied');
+  }
+
+  function autoPreview(slug, initialLimit) {
     return {
-      slug,
-      limit: 5,
-      loading: false,
-      error: null,
-      warning: null,
-      matches: [],
+      slug, limit: initialLimit || 5, loading: false, error: null, warning: null, matches: [],
       async load() {
-        this.loading = true;
-        this.error = null;
-        this.warning = null;
+        this.loading = true; this.error = null; this.warning = null;
         try {
           const r = await fetch(`/api/admin/campaigns/${this.slug}/preview?limit=${this.limit}`);
           if (!r.ok) throw new Error(`HTTP ${r.status}`);
           const data = await r.json();
           this.matches = data.matches || [];
           this.warning = data.warning || null;
-        } catch (e) {
-          this.error = `Failed to load preview: ${e.message}`;
-        } finally {
-          this.loading = false;
-        }
-        // Keep the PNG preview <img> in sync with the spinner. Without
-        // this, the JSON match-list above respects the chosen limit but
-        // the rendered PNG below stays at whatever the page first loaded
-        // with — operator sees mismatched counts and assumes a bug.
-        if (typeof reloadPreview === 'function') {
-          reloadPreview(this.limit);
-        }
+        } catch (e) { this.error = `Failed to load preview: ${e.message}`; }
+        finally { this.loading = false; }
+        if (typeof reloadPreview === 'function') { reloadPreview(this.limit); }
       },
     };
   }

@@ -17,7 +17,7 @@ from typing import Dict, Iterable, List, Optional, Set
 from sqlalchemy.orm import Session
 
 from ..logging_config import get_logger
-from ..models import CubeOverride
+from ..models import CubeBlockedSlot, CubeOverride, Match
 
 logger = get_logger("app.repositories.cube_override")
 
@@ -182,9 +182,56 @@ class CubeOverrideRepository:
             row.updated_at = datetime.utcnow()
         return len(rows)
 
+    def release_finished_pins(self, now: Optional[datetime] = None) -> int:
+        """Clear `position` on pinned rows whose match has finished or vanished.
+
+        Finished = the Match row is gone, OR it's inactive AND already past its
+        kickoff time. An inactive-but-still-upcoming fixture (a flaky feed
+        briefly dropping it) KEEPS its pin — mirrors the old resolver logic that
+        protected against the "World Cup pin vanished" bug.
+
+        This is the single owner of that cleanup write. It runs from the parser
+        cycle (which owns DB writes) so the render paths — request handlers and
+        background GIF pre-warm threads — stay strictly read-only and can't race
+        the parser into a SQLite "database is locked". Returns rows cleared.
+        """
+        now = now or datetime.utcnow()
+        pinned = (
+            self.session.query(CubeOverride)
+            .filter(CubeOverride.position.is_not(None))
+            .all()
+        )
+        if not pinned:
+            return 0
+        event_ids = [r.event_id for r in pinned]
+        matches = {
+            m.event_id: m
+            for m in self.session.query(Match)
+            .filter(Match.event_id.in_(event_ids))
+            .all()
+        }
+        cleared = 0
+        for row in pinned:
+            m = matches.get(row.event_id)
+            if m is not None and m.is_active:
+                continue  # live or upcoming — keep the pin
+            gone = m is None
+            past_kickoff = (
+                m is not None
+                and m.start_time_utc is not None
+                and m.start_time_utc < now
+            )
+            if gone or past_kickoff:
+                row.position = None
+                row.updated_at = now
+                cleared += 1
+        if cleared:
+            logger.info("cube_override.release_finished_pins cleared=%d", cleared)
+        return cleared
+
     def clear_all_for_cube(self, cube_slug: str) -> int:
-        """Delete every override row for this cube. Returns the number of
-        rows removed. Used by the admin "Reset all overrides" button."""
+        """Delete every override row AND blocked slot for this cube. Returns the
+        number of override rows removed. Used by the admin "Reset" button."""
         if not cube_slug:
             return 0
         rows = (
@@ -195,12 +242,105 @@ class CubeOverrideRepository:
         n = len(rows)
         for row in rows:
             self.session.delete(row)
+        self.clear_blocked(cube_slug)
         if n:
             logger.info(
                 "cube_override.clear_all_for_cube cube=%s removed=%d",
                 cube_slug, n,
             )
         return n
+
+    # ─── blocked slots (operator-reserved empty slots) ──────────────────
+    def blocked_slots(self, cube_slug: str) -> Set[int]:
+        """Return the set of slot positions the operator has reserved as blank
+        for this cube. The resolver leaves these slots empty (no auto-fill)."""
+        if not cube_slug:
+            return set()
+        rows = (
+            self.session.query(CubeBlockedSlot.position)
+            .filter(CubeBlockedSlot.cube_slug == cube_slug)
+            .all()
+        )
+        return {int(pos) for (pos,) in rows}
+
+    def block_slot(
+        self,
+        cube_slug: str,
+        position: int,
+        *,
+        by: Optional[str] = None,
+        dropped_event_id: Optional[str] = None,
+    ) -> bool:
+        """Reserve a slot as blank. Returns True if newly blocked.
+
+        `dropped_event_id` is the match that was showing in the slot; it's
+        remembered so `unblock_slot` can hand it back for un-suppressing.
+        """
+        cube_slug = (cube_slug or "").strip()
+        if not cube_slug:
+            raise ValueError("cube_slug required")
+        position = int(position)
+        dropped_event_id = (dropped_event_id or "").strip() or None
+        existing = (
+            self.session.query(CubeBlockedSlot)
+            .filter(CubeBlockedSlot.cube_slug == cube_slug)
+            .filter(CubeBlockedSlot.position == position)
+            .first()
+        )
+        if existing:
+            # Already blank — just keep the most recent dropped match.
+            if dropped_event_id:
+                existing.dropped_event_id = dropped_event_id
+            return False
+        self.session.add(
+            CubeBlockedSlot(
+                cube_slug=cube_slug,
+                position=position,
+                created_by=by,
+                dropped_event_id=dropped_event_id,
+            )
+        )
+        # Any pin sitting in this slot must go — the slot is now blank.
+        self.clear_position_at_slot(cube_slug, position)
+        logger.info("cube_blocked_slot.block cube=%s position=%d by=%s", cube_slug, position, by)
+        return True
+
+    def unblock_slot(self, cube_slug: str, position: int) -> Optional[str]:
+        """Release a blank slot back to automatic.
+
+        Returns the `dropped_event_id` that was stored on the slot (so the
+        caller can un-suppress it), or "" when the slot was blocked but had no
+        remembered match, or None when nothing was blocked. Both "" and a real
+        id are truthy-or-not but distinct from None — callers that only care
+        "was it blocked?" should compare `is not None`.
+        """
+        if not cube_slug:
+            return None
+        row = (
+            self.session.query(CubeBlockedSlot)
+            .filter(CubeBlockedSlot.cube_slug == cube_slug)
+            .filter(CubeBlockedSlot.position == int(position))
+            .first()
+        )
+        if row is None:
+            return None
+        dropped = row.dropped_event_id or ""
+        self.session.delete(row)
+        logger.info("cube_blocked_slot.unblock cube=%s position=%d", cube_slug, int(position))
+        return dropped
+
+    def clear_blocked(self, cube_slug: str) -> int:
+        """Remove every blocked slot for this cube."""
+        if not cube_slug:
+            return 0
+        rows = (
+            self.session.query(CubeBlockedSlot)
+            .filter(CubeBlockedSlot.cube_slug == cube_slug)
+            .all()
+        )
+        for row in rows:
+            self.session.delete(row)
+        return len(rows)
 
     def clear(self, cube_slug: str, event_id: str) -> bool:
         """Remove the row entirely (both pin and suppress reset for this cube/event)."""

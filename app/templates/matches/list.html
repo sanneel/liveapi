@@ -1,170 +1,149 @@
 {% extends "base.html" %}
 {% block title %}Matches · Jugabet Admin{% endblock %}
+{% block content_theme %}content-light{% endblock %}
 {% block page_title %}Matches{% endblock %}
+{% block page_subtitle %}Every match the parser has fetched, alive or not.{% endblock %}
 
 {% block page_actions %}
-  <div class="flex items-center gap-3 text-xs text-muted-400">
-    <span>{{ total_active }} active in DB</span>
-    <span class="text-muted-600">·</span>
-    <span>Page {{ page }}</span>
-  </div>
+  <span class="page-sub" style="margin:0">{{ '{:,}'.format(total_active) }} active in DB · page {{ page }}</span>
 {% endblock %}
 
 {% block content %}
 
-<p class="text-sm text-muted-400 mb-5 max-w-3xl">
-  Every match the parser has fetched, alive or not. Use the filters to narrow
-  down — the dropdowns are populated from current parser data, so leagues
-  appear here automatically as the parser sees them.
+<p class="lede">
+  Use the filters to narrow down, the dropdowns are populated from current parser data,
+  so leagues appear here automatically as the parser sees them.
 </p>
 
-<form method="get" action="/admin/matches"
-      class="bg-ink-850 border border-ink-600 rounded-xl p-4 mb-5 grid grid-cols-1 md:grid-cols-12 gap-3">
-  <div class="md:col-span-4 relative">
-    <input type="text" name="q" value="{{ q }}"
-           placeholder="Search team or league…"
-           class="w-full bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500"/>
+<form method="get" action="/admin/matches" class="toolbar">
+  <div class="ibox">
+    <i data-lucide="search" class="mag"></i>
+    <input class="input" type="text" name="q" value="{{ q }}" placeholder="Search team or league…"/>
   </div>
 
-  <select name="sport"
-          class="md:col-span-2 bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
+  <select name="sport" style="flex:0 0 150px">
     <option value="">All sports</option>
     {% for s in ['football','basketball','tennis','cybersport','boxing','mma','ufc'] %}
       <option value="{{ s }}" {% if sport == s %}selected{% endif %}>{{ s|capitalize }}</option>
     {% endfor %}
   </select>
 
-  <select name="tournament"
-          class="md:col-span-3 bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
+  <select name="tournament" style="flex:1 1 200px; min-width:160px">
     <option value="">All leagues{% if sport %} in {{ sport }}{% endif %}</option>
     {% for t in tournaments %}
       <option value="{{ t }}" {% if tournament == t %}selected{% endif %}>{{ t }}</option>
     {% endfor %}
   </select>
 
-  <select name="status"
-          class="md:col-span-2 bg-ink-700 border border-ink-600 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500">
+  <select name="status" style="flex:0 0 140px">
     <option value="">Any status</option>
     <option value="prematch" {% if status == 'prematch' %}selected{% endif %}>Prematch</option>
     <option value="live"     {% if status == 'live' %}selected{% endif %}>Live</option>
   </select>
 
-  <div class="md:col-span-1 flex items-center gap-2">
-    <button class="flex-1 bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold text-sm px-3 py-2 rounded-lg">Apply</button>
-  </div>
+  <button class="btn primary">Apply</button>
 
-  <label class="md:col-span-12 flex items-center gap-2 text-xs text-muted-400 select-none">
-    <input type="checkbox" name="include_inactive" value="1"
-           {% if include_inactive %}checked{% endif %}
-           class="rounded border-ink-600 bg-ink-700 text-brand-500 focus:ring-brand-500" />
+  <div style="flex-basis:100%; height:0"></div>
+
+  <label class="check">
+    <input type="checkbox" name="include_inactive" value="1" {% if include_inactive %}checked{% endif %} />
     <span>Show inactive matches (dropped from parser feed or expired)</span>
   </label>
-
-  <label class="md:col-span-12 flex items-center gap-2 text-xs text-muted-400 select-none">
-    <input type="checkbox" name="include_synthetic" value="1"
-           {% if include_synthetic %}checked{% endif %}
-           class="rounded border-ink-600 bg-ink-700 text-brand-500 focus:ring-brand-500" />
+  <label class="check">
+    <input type="checkbox" name="include_synthetic" value="1" {% if include_synthetic %}checked{% endif %} />
     <span>Show virtual / replay / esports inventory (hidden by default)</span>
   </label>
 
   {% if q or sport or status or tournament or include_inactive or include_synthetic %}
-    <div class="md:col-span-12 -mt-1">
-      <a href="/admin/matches" class="text-xs text-muted-400 hover:text-zinc-200 underline">Clear all filters</a>
-    </div>
+    <a href="/admin/matches" class="link" style="font-size:12px">Clear all filters</a>
   {% endif %}
 </form>
 
-<div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">
+<section class="card" style="overflow:hidden">
   {% if matches %}
-    <table class="w-full text-sm">
-      <thead class="bg-ink-800 text-[10px] uppercase tracking-wider text-muted-400">
-        <tr>
-          <th class="px-5 py-3 text-left w-24">Status</th>
-          <th class="px-5 py-3 text-left">Match</th>
-          <th class="px-5 py-3 text-left">League</th>
-          <th class="px-5 py-3 text-left">Time</th>
-          <th class="px-5 py-3 text-left">Odds</th>
-          <th class="px-5 py-3 text-right">Sport</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-ink-600">
-      {% for m in matches %}
-        {% set odds = m.odds() %}
-        <tr class="hover:bg-ink-800/50">
-          <td class="px-5 py-3">
-            {% if m.status == 'live' %}
-              <span class="inline-flex items-center gap-1 text-xs font-semibold text-red-300">
-                <span class="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse"></span> LIVE
-              </span>
-            {% else %}
-              <span class="text-xs text-blue-300">Prematch</span>
-            {% endif %}
-            {% if not m.is_active %}
-              <span class="block text-[9px] text-muted-600 mt-0.5">inactive</span>
-            {% endif %}
-            {% if m.is_synthetic %}
-              <span class="block text-[9px] text-amber-400/80 mt-0.5">virtual</span>
-            {% endif %}
-          </td>
-          <td class="px-5 py-3">
-            <div class="text-zinc-100 font-medium truncate max-w-xs">
-              {{ m.home_name }} <span class="text-muted-400">vs</span> {{ m.away_name }}
-            </div>
-            {% if m.status == 'live' and m.home_score is not none %}
-              <div class="text-xs text-red-300 font-bold mt-0.5">{{ m.home_score }} : {{ m.away_score }}</div>
-            {% endif %}
-            {% if m.home_slug or m.away_slug %}
-              <div class="text-[10px] text-muted-600 mt-0.5 font-mono">
-                {% if m.home_slug %}<a href="/admin/clubs/{{ m.home_slug }}" class="hover:text-brand-400">{{ m.home_slug }}</a>{% endif %}
-                {% if m.home_slug and m.away_slug %} · {% endif %}
-                {% if m.away_slug %}<a href="/admin/clubs/{{ m.away_slug }}" class="hover:text-brand-400">{{ m.away_slug }}</a>{% endif %}
-              </div>
-            {% endif %}
-          </td>
-          <td class="px-5 py-3 text-xs text-zinc-300 max-w-[12rem] truncate">{{ m.tournament_name or '—' }}</td>
-          <td class="px-5 py-3 text-xs text-muted-400">{{ m.time_raw or '—' }}</td>
-          <td class="px-5 py-3">
-            <div class="flex gap-1 flex-wrap">
-              {% if m.market_type == '1x2' %}
-                <span class="bg-ink-700 text-brand-400 font-semibold text-xs px-2 py-0.5 rounded">{{ odds.p1 or '-' }}</span>
-                <span class="bg-ink-700 text-brand-400 font-semibold text-xs px-2 py-0.5 rounded">{{ odds.draw or '-' }}</span>
-                <span class="bg-ink-700 text-brand-400 font-semibold text-xs px-2 py-0.5 rounded">{{ odds.p2 or '-' }}</span>
-              {% elif m.market_type == 'winner' %}
-                <span class="bg-ink-700 text-brand-400 font-semibold text-xs px-2 py-0.5 rounded">{{ odds.p1 or '-' }}</span>
-                <span class="bg-ink-700 text-brand-400 font-semibold text-xs px-2 py-0.5 rounded">{{ odds.p2 or '-' }}</span>
+    <div class="dt-wrap">
+      <table class="dt">
+        <thead>
+          <tr>
+            <th style="width:96px">Status</th>
+            <th>Match</th>
+            <th>League</th>
+            <th style="width:90px">Time</th>
+            <th>Odds</th>
+            <th class="right" style="width:90px">Sport</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for m in matches %}
+          {% set odds = m.odds() %}
+          <tr>
+            <td>
+              {% if m.status == 'live' %}
+                <span class="badge live"><span class="dot"></span>Live</span>
               {% else %}
-                <span class="text-muted-500 text-xs">—</span>
+                <span class="badge pre"><span class="dot"></span>Pre</span>
               {% endif %}
-            </div>
-          </td>
-          <td class="px-5 py-3 text-right text-xs uppercase text-muted-400">{{ m.sport }}</td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
+              {% if not m.is_active %}<span class="m-meta" style="margin-top:4px">inactive</span>{% endif %}
+              {% if m.is_synthetic %}<span class="m-meta" style="margin-top:2px; color:var(--warn-t)">virtual</span>{% endif %}
+            </td>
+            <td>
+              <div class="m-title">{{ m.home_name }}<span class="vs">vs</span>{{ m.away_name }}</div>
+              {% if m.status == 'live' and m.home_score is not none %}
+                <div class="m-meta" style="color:var(--live-t); font-weight:700">{{ m.home_score }} : {{ m.away_score }}</div>
+              {% endif %}
+              {% if m.home_slug or m.away_slug %}
+                <div class="m-meta">
+                  {% if m.home_slug %}<a href="/admin/clubs/{{ m.home_slug }}" class="link">{{ m.home_slug }}</a>{% endif %}
+                  {% if m.home_slug and m.away_slug %} · {% endif %}
+                  {% if m.away_slug %}<a href="/admin/clubs/{{ m.away_slug }}" class="link">{{ m.away_slug }}</a>{% endif %}
+                </div>
+              {% endif %}
+            </td>
+            <td><div class="m-meta" style="max-width:12rem">{{ m.tournament_name or '—' }}</div></td>
+            <td><span class="m-meta">{{ m.time_raw or '—' }}</span></td>
+            <td>
+              {% if m.market_type == '1x2' %}
+                <div class="odds">
+                  <span class="odd">{{ odds.p1 or '-' }}</span>
+                  <span class="odd">{{ odds.draw or '-' }}</span>
+                  <span class="odd">{{ odds.p2 or '-' }}</span>
+                </div>
+              {% elif m.market_type == 'winner' %}
+                <div class="odds">
+                  <span class="odd">{{ odds.p1 or '-' }}</span>
+                  <span class="odd">{{ odds.p2 or '-' }}</span>
+                </div>
+              {% else %}
+                <span class="m-meta">—</span>
+              {% endif %}
+            </td>
+            <td class="right"><span class="cell-sport">{{ m.sport }}</span></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
   {% else %}
-    <div class="px-5 py-16 text-center text-muted-500 text-sm">
-      <div class="text-zinc-300 mb-1">No matches found</div>
+    <div class="empty">
+      <b>No matches found.</b>
       {% if q or sport or status or tournament %}
-        <a href="/admin/matches" class="text-brand-400 hover:text-brand-300">Clear filters</a>
+        <a href="/admin/matches" class="link">Clear filters</a>
       {% else %}
-        <span class="text-xs">Once the parser fetches from jugabet.cl, matches will appear here.</span>
+        Once the parser fetches from jugabet.cl, matches will appear here.
       {% endif %}
     </div>
   {% endif %}
-</div>
+</section>
 
 {% if matches %}
-  <div class="flex items-center justify-between mt-5 text-xs text-muted-400">
+  <div class="pager">
     <div>Page {{ page }}</div>
-    <div class="flex gap-2">
+    <div class="grp">
       {% if page > 1 %}
-        <a href="?q={{ q }}&sport={{ sport }}&tournament={{ tournament }}&status={{ status }}{% if include_inactive %}&include_inactive=1{% endif %}{% if include_synthetic %}&include_synthetic=1{% endif %}&page={{ page - 1 }}"
-           class="px-3 py-1.5 bg-ink-700 border border-ink-600 rounded hover:bg-ink-600">← Previous</a>
+        <a class="btn sm" href="?q={{ q }}&sport={{ sport }}&tournament={{ tournament }}&status={{ status }}{% if include_inactive %}&include_inactive=1{% endif %}{% if include_synthetic %}&include_synthetic=1{% endif %}&page={{ page - 1 }}">← Previous</a>
       {% endif %}
       {% if has_next %}
-        <a href="?q={{ q }}&sport={{ sport }}&tournament={{ tournament }}&status={{ status }}{% if include_inactive %}&include_inactive=1{% endif %}{% if include_synthetic %}&include_synthetic=1{% endif %}&page={{ page + 1 }}"
-           class="px-3 py-1.5 bg-ink-700 border border-ink-600 rounded hover:bg-ink-600">Next →</a>
+        <a class="btn sm" href="?q={{ q }}&sport={{ sport }}&tournament={{ tournament }}&status={{ status }}{% if include_inactive %}&include_inactive=1{% endif %}{% if include_synthetic %}&include_synthetic=1{% endif %}&page={{ page + 1 }}">Next →</a>
       {% endif %}
     </div>
   </div>

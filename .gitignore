@@ -72,3 +72,10 @@ v1public_html/
 # intent for anyone unsetting the broader rule.
 data/jugabet.db.before-deploy-*
 data/parser.pid
+
+# Tutorial-video editing workspace (intermediate render assets)
+app/static/_tut_work/
+
+# Uploaded tutorial videos (runtime user content; keep the dir, not the files)
+app/static/tutorials/*
+!app/static/tutorials/.gitkeep

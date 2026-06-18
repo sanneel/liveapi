@@ -1,128 +1,99 @@
 {% extends "base.html" %}
 {% block title %}{{ club.name }} · Club · Jugabet Admin{% endblock %}
+{% block content_theme %}content-light{% endblock %}
 {% block page_title %}{{ club.name }}{% endblock %}
+{% block page_subtitle %}Edit this club's details, logo, and render options.{% endblock %}
 
 {% block page_actions %}
-  <div class="flex items-center gap-2">
-    <a href="/admin/clubs" class="text-xs text-muted-400 hover:text-zinc-200">Back to clubs</a>
-    <a href="/club/{{ club.slug }}.png" target="_blank"
-       class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 text-zinc-300 px-3 py-1.5 rounded">Open PNG</a>
-    {% if current_user.role == 'admin' %}
-      <form method="POST" action="/admin/clubs/{{ club.slug }}/delete" class="inline"
-            onsubmit="return confirm('Delete club {{ club.slug }}? This cannot be undone.');">
-        <button class="text-xs bg-red-950/40 hover:bg-red-900/40 border border-red-900/50 text-red-300 px-3 py-1.5 rounded">Delete</button>
-      </form>
-    {% endif %}
-  </div>
+  <a href="/admin/clubs" class="btn">← Back</a>
+  <a href="/club/{{ club.slug }}.png" target="_blank" class="btn">Open PNG</a>
+  {% if current_user and current_user.role in ['editor','admin'] %}
+    <form method="POST" action="/admin/clubs/{{ club.slug }}/delete" style="display:inline"
+          onsubmit="return confirm('Delete club {{ club.slug }}? This cannot be undone.');">
+      <button class="btn danger">Delete</button>
+    </form>
+  {% endif %}
 {% endblock %}
 
 {% block content %}
 
-<div class="bg-ink-850 border border-ink-600 rounded-xl px-5 py-3 mb-6 flex items-center gap-3">
-  <span class="text-xs uppercase text-muted-400 tracking-wider">Public URL</span>
-  <code class="flex-1 font-mono text-brand-400 text-sm truncate">/club/{{ club.slug }}.png</code>
-  <button onclick="copyToClipboard(location.origin + '/club/{{ club.slug }}.png', 'URL copied')"
-          class="text-xs bg-ink-700 hover:bg-ink-600 border border-ink-600 px-3 py-1 rounded">Copy</button>
+<div class="card card-pad" style="display:flex; align-items:center; gap:12px; margin-bottom:18px; padding:14px 22px">
+  <span class="stat-label" style="text-transform:uppercase; letter-spacing:.06em">Public URL</span>
+  <code class="slug club mono" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">/club/{{ club.slug }}.png</code>
+  <button onclick="copyToClipboard(location.origin + '/club/{{ club.slug }}.png', 'URL copied')" class="btn sm">Copy</button>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="row-flex">
+  <div class="col-main">
+    <form method="post" action="/admin/clubs/{{ club.slug }}" class="card card-pad" style="display:flex; flex-direction:column; gap:18px">
+      <h2 class="card-title">Club details</h2>
 
-  <div class="lg:col-span-2 space-y-6">
-    <form method="post" action="/admin/clubs/{{ club.slug }}"
-          class="bg-ink-850 border border-ink-600 rounded-xl p-6 space-y-5">
-      <h2 class="text-sm font-semibold text-zinc-100">Club details</h2>
-
-      <div>
-        <label class="block text-xs uppercase tracking-wider text-muted-400 mb-1.5">Slug</label>
-        <div class="font-mono text-brand-400 bg-ink-700 border border-ink-600 rounded-lg px-3 py-2 text-sm">{{ club.slug }}</div>
-        <p class="text-xs text-muted-500 mt-1">Slug is set at creation time and cannot change. Must match the team's <code class="font-mono">home_slug</code> / <code class="font-mono">away_slug</code> in the parser feed.</p>
+      <div class="field">
+        <span class="lbl">Slug</span>
+        <div class="slug club mono" style="display:inline-block; padding:9px 12px; border-radius:10px">{{ club.slug }}</div>
+        <p class="help">Slug is set at creation time and cannot change. Must match the team's <b>home_slug</b> / <b>away_slug</b> in the parser feed.</p>
       </div>
 
-      <div>
-        <label class="block text-xs uppercase tracking-wider text-muted-400 mb-1.5">Display name</label>
-        <input type="text" name="name" value="{{ club.name }}" required
-               class="w-full bg-ink-700 border border-ink-600 text-zinc-100 rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500"/>
+      <div class="field">
+        <span class="lbl">Display name</span>
+        <input class="input" type="text" name="name" value="{{ club.name }}" required/>
       </div>
 
-      <div>
-        <label class="block text-xs uppercase tracking-wider text-muted-400 mb-1.5">Logo URL <span class="text-muted-600">(optional)</span></label>
-        <input type="url" name="logo" value="{{ club.logo or '' }}"
-               placeholder="https://jugabet.cl/static/iolite/icons/{{ club.slug }}.webp"
-               class="w-full bg-ink-700 border border-ink-600 text-zinc-100 rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500"/>
+      <div class="field">
+        <span class="lbl">Logo URL <span style="color:var(--t-disabled)">(optional)</span></span>
+        <input class="input" type="url" name="logo" value="{{ club.logo or '' }}"
+               placeholder="https://jugabet.cl/static/iolite/icons/{{ club.slug }}.webp"/>
       </div>
 
-      <div>
-        <label class="block text-xs uppercase tracking-wider text-muted-400 mb-2">Render options</label>
-        <label class="flex items-start gap-3 bg-ink-700 border border-ink-600 rounded-lg p-3 cursor-pointer hover:border-brand-500">
-          <input type="checkbox" name="hide_opponent_logo" value="1"
-                 {% if club.hide_opponent_logo %}checked{% endif %}
-                 class="mt-0.5 accent-brand-500"/>
-          <div>
-            <div class="text-sm text-zinc-100 font-medium">Hide opponent logo on the PNG</div>
-            <div class="text-xs text-muted-500 mt-0.5">
-              For fan-base creative where you don't want the rival's logo in the
-              render. The opponent's team name still appears as text — only the
-              logo is dropped.
-            </div>
-          </div>
+      <div class="field">
+        <span class="lbl">Render options</span>
+        <label class="check" style="align-items:flex-start; gap:10px; padding:13px 15px; border:1px solid var(--border-in); border-radius:10px; background:var(--subtle)">
+          <input type="checkbox" name="hide_opponent_logo" value="1" {% if club.hide_opponent_logo %}checked{% endif %} style="margin-top:2px"/>
+          <span>
+            <span style="display:block; font-weight:700; color:var(--t-strong); font-size:13px">Hide opponent logo on the PNG</span>
+            <span class="help" style="margin-top:3px">For fan-base creative where you don't want the rival's logo. The opponent's team name still appears as text, only the logo is dropped.</span>
+          </span>
         </label>
       </div>
 
-      <button type="submit"
-              class="bg-brand-500 hover:bg-brand-400 text-ink-950 font-semibold px-5 py-2.5 rounded-lg">
-        Save club
-      </button>
+      {% if current_user and current_user.role in ['editor','admin'] %}
+      <div class="form-actions">
+        <button type="submit" class="btn primary">Save club</button>
+      </div>
+      {% endif %}
     </form>
   </div>
 
-  <aside class="space-y-6">
-    <div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">
-      <div class="px-5 py-4 border-b border-ink-600">
-        <h2 class="text-sm font-semibold text-zinc-100">Live state</h2>
-        <p class="text-xs text-muted-500 mt-0.5">Next match the public PNG will render right now.</p>
+  <aside class="col-rail">
+    <section class="card" style="overflow:hidden">
+      <div class="card-head" style="display:block">
+        <h2 class="card-title">Live state</h2>
+        <p class="card-sub">Next match the public PNG will render right now.</p>
       </div>
       {% if next_match %}
-        <div class="px-5 py-4 space-y-2">
-          <div class="text-xs uppercase tracking-wider text-orange-300">Next match</div>
-          <div class="text-base text-zinc-100">
-            vs <span class="font-semibold">{{ next_match.opponent_name }}</span>
-          </div>
-          <div class="text-xs text-muted-400">
-            {{ next_match.tournament or '—' }}
-            {% if next_match.time_raw %}<span class="text-muted-600"> · </span>{{ next_match.time_raw }}{% endif %}
-          </div>
-          <div class="pt-2 text-xs text-muted-500">
-            Sport: <span class="text-zinc-300">{{ next_match.sport }}</span>
-          </div>
+        <div class="card-pad" style="display:flex; flex-direction:column; gap:7px">
+          <div class="stat-label" style="text-transform:uppercase; letter-spacing:.06em; color:var(--warn-t)">Next match</div>
+          <div class="m-title" style="font-size:15px">vs {{ next_match.opponent_name }}</div>
+          <div class="m-meta">{{ next_match.tournament or '—' }}{% if next_match.time_raw %} · {{ next_match.time_raw }}{% endif %}</div>
+          <div class="help" style="margin-top:4px">Sport: <b>{{ next_match.sport }}</b></div>
         </div>
       {% else %}
-        <div class="px-5 py-6 text-center text-xs text-muted-500">
-          No upcoming match in the parser's current feed.
-          <code class="font-mono text-brand-400">/club/{{ club.slug }}.png</code> serves an empty
-          1&times;1 PNG until the next match appears — clubs use the same
-          renderer as campaigns and don't have a custom no-match design.
-        </div>
+        <div class="empty">No upcoming match in the parser's current feed. <span class="slug club" style="display:inline-block">/club/{{ club.slug }}.png</span> serves an empty 1×1 PNG until the next match appears.</div>
       {% endif %}
-    </div>
+    </section>
 
-    <div class="bg-ink-850 border border-ink-600 rounded-xl overflow-hidden">
-      <div class="px-5 py-4 border-b border-ink-600">
-        <h2 class="text-sm font-semibold text-zinc-100">PNG preview</h2>
+    <section class="card" style="overflow:hidden">
+      <div class="card-head"><h2 class="card-title">PNG preview</h2></div>
+      <div class="card-pad" style="background:var(--subtle)">
+        <img src="/club/{{ club.slug }}.png" alt="Club PNG preview" style="width:100%; border-radius:8px; box-shadow:0 4px 14px rgba(16,24,40,.12)" onerror="this.style.opacity=0.3"/>
       </div>
-      <div class="p-4 bg-ink-950">
-        <img src="/club/{{ club.slug }}.png" alt="Club PNG preview"
-             class="w-full rounded shadow-2xl"
-             onerror="this.style.opacity=0.3"/>
-      </div>
-    </div>
+    </section>
   </aside>
 </div>
 
 <script>
   function copyToClipboard(text, label) {
-    navigator.clipboard.writeText(text).then(() => {
-      if (window.toast) toast(label || 'Copied');
-    });
+    navigator.clipboard.writeText(text).then(() => { if (window.toast) toast(label || 'Copied'); });
   }
 </script>
 

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import List, Optional
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlparse
 
 from fastapi import APIRouter, Depends, Form, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -89,8 +89,18 @@ def dashboard(request: Request, user: User = Depends(require_login)) -> HTMLResp
 
         latest = match_repo.search(limit=5)
 
+        # Active matches split by sport — feeds the dashboard donut.
+        sport_rows = (
+            session.query(Match.sport, func.count(Match.event_id))
+            .filter(Match.is_active.is_(True))
+            .group_by(Match.sport)
+            .order_by(func.count(Match.event_id).desc())
+            .all()
+        )
+
     # Health signals based on real data, not hard-coded strings.
     parser_state = _parser_freshness(age_sec)
+    sport_breakdown = _sport_breakdown(sport_rows, matches_active)
 
     return templates.TemplateResponse(
         request,
@@ -109,11 +119,46 @@ def dashboard(request: Request, user: User = Depends(require_login)) -> HTMLResp
                 "hot_suppressed": hot_suppressed,
             },
             "parser_state": parser_state,
+            "sport_breakdown": sport_breakdown,
             "last_update_age_sec": age_sec,
             "latest_matches": [m for m in latest],
             "current_user": user,
         },
     )
+
+
+# Donut circumference for r=52 (2·π·52), matching the design reference.
+_DONUT_CIRC = 326.726
+
+
+def _sport_breakdown(rows, total: int):
+    """Top 2 sports by active count + an 'Other' bucket, as donut segments
+    (percentage + stroke-dasharray/offset). Returns [] when there's nothing
+    active so the template can hide the chart."""
+    if not total or not rows:
+        return []
+    top = rows[:2]
+    other = sum(int(c) for _, c in rows[2:])
+    buckets = [((s or "Other").capitalize(), int(c)) for s, c in top]
+    if other:
+        buckets.append(("Other", other))
+    roles = ["accent", "dark", "muted"]
+    segments = []
+    cumulative = 0.0
+    for i, (name, count) in enumerate(buckets):
+        pct = count / total * 100.0
+        segments.append(
+            {
+                "name": name,
+                "count": count,
+                "pct": round(pct),
+                "dash": round(pct / 100.0 * _DONUT_CIRC, 1),
+                "offset": round(-cumulative / 100.0 * _DONUT_CIRC, 1),
+                "role": roles[i % len(roles)],
+            }
+        )
+        cumulative += pct
+    return segments
 
 
 def _parser_freshness(age_sec):
@@ -208,24 +253,67 @@ def parser_feeds_page(
     saved: int = 0,
     deleted: int = 0,
     sync_error: str = "",
+    tg: str = "",
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
+    from ..services.telegram_notify import is_configured as _tg_configured
+
+    feeds = load_extra_feeds()
+    now_dt = datetime.utcnow()
+    with db_session() as session:
+        for feed in feeds:
+            feed["status"] = _feed_db_status(
+                session, feed["sport"], feed["mode"], feed["url"], now_dt
+            )
     return templates.TemplateResponse(
         request,
         "parser_feeds.html",
         {
             "active_page": "parser_feeds",
             "current_user": user,
-            "feeds": load_extra_feeds(),
+            "feeds": feeds,
             "saved": bool(saved),
             "deleted": bool(deleted),
             "sync_error": sync_error,
+            "tg": tg,
+            "telegram_configured": _tg_configured(),
         },
     )
 
 
+# A live-bearing feed is "ok" when matches in its DB scope updated within this
+# window. We read the DB (ground truth) instead of the parser's in-memory flag,
+# which could read "failing" even while fresh rows were landing every minute.
+FEED_OK_WINDOW_SEC = 15 * 60
+
+
+def _scope_to_feed(query, sport: str, mode: str, url: str):
+    """Narrow a Match query to the rows a given feed is responsible for:
+    its tournament overlay (tournaments=…), its live firehose, or its sport."""
+    params = parse_qs(urlparse(url).query)
+    tids = [t.strip() for raw in params.get("tournaments", []) for t in raw.split(",") if t.strip()]
+    if tids:
+        return query.filter(Match.tournament_id.in_(tids))
+    if mode == "live" or "/live/" in url:
+        return query.filter(Match.sport == sport, Match.status == "live")
+    return query.filter(Match.sport == sport)
+
+
+def _feed_db_status(session, sport: str, mode: str, url: str, now_dt: datetime) -> dict:
+    """Truthful per-feed status from the DB: how many active matches the feed
+    covers and how long since any of them last updated."""
+    base = session.query(
+        func.max(Match.last_updated_at), func.count(Match.event_id)
+    ).filter(Match.is_active.is_(True))
+    last_update, count = _scope_to_feed(base, sport, mode, str(url)).one()
+    age_sec = int((now_dt - last_update).total_seconds()) if last_update else None
+    ok = age_sec is not None and age_sec < FEED_OK_WINDOW_SEC
+    return {"count": int(count or 0), "age_sec": age_sec, "ok": ok}
+
+
 def _live_parse_snapshot():
-    """Read the parser's live-bearing feeds + the live games being tracked.
+    """Live-bearing feeds (health derived from the DB, not the in-memory parser
+    flag) plus the live games being tracked.
 
     Returns (feeds, live_by_league):
       feeds          per live-bearing feed: sport, mode, url, ok, count, age_sec
@@ -233,48 +321,38 @@ def _live_parse_snapshot():
     A feed "carries live" if its mode is live OR it is a tournament overlay
     (/all/?tournaments=...) — overlays serve both live and prematch.
     """
-    import time as _time
-
-    feeds: list = []
+    feed_map: dict = {}
     try:
         import server as _server  # already-loaded main module
 
         feed_map = dict(getattr(_server, "FEEDS", {}) or {})
-        state = getattr(_server, "_state", {}) or {}
-        lock = getattr(_server, "_state_lock", None)
-        now = _time.time()
+    except Exception:
+        feed_map = {}
 
-        meta_snap: dict = {}
-        if lock is not None:
-            with lock:
-                for key, st in state.items():
-                    meta_snap[key] = dict(getattr(st, "meta", {}) or {})
-
+    now_dt = datetime.utcnow()
+    feeds: list = []
+    live_by_league: list = []
+    with db_session() as session:
         for key, url in feed_map.items():
             sport, mode = key
             url = str(url)
             carries_live = (mode == "live") or ("tournaments=" in url) or ("/all/" in url)
             if not carries_live:
                 continue
-            meta = meta_snap.get(key, {})
-            last_ok = meta.get("last_success_epoch") or 0
+            st = _feed_db_status(session, sport, mode, url, now_dt)
             feeds.append(
                 {
                     "sport": sport,
                     "mode": mode,
-                    "url": meta.get("source_url") or url,
-                    "ok": bool(meta.get("ok")),
-                    "count": int(meta.get("count") or 0),
-                    "age_sec": int(now - last_ok) if last_ok else None,
-                    "error": None if meta.get("ok") else meta.get("error"),
+                    "url": url,
+                    "ok": st["ok"],
+                    "count": st["count"],
+                    "age_sec": st["age_sec"],
+                    "error": None if st["ok"] else "no fresh matches from this feed",
                 }
             )
         feeds.sort(key=lambda r: (r["sport"], r["mode"], r["url"]))
-    except Exception:
-        feeds = []
 
-    live_by_league: list = []
-    with db_session() as session:
         rows = (
             session.query(Match.sport, Match.tournament_name, func.count(Match.event_id))
             .filter(Match.is_active.is_(True))
@@ -548,6 +626,35 @@ def parser_feeds_delete(
         qs["sync_error"] = sync_error
     return RedirectResponse(
         f"/admin/parser-feeds?{urlencode(qs)}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/admin/parser-feeds/test-telegram")
+def parser_feeds_test_telegram(
+    user: User = Depends(require_role("editor")),
+) -> RedirectResponse:
+    """Send a test alert + a live summary of currently-dead campaigns so the
+    operator can confirm their Telegram bot is wired up correctly."""
+    from ..services.campaign_monitor import evaluate
+    from ..services.telegram_notify import is_configured, send_telegram
+
+    if not is_configured():
+        return RedirectResponse(
+            f"/admin/parser-feeds?{urlencode({'tg': 'unconfigured'})}",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    healths = evaluate()
+    dead = [h for h in healths if h.dead]
+    if dead:
+        lines = "\n".join(f"• {h.title} (/{h.slug}) — {h.reason}" for h in dead[:10])
+        body = f"\n\n<b>{len(dead)} campaign(s) currently dead:</b>\n{lines}"
+    else:
+        body = f"\n\nAll {len(healths)} campaigns healthy ✅"
+    ok = send_telegram("✅ <b>Jugabet Admin</b> — test alert." + body)
+    return RedirectResponse(
+        f"/admin/parser-feeds?{urlencode({'tg': 'ok' if ok else 'fail'})}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

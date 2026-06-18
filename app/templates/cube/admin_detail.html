@@ -1,619 +1,268 @@
 {% extends "base.html" %}
 {% block title %}{{ theme.display_name }} cube · Jugabet Admin{% endblock %}
-{% block page_title %}{{ theme.display_name }} · cube overrides{% endblock %}
+{% block content_theme %}content-light{% endblock %}
+{% block page_title %}{{ theme.display_name }}{% endblock %}
+{% block page_subtitle %}Cube slots, pin, remove, reorder, or restore automatic.{% endblock %}
 
 {% block page_actions %}
-  <div class="flex items-center gap-3">
-    <button type="button" onclick="window.__cubeAdmin && window.__cubeAdmin.resetAll()"
-            class="text-xs text-red-300 hover:text-red-200 border border-red-800/40 hover:border-red-700 px-2 py-1 rounded">
-      Reset all overrides
-    </button>
-    <a href="/admin/cube" class="text-xs text-muted-400 hover:text-zinc-200">← All cubes</a>
-  </div>
+  <button type="button" class="btn" onclick="window.__cubeAdmin && window.__cubeAdmin.load()">Refresh</button>
+  <button type="button" class="btn danger" onclick="window.__cubeAdmin && window.__cubeAdmin.resetAll()">Reset to automatic</button>
+  <a href="/admin/cube" class="btn">← All cubes</a>
 {% endblock %}
 
 {% block content %}
+<div x-data="cubeAdmin()" x-init="init()" style="max-width:880px">
 
-<div x-data="cubeAdmin()" x-init="init()" class="max-w-5xl">
-
-  <!-- Error banner -->
-  <div x-show="error" x-cloak
-       class="mb-4 px-4 py-2 rounded bg-red-950/40 border border-red-700 text-red-200 text-sm flex items-center gap-3">
-    <i data-lucide="alert-circle" class="!w-4 !h-4"></i>
-    <span x-text="error" class="flex-1"></span>
-    <button @click="error=''" class="text-red-300 hover:text-red-100"><i data-lucide="x" class="!w-4 !h-4"></i></button>
+  <div class="alert err" x-show="error" x-cloak>
+    <span x-text="error"></span><span class="x" @click="error=''">✕</span>
+  </div>
+  <div class="alert ok" x-show="toast" x-cloak x-transition.opacity>
+    <span x-text="toast"></span><span class="undo" x-show="undoIdx !== null" @click="undo()">Undo</span>
   </div>
 
-  <!-- Drag/pin confirmation toast — small, transient, auto-dismisses. -->
-  <div x-show="toast" x-cloak x-transition.opacity
-       class="mb-4 px-4 py-2 rounded bg-emerald-950/40 border border-emerald-700/60 text-emerald-200 text-sm flex items-center gap-3">
-    <i data-lucide="check" class="!w-4 !h-4"></i>
-    <span x-text="toast" class="flex-1"></span>
-  </div>
-
-  <p class="text-sm text-muted-400 mb-4 max-w-3xl">
-    Drag a match into a slot to pin it. Drag a pinned match out of its slot
-    (into the candidate pool, search results, or another slot) to move it.
-    Drop a pinned match back into the pool to unpin it.
-    Open <a href="/cube/{{ theme.slug }}.png" target="_blank" class="underline"
-       onclick="this.href='/cube/{{ theme.slug }}.png?t=' + Date.now()">/cube/{{ theme.slug }}.png</a>
-    to preview the current state (opens a fresh, un-cached render).
+  <p class="lede">
+    Slots fill <b>automatically</b> by hot-score. Use <b>Remove</b> to empty a slot (it drops out),
+    then <b>Add</b> the one you want. <b>Restore auto</b> on an empty slot puts it back. The <b>▲ ▼</b> buttons set the order.
   </p>
 
-  <!-- ═══════════════════════════════════════════════════════════════════
-       Current cube slots — N independent drop targets, one per slot.
-       Each slot accepts ONE match; dropping a second match displaces the
-       first (server-side `set_position` handles the displacement).
-       ═══════════════════════════════════════════════════════════════════ -->
-  <section class="bg-ink-900 border border-ink-600/60 rounded-lg overflow-hidden mb-5">
-    <header class="px-4 py-2 bg-ink-950/40 border-b border-ink-600/30 flex items-center justify-between">
-      <h3 class="text-label uppercase text-muted-400">
-        Current cube slots <span class="text-muted-500 normal-case tracking-normal">· drag a match in / out to pin / unpin</span>
-      </h3>
-      <span x-show="loading" class="text-meta text-muted-500">Loading…</span>
-    </header>
+  <!-- Showing now -->
+  <section class="card" style="overflow:hidden; margin-bottom:18px">
+    <div class="card-head">
+      <h2 class="card-title">Showing now <span class="card-sub" style="display:inline">· slots on this cube</span></h2>
+      <span class="card-sub" x-show="loading || busy" x-text="busy ? 'saving…' : 'loading…'"></span>
+    </div>
+    <div class="dt-wrap">
+      <table class="dt">
+        <thead><tr><th style="width:48px">#</th><th style="width:80px">Status</th><th>Match</th><th class="right" style="width:170px">Actions</th></tr></thead>
+        <tbody>
+          <template x-for="(m, idx) in top" :key="'slot-' + idx">
+            <tr :class="!m && blockedSlots.includes(idx) ? 'reserved' : ''">
+              <td class="slot-no" x-text="idx + 1"></td>
 
-    <div class="grid gap-px bg-ink-600/30" :style="`grid-template-columns: repeat(${slotCount}, minmax(0, 1fr));`">
-      <template x-for="(m, idx) in topMatches" :key="'slot-wrap-' + idx">
-        <div class="bg-ink-900 p-2 min-h-[120px] flex flex-col">
-          <div class="text-meta uppercase tracking-wide text-muted-500 mb-1 flex items-center gap-2">
-            <span>Slot</span>
-            <span class="font-mono tabular-nums text-zinc-300" x-text="idx + 1"></span>
-            <template x-if="m && m.position !== null && m.position !== undefined">
-              <span class="text-orange-300 text-[10px]">pinned</span>
-            </template>
-            <template x-if="m && (m.position === null || m.position === undefined)">
-              <span class="text-muted-500 text-[10px]">auto</span>
-            </template>
-          </div>
+              <template x-if="m">
+                <td><span class="badge" :class="m.status === 'live' ? 'live' : 'pre'"><span class="dot"></span><span x-text="m.status === 'live' ? 'Live' : 'Pre'"></span></span></td>
+              </template>
+              <template x-if="m">
+                <td>
+                  <div class="m-title"><span x-text="m.home_name"></span><span class="vs">vs</span><span x-text="m.away_name"></span></div>
+                  <div class="m-meta" x-text="m.tournament_name || '—'"></div>
+                </td>
+              </template>
+              <template x-if="m">
+                <td>
+                  <div class="row-actions">
+                    <button class="btn icon" @click="move(idx, -1)" :disabled="idx === 0 || busy" title="Move up">▲</button>
+                    <button class="btn icon" @click="move(idx, 1)" :disabled="idx === lastFilledIdx || busy" title="Move down">▼</button>
+                    <button class="btn sm danger" @click="blankSlot(idx, m)" :disabled="busy">Remove</button>
+                  </div>
+                </td>
+              </template>
 
-          <!--
-            The drop target. data-slot identifies which slot index this
-            container represents; SortableJS onAdd uses it to call pin().
-          -->
-          <ul :id="'slot-' + idx" :data-slot="idx"
-              class="slot-zone flex-1 rounded border-2 border-dashed border-ink-600/50 p-1 min-h-[80px]
-                     transition-colors hover:border-orange-500/40">
-            <template x-if="m">
-              <li class="slot-item bg-ink-800 border border-ink-600 rounded p-2 cursor-move flex items-start gap-2"
-                  :class="m.is_active === false && 'opacity-60'"
-                  :data-event-id="m.event_id">
-                <i data-lucide="grip-vertical" class="!w-4 !h-4 text-muted-500 flex-shrink-0 mt-0.5"></i>
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-1.5 mb-0.5">
-                    <span class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase"
-                          :class="m.status === 'live'
-                            ? 'bg-red-500/10 text-red-300/80 ring-1 ring-red-500/20'
-                            : 'bg-sky-500/10 text-sky-300/80 ring-1 ring-sky-500/20'"
-                          x-text="m.status === 'live' ? 'Live' : 'Pre'"></span>
-                    <span x-show="m.is_synthetic"
-                          class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase
-                                 bg-amber-500/10 text-amber-300/80 ring-1 ring-amber-500/20"
-                          style="display:none">Syn</span>
+              <template x-if="!m">
+                <td colspan="3">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+                    <span class="blank-cell" :class="blockedSlots.includes(idx) ? 'reserved' : ''">
+                      <span x-show="blockedSlots.includes(idx)">▢ Empty, add a match below, or restore auto</span>
+                      <span x-show="!blockedSlots.includes(idx)">▢ Empty, no match available</span>
+                    </span>
+                    <button class="btn sm primary" x-show="blockedSlots.includes(idx)" @click="unblock(idx)" :disabled="busy">Restore auto</button>
                   </div>
-                  <div class="text-sm text-zinc-200 truncate font-medium">
-                    <span x-text="m.home_name"></span>
-                    <span class="text-muted-500"> vs </span>
-                    <span x-text="m.away_name"></span>
-                  </div>
-                  <div class="text-meta text-muted-500 truncate" x-text="m.tournament_name || '—'"></div>
-                </div>
-              </li>
-            </template>
-          </ul>
-          <template x-if="!m">
-            <div class="text-center text-meta text-muted-600 italic mt-2">drop a match here</div>
+                </td>
+              </template>
+            </tr>
           </template>
-        </div>
-      </template>
+        </tbody>
+      </table>
     </div>
   </section>
 
-  <!-- ═══════════════════════════════════════════════════════════════════
-       Search — type to filter the candidate pool. Results are draggable
-       directly into any slot.
-       ═══════════════════════════════════════════════════════════════════ -->
-  <section class="bg-ink-900 border border-ink-600/60 rounded-lg overflow-hidden mb-5">
-    <header class="px-4 py-2 bg-ink-950/40 border-b border-ink-600/30 flex items-center gap-2">
-      <input x-model="searchQuery" @input.debounce.300ms="performSearch()"
-             placeholder="Search {{ theme.display_name }} matches by team or tournament…"
-             class="flex-1 bg-ink-950/60 text-sm text-zinc-100 placeholder-muted-500 border border-ink-600 rounded px-3 py-1.5 focus:outline-none focus:border-brand-500"/>
-      <span x-show="searching" class="text-meta text-muted-500">Searching…</span>
-    </header>
-    <div x-show="searchQuery && searchResults.length > 0">
-      <ul id="search-pool" data-pool="search"
-          class="pool-zone divide-y divide-ink-600/30 max-h-72 overflow-y-auto">
-        <template x-for="m in searchResults" :key="'search-' + m.event_id">
-          <li class="pool-item group px-3 py-2 flex items-center gap-3 hover:bg-ink-800/40 cursor-move"
-              :class="m.is_active === false && 'opacity-60'"
-              :data-event-id="m.event_id">
-            <i data-lucide="grip-vertical" class="!w-4 !h-4 text-muted-500 flex-shrink-0"></i>
-            <span class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase flex-shrink-0"
-                  :class="m.status === 'live'
-                    ? 'bg-red-500/10 text-red-300/80 ring-1 ring-red-500/20'
-                    : 'bg-sky-500/10 text-sky-300/80 ring-1 ring-sky-500/20'"
-                  x-text="m.status === 'live' ? 'Live' : 'Pre'"></span>
-            <span x-show="m.is_active === false"
-                  class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase flex-shrink-0
-                         bg-zinc-700/40 text-zinc-300 ring-1 ring-zinc-500/30"
-                  style="display:none">Inactive</span>
-            <span x-show="m.is_synthetic"
-                  class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase flex-shrink-0
-                         bg-amber-500/10 text-amber-300/80 ring-1 ring-amber-500/20"
-                  style="display:none">Syn</span>
-            <div class="flex-1 min-w-0">
-              <div class="text-body text-zinc-200 truncate">
-                <span x-text="m.home_name"></span>
-                <span class="text-muted-500"> vs </span>
-                <span x-text="m.away_name"></span>
-              </div>
-              <div class="text-meta text-muted-500 truncate" x-text="m.tournament_name || '—'"></div>
-            </div>
-            <button @click="suppress(m.event_id, true)" title="Hide from this cube"
-                    class="p-1.5 rounded text-muted-500 hover:text-red-300 hover:bg-red-950/40 opacity-0 group-hover:opacity-100 transition-opacity">
-              <i data-lucide="eye-off" class="!w-3.5 !h-3.5"></i>
-            </button>
-          </li>
-        </template>
-      </ul>
+  <!-- Available -->
+  <section class="card" style="overflow:hidden; margin-bottom:18px">
+    <div class="card-head">
+      <h2 class="card-title">Available <span class="card-sub" style="display:inline">· in-theme matches</span></h2>
+      <span class="card-sub" x-text="hasBlank ? 'adds to the empty slot' : 'takes the last slot'"></span>
     </div>
-    <div x-show="searchQuery && searchResults.length === 0 && !searching"
-         class="px-4 py-4 text-center text-meta text-muted-500">
-      No matches found matching "<span x-text="searchQuery" class="text-zinc-300"></span>"
+    <div class="search">
+      <span class="mag"><i data-lucide="search" style="width:15px;height:15px"></i></span>
+      <input x-model="addQuery" placeholder="Search a team or tournament…">
+    </div>
+    <div class="pool-scroll">
+      <table class="dt" style="min-width:0">
+        <tbody>
+          <template x-for="m in filteredCandidates" :key="'cand-' + m.event_id">
+            <tr>
+              <td style="width:80px"><span class="badge" :class="m.status === 'live' ? 'live' : 'pre'"><span class="dot"></span><span x-text="m.status === 'live' ? 'Live' : 'Pre'"></span></span></td>
+              <td>
+                <div class="m-title"><span x-text="m.home_name"></span><span class="vs">vs</span><span x-text="m.away_name"></span></div>
+                <div class="m-meta" x-text="m.tournament_name || '—'"></div>
+              </td>
+              <td class="right" style="width:90px"><button class="btn sm primary" @click="addMatch(m.event_id)" :disabled="busy">Add</button></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+      <div class="empty" x-show="filteredCandidates.length === 0">
+        <span x-show="addQuery">No match for "<b x-text="addQuery"></b>".</span>
+        <span x-show="!addQuery">No other in-theme matches available right now.</span>
+      </div>
     </div>
   </section>
 
-  <!-- ═══════════════════════════════════════════════════════════════════
-       In-theme candidates — the auto-rank pool. Drop a slot match here
-       to unpin it. Drag a candidate to a slot to pin.
-       ═══════════════════════════════════════════════════════════════════ -->
-  <section class="bg-ink-900 border border-ink-600/60 rounded-lg overflow-hidden mb-5">
-    <button @click="expanded = !expanded"
-            class="w-full px-4 py-2 flex items-center justify-between text-left hover:bg-ink-800/40 transition-colors"
-            :class="expanded && 'border-b border-ink-600/60'">
-      <span class="text-label uppercase text-muted-400">
-        In-theme candidates <span class="text-muted-500 normal-case tracking-normal">· drop here to unpin</span>
-      </span>
-      <i data-lucide="chevron-down" class="!w-4 !h-4 text-muted-500 transition-transform"
-         :class="expanded && 'rotate-180'"></i>
-    </button>
-    <div x-show="expanded" x-transition.duration.150ms>
-      <ul id="candidates-pool" data-pool="candidates"
-          class="pool-zone divide-y divide-ink-600/30 min-h-[60px] max-h-96 overflow-y-auto">
-        <template x-for="m in candidates" :key="'cand-' + m.event_id">
-          <li class="pool-item group px-3 py-2 flex items-center gap-3 hover:bg-ink-800/40 cursor-move"
-              :data-event-id="m.event_id">
-            <i data-lucide="grip-vertical" class="!w-4 !h-4 text-muted-500 flex-shrink-0"></i>
-            <span class="text-[10px] font-medium tracking-wide px-1.5 py-0.5 rounded uppercase flex-shrink-0"
-                  :class="m.status === 'live'
-                    ? 'bg-red-500/10 text-red-300/80 ring-1 ring-red-500/20'
-                    : 'bg-sky-500/10 text-sky-300/80 ring-1 ring-sky-500/20'"
-                  x-text="m.status === 'live' ? 'Live' : 'Pre'"></span>
-            <div class="flex-1 min-w-0">
-              <div class="text-body text-zinc-200 truncate">
-                <span x-text="m.home_name"></span>
-                <span class="text-muted-500"> vs </span>
-                <span x-text="m.away_name"></span>
-              </div>
-              <div class="text-meta text-muted-500 truncate" x-text="m.tournament_name || '—'"></div>
-            </div>
-            <button @click="suppress(m.event_id, true)" title="Hide from this cube"
-                    class="p-1.5 rounded text-muted-500 hover:text-red-300 hover:bg-red-950/40 opacity-0 group-hover:opacity-100 transition-opacity">
-              <i data-lucide="eye-off" class="!w-3.5 !h-3.5"></i>
-            </button>
-          </li>
-        </template>
-        <li x-show="candidates.length === 0" class="px-4 py-3 text-meta text-muted-500 italic">
-          No in-theme candidates available. Use the search above to find a match.
-        </li>
-      </ul>
+  <!-- Dropped -->
+  <section class="card" style="overflow:hidden" x-show="suppressedMatches.length > 0" x-cloak>
+    <div class="card-head"><h2 class="card-title">Dropped <span class="card-sub" style="display:inline">· hidden from this cube</span></h2></div>
+    <div class="dt-wrap">
+      <table class="dt" style="min-width:0">
+        <tbody>
+          <template x-for="m in suppressedMatches" :key="'sup-' + m.event_id">
+            <tr>
+              <td>
+                <div class="m-title"><span x-text="m.home_name"></span><span class="vs">vs</span><span x-text="m.away_name"></span></div>
+                <div class="m-meta" x-text="m.tournament_name || '—'"></div>
+              </td>
+              <td class="right" style="width:120px"><button class="btn sm" @click="restoreMatch(m.event_id)" :disabled="busy">Bring back</button></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
     </div>
-  </section>
-
-  <!-- ═══════════════════════════════════════════════════════════════════
-       Suppressed bucket — restore button instead of drag.
-       ═══════════════════════════════════════════════════════════════════ -->
-  <section x-show="suppressedMatches.length > 0" class="bg-ink-900 border border-ink-600/60 rounded-lg overflow-hidden mb-5">
-    <header class="px-4 py-2 bg-ink-950/40 border-b border-ink-600/30">
-      <h3 class="text-label uppercase text-muted-400">
-        Suppressed <span class="text-muted-500 normal-case tracking-normal">· hidden from this cube</span>
-      </h3>
-    </header>
-    <ul>
-      <template x-for="m in suppressedMatches" :key="'sup-' + m.event_id">
-        <li class="group px-3 py-2 flex items-center gap-3 border-b border-ink-600/30 last:border-0 hover:bg-ink-800/40">
-          <div class="flex-1 min-w-0">
-            <div class="text-body text-zinc-400 truncate">
-              <span x-text="m.home_name"></span>
-              <span class="text-muted-600"> vs </span>
-              <span x-text="m.away_name"></span>
-            </div>
-            <div class="text-meta text-muted-600 truncate" x-text="m.tournament_name || '—'"></div>
-          </div>
-          <button @click="suppress(m.event_id, false)" title="Un-suppress"
-                  class="text-xs bg-ink-700 hover:bg-ink-600 text-zinc-300 px-2 py-1 rounded">
-            Restore
-          </button>
-        </li>
-      </template>
-    </ul>
   </section>
 </div>
+{% endblock %}
 
 {% block scripts %}{{ super() }}
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
 function cubeAdmin() {
   return {
     theme: {{ theme.slug | tojson }},
     slotCount: {{ slot_count }},
-    topMatches: [],
+    top: [],
     candidates: [],
     suppressedMatches: [],
-    searchResults: [],
-    searchQuery: '',
-    expanded: true,
+    blockedSlots: [],
+    addQuery: '',
     loading: false,
-    searching: false,
+    busy: false,
     error: '',
     toast: '',
-    _sortables: [],
-    // Serialize pin/suppress writes so two fast drags don't fire in
-    // parallel and race each other (which could leave the DB with two
-    // events at the same position and the cube rendering "stuck").
-    _writeQueue: Promise.resolve(),
+    undoIdx: null,
+    _toastTimer: null,
 
-    async init() {
-      // Expose for the header "Reset all overrides" button which can't
-      // access the Alpine scope from outside the x-data root.
-      window.__cubeAdmin = this;
-      await this.load();
+    async init() { window.__cubeAdmin = this; await this.load(); },
+
+    get lastFilledIdx() { let last = -1; this.top.forEach((m, i) => { if (m) last = i; }); return last; },
+    get hasBlank() { return this.top.some(m => !m); },
+
+    get filteredCandidates() {
+      const q = this._norm(this.addQuery).trim();
+      const list = this.candidates;
+      if (!q) return list.slice(0, 40);
+      const toks = q.split(/\s+/).filter(Boolean);
+      return list.filter(m => {
+        const hay = this._norm(`${m.home_name} ${m.away_name} ${m.tournament_name || ''}`);
+        return toks.every(t => hay.includes(t));
+      }).slice(0, 40);
     },
+    _norm(s) { return (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); },
 
     _flash(msg) {
-      this.toast = msg;
-      setTimeout(() => {
-        if (this.toast === msg) this.toast = '';
-      }, 2500);
-    },
-
-    async resetAll() {
-      if (!confirm('Clear every pin and suppression for this cube? The cube will revert to fully automatic ranking.')) {
-        return;
-      }
-      try {
-        const r = await fetch(`/api/admin/cube/${this.theme}/overrides`, {
-          method: 'DELETE',
-          credentials: 'same-origin',
-        });
-        if (!r.ok) {
-          const body = await r.text();
-          throw new Error(`HTTP ${r.status}: ${body}`);
-        }
-        const data = await r.json();
-        this._flash(`Cleared ${data.removed} override(s).`);
-        await this.load();
-      } catch (e) {
-        this.error = `Reset failed: ${e.message}`;
-      }
+      this.undoIdx = null; this.toast = msg;
+      clearTimeout(this._toastTimer);
+      this._toastTimer = setTimeout(() => { if (this.toast === msg) this.toast = ''; }, 2400);
     },
 
     async load() {
       this.loading = true;
       try {
-        const url = `/api/admin/cube/${this.theme}/leaderboard`;
-        const r = await fetch(url, { credentials: 'same-origin' });
-        if (r.status === 307 || r.status === 401) {
-          throw new Error('Session expired — reload and sign in.');
-        }
+        const r = await fetch(`/api/admin/cube/${this.theme}/leaderboard`, { credentials: 'same-origin' });
+        if (r.status === 401 || r.status === 307) throw new Error('Session expired, reload and sign in.');
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const data = await r.json();
-        // Pad topMatches so empty slots render the "drop here" placeholder.
         const top = data.top || [];
         const padded = [];
         for (let i = 0; i < this.slotCount; i++) padded.push(top[i] || null);
-        this.topMatches = padded;
-        this.candidates = data.candidates || [];
+        this.top = padded;
+        this.candidates = (data.candidates || []).filter(c => !c.suppressed);
         this.suppressedMatches = data.suppressed || [];
-        if (this.searchQuery.trim()) {
-          await this.performSearch();
-        }
-        this.$nextTick(() => {
-          if (window.lucide) lucide.createIcons();
-          this._wireSortables();
-        });
+        this.blockedSlots = data.blocked_slots || [];
       } catch (e) {
         console.error('[cubeAdmin.load]', e);
         this.error = `Failed to load: ${e.message}`;
-      } finally {
-        this.loading = false;
-      }
+      } finally { this.loading = false; }
     },
 
-    async performSearch() {
-      if (!this.searchQuery.trim()) {
-        this.searchResults = [];
-        return;
-      }
-      this.searching = true;
-      try {
-        const r = await fetch(
-          `/api/admin/cube/${this.theme}/leaderboard?q=${encodeURIComponent(this.searchQuery)}`,
-          { credentials: 'same-origin' }
-        );
+    async _post(path, body) {
+      const r = await fetch(`/api/admin/cube/${this.theme}${path}`, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {}),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`);
+      return r.json();
+    },
+
+    async _do(fn, okMsg) {
+      if (this.busy) return;
+      this.busy = true;
+      try { await fn(); if (okMsg) this._flash(okMsg); }
+      catch (e) { this.error = e.message; }
+      finally { await this.load(); this.busy = false; }
+    },
+
+    pin(eventId, slot) { return this._post(`/pin/${encodeURIComponent(eventId)}`, { position: slot }); },
+    reorderPins(pins) { return this._post(`/reorder`, { pins }); },
+
+    blankSlot(idx, m) {
+      this.top = this.top.map((x, i) => (i === idx ? null : x));
+      if (!this.blockedSlots.includes(idx)) this.blockedSlots = [...this.blockedSlots, idx];
+      this._do(() => this._post(`/block/${idx}`, { event_id: m.event_id }), null);
+      this.toast = `Removed ${m.home_name} vs ${m.away_name}`;
+      this.undoIdx = idx;
+      clearTimeout(this._toastTimer);
+      this._toastTimer = setTimeout(() => { this.toast = ''; this.undoIdx = null; }, 6000);
+    },
+
+    undo() { const i = this.undoIdx; this.undoIdx = null; if (i !== null) this.unblock(i); },
+
+    unblock(idx) {
+      this._do(async () => {
+        const r = await this._post(`/unblock/${idx}`, {});
+        this._flash(r && r.restored ? 'Slot reopened, match restored' : 'Slot back to automatic');
+      });
+    },
+
+    addMatch(eventId) {
+      let slot = this.top.findIndex(m => !m);
+      if (slot < 0) slot = this.slotCount - 1;
+      this._do(() => this.pin(eventId, slot), `Added to slot ${slot + 1}`);
+    },
+
+    move(idx, dir) {
+      const to = idx + dir;
+      if (to < 0 || to >= this.slotCount) return;
+      const a = this.top[idx];
+      if (!a) return;
+      const b = this.top[to];
+      this._do(() => b
+        ? this.reorderPins([
+            { event_id: a.event_id, position: to },
+            { event_id: b.event_id, position: idx },
+          ])
+        : this.pin(a.event_id, to), 'Order updated');
+    },
+
+    restoreMatch(eventId) { this._do(() => this._post(`/suppress/${encodeURIComponent(eventId)}`, { suppress: false }), 'Brought back'); },
+
+    async resetAll() {
+      if (!confirm('Clear every change for this cube? It reverts to fully automatic ranking.')) return;
+      this._do(async () => {
+        const r = await fetch(`/api/admin/cube/${this.theme}/overrides`, { method: 'DELETE', credentials: 'same-origin' });
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const data = await r.json();
-        this.searchResults = data.search_results || [];
-        this.$nextTick(() => {
-          if (window.lucide) lucide.createIcons();
-          this._wireSortables();
-        });
-      } catch (e) {
-        this.error = `Search failed: ${e.message}`;
-      } finally {
-        this.searching = false;
-      }
-    },
-
-    async suppress(eventId, value) {
-      try {
-        const r = await fetch(`/api/admin/cube/${this.theme}/suppress/${encodeURIComponent(eventId)}`, {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ suppress: value }),
-        });
-        if (!r.ok) {
-          const body = await r.text();
-          throw new Error(`HTTP ${r.status}: ${body}`);
-        }
-        await this.load();
-      } catch (e) {
-        this.error = `Suppress failed: ${e.message}`;
-      }
-    },
-
-    _findMatchById(eventId) {
-      const pools = [this.topMatches, this.candidates, this.searchResults, this.suppressedMatches];
-      for (const pool of pools) {
-        const found = (pool || []).find(m => m && m.event_id === eventId);
-        if (found) return {...found};
-      }
-      return null;
-    },
-
-    _applyOptimisticPin(eventId, slot) {
-      const match = this._findMatchById(eventId);
-      if (!match) return;
-      match.position = slot;
-      match.suppressed = false;
-      const nextTop = [...this.topMatches];
-      for (let i = 0; i < nextTop.length; i++) {
-        if (nextTop[i] && nextTop[i].event_id === eventId) {
-          nextTop[i] = null;
-        }
-      }
-      // Force Alpine to recreate the slot item. Sortable mutates the DOM
-      // directly; if Alpine's state already says "this slot has a match",
-      // setting the same truthy slot again can leave the visible <li>
-      // missing until a browser refresh.
-      nextTop[slot] = null;
-      this.topMatches = nextTop;
-      this.candidates = this.candidates.filter(m => m.event_id !== eventId);
-      this.searchResults = this.searchResults.filter(m => m.event_id !== eventId);
-      this.suppressedMatches = this.suppressedMatches.filter(m => m.event_id !== eventId);
-      this.$nextTick(() => {
-        const filledTop = [...this.topMatches];
-        filledTop[slot] = match;
-        this.topMatches = filledTop;
-        this.$nextTick(() => {
-          if (window.lucide) lucide.createIcons();
-          this._wireSortables();
-        });
+        this._flash(`Reset, cleared ${data.removed} change(s).`);
       });
-    },
-
-    async _pin(eventId, slot) {
-      // Chain onto the write queue so multiple rapid drags don't race.
-      // Each pin awaits the previous one's load() before firing.
-      const self = this;
-      const job = self._writeQueue.then(async () => {
-        try {
-          if (slot !== null) {
-            self._applyOptimisticPin(eventId, slot);
-          }
-          const r = await fetch(`/api/admin/cube/${self.theme}/pin/${encodeURIComponent(eventId)}`, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ position: slot }),
-          });
-          if (!r.ok) {
-            const body = await r.text();
-            throw new Error(`HTTP ${r.status}: ${body}`);
-          }
-          if (slot === null) {
-            self._flash(`Unpinned`);
-          } else {
-            self._flash(`Pinned to slot ${slot + 1}`);
-          }
-          await self.load();
-        } catch (e) {
-          self.error = `Pin failed: ${e.message}`;
-        }
-      });
-      // Swallow errors at the queue level so one failure doesn't break
-      // every subsequent write.
-      self._writeQueue = job.catch(() => {});
-      return job;
-    },
-
-    async _swap(eidA, slotA, eidB, slotB) {
-      // Atomic two-event swap via /reorder so we never leave both events
-      // briefly fighting for one slot (which two sequential /pin calls do).
-      // Relies on load() to repaint from server truth — no optimistic
-      // mutation, which keeps the slot DOM clean after the SortableJS move.
-      const self = this;
-      const job = self._writeQueue.then(async () => {
-        try {
-          const r = await fetch(`/api/admin/cube/${self.theme}/reorder`, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pins: [
-              { event_id: eidA, position: slotA },
-              { event_id: eidB, position: slotB },
-            ] }),
-          });
-          if (!r.ok) {
-            const body = await r.text();
-            throw new Error(`HTTP ${r.status}: ${body}`);
-          }
-          self._flash(`Swapped slots ${slotB + 1} ↔ ${slotA + 1}`);
-        } catch (e) {
-          self.error = `Swap failed: ${e.message}`;
-        }
-        await self.load();
-      });
-      self._writeQueue = job.catch(() => {});
-      return job;
-    },
-
-    _wireSortables() {
-      // Tear down any sortables from the previous render.
-      for (const s of this._sortables) {
-        try { s.destroy(); } catch (e) { /* ignore */ }
-      }
-      this._sortables = [];
-      if (typeof Sortable === 'undefined') {
-        console.warn('[cubeAdmin] SortableJS not loaded — drag-and-drop disabled');
-        return;
-      }
-
-      const self = this;
-      const groupName = 'cube-' + this.theme;
-
-      /*
-        DOM-hygiene rule for every drop handler:
-
-        SortableJS physically moves the dragged <li> into the destination
-        container. Alpine then re-renders the same container from the new
-        `topMatches`/`candidates` state on next load(), which DOUBLES the
-        visual item count (one Sortable-moved node + one Alpine-rendered
-        node) — that's exactly the "2 matches in 1 slot" bug, and the
-        cascading "everything falls into candidates" effect on slot-to-slot
-        drags. Fix: ALWAYS remove the Sortable-moved node before the
-        server call, so the only authority on the rendered DOM is Alpine's
-        next render of the server state.
-      */
-      function undoVisualMove(evt) {
-        try {
-          if (evt && evt.item && evt.item.parentNode) {
-            evt.item.parentNode.removeChild(evt.item);
-          }
-        } catch (e) { /* ignore — Alpine will overwrite anyway */ }
-      }
-
-      // Each slot is its own drop target. data-slot on the <ul> tells us
-      // which slot index it represents.
-      for (let i = 0; i < this.slotCount; i++) {
-        const el = document.getElementById('slot-' + i);
-        if (!el) continue;
-        this._sortables.push(new Sortable(el, {
-          group: { name: groupName, pull: true, put: true },
-          animation: 140,
-          ghostClass: 'opacity-30',
-          dragClass: 'shadow-pop',
-          // Sort within a slot doesn't make sense (slots are single-item).
-          sort: false,
-          onAdd: function (evt) {
-            const eid = evt.item.dataset.eventId;
-            const slot = parseInt(evt.to.dataset.slot, 10);
-            const fromRaw = evt.from.dataset.slot;
-            // Remove the Sortable-moved DOM node FIRST so Alpine's next
-            // render is the only authority on what's visible in this slot.
-            undoVisualMove(evt);
-            if (!eid || isNaN(slot)) return;
-            const fromSlot = (fromRaw !== undefined && fromRaw !== '')
-              ? parseInt(fromRaw, 10) : null;
-            const occupant = self.topMatches[slot];
-            // Slot → slot drop onto an already-filled slot = SWAP the two
-            // (both get pinned). Untouched slots keep auto-ranking. Any other
-            // drop (from the pool, or onto an empty slot) is a plain pin.
-            if (fromSlot !== null && !isNaN(fromSlot) && fromSlot !== slot
-                && occupant && occupant.event_id && occupant.event_id !== eid) {
-              self._swap(eid, slot, occupant.event_id, fromSlot);
-            } else {
-              self._pin(eid, slot);
-            }
-          },
-        }));
-      }
-
-      // Candidates pool — drop from a slot here means "unpin".
-      const candEl = document.getElementById('candidates-pool');
-      if (candEl) {
-        this._sortables.push(new Sortable(candEl, {
-          group: { name: groupName, pull: true, put: true },
-          animation: 140,
-          ghostClass: 'opacity-30',
-          dragClass: 'shadow-pop',
-          // Reordering within candidates is purely visual — no server
-          // call. Don't let it persist; re-render on next load.
-          sort: false,
-          onAdd: function (evt) {
-            const eid = evt.item.dataset.eventId;
-            const fromSlot = evt.from.dataset.slot;
-            undoVisualMove(evt);
-            if (!eid) return;
-            if (fromSlot !== undefined) {
-              self._pin(eid, null);  // unpin
-            } else {
-              self.load();           // search → cand, just resync UI
-            }
-          },
-        }));
-      }
-
-      // Search pool — drop from slot here ALSO unpins (some users drag
-      // back to where they dragged from).
-      const searchEl = document.getElementById('search-pool');
-      if (searchEl) {
-        this._sortables.push(new Sortable(searchEl, {
-          group: { name: groupName, pull: true, put: true },
-          animation: 140,
-          ghostClass: 'opacity-30',
-          dragClass: 'shadow-pop',
-          sort: false,
-          onAdd: function (evt) {
-            const eid = evt.item.dataset.eventId;
-            const fromSlot = evt.from.dataset.slot;
-            undoVisualMove(evt);
-            if (!eid) return;
-            if (fromSlot !== undefined) {
-              self._pin(eid, null);
-            } else {
-              self.load();
-            }
-          },
-        }));
-      }
     },
   };
 }
 </script>
-<style>
-  /* Tiny visual: when a slot is hovered during drag, the dashed border
-     gets the orange accent so the drop target is obvious. */
-  .slot-zone.sortable-drag-over,
-  .slot-zone:has(.sortable-ghost) {
-    border-color: rgba(251, 146, 60, 0.6) !important;
-    background: rgba(251, 146, 60, 0.06);
-  }
-  .shadow-pop {
-    box-shadow: 0 6px 16px -2px rgba(0,0,0,0.4);
-  }
-</style>
-{% endblock %}
-
 {% endblock %}

@@ -356,7 +356,7 @@ def update_club(
 def delete_club(
     slug: str,
     request: Request,
-    user: User = Depends(require_role("admin")),
+    user: User = Depends(require_role("editor")),
 ) -> Dict[str, Any]:
     slug = _validate_slug(slug)
     with db_session() as session:
@@ -376,7 +376,7 @@ def delete_club(
 def clubs_admin_delete(
     slug: str,
     request: Request,
-    user: User = Depends(require_role("admin")),
+    user: User = Depends(require_role("editor")),
 ) -> RedirectResponse:
     slug = _validate_slug(slug)
     with db_session() as session:
