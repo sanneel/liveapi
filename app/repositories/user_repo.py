@@ -93,6 +93,14 @@ class UserRepository:
     def all(self) -> List[User]:
         return self.session.query(User).order_by(User.username).all()
 
+    def delete(self, username: str) -> bool:
+        user = self.find(username)
+        if user is None:
+            return False
+        self.session.delete(user)
+        logger.info(f"user.delete username={user.username}")
+        return True
+
     def count(self) -> int:
         return self.session.query(User).count()
 
