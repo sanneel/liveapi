@@ -181,7 +181,7 @@
         if (!this._loaded) {
           this._loaded = true;
           try {
-            const r = await fetch('/api/tutorials');
+            const r = await fetch('/api/admin/tutorials');
             if (r.ok) this.items = await r.json();
           } catch (e) { /* keep empty */ }
           this.loading = false;

@@ -4,7 +4,7 @@ Tutorial library — admin upload + per-operator playback.
   GET  /admin/tutorials              management page (list + upload form) — admin
   POST /admin/tutorials              upload a video with a title           — admin
   POST /admin/tutorials/{id}/delete  remove a tutorial + its file          — admin
-  GET  /api/tutorials                JSON list for the Help modal          — any login
+  GET  /api/admin/tutorials          JSON list for the Help modal          — any login
 
 Video files are stored under app/static/tutorials/<uuid>.<ext> and served by
 the existing /static mount. The stored filename is always a server-generated
@@ -182,7 +182,7 @@ def tutorials_delete(
     )
 
 
-@router.get("/api/tutorials")
+@router.get("/api/admin/tutorials")
 def tutorials_api(request: Request, user: User = Depends(require_login)) -> JSONResponse:
     """Title + playback URL list for the Help modal (any logged-in operator)."""
     with db_session() as session:
