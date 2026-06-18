@@ -150,15 +150,32 @@ def _format_disabled(slug: str, title: str) -> str:
     )
 
 
-def auto_disable_finished() -> List[tuple]:
-    """Disable manual campaigns whose every picked match has finished
-    (``is_active=False``) or was removed, so they stop rendering blank PNGs
-    and the operator can delete them.
+def _match_still_live(match, now_dt: datetime, stale_seconds: int) -> bool:
+    """True only if a picked match is genuinely still going.
 
-    Empty-by-design campaigns (no matches ever picked) are left alone — only
-    campaigns that *had* matches and have since gone fully inactive qualify.
-    Returns ``[(slug, title)]`` for the campaigns it just turned off.
+    We do NOT trust ``is_active``/``status`` alone: a finished live match
+    often gets stuck with ``is_active=True, status='live'`` because it simply
+    vanished from the live feed and nothing ever flipped the flag (observed on
+    worldcupprm — both matches frozen 'live' but not refreshed for 10+ hours).
+    A match only counts as live if it is active AND its odds were refreshed
+    within the stale window; otherwise the game is over.
     """
+    if not match.is_active or match.last_updated_at is None:
+        return False
+    return (now_dt - match.last_updated_at).total_seconds() <= stale_seconds
+
+
+def auto_disable_finished() -> List[tuple]:
+    """Disable manual campaigns whose every picked match has finished, so they
+    stop rendering a blank/stale PNG and the operator can delete them.
+
+    A match is "finished" when it is inactive, was removed, OR is frozen
+    (still flagged live but not refreshed within the stale window — see
+    ``_match_still_live``). Empty-by-design campaigns (no matches ever picked)
+    are left alone. Returns ``[(slug, title)]`` for the campaigns just turned off.
+    """
+    now_dt = datetime.utcnow()
+    stale_seconds = max(60, get_settings().campaign_stale_minutes * 60)
     disabled: List[tuple] = []
     with db_session() as session:
         repo = CampaignRepository(session)
@@ -169,8 +186,8 @@ def auto_disable_finished() -> List[tuple]:
             if not repo.get_match_rows(campaign.slug):
                 continue  # never had matches — not "finished"
             matches = repo.get_matches(campaign.slug)
-            if any(m.is_active for m in matches):
-                continue  # at least one match still live
+            if any(_match_still_live(m, now_dt, stale_seconds) for m in matches):
+                continue  # at least one match still live and fresh
             if repo.disable(campaign.slug):
                 disabled.append((campaign.slug, campaign.title))
                 log.record(
