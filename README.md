@@ -175,7 +175,7 @@ All run from the project root. On the server, prefix with `.venv/bin/python`.
 Create one admin (interactive or with flags):
 
 ```bash
-python scripts/create_admin.py --username sandros7 --role admin
+python scripts/create_admin.py --username adminusername --role admin
 ```
 
 Create operator accounts with generated one-time passwords:
@@ -185,10 +185,9 @@ Create operator accounts with generated one-time passwords:
 python scripts/new_user.py
 
 # batch
-python scripts/new_user.py --role editor fotsaros koda beesley
-
+python scripts/new_user.py --role editor user1 user2 user3
 # re-issue a password for someone who lost theirs
-python scripts/new_user.py --reset fotsaros
+python scripts/new_user.py --reset user1
 ```
 
 List and remove accounts:
@@ -197,11 +196,11 @@ List and remove accounts:
 python scripts/manage_users.py list
 
 # delete specific account(s); dry run, then add --yes to confirm
-python scripts/manage_users.py delete --user koda
-python scripts/manage_users.py delete --user koda beesley --yes
+python scripts/manage_users.py delete --user user1
+python scripts/manage_users.py delete --user user1 user2 --yes
 
 # delete everyone except the named account(s)
-python scripts/manage_users.py delete-others --keep sandros7 --yes
+python scripts/manage_users.py delete-others --keep user1 --yes
 ```
 
 Both delete commands refuse to run if a named account does not exist, or if the
