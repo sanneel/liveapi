@@ -57,19 +57,18 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             else "same-site"
         )
         response.headers.setdefault("Cross-Origin-Resource-Policy", corp)
-        # `unsafe-eval` is required by:
-        #   - Alpine.js: compiles every x-show/x-text/x-model/etc. directive
-        #     into a runtime Function() — without it, every binding silently
-        #     no-ops and the admin pages render as static templates with no
-        #     fetched data (root cause of "browse shows nothing while PNG
-        #     works").
-        #   - Tailwind CDN JIT: also uses Function() to compile class names
-        #     at runtime.
-        # `style-src 'unsafe-inline'` is required by Tailwind CDN injecting
-        # styles dynamically.
-        # Follow-up (out of scope here): replace the Tailwind CDN with a
-        # pre-built CSS bundle and swap Alpine for its CSP-friendly build
-        # so we can drop both `unsafe-eval` and the third-party CDN hosts.
+        # `unsafe-eval` is required by Alpine.js, which compiles every
+        # x-show/x-text/x-model/etc. directive into a runtime Function() —
+        # without it every binding silently no-ops and the admin pages render
+        # as static templates with no fetched data (root cause of "browse
+        # shows nothing while PNG works").
+        # `style-src 'unsafe-inline'` is required by Alpine's inline style
+        # bindings and a few template-level inline styles.
+        # CDN hosts in use: unpkg (Alpine/htmx/lucide) and jsdelivr (SortableJS
+        # on the campaigns/hot reorder pages). Tailwind is now served from the
+        # local pre-built bundle (/static/admin.tw.css), NOT a CDN.
+        # Follow-up (out of scope here): swap Alpine for its CSP-friendly build
+        # and self-host the remaining libs to drop `unsafe-eval` and the CDNs.
         response.headers.setdefault(
             "Content-Security-Policy",
             "default-src 'self'; "

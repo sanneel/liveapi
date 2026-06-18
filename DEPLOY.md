@@ -15,7 +15,7 @@ Assumes Ubuntu 22.04 or Debian 12. Everything is copy-paste.
 | **Check health** | `curl -s http://127.0.0.1:8000/health \| jq .` |
 | **Run a backup now** | `./deploy/backup.sh` |
 | **Roll back to previous commit** | `git reset --hard HEAD~1 && ./deploy/deploy.sh` |
-| **Reset someone's 2FA** | `.venv/bin/python scripts/reset_2fa.py USERNAME` |
+| **Clear legacy 2FA flag** (2FA is removed from the login flow; legacy only) | `.venv/bin/python scripts/reset_2fa.py USERNAME` |
 
 > **Run uvicorn with `--workers 1`** (the default). The parser uses
 > in-process background threads and the PNG cache is process-local, so
@@ -372,7 +372,7 @@ Before going live:
 - [ ] `ufw enable` confirmed active (`sudo ufw status`)
 - [ ] `fail2ban` enabled (`sudo systemctl status fail2ban`)
 - [ ] Cloudflare in front with at least Bot Fight Mode ON
-- [ ] All admin users have 2FA enabled (`/admin/2fa`)
+- [ ] Every admin/operator account has completed the forced first-login password change
 - [ ] First admin user has a strong (16+ chars) password
 - [ ] Backups confirmed running (`ls -lh /var/backups/jugabet/`)
 - [ ] Backups confirmed reaching off-site storage
@@ -391,8 +391,7 @@ Before going live:
 | Login redirects in a loop | Cookie not being saved | Make sure `COOKIE_SECURE=true` only if HTTPS works, else `false` |
 | Admin pages return 503 | DB not initialized | `python scripts/init_db.py` |
 | Empty PNG renders | Parser geo-blocked | Check `/health` — feeds will show errors; VPS must reach jugabet.cl |
-| 2FA codes never accepted | Server clock drift | `sudo timedatectl set-ntp true` |
-| `502 Bad Gateway` from Caddy | App isn't running on 8000 | `sudo systemctl status jugabet` |
+| `502 Bad Gateway` from proxy | App isn't running on 8000 | `sudo systemctl status jugabet` |
 | Caddy can't get cert | DNS doesn't point to VPS | `dig your-domain.com` should return the VPS IP |
 
 ---
