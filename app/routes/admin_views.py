@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import List, Optional
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlparse
 
 from fastapi import APIRouter, Depends, Form, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -255,13 +255,20 @@ def parser_feeds_page(
     sync_error: str = "",
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
+    feeds = load_extra_feeds()
+    now_dt = datetime.utcnow()
+    with db_session() as session:
+        for feed in feeds:
+            feed["status"] = _feed_db_status(
+                session, feed["sport"], feed["mode"], feed["url"], now_dt
+            )
     return templates.TemplateResponse(
         request,
         "parser_feeds.html",
         {
             "active_page": "parser_feeds",
             "current_user": user,
-            "feeds": load_extra_feeds(),
+            "feeds": feeds,
             "saved": bool(saved),
             "deleted": bool(deleted),
             "sync_error": sync_error,
@@ -269,8 +276,39 @@ def parser_feeds_page(
     )
 
 
+# A live-bearing feed is "ok" when matches in its DB scope updated within this
+# window. We read the DB (ground truth) instead of the parser's in-memory flag,
+# which could read "failing" even while fresh rows were landing every minute.
+FEED_OK_WINDOW_SEC = 15 * 60
+
+
+def _scope_to_feed(query, sport: str, mode: str, url: str):
+    """Narrow a Match query to the rows a given feed is responsible for:
+    its tournament overlay (tournaments=…), its live firehose, or its sport."""
+    params = parse_qs(urlparse(url).query)
+    tids = [t.strip() for raw in params.get("tournaments", []) for t in raw.split(",") if t.strip()]
+    if tids:
+        return query.filter(Match.tournament_id.in_(tids))
+    if mode == "live" or "/live/" in url:
+        return query.filter(Match.sport == sport, Match.status == "live")
+    return query.filter(Match.sport == sport)
+
+
+def _feed_db_status(session, sport: str, mode: str, url: str, now_dt: datetime) -> dict:
+    """Truthful per-feed status from the DB: how many active matches the feed
+    covers and how long since any of them last updated."""
+    base = session.query(
+        func.max(Match.last_updated_at), func.count(Match.event_id)
+    ).filter(Match.is_active.is_(True))
+    last_update, count = _scope_to_feed(base, sport, mode, str(url)).one()
+    age_sec = int((now_dt - last_update).total_seconds()) if last_update else None
+    ok = age_sec is not None and age_sec < FEED_OK_WINDOW_SEC
+    return {"count": int(count or 0), "age_sec": age_sec, "ok": ok}
+
+
 def _live_parse_snapshot():
-    """Read the parser's live-bearing feeds + the live games being tracked.
+    """Live-bearing feeds (health derived from the DB, not the in-memory parser
+    flag) plus the live games being tracked.
 
     Returns (feeds, live_by_league):
       feeds          per live-bearing feed: sport, mode, url, ok, count, age_sec
@@ -278,48 +316,38 @@ def _live_parse_snapshot():
     A feed "carries live" if its mode is live OR it is a tournament overlay
     (/all/?tournaments=...) — overlays serve both live and prematch.
     """
-    import time as _time
-
-    feeds: list = []
+    feed_map: dict = {}
     try:
         import server as _server  # already-loaded main module
 
         feed_map = dict(getattr(_server, "FEEDS", {}) or {})
-        state = getattr(_server, "_state", {}) or {}
-        lock = getattr(_server, "_state_lock", None)
-        now = _time.time()
+    except Exception:
+        feed_map = {}
 
-        meta_snap: dict = {}
-        if lock is not None:
-            with lock:
-                for key, st in state.items():
-                    meta_snap[key] = dict(getattr(st, "meta", {}) or {})
-
+    now_dt = datetime.utcnow()
+    feeds: list = []
+    live_by_league: list = []
+    with db_session() as session:
         for key, url in feed_map.items():
             sport, mode = key
             url = str(url)
             carries_live = (mode == "live") or ("tournaments=" in url) or ("/all/" in url)
             if not carries_live:
                 continue
-            meta = meta_snap.get(key, {})
-            last_ok = meta.get("last_success_epoch") or 0
+            st = _feed_db_status(session, sport, mode, url, now_dt)
             feeds.append(
                 {
                     "sport": sport,
                     "mode": mode,
-                    "url": meta.get("source_url") or url,
-                    "ok": bool(meta.get("ok")),
-                    "count": int(meta.get("count") or 0),
-                    "age_sec": int(now - last_ok) if last_ok else None,
-                    "error": None if meta.get("ok") else meta.get("error"),
+                    "url": url,
+                    "ok": st["ok"],
+                    "count": st["count"],
+                    "age_sec": st["age_sec"],
+                    "error": None if st["ok"] else "no fresh matches from this feed",
                 }
             )
         feeds.sort(key=lambda r: (r["sport"], r["mode"], r["url"]))
-    except Exception:
-        feeds = []
 
-    live_by_league: list = []
-    with db_session() as session:
         rows = (
             session.query(Match.sport, Match.tournament_name, func.count(Match.event_id))
             .filter(Match.is_active.is_(True))

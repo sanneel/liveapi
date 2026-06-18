@@ -10,7 +10,7 @@
 
 {% block content %}
 
-{% if saved %}<div class="alert ok">Parser link saved and synced.</div>{% endif %}
+{% if saved %}<div class="alert ok">Parser link saved — the parser is now pulling it. Refresh in ~30s to see its match count.</div>{% endif %}
 {% if deleted %}<div class="alert ok">Parser link removed from the extra-feed list.</div>{% endif %}
 {% if sync_error %}<div class="alert err">{{ sync_error }}</div>{% endif %}
 
@@ -61,7 +61,7 @@
       <div class="dt-wrap">
         <table class="dt">
           <thead>
-            <tr><th>Link</th><th>Sport</th><th>Mode</th><th>URL</th><th class="right">Action</th></tr>
+            <tr><th>Link</th><th>Sport</th><th>Mode</th><th>URL</th><th class="right">Matches</th><th>Status</th><th class="right">Action</th></tr>
           </thead>
           <tbody>
             {% for feed in feeds %}
@@ -70,6 +70,15 @@
                 <td><span class="cell-sport">{{ feed.sport }}</span></td>
                 <td><span class="tag {% if feed.mode == 'live' %}live{% else %}club{% endif %}">{{ feed.mode }}</span></td>
                 <td><a href="{{ feed.url }}" target="_blank" class="m-meta mono link" style="max-width:24rem; display:inline-block">{{ feed.url }}</a></td>
+                <td class="num">{{ feed.status.count }}</td>
+                <td>
+                  {% if feed.status.ok %}
+                    <span class="pill pos"><span class="dot"></span>parsing</span>
+                    {% if feed.status.age_sec is not none %}<span class="m-meta" style="display:inline">· {{ feed.status.age_sec }}s ago</span>{% endif %}
+                  {% else %}
+                    <span class="pill warn">no matches yet</span>
+                  {% endif %}
+                </td>
                 <td class="right">
                   <form method="post" action="/admin/parser-feeds/{{ feed.id }}/delete" onsubmit="return confirm('Remove this parser link?')">
                     <button class="btn sm danger">Remove</button>

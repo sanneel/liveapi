@@ -55,7 +55,7 @@
               <td><a href="{{ f.url }}" target="_blank" class="m-meta mono link" style="max-width:28rem; display:inline-block">{{ f.url }}</a></td>
               <td class="num">{{ f.count }}</td>
               <td>
-                {% if f.ok and f.age_sec is not none and f.age_sec < 180 %}
+                {% if f.ok and f.age_sec is not none and f.age_sec < 300 %}
                   <span class="pill pos"><span class="dot"></span>OK</span> <span class="m-meta" style="display:inline">· {{ f.age_sec }}s ago</span>
                 {% elif f.ok %}
                   <span class="pill warn">stale</span> <span class="m-meta" style="display:inline">· {% if f.age_sec is not none %}{{ f.age_sec }}s ago{% else %}never{% endif %}</span>
