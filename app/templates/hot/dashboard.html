@@ -20,7 +20,7 @@
       <span class="tag">{{ row.active }} active</span>
       {% if row.pinned > 0 %}<span class="tag warn">{{ row.pinned }} pinned</span>{% endif %}
       {% if row.suppressed > 0 %}<span class="tag live">{{ row.suppressed }} suppressed</span>{% endif %}
-      {% if row.active == 0 %}<span class="m-meta" style="font-style:italic">no matches yet — waiting on parser</span>{% endif %}
+      {% if row.active == 0 %}<span class="m-meta" style="font-style:italic">no matches yet, waiting on parser</span>{% endif %}
       <div class="row-actions" style="margin-left:auto; flex:none">
         <a href="/hot/{{ row.sport }}.png" target="_blank" class="btn sm">PNG ↗</a>
         <a href="/admin/hot/{{ row.sport }}" class="btn sm primary">Browse →</a>

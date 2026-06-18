@@ -145,8 +145,8 @@ def _format_disabled(slug: str, title: str) -> str:
     return (
         "🟠 <b>Campaign auto-disabled</b>\n"
         f"<b>{title}</b> (/{slug})\n"
-        "Every picked match has finished — turned off so it won't render "
-        "blank. Safe to delete from the Campaigns page."
+        "Every picked match has finished, so it was turned off to avoid "
+        "rendering blank. Safe to delete from the Campaigns page."
     )
 
 

@@ -2,7 +2,7 @@
 {% block title %}Campaigns · Jugabet Admin{% endblock %}
 {% block content_theme %}content-light{% endblock %}
 {% block page_title %}Campaigns{% endblock %}
-{% block page_subtitle %}Dynamic /r/ URLs — manual hand-picked lists or auto-by-league.{% endblock %}
+{% block page_subtitle %}Dynamic /r/ URLs, manual hand-picked lists or auto-by-league.{% endblock %}
 
 {% block page_actions %}
   {% if current_user and current_user.role in ['editor','admin'] %}
@@ -68,7 +68,7 @@
                 <div style="display:flex; align-items:center; gap:8px">
                   <span class="mono" style="font-weight:600">{{ match_counts[c.slug] }}</span>
                   {% if stats and stats.will_render_blank %}
-                    <span class="tag live" title="No renderable matches — PNG returns a 1×1 transparent. {{ stats.synthetic }} hidden as synthetic, {{ stats.inactive }} inactive.">PNG empty</span>
+                    <span class="tag live" title="No renderable matches, PNG returns a 1×1 transparent. {{ stats.synthetic }} hidden as synthetic, {{ stats.inactive }} inactive.">PNG empty</span>
                   {% elif stats and (stats.synthetic or stats.inactive) %}
                     <span class="tag warn" title="{{ stats.renderable }} of {{ stats.total }} will render. {{ stats.synthetic }} hidden as synthetic, {{ stats.inactive }} inactive.">{{ stats.renderable }}/{{ stats.total }} live</span>
                   {% endif %}

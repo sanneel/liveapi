@@ -212,7 +212,7 @@ function hotCard(sport, topN, leaderboardMax) {
       try {
         const r = await fetch(url, { credentials: 'same-origin' });
         if (r.redirected || r.status === 401 || r.status === 403) {
-          throw new Error('Session expired — reload the page and sign in again.');
+          throw new Error('Session expired, reload the page and sign in again.');
         }
         if (!r.ok) throw new Error(`HTTP ${r.status} from ${url}`);
         const ctype = r.headers.get('content-type') || '';
@@ -321,7 +321,7 @@ function hotCard(sport, topN, leaderboardMax) {
         if (toTop) {
           toast({msg: `Pinned to slot ${slot}` + (data.displaced ? ' (displaced previous pin)' : ''), kind: 'success'});
         } else {
-          toast({msg: 'Unpinned — back to auto-rank', kind: 'success'});
+          toast({msg: 'Unpinned, back to auto-rank', kind: 'success'});
         }
         await this.load();
       } catch (e) {

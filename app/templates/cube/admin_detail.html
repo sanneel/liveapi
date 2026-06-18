@@ -2,7 +2,7 @@
 {% block title %}{{ theme.display_name }} cube · Jugabet Admin{% endblock %}
 {% block content_theme %}content-light{% endblock %}
 {% block page_title %}{{ theme.display_name }}{% endblock %}
-{% block page_subtitle %}Cube slots — pin, remove, reorder, or restore automatic.{% endblock %}
+{% block page_subtitle %}Cube slots, pin, remove, reorder, or restore automatic.{% endblock %}
 
 {% block page_actions %}
   <button type="button" class="btn" onclick="window.__cubeAdmin && window.__cubeAdmin.load()">Refresh</button>
@@ -28,7 +28,7 @@
   <!-- Showing now -->
   <section class="card" style="overflow:hidden; margin-bottom:18px">
     <div class="card-head">
-      <h2 class="card-title">Showing now <span class="card-sub" style="display:inline">— slots on this cube</span></h2>
+      <h2 class="card-title">Showing now <span class="card-sub" style="display:inline">· slots on this cube</span></h2>
       <span class="card-sub" x-show="loading || busy" x-text="busy ? 'saving…' : 'loading…'"></span>
     </div>
     <div class="dt-wrap">
@@ -62,8 +62,8 @@
                 <td colspan="3">
                   <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
                     <span class="blank-cell" :class="blockedSlots.includes(idx) ? 'reserved' : ''">
-                      <span x-show="blockedSlots.includes(idx)">▢ Empty — add a match below, or restore auto</span>
-                      <span x-show="!blockedSlots.includes(idx)">▢ Empty — no match available</span>
+                      <span x-show="blockedSlots.includes(idx)">▢ Empty, add a match below, or restore auto</span>
+                      <span x-show="!blockedSlots.includes(idx)">▢ Empty, no match available</span>
                     </span>
                     <button class="btn sm primary" x-show="blockedSlots.includes(idx)" @click="unblock(idx)" :disabled="busy">Restore auto</button>
                   </div>
@@ -79,7 +79,7 @@
   <!-- Available -->
   <section class="card" style="overflow:hidden; margin-bottom:18px">
     <div class="card-head">
-      <h2 class="card-title">Available <span class="card-sub" style="display:inline">— in-theme matches</span></h2>
+      <h2 class="card-title">Available <span class="card-sub" style="display:inline">· in-theme matches</span></h2>
       <span class="card-sub" x-text="hasBlank ? 'adds to the empty slot' : 'takes the last slot'"></span>
     </div>
     <div class="search">
@@ -110,7 +110,7 @@
 
   <!-- Dropped -->
   <section class="card" style="overflow:hidden" x-show="suppressedMatches.length > 0" x-cloak>
-    <div class="card-head"><h2 class="card-title">Dropped <span class="card-sub" style="display:inline">— hidden from this cube</span></h2></div>
+    <div class="card-head"><h2 class="card-title">Dropped <span class="card-sub" style="display:inline">· hidden from this cube</span></h2></div>
     <div class="dt-wrap">
       <table class="dt" style="min-width:0">
         <tbody>
@@ -175,7 +175,7 @@ function cubeAdmin() {
       this.loading = true;
       try {
         const r = await fetch(`/api/admin/cube/${this.theme}/leaderboard`, { credentials: 'same-origin' });
-        if (r.status === 401 || r.status === 307) throw new Error('Session expired — reload and sign in.');
+        if (r.status === 401 || r.status === 307) throw new Error('Session expired, reload and sign in.');
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const data = await r.json();
         const top = data.top || [];
@@ -227,7 +227,7 @@ function cubeAdmin() {
     unblock(idx) {
       this._do(async () => {
         const r = await this._post(`/unblock/${idx}`, {});
-        this._flash(r && r.restored ? 'Slot reopened — match restored' : 'Slot back to automatic');
+        this._flash(r && r.restored ? 'Slot reopened, match restored' : 'Slot back to automatic');
       });
     },
 
@@ -259,7 +259,7 @@ function cubeAdmin() {
         const r = await fetch(`/api/admin/cube/${this.theme}/overrides`, { method: 'DELETE', credentials: 'same-origin' });
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const data = await r.json();
-        this._flash(`Reset — cleared ${data.removed} change(s).`);
+        this._flash(`Reset, cleared ${data.removed} change(s).`);
       });
     },
   };

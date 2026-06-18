@@ -30,7 +30,7 @@
       {% if render_stats.will_render_blank %}
         <div style="font-weight:700">PNG will render blank (1×1 transparent).</div>
         <div class="help" style="margin-top:3px; color:inherit; opacity:.85">
-          {{ render_stats.total }} match{{ '' if render_stats.total == 1 else 'es' }} selected, but none are renderable —
+          {{ render_stats.total }} match{{ '' if render_stats.total == 1 else 'es' }} selected, but none are renderable:
           {% if render_stats.synthetic %}{{ render_stats.synthetic }} hidden as virtual / replay / esports{% endif %}{% if render_stats.synthetic and render_stats.inactive %}, {% endif %}{% if render_stats.inactive %}{{ render_stats.inactive }} dropped from the parser feed{% endif %}. Add real, currently-active fixtures from the picker on the right.
         </div>
       {% else %}
@@ -43,7 +43,7 @@
   </div>
 {% endif %}
 
-{# Public URL bar — Copy yields the full journey formula with a dynamic limit:
+{# Public URL bar, Copy yields the full journey formula with a dynamic limit:
    auto → saved default limit · manual → current match count. #}
 <div class="card card-pad" style="display:flex; align-items:center; gap:12px; margin-bottom:18px; padding:14px 22px">
   <span class="stat-label" style="text-transform:uppercase; letter-spacing:.06em">Copy URL</span>
@@ -83,7 +83,7 @@
         {% if campaign.mode == 'auto' %}
           <div class="field">
             <span class="lbl">League / Tournament</span>
-            <input class="input" name="league" list="league-options" autocomplete="off" value="{{ campaign.league or '' }}" placeholder="All leagues in sport — type to search…"/>
+            <input class="input" name="league" list="league-options" autocomplete="off" value="{{ campaign.league or '' }}" placeholder="All leagues in sport, type to search…"/>
             <datalist id="league-options">
               {% for t in tournaments %}<option value="{{ t }}"></option>{% endfor %}
             </datalist>
@@ -103,7 +103,7 @@
 
         <label class="check" style="grid-column:1 / -1">
           <input type="checkbox" name="vip" value="1" {% if campaign.vip %}checked{% endif %}/>
-          <span><b style="color:var(--t-strong)">VIP theme</b> — ON = purple VIP look · OFF = classic navy theme</span>
+          <span><b style="color:var(--t-strong)">VIP theme</b>, ON = purple VIP look · OFF = classic navy theme</span>
         </label>
       </div>
 

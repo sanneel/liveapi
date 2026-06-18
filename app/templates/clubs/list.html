@@ -18,7 +18,7 @@
 <p class="lede">
   Clubs are created here manually. Every club gets a permanent
   <span class="slug club" style="display:inline-block">/club/&lt;slug&gt;.png</span> that renders the team's
-  next upcoming match — the slug must match a team's <b>home_slug</b> / <b>away_slug</b> as the parser
+  next upcoming match, the slug must match a team's <b>home_slug</b> / <b>away_slug</b> as the parser
   sees it on jugabet.cl.
 </p>
 
@@ -89,7 +89,7 @@
                 <div class="m-title" style="font-size:12.5px">vs {{ ns.opponent }}</div>
                 <div class="m-meta">{{ ns.tournament or '—' }}{% if ns.time_raw %} · {{ ns.time_raw }}{% endif %}</div>
               {% else %}
-                <span class="m-meta" style="font-style:italic">No upcoming match — empty PNG</span>
+                <span class="m-meta" style="font-style:italic">No upcoming match, empty PNG</span>
               {% endif %}
             </td>
             <td class="right">

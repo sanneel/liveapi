@@ -2,7 +2,7 @@
 {% block title %}Weights · Jugabet Admin{% endblock %}
 {% block content_theme %}content-light{% endblock %}
 {% block page_title %}Scoring Weights{% endblock %}
-{% block page_subtitle %}Tune how matches earn hot points — edits go live within ~15s, no restart.{% endblock %}
+{% block page_subtitle %}Tune how matches earn hot points, edits go live within ~15s, no restart.{% endblock %}
 
 {% block content %}
 
@@ -126,7 +126,7 @@
                 <i data-lucide="check" x-show="w._saved" x-transition.opacity style="width:14px;height:14px;color:var(--pos-t);vertical-align:middle;margin-left:4px"></i>
               </td>
               <td style="text-align:center">
-                <button @click="w.enabled = !w.enabled; save(w)" class="wtoggle" :style="w.enabled ? 'background:var(--ac)' : 'background:var(--border-in)'" :title="w.enabled ? 'Enabled — click to disable' : 'Disabled — click to enable'">
+                <button @click="w.enabled = !w.enabled; save(w)" class="wtoggle" :style="w.enabled ? 'background:var(--ac)' : 'background:var(--border-in)'" :title="w.enabled ? 'Enabled, click to disable' : 'Disabled, click to enable'">
                   <span class="knob" :style="w.enabled ? 'transform:translateX(17px)' : 'transform:translateX(2px)'"></span>
                 </button>
               </td>
@@ -137,7 +137,7 @@
               </td>
             </tr>
           </template>
-          <tr x-show="weights.length === 0"><td colspan="5"><div class="empty" style="font-style:italic">No weights yet — add one above.</div></td></tr>
+          <tr x-show="weights.length === 0"><td colspan="5"><div class="empty" style="font-style:italic">No weights yet, add one above.</div></td></tr>
           <tr x-show="weights.length > 0 && filtered().length === 0"><td colspan="5"><div class="empty" style="font-style:italic">No weights match this filter.</div></td></tr>
         </tbody>
       </table>
@@ -145,7 +145,7 @@
 
     <div style="padding:10px 22px; border-top:1px solid var(--border-soft); display:flex; align-items:center; justify-content:space-between">
       <span class="m-meta">Showing <span class="mono" x-text="filtered().length"></span> of <span class="mono" x-text="weights.length"></span></span>
-      <span class="m-meta" style="display:inline-flex; align-items:center; gap:6px"><span class="dot" style="width:6px;height:6px;border-radius:50%;background:var(--pos-t)"></span> live — edits affect scoring</span>
+      <span class="m-meta" style="display:inline-flex; align-items:center; gap:6px"><span class="dot" style="width:6px;height:6px;border-radius:50%;background:var(--pos-t)"></span> live, edits affect scoring</span>
     </div>
   </section>
 
@@ -228,7 +228,7 @@ function weightsPage(sport, sports, kinds, topN) {
 
     _expired(res) {
       if (res.status !== 401) return false;
-      toast({ msg: 'Session expired — taking you to the login page…', kind: 'error' });
+      toast({ msg: 'Session expired, taking you to the login page…', kind: 'error' });
       const next = encodeURIComponent(location.pathname + location.search);
       setTimeout(() => { window.location.href = '/admin/login?next=' + next; }, 900);
       return true;

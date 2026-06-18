@@ -18,7 +18,7 @@
     /*
       Scene: perspective container.
       Face ratio matches media-cub-template (420×380 = 1.105:1).
-      Capped at 300px wide so it looks like an ad unit — not full-screen —
+      Capped at 300px wide so it looks like an ad unit, not full-screen
       when visited directly in a browser. Shrinks to fit smaller iframes.
     */
     .scene {
@@ -66,7 +66,7 @@
     <div class="cube" id="cube">
       <!--
         4 faces, alternating: promo → odds → promo → odds.
-        The two odds faces stay in sync — both show the currently-active
+        The two odds faces stay in sync, both show the currently-active
         match slot. Every SLOT_INTERVAL_MS, both odds <img>s swap to the
         next slot.
       -->
@@ -105,7 +105,7 @@
     var step    = 360 / N;                 // 90°
 
     function layout() {
-      /* translateZ = half the face width — makes a perfect square prism. */
+      /* translateZ = half the face width, makes a perfect square prism. */
       var tz = scene.clientWidth / 2;
       for (var i = 0; i < N; i++) {
         faces[i].style.transform =
@@ -120,7 +120,7 @@
       Slot cycling state.
 
       slotCount: how many match slots the theme has. Discovered from the
-      first /data.json response — keeps the widget self-configuring so we
+      first /data.json response, keeps the widget self-configuring so we
       don't have to template a Python list of slot indices into JS.
 
       currentSlot: which slot is currently rendered in the odds <img>s.
@@ -164,7 +164,7 @@
             currentSlot = Math.min(currentSlot, slotCount - 1);
           }
         })
-        .catch(function () { /* silent — keep slotCount as-is */ });
+        .catch(function () { /* silent, keep slotCount as-is */ });
     }
 
     // Boot sequence.
