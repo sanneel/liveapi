@@ -89,6 +89,13 @@ class Settings(BaseSettings):
     # chat id from @userinfobot → telegram_chat_id. Blank disables alerts.
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
+    # Inline-button actions: Telegram echoes this secret in the
+    # X-Telegram-Bot-Api-Secret-Token header on every webhook call. Blank
+    # disables the webhook endpoint entirely (it 403s), so buttons are inert
+    # until a secret is set and the webhook is registered.
+    telegram_webhook_secret: str = ""
+    # systemd unit the "♻️ Restart" button restarts (via a narrow sudoers rule).
+    jugabet_service_name: str = "jugabet"
     campaign_monitor_enabled: bool = True
     campaign_monitor_interval_seconds: int = 300   # how often to re-check
     # A *live* match refreshes every ~minute, so 20 min of silence means its

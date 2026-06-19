@@ -183,6 +183,16 @@ def _where(h: CampaignHealth) -> str:
     return h.sport + (f" · {h.league}" if h.league else "")
 
 
+def _dead_buttons(h: CampaignHealth) -> List[List[tuple]]:
+    """Inline actions on a 'data is dead' alert: triage, then kick the parser."""
+    return [[("🔍 Diagnose", f"diag:{h.slug}"), ("♻️ Restart", "restart")]]
+
+
+def _disabled_buttons(slug: str) -> List[List[tuple]]:
+    """Inline action on an 'auto-disabled' alert: turn it back on."""
+    return [[("✅ Re-enable", f"reenable:{slug}")]]
+
+
 def _format_dead(h: CampaignHealth) -> str:
     return (
         "🔴 <b>Campaign data is dead</b>\n"
@@ -326,7 +336,7 @@ def run_monitor_once() -> dict:
         # it won't also fire a "dead" alert — this is its single notification.
         with _state_lock:
             _last_state.pop(slug, None)
-        if send_telegram(_format_disabled(slug, title)):
+        if send_telegram(_format_disabled(slug, title), buttons=_disabled_buttons(slug)):
             alerts += 1
     healths = evaluate()
     with _state_lock:
@@ -337,7 +347,7 @@ def run_monitor_once() -> dict:
             cur = "dead" if h.dead else "ok"
             if prev != cur:
                 if cur == "dead":
-                    if send_telegram(_format_dead(h)):
+                    if send_telegram(_format_dead(h), buttons=_dead_buttons(h)):
                         alerts += 1
                 elif prev == "dead":  # was dead, now ok
                     if send_telegram(_format_recovered(h)):
