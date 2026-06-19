@@ -8,11 +8,15 @@ renders:
   * auto campaigns   — active matches for the campaign's sport, optionally
                        narrowed to one league (tournament_name)
 
-If a campaign's data has gone stale (no match updated within
-`campaign_stale_minutes`) or it has no matches at all, the league/feed behind
-it is effectively dead — so we send a Telegram alert. Alerts fire only on
-state transitions (ok→dead and dead→ok), so a persistently-dead feed is
-reported once, not every cycle.
+If a campaign's data has gone stale or it has no matches at all, the
+league/feed behind it is effectively dead — so we send a Telegram alert. The
+staleness window is phase-aware: live matches must refresh within
+`campaign_stale_minutes`, while prematch matches (refreshed on a slow,
+low-priority cadence) get the far larger `campaign_prematch_stale_minutes`
+window so their normal slowness never flap-alerts. A campaign is dead only when
+*every* match it renders is stale for its own phase. Alerts fire only on state
+transitions (ok→dead and dead→ok), so a persistently-dead feed is reported once,
+not every cycle.
 
 Only the parser-holding process starts the loop (see server.startup), so the
 8 uvicorn workers don't each fire duplicate alerts.
@@ -26,7 +30,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
-from sqlalchemy import func
+from sqlalchemy import and_, func, or_
 
 from ..config import get_settings
 from ..database import db_session
@@ -77,7 +81,23 @@ def _health(campaign, count, age_sec, dead, reason) -> CampaignHealth:
     )
 
 
-def _freshness(session, campaign, now_dt: datetime, stale_seconds: int) -> CampaignHealth:
+def _stale_seconds_for(status: Optional[str], settings) -> int:
+    """Silence window before a match counts as 'dead', chosen by match phase.
+
+    A *live* match refreshes every ~minute, so the tight ``campaign_stale_minutes``
+    window means a genuine feed outage. A *prematch* match is refreshed on a slow,
+    low-priority cadence and routinely sits far longer between updates while
+    perfectly healthy, so it gets the much larger ``campaign_prematch_stale_minutes``
+    window. Unknown/missing status is treated as prematch (the lenient side) so we
+    never flap-alert on incomplete data.
+    """
+    live = max(60, settings.campaign_stale_minutes * 60)
+    if (status or "").lower() == "live":
+        return live
+    return max(live, settings.campaign_prematch_stale_minutes * 60)
+
+
+def _freshness(session, campaign, now_dt: datetime, settings) -> CampaignHealth:
     if campaign.mode == "manual":
         repo = CampaignRepository(session)
         matches = repo.get_matches(campaign.slug)
@@ -90,38 +110,72 @@ def _freshness(session, campaign, now_dt: datetime, stale_seconds: int) -> Campa
         # Matches were picked but every one's row has since vanished.
         if count == 0:
             return _health(campaign, 0, None, True, "all selected matches were removed")
-        stamps = [m.last_updated_at for m in matches if m.last_updated_at]
-        last = max(stamps) if stamps else None
-    else:
-        q = session.query(
-            func.max(Match.last_updated_at), func.count(Match.event_id)
-        ).filter(Match.is_active.is_(True), Match.sport == campaign.sport)
-        if campaign.league:
-            q = q.filter(Match.tournament_name == campaign.league)
-        last, count = q.one()
-        count = int(count or 0)
-        # An auto campaign with no live matches = its league/sport feed is dead.
-        if count == 0:
-            return _health(campaign, 0, None, True, "league has no live matches")
+        # The campaign renders fine as long as *one* picked match is fresh, and
+        # each match is judged against its own phase-aware window — so a slow
+        # prematch refresh no longer drags a healthy campaign into "dead".
+        best_age: Optional[float] = None
+        any_fresh = False
+        for m in matches:
+            if not m.last_updated_at:
+                continue
+            age = (now_dt - m.last_updated_at).total_seconds()
+            if age <= _stale_seconds_for(m.status, settings):
+                any_fresh = True
+            if best_age is None or age < best_age:
+                best_age = age
+        if any_fresh:
+            return _health(campaign, count, int(best_age) if best_age is not None else None, False, "ok")
+        if best_age is None:
+            return _health(campaign, count, None, True, "matches have no update timestamp")
+        return _health(campaign, count, int(best_age), True, f"no data update in {int(best_age) // 60} min")
 
+    # Auto campaign: healthy if at least one in-scope match is fresh for its
+    # phase. We express the phase-aware staleness directly in SQL so a league
+    # full of slowly-refreshed prematch fixtures doesn't read as dead.
+    base = session.query(Match).filter(
+        Match.is_active.is_(True), Match.sport == campaign.sport
+    )
+    if campaign.league:
+        base = base.filter(Match.tournament_name == campaign.league)
+    last, count = base.with_entities(
+        func.max(Match.last_updated_at), func.count(Match.event_id)
+    ).one()
+    count = int(count or 0)
+    # An auto campaign with no matches = its league/sport feed is dead.
+    if count == 0:
+        return _health(campaign, 0, None, True, "league has no live matches")
+    live_cutoff = now_dt - timedelta(seconds=_stale_seconds_for("live", settings))
+    prematch_cutoff = now_dt - timedelta(seconds=_stale_seconds_for("prematch", settings))
+    fresh_exists = (
+        base.filter(
+            or_(
+                and_(Match.status == "live", Match.last_updated_at >= live_cutoff),
+                and_(
+                    or_(Match.status != "live", Match.status.is_(None)),
+                    Match.last_updated_at >= prematch_cutoff,
+                ),
+            )
+        ).first()
+        is not None
+    )
     age_sec = int((now_dt - last).total_seconds()) if last else None
+    if fresh_exists:
+        return _health(campaign, count, age_sec, False, "ok")
     if age_sec is None:
         return _health(campaign, count, None, True, "matches have no update timestamp")
-    if age_sec > stale_seconds:
-        return _health(campaign, count, age_sec, True, f"no data update in {age_sec // 60} min")
-    return _health(campaign, count, age_sec, False, "ok")
+    return _health(campaign, count, age_sec, True, f"no data update in {age_sec // 60} min")
 
 
 def evaluate() -> List[CampaignHealth]:
     """Health of every enabled, non-expired campaign (read-only)."""
     now_dt = datetime.utcnow()
-    stale_seconds = max(60, get_settings().campaign_stale_minutes * 60)
+    settings = get_settings()
     out: List[CampaignHealth] = []
     with db_session() as session:
         for campaign in CampaignRepository(session).list_all(enabled_only=True):
             if campaign.expires_at and campaign.expires_at < now_dt:
                 continue
-            out.append(_freshness(session, campaign, now_dt, stale_seconds))
+            out.append(_freshness(session, campaign, now_dt, settings))
     return out
 
 

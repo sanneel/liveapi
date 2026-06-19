@@ -91,7 +91,14 @@ class Settings(BaseSettings):
     telegram_chat_id: str = ""
     campaign_monitor_enabled: bool = True
     campaign_monitor_interval_seconds: int = 300   # how often to re-check
-    campaign_stale_minutes: int = 20               # data older than this = "dead"
+    # A *live* match refreshes every ~minute, so 20 min of silence means its
+    # feed is genuinely dead. A *prematch* match (kickoff hours/days away) is
+    # refreshed on a slow, low-priority cadence and routinely sits 20-90 min
+    # between updates while perfectly healthy — judging it by the live window
+    # produced a constant dead/recovered alert flap. Prematch matches get their
+    # own, far more generous window so we only alert on a real outage.
+    campaign_stale_minutes: int = 20               # live data older than this = "dead"
+    campaign_prematch_stale_minutes: int = 180     # prematch data older than this = "dead"
 
     # ── Rate limits ──────────────────────────────────────────────────
     admin_login_max_attempts: int = 5
