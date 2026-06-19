@@ -8,11 +8,15 @@ renders:
   * auto campaigns   — active matches for the campaign's sport, optionally
                        narrowed to one league (tournament_name)
 
-If a campaign's data has gone stale (no match updated within
-`campaign_stale_minutes`) or it has no matches at all, the league/feed behind
-it is effectively dead — so we send a Telegram alert. Alerts fire only on
-state transitions (ok→dead and dead→ok), so a persistently-dead feed is
-reported once, not every cycle.
+If a campaign's data has gone stale or it has no matches at all, the
+league/feed behind it is effectively dead — so we send a Telegram alert. The
+staleness window is phase-aware: live matches must refresh within
+`campaign_stale_minutes`, while prematch matches (refreshed on a slow,
+low-priority cadence) get the far larger `campaign_prematch_stale_minutes`
+window so their normal slowness never flap-alerts. A campaign is dead only when
+*every* match it renders is stale for its own phase. Alerts fire only on state
+transitions (ok→dead and dead→ok), so a persistently-dead feed is reported once,
+not every cycle.
 
 Only the parser-holding process starts the loop (see server.startup), so the
 8 uvicorn workers don't each fire duplicate alerts.
@@ -23,10 +27,10 @@ from __future__ import annotations
 import threading
 import time
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
-from sqlalchemy import func
+from sqlalchemy import and_, func, or_
 
 from ..config import get_settings
 from ..database import db_session
@@ -77,7 +81,23 @@ def _health(campaign, count, age_sec, dead, reason) -> CampaignHealth:
     )
 
 
-def _freshness(session, campaign, now_dt: datetime, stale_seconds: int) -> CampaignHealth:
+def _stale_seconds_for(status: Optional[str], settings) -> int:
+    """Silence window before a match counts as 'dead', chosen by match phase.
+
+    A *live* match refreshes every ~minute, so the tight ``campaign_stale_minutes``
+    window means a genuine feed outage. A *prematch* match is refreshed on a slow,
+    low-priority cadence and routinely sits far longer between updates while
+    perfectly healthy, so it gets the much larger ``campaign_prematch_stale_minutes``
+    window. Unknown/missing status is treated as prematch (the lenient side) so we
+    never flap-alert on incomplete data.
+    """
+    live = max(60, settings.campaign_stale_minutes * 60)
+    if (status or "").lower() == "live":
+        return live
+    return max(live, settings.campaign_prematch_stale_minutes * 60)
+
+
+def _freshness(session, campaign, now_dt: datetime, settings) -> CampaignHealth:
     if campaign.mode == "manual":
         repo = CampaignRepository(session)
         matches = repo.get_matches(campaign.slug)
@@ -90,43 +110,87 @@ def _freshness(session, campaign, now_dt: datetime, stale_seconds: int) -> Campa
         # Matches were picked but every one's row has since vanished.
         if count == 0:
             return _health(campaign, 0, None, True, "all selected matches were removed")
-        stamps = [m.last_updated_at for m in matches if m.last_updated_at]
-        last = max(stamps) if stamps else None
-    else:
-        q = session.query(
-            func.max(Match.last_updated_at), func.count(Match.event_id)
-        ).filter(Match.is_active.is_(True), Match.sport == campaign.sport)
-        if campaign.league:
-            q = q.filter(Match.tournament_name == campaign.league)
-        last, count = q.one()
-        count = int(count or 0)
-        # An auto campaign with no live matches = its league/sport feed is dead.
-        if count == 0:
-            return _health(campaign, 0, None, True, "league has no live matches")
+        # The campaign renders fine as long as *one* picked match is fresh, and
+        # each match is judged against its own phase-aware window — so a slow
+        # prematch refresh no longer drags a healthy campaign into "dead".
+        best_age: Optional[float] = None
+        any_fresh = False
+        for m in matches:
+            if not m.last_updated_at:
+                continue
+            age = (now_dt - m.last_updated_at).total_seconds()
+            if age <= _stale_seconds_for(m.status, settings):
+                any_fresh = True
+            if best_age is None or age < best_age:
+                best_age = age
+        if any_fresh:
+            return _health(campaign, count, int(best_age) if best_age is not None else None, False, "ok")
+        if best_age is None:
+            return _health(campaign, count, None, True, "matches have no update timestamp")
+        return _health(campaign, count, int(best_age), True, f"no data update in {int(best_age) // 60} min")
 
+    # Auto campaign: healthy if at least one in-scope match is fresh for its
+    # phase. We express the phase-aware staleness directly in SQL so a league
+    # full of slowly-refreshed prematch fixtures doesn't read as dead.
+    base = session.query(Match).filter(
+        Match.is_active.is_(True), Match.sport == campaign.sport
+    )
+    if campaign.league:
+        base = base.filter(Match.tournament_name == campaign.league)
+    last, count = base.with_entities(
+        func.max(Match.last_updated_at), func.count(Match.event_id)
+    ).one()
+    count = int(count or 0)
+    # An auto campaign with no matches = its league/sport feed is dead.
+    if count == 0:
+        return _health(campaign, 0, None, True, "league has no live matches")
+    live_cutoff = now_dt - timedelta(seconds=_stale_seconds_for("live", settings))
+    prematch_cutoff = now_dt - timedelta(seconds=_stale_seconds_for("prematch", settings))
+    fresh_exists = (
+        base.filter(
+            or_(
+                and_(Match.status == "live", Match.last_updated_at >= live_cutoff),
+                and_(
+                    or_(Match.status != "live", Match.status.is_(None)),
+                    Match.last_updated_at >= prematch_cutoff,
+                ),
+            )
+        ).first()
+        is not None
+    )
     age_sec = int((now_dt - last).total_seconds()) if last else None
+    if fresh_exists:
+        return _health(campaign, count, age_sec, False, "ok")
     if age_sec is None:
         return _health(campaign, count, None, True, "matches have no update timestamp")
-    if age_sec > stale_seconds:
-        return _health(campaign, count, age_sec, True, f"no data update in {age_sec // 60} min")
-    return _health(campaign, count, age_sec, False, "ok")
+    return _health(campaign, count, age_sec, True, f"no data update in {age_sec // 60} min")
 
 
 def evaluate() -> List[CampaignHealth]:
     """Health of every enabled, non-expired campaign (read-only)."""
     now_dt = datetime.utcnow()
-    stale_seconds = max(60, get_settings().campaign_stale_minutes * 60)
+    settings = get_settings()
     out: List[CampaignHealth] = []
     with db_session() as session:
         for campaign in CampaignRepository(session).list_all(enabled_only=True):
             if campaign.expires_at and campaign.expires_at < now_dt:
                 continue
-            out.append(_freshness(session, campaign, now_dt, stale_seconds))
+            out.append(_freshness(session, campaign, now_dt, settings))
     return out
 
 
 def _where(h: CampaignHealth) -> str:
     return h.sport + (f" · {h.league}" if h.league else "")
+
+
+def _dead_buttons(h: CampaignHealth) -> List[List[tuple]]:
+    """Inline actions on a 'data is dead' alert: triage, then kick the parser."""
+    return [[("🔍 Diagnose", f"diag:{h.slug}"), ("♻️ Restart", "restart")]]
+
+
+def _disabled_buttons(slug: str) -> List[List[tuple]]:
+    """Inline action on an 'auto-disabled' alert: turn it back on."""
+    return [[("✅ Re-enable", f"reenable:{slug}")]]
 
 
 def _format_dead(h: CampaignHealth) -> str:
@@ -173,32 +237,42 @@ def _format_disabled(slug: str, title: str) -> str:
     )
 
 
-def _match_still_live(match, now_dt: datetime, stale_seconds: int) -> bool:
-    """True only if a picked match is genuinely still going.
+def _match_still_live(match, now_dt: datetime) -> bool:
+    """True until a match's scheduled end has passed.
 
-    We do NOT trust ``is_active``/``status`` alone: a finished live match
-    often gets stuck with ``is_active=True, status='live'`` because it simply
-    vanished from the live feed and nothing ever flipped the flag (observed on
-    worldcupprm — both matches frozen 'live' but not refreshed for 10+ hours).
-    A match only counts as live if it is active AND its odds were refreshed
-    within the stale window; otherwise the game is over.
+    Deterministic "is the game over by the clock" rule: a match counts as
+    finished once ``start_time_utc + campaign_hide_after_start_hours`` is in the
+    past. A football match runs ~2h, so a kickoff that was 2h+ ago is over.
+
+    This replaces the old "active AND refreshed within N minutes" heuristic,
+    which wrongly flagged *upcoming* matches as finished whenever the parser
+    briefly stopped refreshing them (e.g. during a deploy/restart) — that is
+    what auto-disabled campaigns whose games hadn't even started yet.
+
+    A match with no known start time is treated as live, so a campaign is never
+    auto-disabled on missing data.
     """
-    if not match.is_active or match.last_updated_at is None:
-        return False
-    return (now_dt - match.last_updated_at).total_seconds() <= stale_seconds
+    if match.start_time_utc is None:
+        return True
+    finished_at = match.start_time_utc + timedelta(
+        hours=get_settings().campaign_hide_after_start_hours
+    )
+    return finished_at > now_dt
 
 
 def auto_disable_finished() -> List[tuple]:
     """Disable manual campaigns whose every picked match has finished, so they
     stop rendering a blank/stale PNG and the operator can delete them.
 
-    A match is "finished" when it is inactive, was removed, OR is frozen
-    (still flagged live but not refreshed within the stale window — see
-    ``_match_still_live``). Empty-by-design campaigns (no matches ever picked)
-    are left alone. Returns ``[(slug, title)]`` for the campaigns just turned off.
+    A match is "finished" when its scheduled end has passed — i.e.
+    ``start_time_utc + campaign_hide_after_start_hours`` is in the past (see
+    ``_match_still_live``) — or when it was removed (``get_matches`` returns
+    nothing). Upcoming matches are never "finished", so a campaign whose games
+    haven't started yet is never auto-disabled, even if the parser briefly
+    stalls. Empty-by-design campaigns (no matches ever picked) are left alone.
+    Returns ``[(slug, title)]`` for the campaigns just turned off.
     """
     now_dt = datetime.utcnow()
-    stale_seconds = max(60, get_settings().campaign_stale_minutes * 60)
     disabled: List[tuple] = []
     with db_session() as session:
         repo = CampaignRepository(session)
@@ -209,8 +283,8 @@ def auto_disable_finished() -> List[tuple]:
             if not repo.get_match_rows(campaign.slug):
                 continue  # never had matches — not "finished"
             matches = repo.get_matches(campaign.slug)
-            if any(_match_still_live(m, now_dt, stale_seconds) for m in matches):
-                continue  # at least one match still live and fresh
+            if any(_match_still_live(m, now_dt) for m in matches):
+                continue  # at least one match has not finished yet (by the clock)
             if repo.disable(campaign.slug):
                 disabled.append((campaign.slug, campaign.title))
                 log.record(
@@ -262,7 +336,7 @@ def run_monitor_once() -> dict:
         # it won't also fire a "dead" alert — this is its single notification.
         with _state_lock:
             _last_state.pop(slug, None)
-        if send_telegram(_format_disabled(slug, title)):
+        if send_telegram(_format_disabled(slug, title), buttons=_disabled_buttons(slug)):
             alerts += 1
     healths = evaluate()
     with _state_lock:
@@ -273,7 +347,7 @@ def run_monitor_once() -> dict:
             cur = "dead" if h.dead else "ok"
             if prev != cur:
                 if cur == "dead":
-                    if send_telegram(_format_dead(h)):
+                    if send_telegram(_format_dead(h), buttons=_dead_buttons(h)):
                         alerts += 1
                 elif prev == "dead":  # was dead, now ok
                     if send_telegram(_format_recovered(h)):
