@@ -32,6 +32,8 @@ from ..models import Campaign, Club, HotBoost, Match, User
 from ..parser.extra_feeds import add_extra_feed, delete_extra_feed, load_extra_feeds
 from ..repositories.match_repo import MatchRepository
 from ..services.journey_cloner_runner import (
+    DEFAULT_TEAM,
+    TEAMS,
     generate_console_script,
     missing_templates,
     run_journey_cloner,
@@ -396,15 +398,19 @@ def journey_cloner_page(
     request: Request,
     template_saved: str = "",
     template_error: str = "",
+    team: str = DEFAULT_TEAM,
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
+    team = team if team in TEAMS else DEFAULT_TEAM
     return templates.TemplateResponse(
         request,
         "journey_cloner.html",
         {
             "active_page": "journey_cloner",
             "current_user": user,
-            "template_status": template_status(),
+            "teams": TEAMS,
+            "team": team,
+            "template_status": template_status(team),
             "selected_types": ["followup", "bfr", "two_hours", "aft"],
             "dry_run": True,
             "result": None,
@@ -420,6 +426,7 @@ def journey_cloner_page(
 def journey_cloner_run(
     request: Request,
     token: str = Form(""),
+    team: str = Form(DEFAULT_TEAM),
     home: str = Form(...),
     away: str = Form(...),
     date: str = Form(...),
@@ -429,6 +436,7 @@ def journey_cloner_run(
     dry_run: Optional[str] = Form(None),
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
+    team = team if team in TEAMS else DEFAULT_TEAM
     selected_types = [t for t in types if t in {"followup", "bfr", "two_hours", "aft"}]
     is_dry_run = bool(dry_run)
     form = {
@@ -446,9 +454,11 @@ def journey_cloner_run(
     elif not is_dry_run and not token.strip():
         error = "Bearer token is required when dry run is unchecked."
     else:
-        missing = missing_templates(selected_types)
+        missing = missing_templates(selected_types, team)
         if missing:
-            error = "Missing templates: " + ", ".join(f"templates/{m}.json" for m in missing)
+            error = "Missing templates: " + ", ".join(
+                f"templates/{team}/{m}.json" for m in missing
+            )
 
     if not error:
         try:
@@ -461,6 +471,7 @@ def journey_cloner_run(
                 chile_time=chile_time,
                 selected_types=selected_types,
                 dry_run=is_dry_run,
+                team=team,
             )
             result = {
                 "exit_code": exit_code,
@@ -477,7 +488,9 @@ def journey_cloner_run(
         {
             "active_page": "journey_cloner",
             "current_user": user,
-            "template_status": template_status(),
+            "teams": TEAMS,
+            "team": team,
+            "template_status": template_status(team),
             "selected_types": selected_types,
             "dry_run": is_dry_run,
             "result": result,
@@ -492,6 +505,7 @@ def journey_cloner_run(
 @router.post("/admin/journey-cloner/console-script", response_class=HTMLResponse)
 def journey_cloner_console_script(
     request: Request,
+    team: str = Form(DEFAULT_TEAM),
     home: str = Form(...),
     away: str = Form(...),
     date: str = Form(...),
@@ -500,6 +514,7 @@ def journey_cloner_console_script(
     types: List[str] = Form(["followup", "bfr", "two_hours", "aft"]),
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
+    team = team if team in TEAMS else DEFAULT_TEAM
     selected_types = [t for t in types if t in {"followup", "bfr", "two_hours", "aft"}]
     form = {
         "home": home,
@@ -515,9 +530,11 @@ def journey_cloner_console_script(
     if not selected_types:
         error = "Select at least one draft type."
     else:
-        missing = missing_templates(selected_types)
+        missing = missing_templates(selected_types, team)
         if missing:
-            error = "Missing templates: " + ", ".join(f"templates/{m}.json" for m in missing)
+            error = "Missing templates: " + ", ".join(
+                f"templates/{team}/{m}.json" for m in missing
+            )
 
     if not error:
         try:
@@ -528,6 +545,7 @@ def journey_cloner_console_script(
                 date=date,
                 chile_time=chile_time,
                 selected_types=selected_types,
+                team=team,
             )
             result = {
                 "exit_code": exit_code,
@@ -548,7 +566,9 @@ def journey_cloner_console_script(
         {
             "active_page": "journey_cloner",
             "current_user": user,
-            "template_status": template_status(),
+            "teams": TEAMS,
+            "team": team,
+            "template_status": template_status(team),
             "selected_types": selected_types,
             "dry_run": True,
             "result": result,
@@ -566,14 +586,18 @@ def journey_cloner_save_template(
     request: Request,
     template_type: str = Form(...),
     fetch_text: str = Form(...),
+    team: str = Form(DEFAULT_TEAM),
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
+    team = team if team in TEAMS else DEFAULT_TEAM
     template_saved = ""
     template_error = ""
     try:
-        info = save_template_from_fetch(template_type, fetch_text)
+        info = save_template_from_fetch(template_type, fetch_text, team)
         name = info.get("journeyName") or template_type
-        template_saved = f"Saved {template_type}.json from template: {name}"
+        template_saved = (
+            f"Saved {TEAMS[team]} {template_type}.json from template: {name}"
+        )
     except Exception as exc:
         template_error = str(exc)
 
@@ -583,7 +607,9 @@ def journey_cloner_save_template(
         {
             "active_page": "journey_cloner",
             "current_user": user,
-            "template_status": template_status(),
+            "teams": TEAMS,
+            "team": team,
+            "template_status": template_status(team),
             "selected_types": ["followup", "bfr", "two_hours", "aft"],
             "dry_run": True,
             "result": None,

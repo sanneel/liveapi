@@ -26,6 +26,20 @@
       <p class="card-sub">Build Journey Builder drafts from the stored templates.</p>
     </div>
 
+    <input type="hidden" name="team" value="{{ team }}">
+    <div class="field">
+      <span class="lbl">Club</span>
+      <div style="display:flex; gap:8px">
+        {% for key, label in teams.items() %}
+          <a href="/admin/journey-cloner?team={{ key }}"
+             class="btn{% if key == team %} primary{% endif %}"
+             style="flex:1; justify-content:center"
+             title="Switch club (reloads template status)">{{ label }}</a>
+        {% endfor %}
+      </div>
+      <p class="help" style="margin-top:6px">Each club clones its own template set. Switching reloads template status.</p>
+    </div>
+
     <div class="field">
       <span class="lbl">Bearer token</span>
       <input class="input" name="token" type="password" autocomplete="off" placeholder="Required for real creation"/>
@@ -83,10 +97,11 @@
 
   <div class="col-main stack">
     <form method="post" action="/admin/journey-cloner/templates" class="card card-pad" style="display:flex; flex-direction:column; gap:14px">
+      <input type="hidden" name="team" value="{{ team }}">
       <div class="card-head" style="padding:0">
         <div>
-          <h2 class="card-title">Save Template</h2>
-          <p class="card-sub">Paste Chrome DevTools Copy-as-fetch for POST /journey-drafts.</p>
+          <h2 class="card-title">Save Template · {{ teams[team] }}</h2>
+          <p class="card-sub">Paste Chrome DevTools Copy-as-fetch for POST /journey-drafts. Saves into the {{ teams[team] }} set.</p>
         </div>
         <select name="template_type" style="flex:0 0 130px">
           <option value="followup">FollowUp</option>
@@ -101,8 +116,8 @@
 
     <section class="card" style="overflow:hidden">
       <div class="card-head">
-        <h2 class="card-title">Template Status</h2>
-        <span class="card-sub" style="margin:0">journey-cloner/templates</span>
+        <h2 class="card-title">Template Status · {{ teams[team] }}</h2>
+        <span class="card-sub" style="margin:0">journey-cloner/templates/{{ team }}</span>
       </div>
       <div class="card-pad" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px">
         {% set labels = {'followup':'FollowUp','bfr':'BFR','two_hours':'2H','aft':'AFT'} %}
