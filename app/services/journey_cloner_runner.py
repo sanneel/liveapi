@@ -18,6 +18,28 @@ SCRIPT_PATH = CLONER_DIR / "create_journeys.py"
 OUTPUT_DIR = BASE_DIR / "data" / "journey_cloner_out"
 TEMPLATE_TYPES = ("followup", "bfr", "two_hours", "aft")
 
+# Keys must match TEAMS in journey-cloner/create_journeys.py. Each team's
+# templates live in journey-cloner/templates/<team>/.
+TEAMS: Dict[str, str] = {"udch": "UDCH", "colocolo": "Colo Colo"}
+DEFAULT_TEAM = "udch"
+
+# Teams that reuse another team's template files (mirror base_team in the
+# cloner's TEAMS). A team's own file still takes precedence when present.
+TEAM_BASE: Dict[str, str] = {"colocolo": "udch"}
+
+
+def resolve_team(team: str | None) -> str:
+    key = (team or DEFAULT_TEAM).strip().lower()
+    if key not in TEAMS:
+        raise ValueError(
+            f"Unknown team {team!r}. Known teams: {', '.join(sorted(TEAMS))}"
+        )
+    return key
+
+
+def templates_dir(team: str) -> Path:
+    return CLONER_DIR / "templates" / resolve_team(team)
+
 
 def extract_body_from_fetch(fetch_text: str) -> Dict[str, Any]:
     match = re.search(r'"body"\s*:\s*"((?:\\.|[^"\\])*)"', fetch_text, flags=re.DOTALL)
@@ -35,11 +57,13 @@ def extract_body_from_fetch(fetch_text: str) -> Dict[str, Any]:
     return body
 
 
-def save_template_from_fetch(template_type: str, fetch_text: str) -> Dict[str, Any]:
+def save_template_from_fetch(
+    template_type: str, fetch_text: str, team: str = DEFAULT_TEAM
+) -> Dict[str, Any]:
     if template_type not in TEMPLATE_TYPES:
         raise ValueError(f"Unknown template type: {template_type}")
     body = extract_body_from_fetch(fetch_text)
-    output_path = CLONER_DIR / "templates" / f"{template_type}.json"
+    output_path = templates_dir(team) / f"{template_type}.json"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
         json.dumps(body, ensure_ascii=False, indent=2) + "\n",
@@ -63,15 +87,25 @@ def python_executable() -> str:
     return sys.executable
 
 
-def template_status() -> Dict[str, bool]:
-    return {
-        key: (CLONER_DIR / "templates" / f"{key}.json").exists()
-        for key in TEMPLATE_TYPES
-    }
+def template_exists(team: str, template_type: str) -> bool:
+    """A team's own file, or an inherited base team's file, exists."""
+    team = resolve_team(team)
+    if (templates_dir(team) / f"{template_type}.json").exists():
+        return True
+    base = TEAM_BASE.get(team)
+    return bool(base) and (templates_dir(base) / f"{template_type}.json").exists()
 
 
-def missing_templates(selected_types: List[str]) -> List[str]:
-    status = template_status()
+def team_inherits(team: str) -> bool:
+    return resolve_team(team) in TEAM_BASE
+
+
+def template_status(team: str = DEFAULT_TEAM) -> Dict[str, bool]:
+    return {key: template_exists(team, key) for key in TEMPLATE_TYPES}
+
+
+def missing_templates(selected_types: List[str], team: str = DEFAULT_TEAM) -> List[str]:
+    status = template_status(team)
     return [key for key in selected_types if not status.get(key)]
 
 
@@ -83,6 +117,7 @@ def generate_console_script(
     date: str,
     chile_time: str,
     selected_types: List[str],
+    team: str = DEFAULT_TEAM,
 ) -> Tuple[int, str, str, str | None, str]:
     """Generate the paste-into-DevTools console script for a campaign.
 
@@ -93,6 +128,8 @@ def generate_console_script(
     cmd = [
         python_executable(),
         str(CLONER_DIR / "generate_console_script.py"),
+        "--team",
+        resolve_team(team),
         "--match",
         match_name,
         "--code",
@@ -146,11 +183,14 @@ def run_journey_cloner(
     chile_time: str,
     selected_types: List[str],
     dry_run: bool,
+    team: str = DEFAULT_TEAM,
 ) -> Tuple[int, str, str]:
     match_name = f"{home.strip()} vs {away.strip()}"
     cmd = [
         python_executable(),
         str(SCRIPT_PATH),
+        "--team",
+        resolve_team(team),
         "--match",
         match_name,
         "--code",

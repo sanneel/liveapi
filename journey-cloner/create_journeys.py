@@ -22,7 +22,9 @@ import argparse
 import copy
 import json
 import os
+import re
 import sys
+from dataclasses import dataclass, field
 from datetime import datetime, time, timedelta
 from pathlib import Path
 from typing import Any
@@ -44,37 +46,202 @@ OUT_DIR = os.getenv("JOURNEY_CLONER_OUT_DIR", "out")
 LOCAL_TZ = ZoneInfo(LOCAL_TZ_NAME)
 UTC = ZoneInfo("UTC")
 
-TEMPLATE_FILES = {
-    "followup": "templates/followup.json",
-    "bfr": "templates/bfr.json",
-    "two_hours": "templates/two_hours.json",
-    "aft": "templates/aft.json",
-}
+TEMPLATE_TYPES = ("followup", "bfr", "two_hours", "aft")
 
 # Creation order matters: the 2H campaign connector must point at the FollowUp
 # journey created in the same run, so followup is always processed first.
 TYPE_ORDER = ["followup", "bfr", "two_hours", "aft"]
 
-# Old values from the VAMOSBULLA template set.
-OLD_CODES = [
-    "VAMOSBULLA",
-    "XQTANTEMPRANO",  # appears in some notification metadata of the captured AFT body
-]
 
-OLD_MATCH_TEXTS = [
-    "UDCH vs O'higgins",
-    "UDCH vs O'higgin",
-    "UDCH vs O\u2019Higgins",
-    "UDCH vs O\u2019Higgin",
-    "UDCH vs Audax",
-]
+TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 
-OLD_DATE_LABELS = [
-    "10.06",
-    "07.06",
-    "23.11",
-    "13.09",
-]
+
+@dataclass(frozen=True)
+class Team:
+    """A club the cloner can build drafts for.
+
+    A team either has its own captured template set in templates/<key>/ or
+    inherits another team's via ``base_team`` (per-type files in its own folder
+    still take precedence). This lets a club that is identical to another except
+    for one visual asset reuse the base templates and only declare the swap in
+    ``asset_overrides`` (old_url -> new_url), instead of duplicating big files.
+
+    ``old_codes`` / ``old_match_texts`` / ``old_date_labels`` are curated hints
+    for literal strings baked into the templates where the text differs from the
+    journey name (truncated club names, stray notification metadata, secondary
+    dates). Code/match/date are also derived from each template at runtime, so
+    these lists only need the extra variants.
+    """
+
+    key: str
+    label: str
+    base_team: str | None = None
+    asset_overrides: dict[str, str] = field(default_factory=dict)
+    old_codes: tuple[str, ...] = ()
+    old_match_texts: tuple[str, ...] = ()
+    old_date_labels: tuple[str, ...] = ()
+
+
+# UDCH visual assets, kept here as the keys a sibling club would override.
+UDCH_CATFISH_BANNER = (
+    "https://static.contentin.cloud/"
+    "c93ad623-44ae-40f6-9aa5-b1aef7fd931a/f7f203d3-90d0-4251-ae68-8e3566625fbf.png"
+)
+UDCH_NOTIFICATION_ICON = (
+    "https://static.contentin.cloud/"
+    "c93ad623-44ae-40f6-9aa5-b1aef7fd931a/70dec629-9e67-4e52-9504-fec23989a565.png"
+)
+
+
+TEAMS: dict[str, Team] = {
+    "udch": Team(
+        key="udch",
+        label="UDCH",
+        old_codes=(
+            "VAMOSBULLA",
+            "XQTANTEMPRANO",  # stray promo in some AFT notification metadata
+        ),
+        old_match_texts=(
+            "UDCH vs O'higgins",
+            "UDCH vs O'higgin",
+            "UDCH vs O\u2019Higgins",
+            "UDCH vs O\u2019Higgin",
+            "UDCH vs Audax",
+        ),
+        old_date_labels=(
+            "10.06",
+            "07.06",
+            "23.11",
+            "13.09",
+        ),
+    ),
+    # Colo Colo is "the same journey as UDCH, one visual asset differs". It
+    # inherits the UDCH templates (no duplication) and only needs the single
+    # changed image declared below. To set it: put the Colo Colo image URL as
+    # the value for the asset that differs (the catfish banner is the usual
+    # one). Leave empty and Colo Colo clones render with the UDCH asset.
+    # To instead use a fully separate Colo Colo design, drop captured files in
+    # templates/colocolo/ and they take precedence over the inherited ones.
+    "colocolo": Team(
+        key="colocolo",
+        label="Colo Colo",
+        base_team="udch",
+        asset_overrides={
+            # UDCH_CATFISH_BANNER: "https://static.contentin.cloud/<colocolo>.png",
+            # UDCH_NOTIFICATION_ICON: "https://static.contentin.cloud/<colocolo>.png",
+        },
+    ),
+}
+
+DEFAULT_TEAM = "udch"
+
+
+def resolve_team(team_key: str) -> Team:
+    key = (team_key or DEFAULT_TEAM).strip().lower()
+    if key not in TEAMS:
+        raise JourneyCloneError(
+            f"Unknown team {team_key!r}. Known teams: {', '.join(sorted(TEAMS))}"
+        )
+    return TEAMS[key]
+
+
+def template_path(team_key: str, journey_type: str) -> str:
+    """Resolve a draft template, preferring the team's own file then its base."""
+    team = resolve_team(team_key)
+    own = TEMPLATES_DIR / team.key / f"{journey_type}.json"
+    if own.exists() or not team.base_team:
+        return str(own)
+    base = TEMPLATES_DIR / team.base_team / f"{journey_type}.json"
+    return str(base if base.exists() else own)
+
+
+def template_files(team_key: str) -> dict[str, str]:
+    """Resolved template path per draft type for a team."""
+    return {t: template_path(team_key, t) for t in TEMPLATE_TYPES}
+
+
+# Back-compat default so existing callers/imports keep working.
+TEMPLATE_FILES = template_files(DEFAULT_TEAM)
+
+
+@dataclass(frozen=True)
+class OldValues:
+    """Literal strings to replace in a template before re-posting it."""
+
+    codes: tuple[str, ...]
+    match_texts: tuple[str, ...]
+    date_labels: tuple[str, ...]
+
+    def all_values(self) -> list[str]:
+        return [*self.codes, *self.match_texts, *self.date_labels]
+
+
+def _journey_name_parts(name: str) -> list[str]:
+    return [p.strip() for p in (name or "").split("|") if p.strip()]
+
+
+def _derive_from_name(name: str) -> tuple[str | None, str | None, str | None]:
+    """Best-effort (code, match, date) parse from a captured journey name.
+
+    Names look like: "[Copy of] JBCL | SP | <match> | <code-part> | <type> | DD.MM"
+    where <code-part> is e.g. "PrmCode-VAMOSBULLA", "Promocode - VAMOSBULLA" or
+    "PromoCode COLOCOLO2026".
+    """
+    parts = _journey_name_parts(name)
+    match = code = date = None
+
+    for i, part in enumerate(parts):
+        if part.upper() == "SP" and i + 1 < len(parts):
+            match = parts[i + 1] or None
+            break
+
+    code_match = re.search(r"(?:Prm|Promo)Code\s*-?\s*([A-Za-z0-9]+)", name or "", re.I)
+    if code_match:
+        code = code_match.group(1)
+
+    date_match = re.findall(r"\b(\d{1,2}\.\d{1,2})\b", name or "")
+    if date_match:
+        date = date_match[-1]
+
+    return code, match, date
+
+
+def _template_promocodes(template: dict[str, Any]) -> list[str]:
+    codes: list[str] = []
+    for d in walk_dicts(template):
+        settings = d.get("promocodeSettings")
+        if isinstance(settings, dict):
+            for value in settings.get("values") or []:
+                if isinstance(value, str) and value.strip():
+                    codes.append(value.strip())
+    return codes
+
+
+def collect_old_values(template: dict[str, Any], team: Team) -> OldValues:
+    """Curated team hints plus values derived from the template itself."""
+    codes = list(team.old_codes)
+    matches = list(team.old_match_texts)
+    dates = list(team.old_date_labels)
+
+    codes.extend(_template_promocodes(template))
+    name = template.get("journeyName") or ""
+    derived_code, derived_match, derived_date = _derive_from_name(name)
+    if derived_code:
+        codes.append(derived_code)
+    if derived_match:
+        matches.append(derived_match)
+    if derived_date:
+        dates.append(derived_date)
+
+    def dedup(values: list[str]) -> tuple[str, ...]:
+        # Longest first so overlapping variants ("O'higgins" vs "O'higgin")
+        # replace the longer match before its prefix.
+        seen: dict[str, None] = {}
+        for v in sorted((x for x in values if x), key=len, reverse=True):
+            seen.setdefault(v, None)
+        return tuple(seen)
+
+    return OldValues(dedup(codes), dedup(matches), dedup(dates))
 
 
 class JourneyCloneError(RuntimeError):
@@ -317,7 +484,9 @@ def prepare_body(
     code: str,
     match_dt: datetime,
     reserved_id: str,
+    old_values: OldValues,
     followup_id: str | None = None,
+    asset_overrides: dict[str, str] | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
     """Returns the prepared body plus a log of every setting that was changed."""
     body = copy.deepcopy(template)
@@ -326,12 +495,17 @@ def prepare_body(
     report: list[str] = []
 
     replacements: dict[str, str] = {}
-    for old_code in OLD_CODES:
+    for old_code in old_values.codes:
         replacements[old_code] = code
-    for old_match in OLD_MATCH_TEXTS:
+    for old_match in old_values.match_texts:
         replacements[old_match] = match_name
-    for old_date in OLD_DATE_LABELS:
+    for old_date in old_values.date_labels:
         replacements[old_date] = date_label
+    # Team visual-asset swaps (old URL -> club URL). Applied as plain string
+    # replacements like everything else.
+    for old_asset, new_asset in (asset_overrides or {}).items():
+        if old_asset and new_asset:
+            replacements[old_asset] = new_asset
 
     if followup_id:
         # Repoint the campaign connector at the FollowUp journey from this run.
@@ -394,6 +568,7 @@ def verify_body(
     match_dt: datetime,
     reserved_id: str,
     followup_id: str | None,
+    old_values: OldValues,
 ) -> list[tuple[bool, str]]:
     """Run sanity checks on a generated payload. Returns (ok, message) pairs."""
     checks: list[tuple[bool, str]] = []
@@ -415,9 +590,12 @@ def verify_body(
         f"reservedJourneyId is {body.get('reservedJourneyId')!r}",
     ))
 
+    # A new value that equals one of the old values (e.g. reusing the same
+    # club or date) is not a leftover — skip those to avoid false positives.
+    new_values = {code, match_name, date_label}
     leftovers = [
-        old for old in (OLD_CODES + OLD_MATCH_TEXTS + OLD_DATE_LABELS)
-        if old in serialized
+        old for old in old_values.all_values()
+        if old not in new_values and old in serialized
     ]
     checks.append((
         not leftovers,
@@ -506,6 +684,12 @@ def prompt_missing(args: argparse.Namespace) -> argparse.Namespace:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Create 4 Journey Builder draft clones.")
+    parser.add_argument(
+        "--team",
+        choices=sorted(TEAMS),
+        default=DEFAULT_TEAM,
+        help=f"Template set / club to clone (default: {DEFAULT_TEAM}).",
+    )
     parser.add_argument("--match", help='Full match name, example: "UDCH vs O\'Higgins"')
     parser.add_argument("--code", help="Promocode, example: VAMOSBULLA")
     parser.add_argument("--date", help="Match date YYYY-MM-DD, example: 2026-06-10")
@@ -544,6 +728,8 @@ def main() -> int:
         args = parse_args()
         validate_env(require_api=not args.dry_run)
 
+        team = resolve_team(args.team)
+        team_templates = template_files(team.key)
         match_dt = datetime.strptime(f"{args.date} {args.time}", "%Y-%m-%d %H:%M").replace(tzinfo=LOCAL_TZ)
         code = args.code.strip().upper()
         match_name = args.match.strip()
@@ -568,6 +754,7 @@ def main() -> int:
             )
 
         print("\nCampaign")
+        print(f"  Team:  {team.label}")
         print(f"  Match: {match_name}")
         print(f"  Code:  {code}")
         print(f"  Date:  {date_label}")
@@ -590,7 +777,8 @@ def main() -> int:
 
         for journey_type in ordered_types:
             print(f"\n[{journey_type}] Loading template...")
-            template = load_template(TEMPLATE_FILES[journey_type])
+            template = load_template(team_templates[journey_type])
+            old_values = collect_old_values(template, team)
 
             if args.dry_run:
                 reserved_id = f"DRY-RUN-{journey_type.upper()}"
@@ -613,7 +801,8 @@ def main() -> int:
 
             body, settings_report = prepare_body(
                 template, journey_type, match_name, code, match_dt, reserved_id,
-                followup_id=followup_id,
+                old_values, followup_id=followup_id,
+                asset_overrides=team.asset_overrides,
             )
             created_ids[journey_type] = reserved_id
 
@@ -626,7 +815,8 @@ def main() -> int:
             print(f"[{journey_type}] Name: {body['journeyName']}")
 
             checks = verify_body(
-                body, journey_type, match_name, code, match_dt, reserved_id, followup_id
+                body, journey_type, match_name, code, match_dt, reserved_id,
+                followup_id, old_values,
             )
             checks_ok = print_checks(journey_type, checks)
             if not checks_ok:

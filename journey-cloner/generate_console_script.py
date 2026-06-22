@@ -29,12 +29,16 @@ from pathlib import Path
 from create_journeys import (
     BASE_URL,
     BRAND,
+    DEFAULT_TEAM,
     LOCAL_TZ,
-    TEMPLATE_FILES,
+    TEAMS,
     TYPE_ORDER,
+    collect_old_values,
     load_template,
     prepare_body,
     print_checks,
+    resolve_team,
+    template_files,
     verify_body,
 )
 
@@ -229,26 +233,32 @@ def build_console_js(
     code: str,
     match_dt: datetime,
     ordered_types: list[str],
+    team_key: str = DEFAULT_TEAM,
 ) -> tuple[bool, str]:
     """Prepare + verify payloads and render the console JS.
 
     Returns (all_checks_ok, js_text). Verification results are printed.
     """
+    team = resolve_team(team_key)
+    team_templates = template_files(team.key)
     payloads: dict[str, dict] = {}
     all_ok = True
     for journey_type in ordered_types:
-        template = load_template(TEMPLATE_FILES[journey_type])
+        template = load_template(team_templates[journey_type])
+        old_values = collect_old_values(template, team)
         reserved_id = f"DRY-RUN-{journey_type.upper()}"
         followup_id = "DRY-RUN-FOLLOWUP" if journey_type == "two_hours" else None
         body, report = prepare_body(
             template, journey_type, match_name, code, match_dt, reserved_id,
-            followup_id=followup_id,
+            old_values, followup_id=followup_id,
+            asset_overrides=team.asset_overrides,
         )
         print(f"\n[{journey_type}] Applied settings:")
         for line in report:
             print(f"  {line}")
         checks = verify_body(
-            body, journey_type, match_name, code, match_dt, reserved_id, followup_id
+            body, journey_type, match_name, code, match_dt, reserved_id,
+            followup_id, old_values,
         )
         all_ok = print_checks(journey_type, checks) and all_ok
         payloads[journey_type] = body
@@ -273,6 +283,12 @@ def build_console_js(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--team",
+        choices=sorted(TEAMS),
+        default=DEFAULT_TEAM,
+        help=f"Template set / club to clone (default: {DEFAULT_TEAM}).",
+    )
     parser.add_argument("--match", required=True, help='Example: "UDCH vs Calera"')
     parser.add_argument("--code", required=True, help="Example: DALELEON")
     parser.add_argument("--date", required=True, help="Match date YYYY-MM-DD")
@@ -280,7 +296,7 @@ def main() -> int:
     parser.add_argument(
         "--types",
         nargs="+",
-        choices=list(TEMPLATE_FILES),
+        choices=list(TYPE_ORDER),
         default=list(TYPE_ORDER),
     )
     args = parser.parse_args()
@@ -292,7 +308,7 @@ def main() -> int:
     match_name = args.match.strip()
     ordered_types = [t for t in TYPE_ORDER if t in args.types]
 
-    all_ok, js = build_console_js(match_name, code, match_dt, ordered_types)
+    all_ok, js = build_console_js(match_name, code, match_dt, ordered_types, args.team)
     if not all_ok:
         print("\nVERIFICATION FAILED — console script NOT generated.", file=sys.stderr)
         return 1
