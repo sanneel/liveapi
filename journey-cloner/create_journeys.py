@@ -24,6 +24,7 @@ import json
 import os
 import re
 import sys
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, time, timedelta
 from pathlib import Path
@@ -292,6 +293,74 @@ def walk_dicts(obj: Any):
             yield from walk_dicts(item)
 
 
+# Canonical 8-4-4-4-12 UUID. Used to find and swap the journey's internal
+# activity/node identifiers without touching unrelated UUIDs (the author id, the
+# static.contentin.cloud asset-folder/file ids embedded in image URLs).
+UUID_RE = re.compile(
+    r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I
+)
+
+
+def collect_activity_ids(body: dict[str, Any]) -> set[str]:
+    """Collect the journey's internal node identifiers.
+
+    These are the GUIDs the Journey Builder backend treats as globally unique
+    per *activity*: the activity ids, the visual-editor element ids, and the
+    ``activitiesConfiguration`` map keys (which are the same GUIDs). Edges
+    (``nextActivityId``), ports (``input-<guid>``, ``NotificationSent-<guid>``,
+    ...) and edge ``source``/``target``/``sourceHandle`` all reference these as
+    substrings, so swapping the GUID everywhere keeps the graph consistent.
+
+    Deliberately excludes other UUIDs (author id, asset URLs) by only reading
+    these structural locations.
+    """
+    ids: set[str] = set()
+    for activity in body.get("activities") or []:
+        if isinstance(activity, dict):
+            value = activity.get("activityId")
+            if isinstance(value, str) and UUID_RE.fullmatch(value):
+                ids.add(value)
+
+    raw = body.get("rawJourneyData") or {}
+    for element in raw.get("elements") or []:
+        if isinstance(element, dict):
+            value = element.get("id")
+            if isinstance(value, str) and UUID_RE.fullmatch(value):
+                ids.add(value)
+
+    config = raw.get("activitiesConfiguration")
+    if isinstance(config, dict):
+        ids.update(k for k in config if isinstance(k, str) and UUID_RE.fullmatch(k))
+
+    return ids
+
+
+def regenerate_activity_ids(body: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    """Give every internal activity/node GUID a fresh value.
+
+    Journey Builder rejects publishing a journey whose activities carry the same
+    identifiers as activities already used by another (published) journey — the
+    "...with the same identifier already exist in other journeys" error. Because
+    every clone is copied from the captured template verbatim, they all share the
+    template's activity GUIDs and collide on publish. Reassigning them per clone
+    makes each draft self-contained and unique.
+
+    Replacement is a single regex pass over the serialized body so it also covers
+    GUIDs that appear as dict keys (``activitiesConfiguration``) and as
+    substrings inside port/handle ids. Only GUIDs in the collected node set are
+    swapped; any other UUID (author id, asset urls) is left untouched.
+    """
+    mapping = {old: str(uuid.uuid4()) for old in collect_activity_ids(body)}
+    if not mapping:
+        return body, 0
+
+    def swap(match: re.Match[str]) -> str:
+        return mapping.get(match.group(0), match.group(0))
+
+    rewritten = UUID_RE.sub(swap, json.dumps(body, ensure_ascii=False))
+    return json.loads(rewritten), len(mapping)
+
+
 def headers(content_type: str) -> dict[str, str]:
     h = {
         "accept": "application/json, text/plain, */*",
@@ -493,6 +562,13 @@ def prepare_body(
     date_label = match_dt.strftime("%d.%m")
     clean_name = build_journey_name(journey_type, match_name, code, date_label)
     report: list[str] = []
+
+    # Fresh internal activity ids so this clone does not collide with the
+    # template (or earlier clones) on publish. Done before the connector lookup
+    # below, which keys off JRN- journey ids and is unaffected by this.
+    body, regenerated = regenerate_activity_ids(body)
+    if regenerated:
+        report.append(f"regenerated {regenerated} internal activity ids")
 
     replacements: dict[str, str] = {}
     for old_code in old_values.codes:
