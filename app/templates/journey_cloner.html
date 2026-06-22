@@ -117,8 +117,15 @@
     <section class="card" style="overflow:hidden">
       <div class="card-head">
         <h2 class="card-title">Template Status · {{ teams[team] }}</h2>
-        <span class="card-sub" style="margin:0">journey-cloner/templates/{{ team }}</span>
+        <span class="card-sub" style="margin:0">
+          journey-cloner/templates/{{ team }}{% if team_inherits %} · inherits UDCH templates{% endif %}
+        </span>
       </div>
+      {% if team_inherits %}
+        <div class="card-pad" style="padding-bottom:0">
+          <p class="help" style="margin:0">{{ teams[team] }} reuses the UDCH templates and only swaps its team-specific visual asset. Save a template here to override a specific draft type with a fully separate {{ teams[team] }} design.</p>
+        </div>
+      {% endif %}
       <div class="card-pad" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px">
         {% set labels = {'followup':'FollowUp','bfr':'BFR','two_hours':'2H','aft':'AFT'} %}
         {% for key, exists in template_status.items() %}

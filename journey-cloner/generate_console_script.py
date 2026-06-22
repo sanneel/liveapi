@@ -251,6 +251,7 @@ def build_console_js(
         body, report = prepare_body(
             template, journey_type, match_name, code, match_dt, reserved_id,
             old_values, followup_id=followup_id,
+            asset_overrides=team.asset_overrides,
         )
         print(f"\n[{journey_type}] Applied settings:")
         for line in report:

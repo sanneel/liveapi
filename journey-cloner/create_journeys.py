@@ -24,7 +24,7 @@ import json
 import os
 import re
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, time, timedelta
 from pathlib import Path
 from typing import Any
@@ -53,26 +53,44 @@ TEMPLATE_TYPES = ("followup", "bfr", "two_hours", "aft")
 TYPE_ORDER = ["followup", "bfr", "two_hours", "aft"]
 
 
+TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
+
+
 @dataclass(frozen=True)
 class Team:
-    """A club whose template set lives in templates/<key>/.
+    """A club the cloner can build drafts for.
 
-    The clone is the team's own captured journey with the campaign variables
-    swapped, so a team-specific visual asset is whatever the captured templates
-    already contain \u2014 nothing extra to manage here.
+    A team either has its own captured template set in templates/<key>/ or
+    inherits another team's via ``base_team`` (per-type files in its own folder
+    still take precedence). This lets a club that is identical to another except
+    for one visual asset reuse the base templates and only declare the swap in
+    ``asset_overrides`` (old_url -> new_url), instead of duplicating big files.
 
     ``old_codes`` / ``old_match_texts`` / ``old_date_labels`` are curated hints
-    for the literal strings baked into the captured templates. They cover spots
-    where the text differs from the journey name (truncated club names, stray
-    notification metadata, secondary dates). Code/match/date are also derived
-    from each template at runtime, so these lists only need the extra variants.
+    for literal strings baked into the templates where the text differs from the
+    journey name (truncated club names, stray notification metadata, secondary
+    dates). Code/match/date are also derived from each template at runtime, so
+    these lists only need the extra variants.
     """
 
     key: str
     label: str
+    base_team: str | None = None
+    asset_overrides: dict[str, str] = field(default_factory=dict)
     old_codes: tuple[str, ...] = ()
     old_match_texts: tuple[str, ...] = ()
     old_date_labels: tuple[str, ...] = ()
+
+
+# UDCH visual assets, kept here as the keys a sibling club would override.
+UDCH_CATFISH_BANNER = (
+    "https://static.contentin.cloud/"
+    "c93ad623-44ae-40f6-9aa5-b1aef7fd931a/f7f203d3-90d0-4251-ae68-8e3566625fbf.png"
+)
+UDCH_NOTIFICATION_ICON = (
+    "https://static.contentin.cloud/"
+    "c93ad623-44ae-40f6-9aa5-b1aef7fd931a/70dec629-9e67-4e52-9504-fec23989a565.png"
+)
 
 
 TEAMS: dict[str, Team] = {
@@ -97,13 +115,21 @@ TEAMS: dict[str, Team] = {
             "13.09",
         ),
     ),
-    # Colo Colo templates are captured from a Colo Colo source journey via the
-    # admin page. Code/match/date are derived from those templates, so curated
-    # variants are only needed if a club name is truncated/spelled differently
-    # somewhere in the body (add them here when a leftover-value check flags it).
+    # Colo Colo is "the same journey as UDCH, one visual asset differs". It
+    # inherits the UDCH templates (no duplication) and only needs the single
+    # changed image declared below. To set it: put the Colo Colo image URL as
+    # the value for the asset that differs (the catfish banner is the usual
+    # one). Leave empty and Colo Colo clones render with the UDCH asset.
+    # To instead use a fully separate Colo Colo design, drop captured files in
+    # templates/colocolo/ and they take precedence over the inherited ones.
     "colocolo": Team(
         key="colocolo",
         label="Colo Colo",
+        base_team="udch",
+        asset_overrides={
+            # UDCH_CATFISH_BANNER: "https://static.contentin.cloud/<colocolo>.png",
+            # UDCH_NOTIFICATION_ICON: "https://static.contentin.cloud/<colocolo>.png",
+        },
     ),
 }
 
@@ -119,10 +145,19 @@ def resolve_team(team_key: str) -> Team:
     return TEAMS[key]
 
 
-def template_files(team_key: str) -> dict[str, str]:
-    """Template path per draft type for a team, as templates/<team>/<type>.json."""
+def template_path(team_key: str, journey_type: str) -> str:
+    """Resolve a draft template, preferring the team's own file then its base."""
     team = resolve_team(team_key)
-    return {t: f"templates/{team.key}/{t}.json" for t in TEMPLATE_TYPES}
+    own = TEMPLATES_DIR / team.key / f"{journey_type}.json"
+    if own.exists() or not team.base_team:
+        return str(own)
+    base = TEMPLATES_DIR / team.base_team / f"{journey_type}.json"
+    return str(base if base.exists() else own)
+
+
+def template_files(team_key: str) -> dict[str, str]:
+    """Resolved template path per draft type for a team."""
+    return {t: template_path(team_key, t) for t in TEMPLATE_TYPES}
 
 
 # Back-compat default so existing callers/imports keep working.
@@ -451,6 +486,7 @@ def prepare_body(
     reserved_id: str,
     old_values: OldValues,
     followup_id: str | None = None,
+    asset_overrides: dict[str, str] | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
     """Returns the prepared body plus a log of every setting that was changed."""
     body = copy.deepcopy(template)
@@ -465,6 +501,11 @@ def prepare_body(
         replacements[old_match] = match_name
     for old_date in old_values.date_labels:
         replacements[old_date] = date_label
+    # Team visual-asset swaps (old URL -> club URL). Applied as plain string
+    # replacements like everything else.
+    for old_asset, new_asset in (asset_overrides or {}).items():
+        if old_asset and new_asset:
+            replacements[old_asset] = new_asset
 
     if followup_id:
         # Repoint the campaign connector at the FollowUp journey from this run.
@@ -761,6 +802,7 @@ def main() -> int:
             body, settings_report = prepare_body(
                 template, journey_type, match_name, code, match_dt, reserved_id,
                 old_values, followup_id=followup_id,
+                asset_overrides=team.asset_overrides,
             )
             created_ids[journey_type] = reserved_id
 

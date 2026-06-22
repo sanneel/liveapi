@@ -23,6 +23,10 @@ TEMPLATE_TYPES = ("followup", "bfr", "two_hours", "aft")
 TEAMS: Dict[str, str] = {"udch": "UDCH", "colocolo": "Colo Colo"}
 DEFAULT_TEAM = "udch"
 
+# Teams that reuse another team's template files (mirror base_team in the
+# cloner's TEAMS). A team's own file still takes precedence when present.
+TEAM_BASE: Dict[str, str] = {"colocolo": "udch"}
+
 
 def resolve_team(team: str | None) -> str:
     key = (team or DEFAULT_TEAM).strip().lower()
@@ -83,9 +87,21 @@ def python_executable() -> str:
     return sys.executable
 
 
+def template_exists(team: str, template_type: str) -> bool:
+    """A team's own file, or an inherited base team's file, exists."""
+    team = resolve_team(team)
+    if (templates_dir(team) / f"{template_type}.json").exists():
+        return True
+    base = TEAM_BASE.get(team)
+    return bool(base) and (templates_dir(base) / f"{template_type}.json").exists()
+
+
+def team_inherits(team: str) -> bool:
+    return resolve_team(team) in TEAM_BASE
+
+
 def template_status(team: str = DEFAULT_TEAM) -> Dict[str, bool]:
-    base = templates_dir(team)
-    return {key: (base / f"{key}.json").exists() for key in TEMPLATE_TYPES}
+    return {key: template_exists(team, key) for key in TEMPLATE_TYPES}
 
 
 def missing_templates(selected_types: List[str], team: str = DEFAULT_TEAM) -> List[str]:
