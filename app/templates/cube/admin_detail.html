@@ -25,6 +25,18 @@
     then <b>Add</b> the one you want. <b>Restore auto</b> on an empty slot puts it back. The <b>▲ ▼</b> buttons set the order.
   </p>
 
+  {# Email-ready cube URL. The {{JourneyActivityId}}/{{playerID}} cache-buster
+     makes each send a unique URL so email image proxies (Gmail/Outlook) fetch
+     the current cube instead of a frozen first-send copy. #}
+  {% if email_url %}
+  <div class="card card-pad" style="display:flex; align-items:center; gap:12px; margin-bottom:18px; padding:14px 22px">
+    <span class="stat-label" style="text-transform:uppercase; letter-spacing:.06em">Email URL</span>
+    <code class="slug r mono" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="{{ email_url }}">{{ email_url }}</code>
+    <span class="tag warn">cache-busted</span>
+    <button type="button" data-copy-url="{{ email_url }}" onclick="copyCubeUrl(this)" class="btn sm">Copy</button>
+  </div>
+  {% endif %}
+
   <!-- Showing now -->
   <section class="card" style="overflow:hidden; margin-bottom:18px">
     <div class="card-head">
@@ -132,6 +144,17 @@
 
 {% block scripts %}{{ super() }}
 <script>
+function copyCubeUrl(btn) {
+  const url = btn.dataset.copyUrl;
+  const done = () => {
+    const prev = btn.textContent;
+    btn.textContent = 'Copied';
+    setTimeout(() => { btn.textContent = prev; }, 1500);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(done).catch(() => {});
+  }
+}
 function cubeAdmin() {
   return {
     theme: {{ theme.slug | tojson }},

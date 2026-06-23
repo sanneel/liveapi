@@ -32,6 +32,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from ..auth.dependencies import require_login, require_role
+from ..config import get_settings
 from ..database import db_session
 from ..logging_config import get_logger
 from ..middleware import limiter
@@ -195,6 +196,16 @@ def cube_admin_detail(
     user: User = Depends(require_login),
 ) -> HTMLResponse:
     t = _validate_theme(theme)
+    # Email-ready cube URL with the same per-send cache-buster the campaign Copy
+    # URL uses. Email image proxies (Gmail/Outlook) cache by full URL and ignore
+    # our short max-age, so a static /cube/{slug}.gif gets frozen at first send;
+    # the {{JourneyActivityId}}/{{playerID}} merge tags make each send unique so
+    # recipients always get the current cube. Tags are emitted literally for the
+    # downstream journey tool to fill in.
+    base = (get_settings().public_base_url or "https://jb-service.cl").rstrip("/")
+    email_url = (
+        f"{base}/cube/{t.slug}.gif?v={{{{JourneyActivityId}}}}&u={{{{playerID}}}}"
+    )
     return templates.TemplateResponse(
         request,
         "cube/admin_detail.html",
@@ -204,6 +215,7 @@ def cube_admin_detail(
             "theme": t,
             "slot_count": _max_match_slots(t),
             "leaderboard_max": LEADERBOARD_MAX,
+            "email_url": email_url,
         },
     )
 
