@@ -40,7 +40,11 @@ from ..repositories.cube_override_repo import CubeOverrideRepository
 from ..repositories.log_repo import LogRepository
 from ..repositories.match_repo import MatchRepository
 from ..services import png_cache
-from ..services.cube_resolver import candidates_for_theme, resolve_for_theme
+from ..services.cube_resolver import (
+    candidates_for_theme,
+    match_is_live,
+    resolve_for_theme,
+)
 from ..services.cube_themes import CUBE_THEMES, CubeTheme, get_theme, list_themes
 from .public_render import _client_ip
 
@@ -86,10 +90,15 @@ def _match_row(
     suppressed: bool,
     in_theme: bool = True,
 ) -> Dict[str, Any]:
+    # Effective status: a finished match whose stale row still reads "live" must
+    # not show a Live badge. match_is_live() applies the elapsed-time guard.
+    effective_status = "live" if match_is_live(m) else (
+        "prematch" if (m.status or "").strip().lower() == "live" else m.status
+    )
     return {
         "event_id": m.event_id,
         "sport": m.sport,
-        "status": m.status,
+        "status": effective_status,
         "home_name": m.home_name,
         "away_name": m.away_name,
         "tournament_name": m.tournament_name,
@@ -109,7 +118,7 @@ def _reason(m: Match, position: Optional[int], suppressed: bool) -> str:
         return "suppressed"
     if position is not None:
         return f"pinned · slot {position + 1}"
-    if (m.status or "").lower() == "live":
+    if match_is_live(m):
         return "live now"
     if m.start_time_utc:
         hours = (m.start_time_utc - datetime.utcnow()).total_seconds() / 3600.0

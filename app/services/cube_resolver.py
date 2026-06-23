@@ -22,7 +22,7 @@ matches are dropped from the candidate pool before scoring.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import unicodedata
 from typing import List, Optional
 
@@ -59,8 +59,46 @@ def _has_required_teams(match: Match, required: tuple) -> bool:
     return all(t.lower() in names for t in required)
 
 
-def _is_live(match: Match) -> bool:
-    return (match.status or "").strip().lower() == "live" or (match.mode or "").strip().lower() == "live"
+# A football match — even with halftime, stoppage, extra time and penalties —
+# is over well within this window. A feed sometimes leaves a finished match
+# tagged status='live' (it stops being re-seen by the live feed but the row's
+# stale status lingers until the 12h expiry reaper retires it). Past this age a
+# 'live' status is not real, so don't treat the match as live: otherwise a
+# finished game keeps the worldcup +120 live boost and a "Live" badge for hours.
+LIVE_MAX_AGE = timedelta(hours=4)
+
+
+def _is_live(match: Match, now: Optional[datetime] = None) -> bool:
+    is_live = (match.status or "").strip().lower() == "live" or (
+        match.mode or ""
+    ).strip().lower() == "live"
+    if not is_live:
+        return False
+    # Stale-live guard, only when we know kickoff (virtual/esports stream live
+    # with no start_time and are reaped on their own short timer).
+    if match.start_time_utc is not None:
+        now = now or datetime.utcnow()
+        if match.start_time_utc < now - LIVE_MAX_AGE:
+            return False
+    return True
+
+
+# Public alias for callers outside this module (e.g. the cube admin badge).
+def match_is_live(match: Match, now: Optional[datetime] = None) -> bool:
+    return _is_live(match, now)
+
+
+def _is_finished(match: Match, now: Optional[datetime] = None) -> bool:
+    """A match that kicked off long enough ago that it cannot still be running
+    and isn't currently live. These rows linger is_active=True until the 12h
+    expiry reaper retires them; excluding them keeps a finished game from
+    sitting in a "showing now / upcoming" cube face for hours. Only applies when
+    kickoff is known (virtual/esports have no start_time and end on their own
+    short reaper)."""
+    if match.start_time_utc is None or _is_live(match, now):
+        return False
+    now = now or datetime.utcnow()
+    return match.start_time_utc < now - LIVE_MAX_AGE
 
 
 def _sort_live_first(matches: List[Match]) -> List[Match]:
@@ -80,7 +118,7 @@ def _worldcup_auto_score(match: Match, now: datetime) -> tuple:
     but neither signal is strong enough to erase the existing hot score."""
     score = float(match.hot_score or 0.0)
 
-    if _is_live(match):
+    if _is_live(match, now):
         score += 120.0
 
     if match.start_time_utc:
@@ -150,6 +188,9 @@ def resolve_for_theme(
     # only a handful of in-scope matches exist in a sea of other fixtures.
     ranked = engine.resolve(limit * 20)
     filtered = [m for m in ranked if match_in_theme(m.tournament_slug, theme)]
+    # Drop finished games (kicked off long ago, no longer live) that still read
+    # is_active=True until the 12h reaper runs — they must not auto-fill a slot.
+    filtered = [m for m in filtered if not _is_finished(m)]
     if theme.required_teams:
         filtered = [m for m in filtered if _has_required_teams(m, theme.required_teams)]
     # Apply cube-level suppression (independent of HotEngine's own suppress
@@ -213,6 +254,7 @@ def resolve_for_theme(
             extras = [m for m in extras if _has_required_teams(m, theme.required_teams)]
         extras = [m for m in extras if m.event_id not in used_ids]
         extras = [m for m in extras if m.event_id not in suppressed]
+        extras = [m for m in extras if not _is_finished(m)]
         extras = _sort_for_theme(extras, theme)
         if theme.slug != "worldcup" and not theme.prefer_live:
             extras.sort(key=lambda m: m.last_updated_at or datetime.min, reverse=True)
