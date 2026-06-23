@@ -37,6 +37,7 @@ from create_journeys import (
     load_template,
     prepare_body,
     print_checks,
+    promo_base_url,
     resolve_team,
     template_files,
     verify_body,
@@ -66,6 +67,7 @@ JS_TEMPLATE = """\
   const MANUAL_TOKEN = '';
 
   const BASE = @BASE_URL@;
+  const PROMO_BASE = @PROMO_BASE@;
   const BRAND = @BRAND@;
   const ORDER = @ORDER@;
   // Journeys that start "immediately after publish": startAt is recomputed
@@ -177,6 +179,21 @@ JS_TEMPLATE = """\
     return id;
   }
 
+  async function reservePromoId() {
+    const r = await fetch(PROMO_BASE + '/promotion-display-identifier', {
+      method: 'POST',
+      headers: headers('application/x-www-form-urlencoded'),
+      credentials: 'include',
+    });
+    const raw = (await r.text()).trim();
+    let id;
+    try { id = JSON.parse(raw).promotionDisplayId; } catch (e) { /* keep undefined */ }
+    if (!r.ok || !id) {
+      throw new Error('Failed to reserve promotion display id: HTTP ' + r.status + ' ' + raw);
+    }
+    return String(id);
+  }
+
   const PAYLOADS = @PAYLOADS@;
 
   console.log('Will create:');
@@ -196,6 +213,14 @@ JS_TEMPLATE = """\
     let text = JSON.stringify(PAYLOADS[type]);
     for (const [t, rid] of Object.entries(realIds)) {
       text = text.split('DRY-RUN-' + t.toUpperCase()).join(rid);
+    }
+    // Reserve a fresh promotion display id for each promotion activity. Each
+    // placeholder is unique (@@PROMO_DISPLAY_ID_n@@), so replace them one by one.
+    const promoTokens = text.match(/@@PROMO_DISPLAY_ID_\\d+@@/g) || [];
+    for (const tok of promoTokens) {
+      const pid = await reservePromoId();
+      text = text.split(tok).join(pid);
+      console.log(`  [${type}] promotion display id ${pid}`);
     }
     const body = JSON.parse(text);
 
@@ -269,7 +294,9 @@ def build_console_js(
     js = JS_TEMPLATE
     js = js.replace("@GENERATED_AT@", datetime.now(LOCAL_TZ).strftime("%Y-%m-%d %H:%M %Z"))
     js = js.replace("@CAMPAIGN@", campaign)
-    js = js.replace("@BASE_URL@", json.dumps(BASE_URL or DEFAULT_BASE_URL))
+    base_url = BASE_URL or DEFAULT_BASE_URL
+    js = js.replace("@BASE_URL@", json.dumps(base_url))
+    js = js.replace("@PROMO_BASE@", json.dumps(promo_base_url(base_url)))
     js = js.replace("@BRAND@", json.dumps(BRAND))
     js = js.replace("@ORDER@", json.dumps(ordered_types))
     js = js.replace(

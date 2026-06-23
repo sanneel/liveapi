@@ -300,6 +300,17 @@ UUID_RE = re.compile(
     r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I
 )
 
+# Promotion activities carry a numeric ``promotionDisplayId`` that Journey
+# Builder also treats as globally unique per activity (publishing a second
+# journey with the same one fails: "Promotion activity with PromotionDisplayId
+# '...' already exists"). Like the journey id, a fresh one is reserved from the
+# backend. prepare_body() runs offline (the console-script path generates JS that
+# does the API calls in the browser), so it only marks each promotion slot with a
+# unique placeholder; the live Python flow and the console JS each resolve the
+# placeholders to freshly reserved ids before posting.
+PROMO_PLACEHOLDER = "@@PROMO_DISPLAY_ID_{}@@"
+PROMO_PLACEHOLDER_RE = re.compile(r"@@PROMO_DISPLAY_ID_\d+@@")
+
 
 def collect_activity_ids(body: dict[str, Any]) -> set[str]:
     """Collect the journey's internal node identifiers.
@@ -410,6 +421,80 @@ def reserve_journey_id(session: requests.Session) -> str:
             f"Unexpected identifier response: {response.text!r}. Parsed: {reserved_id!r}"
         )
     return reserved_id
+
+
+def promo_base_url(base: str | None = None) -> str:
+    """Promo-service base, derived from the journey-builder base URL.
+
+    The promotion-display-identifier endpoint lives under .../crm/promo/v0 while
+    everything else is under .../crm/journey-builder/v0 on the same host.
+    """
+    base = base if base is not None else BASE_URL
+    if "/journey-builder/v0" in base:
+        return base.replace("/journey-builder/v0", "/promo/v0")
+    # Fallback: swap the last two path segments for promo/v0.
+    return re.sub(r"/[^/]+/v0/?$", "/promo/v0", base)
+
+
+def find_promotion_inits(body: dict[str, Any]) -> list[dict[str, Any]]:
+    """The ``initializationData`` dicts of promotion activities (those that
+    carry a ``promotionDisplayId``). This is the authoritative list the backend
+    validates; the stale copies in rawJourneyData are left untouched, mirroring
+    the real backoffice's own duplicate flow."""
+    inits: list[dict[str, Any]] = []
+    for activity in body.get("activities") or []:
+        if isinstance(activity, dict):
+            init = activity.get("initializationData")
+            if isinstance(init, dict) and "promotionDisplayId" in init:
+                inits.append(init)
+    return inits
+
+
+def placehold_promotion_display_ids(body: dict[str, Any]) -> int:
+    """Replace each promotion activity's display id with a unique placeholder.
+    Returns how many promotion activities were marked."""
+    inits = find_promotion_inits(body)
+    for n, init in enumerate(inits):
+        init["promotionDisplayId"] = PROMO_PLACEHOLDER.format(n)
+    return len(inits)
+
+
+def reserve_promotion_display_id(session: requests.Session) -> str:
+    """Reserve one fresh promotion display id from the promo service."""
+    url = f"{promo_base_url()}/promotion-display-identifier"
+    response = session.post(
+        url,
+        headers=headers("application/x-www-form-urlencoded"),
+        timeout=30,
+    )
+    if not response.ok:
+        raise JourneyCloneError(
+            f"Failed to reserve promotion display id: {response.status_code}\n{response.text}"
+        )
+    try:
+        value = response.json().get("promotionDisplayId")
+    except Exception:
+        value = None
+    if not value:
+        raise JourneyCloneError(
+            f"Unexpected promotion-display-identifier response: {response.text!r}"
+        )
+    return str(value)
+
+
+def resolve_promotion_placeholders(
+    body: dict[str, Any], session: requests.Session
+) -> list[str]:
+    """Swap each promotion display-id placeholder for a freshly reserved id.
+    Returns the reserved ids, in activity order, for logging."""
+    reserved: list[str] = []
+    for init in find_promotion_inits(body):
+        value = init.get("promotionDisplayId")
+        if isinstance(value, str) and PROMO_PLACEHOLDER_RE.fullmatch(value):
+            new_id = reserve_promotion_display_id(session)
+            init["promotionDisplayId"] = new_id
+            reserved.append(new_id)
+    return reserved
 
 
 def create_draft(session: requests.Session, body: dict[str, Any]) -> Any:
@@ -569,6 +654,12 @@ def prepare_body(
     body, regenerated = regenerate_activity_ids(body)
     if regenerated:
         report.append(f"regenerated {regenerated} internal activity ids")
+
+    # Mark each promotion activity for a fresh display id. Resolved to reserved
+    # ids by the caller (live Python) or the generated console JS (browser).
+    promo_slots = placehold_promotion_display_ids(body)
+    if promo_slots:
+        report.append(f"marked {promo_slots} promotion display id(s) for reservation")
 
     replacements: dict[str, str] = {}
     for old_code in old_values.codes:
@@ -906,6 +997,13 @@ def main() -> int:
                 raise JourneyCloneError(
                     f"Verification failed for {journey_type}, draft NOT posted. "
                     f"Inspect {out_path} and fix before retrying."
+                )
+
+            promo_ids = resolve_promotion_placeholders(body, session)
+            if promo_ids:
+                print(
+                    f"[{journey_type}] Reserved promotion display ids: "
+                    f"{', '.join(promo_ids)}"
                 )
 
             print(f"[{journey_type}] Creating draft...")
