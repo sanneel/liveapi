@@ -22,4 +22,4 @@ python-jose[cryptography]==3.5.0
 pyotp==2.9.0
 
 # Production hardening
-slowapi==0.1.9
+slowapi==0.1.10
