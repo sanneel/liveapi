@@ -30,6 +30,7 @@ from create_journeys import (
     BASE_URL,
     BRAND,
     DEFAULT_TEAM,
+    IMMEDIATE_TYPES,
     LOCAL_TZ,
     TEAMS,
     TYPE_ORDER,
@@ -147,8 +148,11 @@ JS_TEMPLATE = """\
   });
 
   const pad = (n) => String(n).padStart(2, '0');
-  const nowUtc = () => {
-    const d = new Date();
+  // offsetMinutes staggers "start now" journeys so two created in the same run
+  // don't share an identical startAt (the backoffice rejects the second with
+  // "the journey with the same identifier already exists").
+  const nowUtc = (offsetMinutes = 0) => {
+    const d = new Date(Date.now() + offsetMinutes * 60000);
     return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}` +
       `T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
   };
@@ -199,8 +203,8 @@ JS_TEMPLATE = """\
     }
     const body = JSON.parse(text);
 
-    if (IMMEDIATE[type]) {
-      const now = nowUtc();
+    if (IMMEDIATE[type] != null) {
+      const now = nowUtc(IMMEDIATE[type]);
       body.startAt = now + '.0000000Z';
       if (body.rawJourneyData && body.rawJourneyData.infoValues) {
         body.rawJourneyData.infoValues.startAt = now + 'Z';
@@ -272,10 +276,18 @@ def build_console_js(
     js = js.replace("@BASE_URL@", json.dumps(BASE_URL or DEFAULT_BASE_URL))
     js = js.replace("@BRAND@", json.dumps(BRAND))
     js = js.replace("@ORDER@", json.dumps(ordered_types))
-    js = js.replace(
-        "@IMMEDIATE@",
-        json.dumps({t: t in ("followup", "bfr") for t in ordered_types}),
-    )
+    # Map each "start now" type to its stagger offset in minutes (0, 1, ...) so
+    # two immediate journeys never share an identical startAt. Non-immediate
+    # types map to null.
+    immediate_offsets: dict[str, int | None] = {}
+    offset = 0
+    for t in ordered_types:
+        if t in IMMEDIATE_TYPES:
+            immediate_offsets[t] = offset
+            offset += 1
+        else:
+            immediate_offsets[t] = None
+    js = js.replace("@IMMEDIATE@", json.dumps(immediate_offsets))
     # Payloads go last so marker-like text inside them can never be replaced.
     js = js.replace("@PAYLOADS@", json.dumps(payloads, ensure_ascii=False))
     return all_ok, js

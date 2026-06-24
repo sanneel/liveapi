@@ -52,6 +52,11 @@ TEMPLATE_TYPES = ("followup", "bfr", "two_hours", "aft")
 # journey created in the same run, so followup is always processed first.
 TYPE_ORDER = ["followup", "bfr", "two_hours", "aft"]
 
+# Journeys that start "immediately after publish" (startAt = now). Two of them
+# created in the same run must not share the exact same startAt, so each is
+# staggered by a minute. Match-relative types (two_hours, aft) are unaffected.
+IMMEDIATE_TYPES = {"followup", "bfr"}
+
 
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 
@@ -262,8 +267,11 @@ def utc_api(dt_local: datetime, dotnet_fraction: bool = False) -> str:
     return dt_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def now_utc_api(dotnet_fraction: bool = False) -> str:
-    now = datetime.now(UTC).replace(microsecond=0)
+def now_utc_api(dotnet_fraction: bool = False, offset_minutes: int = 0) -> str:
+    # offset_minutes staggers "start now" journeys so two created in the same
+    # run don't share an identical startAt (the backoffice rejects the second
+    # with "the journey with the same identifier already exists").
+    now = datetime.now(UTC).replace(microsecond=0) + timedelta(minutes=offset_minutes)
     if dotnet_fraction:
         return now.strftime("%Y-%m-%dT%H:%M:%S.0000000Z")
     return now.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -441,7 +449,12 @@ def set_raw_info(body: dict[str, Any], key: str, value: Any) -> None:
     info[key] = value
 
 
-def set_dates(body: dict[str, Any], journey_type: str, match_dt: datetime) -> None:
+def set_dates(
+    body: dict[str, Any],
+    journey_type: str,
+    match_dt: datetime,
+    now_offset_minutes: int = 0,
+) -> None:
     two_hours_start = match_dt - timedelta(hours=2)
     bfr_stop = two_hours_start - timedelta(minutes=1)
     aft_start = match_dt + timedelta(minutes=1)
@@ -464,9 +477,9 @@ def set_dates(body: dict[str, Any], journey_type: str, match_dt: datetime) -> No
         stop_info = utc_api(match_dt)
         immediate = False
     elif journey_type == "bfr":
-        start_top = now_utc_api(dotnet_fraction=True)
+        start_top = now_utc_api(dotnet_fraction=True, offset_minutes=now_offset_minutes)
         stop_top = utc_api(bfr_stop, dotnet_fraction=True)
-        start_info = now_utc_api()
+        start_info = now_utc_api(offset_minutes=now_offset_minutes)
         stop_info = utc_api(bfr_stop)
         immediate = True
     elif journey_type == "aft":
@@ -476,9 +489,9 @@ def set_dates(body: dict[str, Any], journey_type: str, match_dt: datetime) -> No
         stop_info = utc_api(next_day_midnight)
         immediate = False
     elif journey_type == "followup":
-        start_top = now_utc_api(dotnet_fraction=True)
+        start_top = now_utc_api(dotnet_fraction=True, offset_minutes=now_offset_minutes)
         stop_top = utc_api(followup_stop, dotnet_fraction=True)
-        start_info = now_utc_api()
+        start_info = now_utc_api(offset_minutes=now_offset_minutes)
         stop_info = utc_api(followup_stop)
         immediate = True
     else:
@@ -505,6 +518,7 @@ def prepare_body(
     old_values: OldValues,
     followup_id: str | None = None,
     asset_overrides: dict[str, str] | None = None,
+    now_offset_minutes: int = 0,
 ) -> tuple[dict[str, Any], list[str]]:
     """Returns the prepared body plus a log of every setting that was changed."""
     body = copy.deepcopy(template)
@@ -563,7 +577,7 @@ def prepare_body(
     if metadata_count:
         report.append(f"notification metadata journeyName updated in {metadata_count} places")
 
-    set_dates(body, journey_type, match_dt)
+    set_dates(body, journey_type, match_dt, now_offset_minutes=now_offset_minutes)
     start_local = parse_api_dt(body["startAt"]).astimezone(LOCAL_TZ)
     stop_local = parse_api_dt(body["stopAt"]).astimezone(LOCAL_TZ)
     report.append(
@@ -796,11 +810,17 @@ def main() -> int:
         out_dir.mkdir(parents=True, exist_ok=True)
         created_ids: dict[str, str] = {}
         failed_types: list[str] = []
+        immediate_offset = 0  # stagger "start now" journeys by a minute each
 
         for journey_type in ordered_types:
             print(f"\n[{journey_type}] Loading template...")
             template = load_template(team_templates[journey_type])
             old_values = collect_old_values(template, team)
+
+            now_offset_minutes = 0
+            if journey_type in IMMEDIATE_TYPES:
+                now_offset_minutes = immediate_offset
+                immediate_offset += 1
 
             if args.dry_run:
                 reserved_id = f"DRY-RUN-{journey_type.upper()}"
@@ -825,6 +845,7 @@ def main() -> int:
                 template, journey_type, match_name, code, match_dt, reserved_id,
                 old_values, followup_id=followup_id,
                 asset_overrides=team.asset_overrides,
+                now_offset_minutes=now_offset_minutes,
             )
             created_ids[journey_type] = reserved_id
 
