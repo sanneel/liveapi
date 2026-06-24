@@ -417,6 +417,24 @@ def find_connector_host_ids(body: dict[str, Any]) -> set[str]:
     return host_ids
 
 
+def strip_duplicate_lineage(body: dict[str, Any]) -> list[str]:
+    """Drop "copied from journey X" markers so the draft is created standalone.
+
+    A captured template still carries duplicatedFromId/Version pointing at the
+    journey it was copied from. Re-posting that tells the backoffice the new
+    draft is another copy of that source, which fails with "the journey with
+    the same identifier already exists" when a draft from that source already
+    exists. We always reserve a fresh reservedJourneyId, so this lineage is just
+    stale metadata. Returns a log of what was removed.
+    """
+    removed: list[str] = []
+    for key in ("duplicatedFromId", "duplicatedFromVersion"):
+        if key in body:
+            body.pop(key)
+            removed.append(key)
+    return removed
+
+
 def set_raw_info(body: dict[str, Any], key: str, value: Any) -> None:
     raw = body.setdefault("rawJourneyData", {})
     info = raw.setdefault("infoValues", {})
@@ -524,6 +542,10 @@ def prepare_body(
             counting_text = counting_text.replace(old, new)
 
     body = deep_replace(body, replacements)
+
+    removed_lineage = strip_duplicate_lineage(body)
+    if removed_lineage:
+        report.append(f"removed {', '.join(removed_lineage)} (create as standalone draft)")
 
     body["journeyName"] = clean_name
     body["reservedJourneyId"] = reserved_id
