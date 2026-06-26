@@ -24,6 +24,7 @@ import json
 import os
 import re
 import sys
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, time, timedelta
 from pathlib import Path
@@ -362,7 +363,11 @@ def create_draft(session: requests.Session, body: dict[str, Any]) -> Any:
 
     if not response.ok:
         raise JourneyCloneError(
-            f"Failed to create draft {body.get('reservedJourneyId')}: {response.status_code}\n{response.text}"
+            f"Failed to create draft\n"
+            f"  reservedJourneyId: {body.get('reservedJourneyId')}\n"
+            f"  journeyName:       {body.get('journeyName')!r}\n"
+            f"  HTTP {response.status_code}\n"
+            f"  response: {response.text}"
         )
 
     try:
@@ -423,6 +428,43 @@ def find_connector_host_ids(body: dict[str, Any]) -> set[str]:
             if isinstance(host_id, str) and host_id:
                 host_ids.add(host_id)
     return host_ids
+
+
+_UUID_RE = re.compile(
+    r'"(?:activityId|id)"\s*:\s*"'
+    r'([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"'
+)
+
+
+def regenerate_internal_ids(body: dict[str, Any]) -> int:
+    """Give every internal activity/node/edge id a fresh UUID, consistently.
+
+    A captured template reuses the source journey's activity UUIDs. Re-posting
+    them creates a journey that claims ids already owned by the live source
+    journey, which the backoffice rejects ("the same identifier used across
+    campaigns"). The backoffice's own duplicate action regenerates these ids;
+    we do the same here.
+
+    Only structural ids (``activityId`` and ``id`` values) are remapped. External
+    references (ContentId, promotionId, promotionLinkId, FrontId, ...) live under
+    different keys and are left untouched so the draft keeps pointing at the
+    right promotions/content. Handles, ports, edges and config keys embed the
+    activity id as a substring, so a global string replace keeps them in sync.
+    """
+    text = json.dumps(body, ensure_ascii=False)
+    old_ids = set(_UUID_RE.findall(text))
+    if not old_ids:
+        return 0
+    mapping = {old: str(uuid.uuid4()) for old in old_ids}
+    # Replace longest-first is unnecessary (all ids are the same length and
+    # mutually non-overlapping), but guard against a fresh id colliding with a
+    # not-yet-replaced old id by replacing on the original text positions.
+    for old, new in mapping.items():
+        text = text.replace(old, new)
+    new_body = json.loads(text)
+    body.clear()
+    body.update(new_body)
+    return len(mapping)
 
 
 def strip_duplicate_lineage(body: dict[str, Any]) -> list[str]:
@@ -519,11 +561,16 @@ def prepare_body(
     followup_id: str | None = None,
     asset_overrides: dict[str, str] | None = None,
     now_offset_minutes: int = 0,
+    name_suffix: str = "",
 ) -> tuple[dict[str, Any], list[str]]:
     """Returns the prepared body plus a log of every setting that was changed."""
     body = copy.deepcopy(template)
     date_label = match_dt.strftime("%d.%m")
     clean_name = build_journey_name(journey_type, match_name, code, date_label)
+    if name_suffix:
+        # Keeps the journey name unique per run so re-creating the same campaign
+        # doesn't trip the backoffice's "same identifier already exists" check.
+        clean_name = f"{clean_name} #{name_suffix}"
     report: list[str] = []
 
     replacements: dict[str, str] = {}
@@ -560,6 +607,10 @@ def prepare_body(
     removed_lineage = strip_duplicate_lineage(body)
     if removed_lineage:
         report.append(f"removed {', '.join(removed_lineage)} (create as standalone draft)")
+
+    id_count = regenerate_internal_ids(body)
+    if id_count:
+        report.append(f"regenerated {id_count} internal activity ids (unique per campaign)")
 
     body["journeyName"] = clean_name
     body["reservedJourneyId"] = reserved_id
@@ -605,12 +656,15 @@ def verify_body(
     reserved_id: str,
     followup_id: str | None,
     old_values: OldValues,
+    name_suffix: str = "",
 ) -> list[tuple[bool, str]]:
     """Run sanity checks on a generated payload. Returns (ok, message) pairs."""
     checks: list[tuple[bool, str]] = []
     serialized = json.dumps(body, ensure_ascii=False)
     date_label = match_dt.strftime("%d.%m")
     expected_name = build_journey_name(journey_type, match_name, code, date_label)
+    if name_suffix:
+        expected_name = f"{expected_name} #{name_suffix}"
 
     checks.append((
         body.get("journeyName") == expected_name,
@@ -744,6 +798,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--dry-run", action="store_true", help="Write output JSON files but do not call POST /journey-drafts")
     parser.add_argument("--yes", action="store_true", help="Do not ask for final confirmation")
+    parser.add_argument(
+        "--no-unique-name",
+        action="store_true",
+        help="Do NOT append a per-run uniqueness tag to the journey name. By "
+        "default a short tag is added so re-creating the same campaign does not "
+        'collide with "the journey with the same identifier already exists".',
+    )
     return prompt_missing(parser.parse_args())
 
 
@@ -811,6 +872,13 @@ def main() -> int:
         created_ids: dict[str, str] = {}
         failed_types: list[str] = []
         immediate_offset = 0  # stagger "start now" journeys by a minute each
+        # Per-run uniqueness tag for the journey name (on unless --no-unique-name).
+        name_suffix = "" if args.no_unique_name else datetime.now(LOCAL_TZ).strftime("%d%m-%H%M%S")
+        if name_suffix:
+            print(f"  Name tag: #{name_suffix}  (use --no-unique-name to disable)")
+        # Diagnostic: if the platform ever hands back a reserved id we've already
+        # used this run, the reserve endpoint — not the name — is the collision.
+        seen_reserved: set[str] = set()
 
         for journey_type in ordered_types:
             print(f"\n[{journey_type}] Loading template...")
@@ -829,6 +897,13 @@ def main() -> int:
                 print(f"[{journey_type}] Reserving new journey ID...")
                 reserved_id = reserve_journey_id(session)
                 print(f"[{journey_type}] Reserved ID: {reserved_id}")
+                if reserved_id in seen_reserved:
+                    print(
+                        f"[{journey_type}] !! DUPLICATE reserved id {reserved_id} — the "
+                        "platform is NOT issuing fresh ids for drafts. THIS is the "
+                        "'same identifier already exists' cause, not the journey name."
+                    )
+                seen_reserved.add(reserved_id)
 
             followup_id = None
             if journey_type == "two_hours":
@@ -846,6 +921,7 @@ def main() -> int:
                 old_values, followup_id=followup_id,
                 asset_overrides=team.asset_overrides,
                 now_offset_minutes=now_offset_minutes,
+                name_suffix=name_suffix,
             )
             created_ids[journey_type] = reserved_id
 
@@ -859,7 +935,7 @@ def main() -> int:
 
             checks = verify_body(
                 body, journey_type, match_name, code, match_dt, reserved_id,
-                followup_id, old_values,
+                followup_id, old_values, name_suffix=name_suffix,
             )
             checks_ok = print_checks(journey_type, checks)
             if not checks_ok:
