@@ -467,6 +467,29 @@ def regenerate_internal_ids(body: dict[str, Any]) -> int:
     return len(mapping)
 
 
+def clear_stale_campaign_connector_ids(body: dict[str, Any]) -> int:
+    """Blank out stale campaignId values left over from the captured template.
+
+    A captured template's campaign connector activity still carries the
+    campaignId of the original "Campaign" object created when that connector
+    was first linked (in rawJourneyData's mirror of the same activity this
+    field is already blank, which is the unlinked state). Every clone made
+    from the template reuses this same campaignId byte-for-byte regardless
+    of match/code/date — re-posting it tells the backoffice this connector
+    belongs to a campaign that already exists, which is the real cause of
+    "the journey with the same identifier already exists", not the journey
+    name or reservedJourneyId. Blanking it lets the backoffice mint a fresh
+    campaign binding, same as the UI does for a not-yet-linked connector.
+    """
+    count = 0
+    for d in walk_dicts(body):
+        conditions = d.get("campaignConnectorConditions")
+        if isinstance(conditions, dict) and conditions.get("campaignId"):
+            conditions["campaignId"] = ""
+            count += 1
+    return count
+
+
 def strip_duplicate_lineage(body: dict[str, Any]) -> list[str]:
     """Drop "copied from journey X" markers so the draft is created standalone.
 
@@ -608,6 +631,13 @@ def prepare_body(
     if removed_lineage:
         report.append(f"removed {', '.join(removed_lineage)} (create as standalone draft)")
 
+    cleared_campaign_ids = clear_stale_campaign_connector_ids(body)
+    if cleared_campaign_ids:
+        report.append(
+            f"cleared stale campaignId in {cleared_campaign_ids} campaign connector(s) "
+            "(let backoffice mint a fresh campaign binding)"
+        )
+
     id_count = regenerate_internal_ids(body)
     if id_count:
         report.append(f"regenerated {id_count} internal activity ids (unique per campaign)")
@@ -729,6 +759,19 @@ def verify_body(
         ))
     except (KeyError, ValueError) as exc:
         checks.append((False, f"could not parse startAt/stopAt: {exc}"))
+
+    stale_campaign_ids = [
+        d["campaignConnectorConditions"]["campaignId"]
+        for d in walk_dicts(body)
+        if isinstance(d.get("campaignConnectorConditions"), dict)
+        and d["campaignConnectorConditions"].get("campaignId")
+    ]
+    checks.append((
+        not stale_campaign_ids,
+        "no stale campaignId in campaign connector(s)"
+        if not stale_campaign_ids
+        else f"stale campaignId still present in campaign connector(s): {stale_campaign_ids}",
+    ))
 
     if journey_type == "two_hours":
         hosts = find_connector_host_ids(body)
