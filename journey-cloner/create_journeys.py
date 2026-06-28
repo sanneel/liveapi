@@ -490,6 +490,30 @@ def clear_stale_campaign_connector_ids(body: dict[str, Any]) -> int:
     return count
 
 
+def strip_promotion_display_ids(body: dict[str, Any]) -> int:
+    """Remove stale promotionDisplayId values left over from the captured template.
+
+    Every promotion / multipurpose_promotion activity carries a
+    ``promotionDisplayId`` that the backoffice mints server-side when the
+    promotion is first placed (it appears both in ``activities[].
+    initializationData`` and in the ``rawJourneyData`` mirror of the same
+    activity). A captured template still holds the source journey's display
+    ids, so re-posting them makes the backoffice reject the draft with
+    "Promotion activity with PromotionDisplayId: 'NNN' already exists" (HTTP
+    422). These ids are not referenced anywhere else in the payload — every
+    internal link uses promotionId / promotionLinkId / journeyActivityId — so
+    dropping them is safe and lets the backoffice assign fresh display ids,
+    exactly as it does for a promotion added in the UI. Returns the count
+    removed.
+    """
+    count = 0
+    for d in walk_dicts(body):
+        if "promotionDisplayId" in d:
+            d.pop("promotionDisplayId")
+            count += 1
+    return count
+
+
 def strip_duplicate_lineage(body: dict[str, Any]) -> list[str]:
     """Drop "copied from journey X" markers so the draft is created standalone.
 
@@ -638,6 +662,13 @@ def prepare_body(
             "(let backoffice mint a fresh campaign binding)"
         )
 
+    removed_display_ids = strip_promotion_display_ids(body)
+    if removed_display_ids:
+        report.append(
+            f"removed {removed_display_ids} stale promotionDisplayId(s) "
+            "(let backoffice mint fresh promotion display ids)"
+        )
+
     id_count = regenerate_internal_ids(body)
     if id_count:
         report.append(f"regenerated {id_count} internal activity ids (unique per campaign)")
@@ -771,6 +802,18 @@ def verify_body(
         "no stale campaignId in campaign connector(s)"
         if not stale_campaign_ids
         else f"stale campaignId still present in campaign connector(s): {stale_campaign_ids}",
+    ))
+
+    leftover_display_ids = [
+        d["promotionDisplayId"]
+        for d in walk_dicts(body)
+        if d.get("promotionDisplayId")
+    ]
+    checks.append((
+        not leftover_display_ids,
+        "no stale promotionDisplayId in payload"
+        if not leftover_display_ids
+        else f"stale promotionDisplayId still present: {leftover_display_ids}",
     ))
 
     if journey_type == "two_hours":
