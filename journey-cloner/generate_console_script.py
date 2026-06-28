@@ -157,6 +157,32 @@ JS_TEMPLATE = """\
       `T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
   };
 
+  const newUuid = () =>
+    (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+          const r = (Math.random() * 16) | 0;
+          return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+        });
+  // Give every internal activity/node id a fresh UUID on each run, the same way
+  // regenerate_internal_ids() does in create_journeys.py. The IDs baked into
+  // this file are fixed at generation time, so without this a second paste (or
+  // a paste after a previous run already created the drafts) re-sends identical
+  // activity ids and the backoffice rejects it with "activities with the same
+  // identifier already exist in other journeys". Collect every activityId/id
+  // UUID, map each to a fresh one, and string-replace throughout so handles,
+  // ports, edges and rawJourneyData config keys that embed the id stay in sync.
+  const UUID_RE = /"(?:activityId|id)"\\s*:\\s*"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"/g;
+  const regenerateInternalIds = (jsonText) => {
+    const oldIds = new Set();
+    let m;
+    UUID_RE.lastIndex = 0;
+    while ((m = UUID_RE.exec(jsonText)) !== null) oldIds.add(m[1]);
+    let text = jsonText;
+    for (const oldId of oldIds) text = text.split(oldId).join(newUuid());
+    return text;
+  };
+
   async function reserveId() {
     const r = await fetch(BASE + '/journeys/identifier', {
       method: 'POST',
@@ -201,6 +227,10 @@ JS_TEMPLATE = """\
     for (const [t, rid] of Object.entries(realIds)) {
       text = text.split('DRY-RUN-' + t.toUpperCase()).join(rid);
     }
+    // Fresh activity ids per run so re-pasting this script never collides with
+    // drafts a previous run already created. DRY-RUN-* placeholders and JRN-*
+    // ids are not UUIDs, so this leaves the journey-id swaps above untouched.
+    text = regenerateInternalIds(text);
     const body = JSON.parse(text);
 
     if (IMMEDIATE[type] != null) {
