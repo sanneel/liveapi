@@ -402,7 +402,238 @@ design and differ only by an image.
 
 ---
 
-## 12. Open questions / unknowns
+## 12. The bigger picture: three subsystems, not one
+
+A player-facing promotion is assembled from **three independent backoffice
+subsystems** that reference each other by id. This is the single most important
+mental model:
+
+```
+  PROMO PAGE  ──or──  RANDOMIZER (Fortune Wheel)
+  (banner / landing)  (weighted random prize picker)
+        │                      │
+        │  each entry / each prize points at →   journeyId + activityId
+        ▼                      ▼
+                 PLAYER JOURNEY(S)
+        (deliver the actual reward: freebet / free spins /
+         casino bonus / promotion, gated by deposit, etc.)
+```
+
+- **Journey Builder** (`/crm/journey-builder/v0`) — the reward engines (§1–§11).
+- **Promo** (`/crm/promo/v2`) — the *front door*: **Promo Pages** and
+  **Randomizers** (the Fortune Wheel). These are **NOT journeys**; they live in
+  a different API and reference journeys as their payload.
+
+So "build a Spin-the-Wheel promo" = build the reward **journeys** first, then
+build a **Randomizer** whose prizes point at those journeys' entry activities.
+The wheel does the *random selection + visuals*; the journey does the *reward*.
+
+API base for this subsystem (JBCL):
+```
+https://pmi.rea-backoffice.gr8.tech/api/ubo/api/v0/crm/promo/v2
+```
+
+---
+
+## 13. Randomizer / Fortune Wheel (`POST /promo-drafts/randomizer`)
+
+The Fortune Wheel is a **Randomizer** promo object. Captured example:
+`JBCL|SP|WOF|09.06.26` — a 6-prize sport wheel.
+
+Key fields:
+```jsonc
+{
+  "type": "Randomizer",
+  "randomizationType": "FortuneWheel",   // the wheel UI
+  "randomizerShotPolicy": "Once",        // 1 spin per player  (= "1 spin per player")
+  "playerVisibility": "Authorized",      // must be logged in to spin
+  "internalName": "JBCL|SP|WOF|09.06.26",
+  "urlShortName": "sport-09-06-2026",
+  "showDate": "...", "hideDate": "...",  // when the wheel is visible
+  "startDate": "...", "endDate": "...",  // when it's active
+  "languages": ["en","es"],
+  "currencies": [{"brand":"JBCL","currency":null}],
+  "isUsedInJourney": false,
+  "daysToAccept": null,
+  "promoCode": null,                     // can gate entry behind a promocode
+  "contentId": "...", "frontId": "...",  // visual content (the candle/birthday skin lives here)
+  "filterConditions": [ /* segment targeting, see §15 */ ],
+  "prizes": [ /* see below */ ]
+}
+```
+
+### Prizes — weighted random, each routed to a journey
+Every prize is a **`JourneyPrize`** with a `weight`. **Weights sum to 100** (they
+are percentages of the wheel). On spin, the platform picks a prize by weight and
+**routes the player into that journey's specific activity**.
+
+```jsonc
+"prizes": [
+  {
+    "weight": 36.9,                 // 36.9% chance
+    "type": "JourneyPrize",
+    "isEmptyPrize": false,          // true = a "no win" wheel segment
+    "isLimitedPrize": false,        // true = capped-quantity prize…
+    "prizeQuantity": null,          // …e.g. set to 3 for "3 winners" physical prizes
+    "journeyPrizeSettings": {
+      "journeyId": "JRN-0-222272",
+      "activityId": "ff2e626c-7ec7-4c1c-859e-078ef18004be",  // the entry activity inside that journey
+      "activityDescription": "JBCL | SP | RB - Wheel of fortune | Dep | Freebet",
+      "isEmptyPrize": false
+    }
+  }
+  // … more prizes, weights total 100
+]
+```
+
+The captured wheel's six prizes (weights): Free Money `0.1`, Free Bonuses `3`,
+Dep Bonus `25`, Bet Insurance `10`, Dep Freebet `36.9`, Bet Freebet `25`
+→ **= 100**.
+
+**This answers two earlier unknowns:**
+- The **randomizer is `weight`-based** here, not a journey node. To make a
+  3-prize wheel, define 3 prizes with weights summing to 100.
+- **Limited / physical prizes** (e.g. "3 headset winners"): set
+  `isLimitedPrize: true` + `prizeQuantity: 3`. Use `isEmptyPrize: true` for
+  "better luck next time" segments.
+
+---
+
+## 14. Promo Page (`POST /promo-drafts/promo-page`)
+
+A **Promo Page** is the banner/landing entry point (the "banner on promotions
+page" trigger). Captured example: `JBCL|CS|GOW-24-06-26` (Game of the Week).
+
+```jsonc
+{
+  "type": "PromoPage",
+  "internalName": "JBCL|CS|GOW-24-06-26",
+  "brand": "JBCL",
+  "playerVisibility": "Unauthorized",    // banner visible even when logged out
+  "showDate": "...", "startDate": "...", "endDate": "...",
+  "currencies": [{"brand":"JBCL","currency":"CLP"}],
+  "currencyMode": "single",
+  "languages": ["en","es"],
+  "urlShortName": "<uuid-or-slug>",
+  "contentId": "...", "frontId": "...",  // the page visual/content
+  "filterConditions": [ /* segment targeting, see §15 */ ],
+  "promotionSettings": {
+    "type": "JourneyPromotion",
+    "journeyPromotionSettings": {
+      "journeyId": "JRN-0-577417",
+      "activityId": "615a8e8d-93cd-466f-aa4e-42f848283fbf",  // entry activity in the journey
+      "activityDescription": "JBCL | CS | RB - Game of the week | 50 FS"
+    }
+  }
+}
+```
+
+So a Promo Page **routes a player into one journey activity** (vs. the wheel,
+which routes to one-of-N by weight). Both use the same `{journeyId, activityId}`
+hand-off to the Journey Builder.
+
+> Both Randomizer and Promo Page also do a `POST /promo/v2/s3/copy` first
+> (copies visual assets in S3) before the draft `POST`. The `contentId` /
+> `frontId` reference those assets.
+
+---
+
+## 15. Segment targeting (`filterConditions`)
+
+Both promo objects target audiences with a `filterConditions[]` array. Each
+condition:
+```jsonc
+{
+  "key": "Sport" | "Business" | ...,
+  "filterType": "fairplay_business_segment" | ...,
+  "conditionType": "MultiSelect",
+  "operator": "in" | "notIn",
+  "values": [ {"id": 31, "name": "Negative"}, {"id": 40, "name": "VIP-Platinum"}, … ]
+}
+```
+- The Game-of-Week page **excluded** the `Negative` business segment
+  (`operator: "notIn"`).
+- The wheel listed VIP / risk segments (`VIP-Platinum/Gold/Silver`,
+  `Suspicious`, `Scammer`, `Arbitrageur`, …) — this is how "All active players"
+  vs. a VIP-only wheel is expressed.
+
+---
+
+## 16. Casino reward activity types (Journey Builder)
+
+From the **Game of the Week** journey (`JBCL | CS | Game of the week | 50 FS`),
+the casino reward nodes that the sport templates never showed:
+
+### `freespin_bonus` — casino free spins
+```jsonc
+"freespinActivity": {
+  "spins": 50,
+  "provider": "jugabet-games",
+  "lobbyGameId": "jugabet-games-la-gran-copa-jugabet",
+  "walletGameId": "gg_la_gran_copa_jugabet",
+  "externalGameId": "gg_la_gran_copa_jugabet",
+  "productType": "slots", "subcategory": "freeSpin",
+  "withWagering": true,
+  "spinsExpirationDuration": 86400000,        // ms (24h)
+  "startAt": "...", "stopAt": "...",
+  "currenciesConfig": {"CLP": {"betAmount": 20000, "minBonusAmount": 10000, "maxBonusAmount": 20000000}}
+}
+```
+Output paths: `FreespinBonusCollectingFinished` (→ next reward), `FreespinBonusNotUsed`,
+`FreeSpinsBonusTermsNotComplied`, `FreespinBonusRejectConfirmed`, plus
+withdrawal/abort variants.
+
+### `casino_bonus_v2` — wagering (deposit-match) casino bonus
+```jsonc
+{
+  "activitySubtype": "deposit", "productType": "slots",
+  "bonusPercent": 100,                         // 100% deposit match
+  "wageringRequirement": 30,                    // x30 wagering ("x25 on winnings" → 25)
+  "limitType": "multiplier", "releaseLimitMultiplier": 15,
+  "bonusExpirationTime": 172800000,             // ms (48h)
+  "withoutLockBalance": false,
+  "currenciesConfig": {"CLP": {"maxBonusAmount": 20000000, "releaseLimitAmount": 0}},
+  "wageringActivity": { /* nested mirror; dependencyMechanic: "FreeSpin" */ }
+}
+```
+Output paths: `WageringBonusFinished`, `WageringBonusLost`, `WageringBonusForfeited`,
+`WageringBonusExpired`, `WageringBonusRejectConfirmed`, `WageringBonusCancelledByWithdrawalConfirmed`,
+`WageringBonusAwardAborted`.
+
+### `event_detector` — server-side event watcher
+A non-interactive condition that subscribes to a platform event for a window:
+```jsonc
+"properties": {
+  "startingOptions": {"durationTime": "P0Y0M1DT0H0M0S"},   // watch for 1 day
+  "subscriptionOptions": [{
+    "event": {"eventName": "deposit.approved", "sourceName": "platform.orders"},
+    "filter": {"condition": "and", "filters": [
+      {"property": {"name":"amount","value":"CLP","operator":"greaterThanOrEqualCurrency"}, "variables":[{"value":"15000"}]},
+      {"property": {"name":"amount","value":"CLP","operator":"lessThanCurrency"},          "variables":[{"value":"25000"}]}
+    ]}
+  }]
+}
+```
+Output paths: `DetectorSuccess` / `DetectorFailed`. Used to detect a deposit in
+a value band (e.g. route by deposit size) without the interactive `deposit` node.
+
+### Game-of-the-Week flow (reconstructed)
+```
+[API entry] → [Multipurpose Promotion: pick 1 of 4 deposit tiers]
+   small/middle/big/bigger → [Deposit ≥ 10k/20k/30k/50k]
+        Satisfied → [Freespin Bonus: 50 FS "La Gran Copa"]
+              CollectingFinished → [Casino Bonus v2: 100% match, x30 wagering] → End
+```
+`metadata.productType: "Casino"`, `reEntryRule: Prohibited` (one entry/player).
+
+### Useful constants
+- Durations are **milliseconds**: `86400000` = 24h, `172800000` = 48h.
+- ISO-8601 durations on deposit/wait/detector: `P0Y0M3DT0H0M0S` = 3 days.
+- Promo dates use `04:00:00Z` = Chile midnight (UTC−4).
+
+---
+
+## 17. Open questions / unknowns
 
 - Whether there are **further server-minted unique fields** beyond `campaignId`
   and `promotionDisplayId` that a clone must clear (none known to remain, but
@@ -413,8 +644,23 @@ design and differ only by an image.
 - The exact server-side semantics of `campaignId` blank vs absent.
 - Whether `journeySource` / `version` / `changeHistory` fields have any effect
   when posting a fresh draft (currently passed through from the template).
+- **Promo subsystem cloning**: the `promo/v2` Randomizer and Promo Page almost
+  certainly carry their own server-minted ids (`contentId`, `frontId`,
+  `promotionDisplayId`, the draft id) that would need the same strip/regenerate
+  treatment if we ever clone *them*. Not yet exercised by the cloner (the cloner
+  currently only builds journeys, not promo pages/wheels).
+- Whether `freespin_bonus` / `casino_bonus_v2` carry a server-minted unique id
+  analogous to `promotionDisplayId` (watch for it when cloning casino journeys).
+
+**Now solved (previously open):**
+- The **wheel randomizer** is a `promo/v2` Randomizer with weighted
+  `JourneyPrize` entries — NOT a journey node (§13).
+- **Casino free spins / wagering bonus** are the `freespin_bonus` /
+  `casino_bonus_v2` activities (§16).
+- **Limited / physical prizes** = `isLimitedPrize` + `prizeQuantity` on a wheel
+  prize (§13).
 
 These are the spots to watch if a new "already exists" or validation error
-appears: capture the failing `POST /journey-drafts` response, read
-`aggregatedError.journeyActivityError[].problemDetails[].type`, and extend the
-strip/regenerate logic in `prepare_body`.
+appears: capture the failing `POST /journey-drafts` (or `promo-drafts`)
+response, read `aggregatedError.journeyActivityError[].problemDetails[].type`,
+and extend the strip/regenerate logic in `prepare_body`.
