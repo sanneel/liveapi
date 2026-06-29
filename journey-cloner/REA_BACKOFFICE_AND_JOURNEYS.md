@@ -1,0 +1,420 @@
+# REA Backoffice & Player Journeys — Working Knowledge
+
+This document captures everything we currently understand about the **REA
+Backoffice** (the `gr8.tech` "UBO" CRM platform) and its **Player Journey
+Builder**, gathered while building and debugging the Journey Cloner. It is
+written so that a future maintainer (or a new teammate) can understand how the
+platform models journeys, why cloning is hard, and which fields the platform
+treats as unique identifiers.
+
+> Scope: this is reverse-engineered knowledge from captured API payloads and
+> observed API errors, **not** official vendor documentation. Where something
+> is inferred rather than confirmed, it says so.
+
+---
+
+## 1. What the platform is
+
+- **REA Backoffice** is a betting/casino operator back office built on the
+  **gr8.tech "UBO"** platform. The brand we work with is **JBCL** (Jugabet
+  Chile), timezone `America/Santiago`.
+- The relevant subsystem is the **CRM Journey Builder** — a visual, node-based
+  automation tool. A "journey" is a flow that players enter and move through:
+  it can offer promotions, issue freebets, send notifications, wait, branch on
+  conditions, etc.
+- API base URL (JBCL):
+  ```
+  https://pmi.rea-backoffice.gr8.tech/api/ubo/api/v0/crm/journey-builder/v0
+  ```
+- Brand is sent as the `x-brand: JBCL` header on every request.
+
+---
+
+## 2. Authentication
+
+- Auth is a **Bearer JWT** in the `Authorization` header. Tokens are
+  short-lived and expire frequently.
+- The token's JWT payload has `typ: "Bearer"` and an `exp` (expiry) claim. The
+  console script validates both before using a captured token (rejects tokens
+  with < 30s left).
+- Two ways we obtain it:
+  1. **Direct (Python runner)**: paste a fresh token into `.env` as
+     `AUTH_TOKEN`. Optionally a `COOKIE` for session-bound endpoints.
+  2. **Console script (no token copying)**: a generated browser script hooks
+     `window.fetch` and `XMLHttpRequest.setRequestHeader` to **capture the auth
+     token from the page's own requests** the next time the logged-in
+     backoffice tab makes any API call. This avoids ever copy/pasting tokens.
+
+There is no password auth for these APIs — only the Bearer token issued to a
+logged-in backoffice session.
+
+---
+
+## 3. The two API endpoints that matter
+
+The whole cloning workflow uses just two endpoints:
+
+### 3.1 Reserve a journey identifier
+```
+POST {BASE}/journeys/identifier
+Content-Type: application/x-www-form-urlencoded
+```
+- Returns a fresh journey id of the form **`JRN-...`** (e.g. `JRN-0-598872`).
+- The response may be a **bare string** (`"JRN-0-598872"`) or an **object**
+  like `{"journeyId":"JRN-..."}` / `{"identifier":"..."}` — our parsers handle
+  both shapes (`parse_identifier_response` in Python, the same logic inline in
+  the console script).
+- You call this **once per draft** you intend to create, before posting it.
+
+### 3.2 Create a draft
+```
+POST {BASE}/journey-drafts
+Content-Type: application/json
+```
+- Body is the full journey object (see §5).
+- On success: returns the created draft.
+- On failure: returns the journey object with `status: "CreationFailed"` and an
+  **`aggregatedError`** block describing exactly which activities failed and
+  why (this is gold for debugging — see §7).
+
+---
+
+## 4. The four journey types in a campaign
+
+A single "promocode match campaign" is **four separate journeys**, created
+together. Creation order matters (see §6.3).
+
+| Type        | Name tag | Starts                         | Stops                              |
+|-------------|----------|--------------------------------|------------------------------------|
+| `followup`  | FollowUp | immediately after publish (now)| match day + 2 → 00:00 local        |
+| `bfr`       | BFR      | immediately after publish (now)| 2h-before-match minus 1 minute     |
+| `two_hours` | 2H       | match time − 2 hours           | match time                         |
+| `aft`       | AFT      | match time + 1 minute          | next day 00:00 local               |
+
+- **"Immediately after publish"** journeys (`followup`, `bfr`) set
+  `isImmediatelyAfterPublish: true` and `startAt = now`.
+- **Match-relative** journeys (`two_hours`, `aft`) compute `startAt`/`stopAt`
+  from the match datetime.
+- All times are written to the API in **UTC** with a .NET-style fractional
+  second on the top-level fields (`...T17:00:00.0000000Z`) and a plain
+  `...Z` form inside `rawJourneyData.infoValues`. Timezone id sent is
+  `Chile/Continental`.
+
+### 4.1 The 2H → FollowUp link
+The `two_hours` journey contains a **Campaign Connector** activity whose
+`HostJourneyId` must point at the **FollowUp journey created in the same run**.
+That's why `followup` is always created first: its real `JRN-...` id is then
+substituted into the 2H connector before 2H is posted.
+
+---
+
+## 5. The journey object model
+
+A draft body is a large JSON object. The fields that matter for cloning:
+
+### 5.1 Top-level identity / scheduling
+- `reservedJourneyId` — the `JRN-...` id reserved in §3.1.
+- `journeyName` — display name, e.g.
+  `JBCL|SP|uch vs espanol|PrmCode-JUGAKING|FollowUp | 29.06`.
+- `brand`, `currencyCodes` (`["CLP"]`), `timeZoneId`.
+- `startAt`, `stopAt`, `isImmediatelyAfterPublish`.
+- `duplicatedFromId` / `duplicatedFromVersion` — lineage pointers (see §6.1).
+
+### 5.2 `activities[]` — the executable graph
+Each activity is a node. Common shapes:
+- `activityId` — **UUID**, the node's identity.
+- `activityName` — type, e.g. `promotion`, `multipurpose_promotion`,
+  `freebet`, `deposit`, `notification_center`, `wait_interval`,
+  `external_system_source` (the "API" entry node), `campaign_connector`,
+  `end_of_path`, `end_of_journey`.
+- `events[]` — outgoing transitions. Each event has a `nextActivityId`
+  (another `activityId`) and an event name like `PromotionAccepted`,
+  `FreebetIssued`, `WaitTimeCompleted`, `NotificationSent`, etc. This is how
+  the graph is wired.
+- `dependencies[]` — references to other activities via `journeyActivityId`
+  (data dependencies, e.g. a freebet depends on the promotion's `PromotionId`).
+- `initializationData` — the activity's config. For promotions this holds
+  `promotionId`, `promotionLinkId`, `promotionDisplayId`, placements,
+  `ContentId`/`FrontId`, etc. For notifications it holds templates, languages,
+  `objectForSend` (with `metadata.journeyName`), variables, etc.
+
+### 5.3 `rawJourneyData` — the visual editor's mirror
+This is the **React-flow front-end state**: `elements[]` (nodes + edges with
+`x/y` positions, `ports`, `handles`), `infoValues` (a second copy of name /
+dates / brand / etc.), `pathesConfiguration`, `boundaryConfiguration`, and
+**`activitiesConfiguration`** (a per-activity config map keyed by `activityId`).
+
+**Critical:** many things appear **twice** — once in `activities[]` and once in
+`rawJourneyData`. Edits often have to be applied to both. Examples:
+- `journeyName` (top-level, `rawJourneyData.infoValues.journeyName`, and inside
+  each notification's `objectForSend.metadata.journeyName`).
+- dates (`startAt`/`stopAt` top-level and in `infoValues`).
+- `promotionDisplayId` (in `activities[].initializationData` **and** in
+  `rawJourneyData.activitiesConfiguration[id].data`).
+
+### 5.4 ID classes (this is the heart of cloning)
+There are two fundamentally different kinds of identifier in the payload:
+
+| Kind | Examples | Clone behaviour |
+|------|----------|-----------------|
+| **External references** (point at real platform objects) | `promotionId`, `promotionLinkId`, `ContentId`, `FrontId`, `contentId`, `templates` (notification template ids) | **Keep unchanged** — the draft must keep pointing at the same promotions/content. |
+| **Structural ids** (the journey's own internal graph) | `activityId`, `id` (node ids), and everything that embeds them: `nextActivityId`, `journeyActivityId`, port/handle ids, edge `source`/`target` | **Regenerate** consistently per clone. |
+| **Server-minted unique ids** (platform assigns; must NOT be reused) | `campaignId` (campaign connector), `promotionDisplayId` | **Strip/blank** so the server mints fresh ones. |
+| **Lineage metadata** | `duplicatedFromId`, `duplicatedFromVersion` | **Remove** — create as a standalone draft. |
+
+Understanding this table is the difference between a clone that works and one
+the platform rejects.
+
+---
+
+## 6. How cloning works (what the cloner does to a captured template)
+
+A "template" is a real journey's `POST /journey-drafts` body, captured from
+Chrome DevTools via **Copy as fetch** and extracted with `extract_templates.py`
+(it un-escapes the `"body"` string field into clean JSON). Templates live in
+`templates/<team>/<type>.json`.
+
+For each draft, `prepare_body()` transforms the template:
+
+### 6.1 Remove lineage
+`strip_duplicate_lineage()` drops `duplicatedFromId` / `duplicatedFromVersion`.
+Re-posting these tells the backoffice "this is another copy of journey X",
+which fails when a copy already exists. We always reserve a fresh id, so the
+lineage is just stale.
+
+### 6.2 Clear server-minted unique ids
+- `clear_stale_campaign_connector_ids()` — blanks `campaignConnectorConditions.
+  campaignId`. The captured template carries the original campaign binding; the
+  backoffice rejects re-use with *"the journey with the same identifier already
+  exists"*. Blank it → backoffice mints a fresh campaign binding (same state as
+  an unlinked connector in the UI).
+- `strip_promotion_display_ids()` — removes every `promotionDisplayId`. The
+  backoffice mints these server-side per promotion activity; re-posting the
+  source journey's display ids fails with HTTP **422
+  `already-existing-promotion-display-id`**: *"Promotion activity with
+  PromotionDisplayId: 'NNN' already exists"*. Dropping them lets the backoffice
+  assign new ones, exactly like adding a promotion in the UI. These ids are
+  pure display metadata — nothing else references them.
+
+### 6.3 Regenerate internal activity ids
+`regenerate_internal_ids()` collects every `activityId`/`id` UUID, maps each to
+a fresh `uuid4`, and does a **global string replace** across the serialized
+JSON. Because ports, handles, edges, and the `rawJourneyData.
+activitiesConfiguration` keys all **embed** the activity id as a substring, a
+string-level replace keeps the entire graph internally consistent. External
+reference ids (different keys) are left untouched.
+
+Why: a captured template reuses the source journey's activity UUIDs. Posting
+them claims ids already owned by the live source journey → rejected with
+*"activities with the same identifier already exist in other journeys"*.
+
+> **Console-script nuance:** the generated browser script regenerates these
+> activity UUIDs **again at paste time** (in JS, mirroring the Python logic), so
+> that re-pasting the *same* generated script never collides with drafts a
+> previous paste already created. Each paste is independent.
+
+### 6.4 Substitute campaign variables
+`deep_replace()` swaps, as plain string replacements throughout the JSON:
+- old promocode → new code (also `set_promocode_everywhere()` updates
+  `promocodeSettings.values` and "Promo codes: X" display lines).
+- old match text → new match name (handles apostrophe variants like
+  `O'higgins` / `O’Higgins`, longest-first to avoid partial overlaps).
+- old date label (`DD.MM`) → new date label.
+- the 2H connector's old `HostJourneyId` → the new FollowUp `JRN-...`.
+- team asset swaps (`asset_overrides`: old image URL → club image URL).
+
+Old values come from two sources: curated per-team hints (`Team.old_codes`,
+`old_match_texts`, `old_date_labels`) **and** values derived from the template
+itself (`_derive_from_name()` parses the journey name; `_template_promocodes()`
+reads `promocodeSettings`).
+
+### 6.5 Set name, id, dates
+- `build_journey_name()` builds the per-type name (each type has slightly
+  different spacing/format — see the function; these are matched exactly by the
+  verifier).
+- A per-run uniqueness tag (`#DDMM-HHMMSS`) is appended by default so
+  re-creating the same campaign doesn't collide on the journey name (disable
+  with `--no-unique-name`).
+- `set_dates()` writes `startAt`/`stopAt`/`isImmediatelyAfterPublish`/
+  `timeZoneId` to both the top level and `rawJourneyData.infoValues`.
+- "Start now" journeys are **staggered by a minute each** (`now_offset_minutes`)
+  so two immediate journeys in one run don't share an identical `startAt`.
+
+### 6.6 Verify before posting
+`verify_body()` runs a checklist (name matches, reservedJourneyId set, no
+leftover old campaign values, promocode correct, dates sane, **no stale
+campaignId**, **no stale promotionDisplayId**, 2H connector points at the new
+FollowUp). The runner refuses to POST a draft that fails verification.
+
+---
+
+## 7. Reading platform errors (debugging playbook)
+
+The single most useful debugging artifact is the **`POST /journey-drafts`
+response on failure**. When creation fails, the platform returns the journey
+object with:
+
+```json
+"status": "CreationFailed",
+"aggregatedError": {
+  "journeyError": { "errorType": "CreateJourneyError", "description": "ActivitiesFailed" },
+  "journeyActivityError": [
+    {
+      "activityId": "…",
+      "activityName": "promotion",
+      "problemDetails": [
+        {
+          "type": ".../already-existing-promotion-display-id",
+          "title": "Promotion activity with PromotionDisplayId: '677571' already exists'",
+          "status": 422
+        }
+      ]
+    }
+  ]
+}
+```
+
+`journeyActivityError[].problemDetails[].type` is a stable, machine-readable
+error slug — **always read that, not just the human title**. It names the
+exact field/constraint.
+
+### Known "already exists" failure modes (and fixes)
+These all surface with similar wording but are **different fields**. They were
+discovered one at a time:
+
+1. **`duplicatedFromId` present** → "the journey with the same identifier
+   already exists" → remove lineage (§6.1).
+2. **Identical `startAt` for two immediate journeys** → second is rejected →
+   stagger by a minute (§6.5).
+3. **Reused `campaignId`** in the 2H campaign connector → "same identifier
+   already exists" → blank it (§6.2).
+4. **Reused `activityId`s** (re-running the same generated script) →
+   "activities with the same identifier already exist in other journeys" →
+   regenerate internal ids; the console script also regenerates at paste time
+   (§6.3).
+5. **Reused `promotionDisplayId`** → HTTP 422
+   `already-existing-promotion-display-id` → strip them (§6.2).
+
+### General rule
+The platform enforces uniqueness on **server-minted identity fields** across
+all journeys for a brand. Any such field baked into a captured template will
+collide on the second-or-later creation. The fix pattern is always: **identify
+the field from `problemDetails.type`, then strip/blank/regenerate it in
+`prepare_body` so the server assigns a fresh one.** There may be more such
+fields we haven't hit yet; the diagnostic loop is reliable.
+
+### Cleanup note
+A failed creation leaves an **archived `CreationFailed` journey** (e.g.
+`JRN-0-598872`) in the backoffice. It's harmless but should be deleted
+periodically to keep the journeys list clean.
+
+---
+
+## 8. Activity types seen in these journeys
+
+From the captured FollowUp/2H journeys:
+
+- **`external_system_source` ("API")** — the entry node; players are added here
+  (`PlayerAdded` activation event).
+- **`multipurpose_promotion`** — an offer with **choosable flows** (a split into
+  parallel paths the player picks from). Holds `flowsData` / `flowsSetup` and a
+  `split` with `pathId`/`flowId`/`nextActivityId`.
+- **`promotion`** — a single offer (e.g. "Active Promotion (30%)"). Carries
+  `promotionId`, `promotionLinkId`, `promotionDisplayId`, placements
+  (`PromoLobby`, `Cashier`), deposit-rate, freebet max amounts, etc.
+- **`deposit`** — a condition node ("deposit ≥ X within 1 day"); branches into
+  Satisfied / Unsatisfied / Canceled.
+- **`freebet` ("Sport FreeBet")** — issues a freebet; branches into Issued /
+  Not issued / Used / Timeout / Canceled.
+- **`notification_center` / "On-site messaging"** — sends a templated message
+  (push/pop-up). Holds `templates` id, languages, `objectForSend` with
+  variables and `metadata.journeyName`.
+- **`wait_interval` ("Wait")** — delays (`waitPeriod` ISO-8601 duration like
+  `P0Y0M0DT1H0M0S`).
+- **`campaign_connector`** — links this journey to another (the 2H→FollowUp
+  link). Holds `campaignConnectorConditions` with `campaignId` + `HostJourneyId`.
+- **`end_of_path` / `end_of_journey`** — terminal nodes.
+
+Boundary/branch behaviour lives in `rawJourneyData.boundaryConfiguration` and
+`pathesConfiguration`; the visual node graph in `rawJourneyData.elements`.
+
+---
+
+## 9. Teams / template inheritance
+
+The cloner supports multiple "teams" (clubs):
+
+- **`udch`** (UDCH) — has its own captured templates in `templates/udch/`.
+- **`colocolo`** (Colo Colo) — **inherits** UDCH templates via `base_team`; it
+  only declares an `asset_overrides` map (old image URL → Colo Colo image URL)
+  for the one differing visual. A club-specific file dropped in
+  `templates/colocolo/` takes precedence over the inherited one.
+
+This avoids duplicating very large template files when two clubs share a journey
+design and differ only by an image.
+
+---
+
+## 10. The toolchain (files)
+
+| File | Purpose |
+|------|---------|
+| `extract_templates.py` | Turn a DevTools "Copy as fetch" of `POST /journey-drafts` into a clean template JSON. |
+| `create_journeys.py` | The core. Prepares + verifies + (optionally) posts the 4 drafts directly via the API. Holds all the transform logic (`prepare_body`, the strip/clear/regenerate functions, `verify_body`). |
+| `generate_console_script.py` | Renders a **self-contained browser console script** that does the API calls from a logged-in backoffice tab (captures token, reserves ids, regenerates activity ids at paste time, posts drafts). Reuses `prepare_body`/`verify_body`. |
+| `web_ui.py` | A small local HTML form wrapper around the runner. |
+| `app/services/journey_cloner_runner.py` | Integrates the cloner into the main app's admin UI (runs the scripts as subprocesses, manages templates per team). |
+
+### Two ways to create drafts
+1. **Direct API** (`create_journeys.py`, on a machine that can reach the
+   backoffice API + has a token in `.env`).
+2. **Console script** (for a locked-down work laptop on the office VPN that
+   can't run Python but has a logged-in browser): generate the `.js`, paste
+   into DevTools console. **Important: generated scripts are snapshots** — after
+   any cloner code change, **regenerate** the script; old `.js` files keep the
+   old behaviour.
+
+---
+
+## 11. Practical gotchas / lessons learned
+
+- **Edit both copies.** Anything user-visible (name, dates, promocode) lives in
+  both `activities[]`/top-level and `rawJourneyData`. Miss one and the journey
+  is inconsistent.
+- **String-replace, not key-walk, for ids that are embedded.** Activity ids are
+  substrings of port/handle/edge ids, so regeneration must be a global text
+  replace to stay consistent.
+- **Never touch external reference ids.** `promotionId`, `promotionLinkId`,
+  `ContentId`, `FrontId`, notification `templates` ids point at real platform
+  objects — changing them breaks the offer/content.
+- **Server-minted ids are the enemy of cloning.** `campaignId`,
+  `promotionDisplayId` (and possibly others) must be cleared so the server
+  re-mints them. The error message wording ("identifier already exists") is the
+  same for several different fields — rely on `problemDetails.type`.
+- **Tokens expire fast.** Prefer the console script's auto-capture over pasting
+  tokens; never commit tokens (`.env` is git-ignored; `COOKIE`/`AUTH_TOKEN`
+  must stay out of the repo).
+- **A failed POST still creates an archived shell journey.** Clean these up.
+- **Re-running an already-run console script** is now safe (activity ids
+  regenerate at paste time + display ids/campaign id are stripped), but the
+  cleanest path for a partial failure is to re-create only the missing types
+  (`--types ...`, and `--followup-id JRN-...` to relink 2H).
+
+---
+
+## 12. Open questions / unknowns
+
+- Whether there are **further server-minted unique fields** beyond `campaignId`
+  and `promotionDisplayId` that a clone must clear (none known to remain, but
+  the pattern has recurred).
+- Whether `promotionDisplayId` should be **removed** (current approach) vs
+  **blanked** — removal has been chosen as the closest match to "freshly added
+  in the UI"; confirm against a live successful creation.
+- The exact server-side semantics of `campaignId` blank vs absent.
+- Whether `journeySource` / `version` / `changeHistory` fields have any effect
+  when posting a fresh draft (currently passed through from the template).
+
+These are the spots to watch if a new "already exists" or validation error
+appears: capture the failing `POST /journey-drafts` response, read
+`aggregatedError.journeyActivityError[].problemDetails[].type`, and extend the
+strip/regenerate logic in `prepare_body`.
