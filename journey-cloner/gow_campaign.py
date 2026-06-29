@@ -310,26 +310,47 @@ JS_TEMPLATE = r"""// Game-of-Week campaign console script — generated @GENERAT
     return null;
   }
   const normGame = (s) => (s || '').replace(/[™®]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
-  // Resolve the real lobbyId/walletId/externalGameId from the live games catalog.
-  // The baked ids in the template can be stale/guessed; if they don't match a
-  // catalog game the casino backend rejects publish with "Game with lobbyId=...
-  // is not found". We search by provider + the game's first word, then match the
-  // exact translationKey (ignoring the trademark glyph the catalog appends).
-  async function resolveGameIds(provider, gameName) {
-    const term = (gameName || '').trim().split(/\s+/)[0];
-    const url = BASE + '/journey-activities/free-spins-bonus-deposit/data/games'
+  // One catalog query. translationKey is a case-insensitive substring filter and
+  // the endpoint pages at size=100 (a provider can have 500+ slots), so we always
+  // narrow with a search term — never fetch a whole provider and scan.
+  async function searchGames(provider, term) {
+    let url = BASE + '/journey-activities/free-spins-bonus-deposit/data/games'
       + '?freeSpinTypes=regular&productType=slots&page=0&size=100'
-      + '&gameProvider=' + encodeURIComponent(provider)
       + '&translationKey=' + encodeURIComponent(term);
+    if (provider) url += '&gameProvider=' + encodeURIComponent(provider);
     const r = await fetch(url, { headers: headers('application/json'), credentials: 'include' });
-    if (!r.ok) throw new Error('Game search HTTP ' + r.status + ' for ' + provider + ' / ' + gameName);
-    const items = ((await r.json()) || {}).items || [];
+    if (!r.ok) throw new Error('Game search HTTP ' + r.status);
+    return (((await r.json()) || {}).items) || [];
+  }
+  // Resolve the exact catalog game (slot) + provider. The baked ids can be stale,
+  // and the casino backend rejects publish if lobbyId/provider don't match a real
+  // catalog game ("Game with lobbyId=... is not found"). We match the FULL name
+  // exactly (ignoring the ™ glyph the catalog appends) — never a loose substring,
+  // so we can't pick the wrong slot. If the typed provider doesn't contain the
+  // game we retry across all providers and use whichever provider really owns it.
+  async function resolveGame(provider, gameName) {
     const want = normGame(gameName);
-    const hit = items.find((it) => normGame(it.translationKey) === want)
-      || items.find((it) => normGame(it.translationKey).indexOf(want) === 0)
-      || items.find((it) => normGame(it.translationKey).indexOf(want) !== -1);
-    if (!hit) throw new Error('Game "' + gameName + '" not found in catalog for provider "' + provider + '" — candidates: ' + items.map((i) => i.translationKey).join(', '));
-    return { lobbyId: hit.lobbyId, walletId: hit.walletId, externalGameId: hit.externalGameId };
+    const term = (gameName || '').trim().split(/\s+/)[0];
+    let items = [];
+    try { items = await searchGames(provider, term); } catch (e) { if (provider) throw e; }
+    let exact = items.filter((it) => normGame(it.translationKey) === want);
+    if (!exact.length && provider) {
+      // typed provider may be wrong/missing the game — search every provider
+      let all = [];
+      try { all = await searchGames('', term); } catch (e) { /* provider-less search may be unsupported */ }
+      const allExact = all.filter((it) => normGame(it.translationKey) === want);
+      if (allExact.length) { items = all; exact = allExact; }
+    }
+    if (exact.length === 1) return exact[0];
+    if (exact.length > 1) {
+      const pref = exact.find((it) => (it.gameProvider || '').toLowerCase() === (provider || '').toLowerCase());
+      if (pref) return pref;
+      throw new Error('Game "' + gameName + '" matches multiple providers: ' + exact.map((i) => i.gameProvider + '/' + i.translationKey).join(', ') + '. Set the right provider.');
+    }
+    // no exact name match — allow a single unambiguous prefix, else fail with the list
+    const starts = items.filter((it) => normGame(it.translationKey).indexOf(want) === 0);
+    if (starts.length === 1) return starts[0];
+    throw new Error('Game "' + gameName + '" not found exactly' + (provider ? ' for provider "' + provider + '"' : '') + '. Candidates: ' + (items.map((i) => i.translationKey).join(', ') || 'none'));
   }
 
   async function copyContentsTarget(srcPath, destPath, fileFilters) {
@@ -488,20 +509,24 @@ JS_TEMPLATE = r"""// Game-of-Week campaign console script — generated @GENERAT
   }
   walkReplace(PAYLOAD, idMap);
 
-  // Swap the baked free-spin game ids for the real catalog ones before posting.
+  // Swap the baked free-spin game ids + provider for the real catalog ones before posting.
   const fsSample = findFreespin(PAYLOAD);
   let text = JSON.stringify(PAYLOAD);
-  if (fsSample && fsSample.provider) {
-    const resolved = await resolveGameIds(fsSample.provider, GAME_NAME);
-    console.log('Resolved game "' + GAME_NAME + '" ->', resolved);
+  if (fsSample) {
+    const hit = await resolveGame(fsSample.provider, GAME_NAME);
+    console.log('Resolved game "' + GAME_NAME + '" ->', { provider: hit.gameProvider, lobbyId: hit.lobbyId, walletId: hit.walletId, externalGameId: hit.externalGameId, name: hit.translationKey });
     const swaps = [];
-    if (fsSample.lobbyGameId && resolved.lobbyId && fsSample.lobbyGameId !== resolved.lobbyId) swaps.push([fsSample.lobbyGameId, resolved.lobbyId]);
-    if (fsSample.walletGameId && resolved.walletId && fsSample.walletGameId !== resolved.walletId) swaps.push([fsSample.walletGameId, resolved.walletId]);
-    if (fsSample.externalGameId && resolved.externalGameId && fsSample.externalGameId !== resolved.externalGameId) swaps.push([fsSample.externalGameId, resolved.externalGameId]);
-    // longest baked id first, so one id that is a substring of another can't be partly rewritten
-    swaps.sort((a, b) => b[0].length - a[0].length);
-    for (const [a, b] of swaps) text = text.split(a).join(b);
-    if (swaps.length) console.log('  rewrote baked game ids:', swaps.map((s) => s[0] + ' -> ' + s[1]).join(', '));
+    if (fsSample.lobbyGameId && hit.lobbyId) swaps.push([fsSample.lobbyGameId, hit.lobbyId]);
+    if (fsSample.walletGameId && hit.walletId) swaps.push([fsSample.walletGameId, hit.walletId]);
+    if (fsSample.externalGameId && hit.externalGameId) swaps.push([fsSample.externalGameId, hit.externalGameId]);
+    // dedupe by source, drop no-ops, longest source first so a substring id can't be partly rewritten
+    const uniq = swaps.filter(([a, b], i) => a && a !== b && swaps.findIndex((s) => s[0] === a) === i).sort((a, b) => b[0].length - a[0].length);
+    for (const [a, b] of uniq) text = text.split(a).join(b);
+    // provider is a plain word — replace only the freespin "provider":"x" field, surgically
+    if (fsSample.provider && hit.gameProvider && fsSample.provider !== hit.gameProvider) {
+      text = text.split('"provider":"' + fsSample.provider + '"').join('"provider":"' + hit.gameProvider + '"');
+    }
+    if (uniq.length) console.log('  rewrote game ids:', uniq.map((s) => s[0] + ' -> ' + s[1]).join(', '));
   }
   text = text.split('DRY-RUN-CASINO').join(realId);
   const regenResult = regen(text);
