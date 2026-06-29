@@ -99,6 +99,16 @@ def chile_window(date_str: str, days: int) -> tuple[datetime, datetime]:
     return start, start + timedelta(days=days)
 
 
+def chile_same_day_window(
+    date_str: str, start_hour: int = 12, end_hour: int = 19
+) -> tuple[datetime, datetime]:
+    """DATE start_hour:00 -> DATE end_hour:00, same day, in America/Santiago."""
+    day = datetime.strptime(date_str, "%Y-%m-%d").date()
+    start = datetime.combine(day, time(start_hour, 0), tzinfo=LOCAL_TZ)
+    stop = datetime.combine(day, time(end_hour, 0), tzinfo=LOCAL_TZ)
+    return start, stop
+
+
 def freespin_activities(body: dict) -> list[dict]:
     """Every freespinActivity config dict, in activities[] order."""
     return [

@@ -174,70 +174,27 @@ def generate_console_script(
 
 
 GOW_SCRIPT_PATH = CLONER_DIR / "gow_campaign.py"
+COMMS_SCRIPT_PATH = CLONER_DIR / "comms_campaign.py"
+COMBINED_SCRIPT_PATH = CLONER_DIR / "gow_combined.py"
 
 
-def parse_bets(raw: str) -> List[int]:
-    """Parse the bets field ('120 200 500 800' or '120,200,500,800') to ints."""
-    parts = [p for p in re.split(r"[\s,]+", (raw or "").strip()) if p]
-    if not parts:
-        raise ValueError("Enter the per-tier bet values, e.g. 120 200 500 800")
-    try:
-        bets = [int(p) for p in parts]
-    except ValueError:
-        raise ValueError(f"Bets must be whole numbers, got: {raw!r}")
-    if any(b <= 0 for b in bets):
-        raise ValueError("Bet values must be positive.")
-    return bets
+def _date_slug(date: str) -> str:
+    return re.sub(r"[^0-9]", "", date) or "date"
 
 
-def _gow_basename(game_name: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "_", (game_name or "").lower()).strip("_")
-    return f"gow_{slug or 'campaign'}"
-
-
-def generate_gow_console_script(
-    *,
-    game_name: str,
-    provider: str,
-    date: str,
-    bets: List[int],
-    provider_name: str = "",
-    spins: int | None = None,
+def _run_gow_cli(
+    cmd: List[str], *, spec_text: str, basename: str
 ) -> Tuple[int, str, str, str | None, str]:
-    """Generate the paste-into-DevTools console script for a Game-of-the-Week
-    casino campaign (free-spin offer + 4 deposit tiers + promo page).
-
-    The real game ids are resolved from the live games catalog at paste time, so
-    only the game name + provider slug are needed here.
+    """Run one of the gow_*.py CLIs, piping the pasted spec via stdin.
 
     Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
     """
-    basename = _gow_basename(game_name)
-    cmd = [
-        python_executable(),
-        str(GOW_SCRIPT_PATH),
-        "--date",
-        date.strip(),
-        "--game-name",
-        game_name.strip(),
-        "--provider",
-        provider.strip(),
-        "--bets",
-        *[str(b) for b in bets],
-        "--name",
-        basename,
-    ]
-    if provider_name.strip():
-        cmd += ["--provider-name", provider_name.strip()]
-    if spins is not None:
-        cmd += ["--spins", str(spins)]
-
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
 
     display_cmd = " ".join(
         part if " " not in part else repr(part) for part in cmd
-    )
+    ) + "  < (pasted spec piped via stdin)"
 
     proc = subprocess.run(
         cmd,
@@ -247,6 +204,7 @@ def generate_gow_console_script(
         encoding="utf-8",
         capture_output=True,
         timeout=300,
+        input=spec_text,
     )
     output = proc.stdout
     if proc.stderr:
@@ -263,80 +221,64 @@ def generate_gow_console_script(
     return proc.returncode, output, display_cmd, js_text, js_filename
 
 
-COMMS_SCRIPT_PATH = CLONER_DIR / "comms_campaign.py"
+def generate_gow_console_script(
+    *,
+    date: str,
+    spec_text: str,
+    spins: int | None = None,
+) -> Tuple[int, str, str, str | None, str]:
+    """Generate the paste-into-DevTools console script for a Game-of-the-Week
+    casino campaign (free-spin offer + 4 deposit tiers + promo page).
 
+    Game name, provider, and bet tiers are all parsed from the pasted spec
+    blob; the real game ids are resolved from the live games catalog at
+    paste time.
 
-def _comms_basename(journey_name: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "_", (journey_name or "").lower()).strip("_")
-    return f"comms_{slug or 'campaign'}"
+    Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
+    """
+    basename = f"gow_campaign_{_date_slug(date)}"
+    cmd = [
+        python_executable(),
+        str(GOW_SCRIPT_PATH),
+        "--date",
+        date.strip(),
+        "--spec",
+        "-",
+        "--name",
+        basename,
+    ]
+    if spins is not None:
+        cmd += ["--spins", str(spins)]
+    return _run_gow_cli(cmd, spec_text=spec_text, basename=basename)
 
 
 def generate_comms_console_script(
     *,
     date: str,
+    spec_text: str,
     promo_page_id: str,
-    nc_title_en: str,
-    nc_title_es: str,
-    nc_desc_en: str,
-    nc_desc_es: str,
-    nc_caption_en: str,
-    nc_caption_es: str,
-    popup_title_en: str,
-    popup_title_es: str,
-    popup_desc_en: str,
-    popup_desc_es: str,
-    popup_caption_en: str,
-    popup_caption_es: str,
-    sms_en: str,
-    sms_es: str,
-    days: int = 7,
     public_domain: str = "",
     journey_name: str = "",
 ) -> Tuple[int, str, str, str | None, str]:
     """Generate the paste-into-DevTools console script for the GOW
     communications journey (Notification Center + Pop-up + SMS; Email is
-    left untouched and edited by hand).
+    left untouched and edited by hand). The window is always the same day,
+    12:00 -> 19:00 Chile time.
+
+    Notification/Pop-up/SMS copy is parsed from the pasted spec blob.
 
     Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
     """
-    basename = _comms_basename(journey_name or "comms_campaign")
+    basename = f"gow_comms_{_date_slug(date)}"
     cmd = [
         python_executable(),
         str(COMMS_SCRIPT_PATH),
         "--date",
         date.strip(),
-        "--days",
-        str(days),
         "--promo-page-id",
         promo_page_id.strip(),
-        "--nc-title-en",
-        nc_title_en,
-        "--nc-title-es",
-        nc_title_es,
-        "--nc-desc-en",
-        nc_desc_en,
-        "--nc-desc-es",
-        nc_desc_es,
-        "--nc-caption-en",
-        nc_caption_en,
-        "--nc-caption-es",
-        nc_caption_es,
-        "--popup-title-en",
-        popup_title_en,
-        "--popup-title-es",
-        popup_title_es,
-        "--popup-desc-en",
-        popup_desc_en,
-        "--popup-desc-es",
-        popup_desc_es,
-        "--popup-caption-en",
-        popup_caption_en,
-        "--popup-caption-es",
-        popup_caption_es,
-        "--sms-en",
-        sms_en,
-        "--sms-es",
-        sms_es,
+        "--spec",
+        "-",
         "--name",
         basename,
     ]
@@ -344,36 +286,45 @@ def generate_comms_console_script(
         cmd += ["--public-domain", public_domain.strip()]
     if journey_name.strip():
         cmd += ["--journey-name", journey_name.strip()]
+    return _run_gow_cli(cmd, spec_text=spec_text, basename=basename)
 
-    env = os.environ.copy()
-    env["PYTHONIOENCODING"] = "utf-8"
 
-    display_cmd = " ".join(
-        part if " " not in part else repr(part) for part in cmd
-    )
+def generate_gow_combined_console_script(
+    *,
+    date: str,
+    spec_text: str,
+    days: int = 1,
+    spins: int | None = None,
+    public_domain: str = "",
+    journey_name: str = "",
+) -> Tuple[int, str, str, str | None, str]:
+    """Generate the paste-into-DevTools console script that creates the GOW
+    casino campaign (free-spin offer + promo page) AND the communications
+    journey (Notification Center + Pop-up + SMS) together in one paste, with
+    the comms links pointed at the promo page created in the same run.
 
-    proc = subprocess.run(
-        cmd,
-        cwd=CLONER_DIR,
-        env=env,
-        text=True,
-        encoding="utf-8",
-        capture_output=True,
-        timeout=300,
-    )
-    output = proc.stdout
-    if proc.stderr:
-        output += "\nSTDERR:\n" + proc.stderr
-
-    js_filename = f"{basename}_console.js"
-    js_text = None
-    if proc.returncode == 0:
-        js_path = CLONER_DIR / "console_scripts" / js_filename
-        if js_path.exists():
-            js_text = js_path.read_text(encoding="utf-8")
-        else:
-            output += f"\nERROR: expected script file not found: {js_path}"
-    return proc.returncode, output, display_cmd, js_text, js_filename
+    Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
+    """
+    basename = f"gow_combined_{_date_slug(date)}"
+    cmd = [
+        python_executable(),
+        str(COMBINED_SCRIPT_PATH),
+        "--date",
+        date.strip(),
+        "--days",
+        str(days),
+        "--spec",
+        "-",
+        "--name",
+        basename,
+    ]
+    if spins is not None:
+        cmd += ["--spins", str(spins)]
+    if public_domain.strip():
+        cmd += ["--public-domain", public_domain.strip()]
+    if journey_name.strip():
+        cmd += ["--journey-name", journey_name.strip()]
+    return _run_gow_cli(cmd, spec_text=spec_text, basename=basename)
 
 
 def run_journey_cloner(

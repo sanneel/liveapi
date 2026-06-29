@@ -23,15 +23,16 @@ were mapped) and:
     upload API (same one the backoffice's own picker uses) — nothing is
     embedded in the script itself.
 
+The entry window (when the Notification/Pop-up/SMS go out) is fixed to the
+same day as --date, 12:00 -> 19:00 Chile time — separate from (and shorter
+than) the GOW free-spin journey's own activation window.
+
 Usage:
   python comms_campaign.py --date 2026-07-01 --promo-page-id <uuid> \
-      --nc-title-en "..." --nc-title-es "..." \
-      --nc-desc-en "..." --nc-desc-es "..." \
-      --nc-caption-en "..." --nc-caption-es "..." \
-      --popup-title-en "..." --popup-title-es "..." \
-      --popup-desc-en "..." --popup-desc-es "..." \
-      --popup-caption-en "..." --popup-caption-es "..." \
-      --sms-en "..." --sms-es "..."
+      --spec spec.txt
+
+  # or pipe the pasted spreadsheet block straight in:
+  pbpaste | python comms_campaign.py --date 2026-07-01 --promo-page-id <uuid> --spec -
 
 Then paste console_scripts/<name>_console.js into the DevTools console on a
 logged-in backoffice tab. Two file pickers will pop up in turn — pick the NC
@@ -57,7 +58,8 @@ from create_journeys import (
     strip_duplicate_lineage,
     strip_promotion_display_ids,
 )
-from casino_journey import DEFAULT_BASE_URL, chile_window, set_dates, utc_dotnet
+from casino_journey import DEFAULT_BASE_URL, chile_same_day_window, set_dates, utc_dotnet
+from spec_parser import ChannelCopy, SmsCopy, parse_spec
 
 TEMPLATE_PATH = Path(__file__).resolve().parent / "templates" / "casino" / "gow_comms.json"
 
@@ -75,6 +77,28 @@ POPUP_BG_TOKEN = "@@POPUP_BG_URL@@"
 RESERVED_ID_TOKEN = "DRY-RUN-COMMS"
 
 SMS_PREFIX = "JugaBet | "
+
+# The comms entry window is always same-day 12:00 -> 19:00 Chile time,
+# independent of the GOW journey's own (possibly multi-day) activation
+# window — this is the channel send window, not the offer's validity.
+COMMS_START_HOUR = 12
+COMMS_END_HOUR = 19
+
+
+def nc_dict_from_spec(nc: ChannelCopy) -> dict[str, str]:
+    return {
+        "title_en": nc.title_en, "title_es": nc.title_es,
+        "desc_en": nc.desc_en, "desc_es": nc.desc_es,
+        "caption_en": nc.caption_en, "caption_es": nc.caption_es,
+    }
+
+
+def popup_dict_from_spec(popup: ChannelCopy) -> dict[str, str]:
+    return nc_dict_from_spec(popup)
+
+
+def sms_dict_from_spec(sms: SmsCopy) -> dict[str, str]:
+    return {"text_en": sms.text_en, "text_es": sms.text_es}
 
 
 def find_notification(body: dict, contract: int) -> dict:
@@ -250,7 +274,6 @@ def set_comms_name(body: dict, start_local: datetime, name_override: str = "") -
 def prepare_comms(
     *,
     date_str: str,
-    days: int,
     promo_page_id: str,
     public_domain: str,
     journey_name: str,
@@ -261,7 +284,7 @@ def prepare_comms(
     body = json.loads(TEMPLATE_PATH.read_text(encoding="utf-8-sig"))
     report: list[str] = []
 
-    start_local, stop_local = chile_window(date_str, days)
+    start_local, stop_local = chile_same_day_window(date_str, COMMS_START_HOUR, COMMS_END_HOUR)
     set_dates(body, start_local, stop_local)
     report.append(
         f"startAt {body['startAt']} ({start_local:%Y-%m-%d %H:%M} Chile) -> "
@@ -509,50 +532,32 @@ def build_js(body: dict) -> str:
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--date", required=True, help="Campaign start date YYYY-MM-DD (Chile)")
-    p.add_argument("--days", type=int, default=7, help="Duration in days (default 7)")
+    p.add_argument("--date", required=True, help="Comms send date YYYY-MM-DD (Chile); window is always 12:00->19:00 that day")
     p.add_argument("--promo-page-id", required=True, help="UUID of the GOW promo page draft (from gow_campaign.py's DONE output)")
     p.add_argument("--public-domain", default=DEFAULT_PUBLIC_DOMAIN, help=f"Public site domain for the SMS link (default {DEFAULT_PUBLIC_DOMAIN})")
     p.add_argument("--journey-name", default="", help="Override the journey name (default: reuse template name with the date refreshed)")
-
-    p.add_argument("--nc-title-en", required=True)
-    p.add_argument("--nc-title-es", required=True)
-    p.add_argument("--nc-desc-en", required=True)
-    p.add_argument("--nc-desc-es", required=True)
-    p.add_argument("--nc-caption-en", required=True)
-    p.add_argument("--nc-caption-es", required=True)
-
-    p.add_argument("--popup-title-en", required=True)
-    p.add_argument("--popup-title-es", required=True)
-    p.add_argument("--popup-desc-en", required=True)
-    p.add_argument("--popup-desc-es", required=True)
-    p.add_argument("--popup-caption-en", required=True)
-    p.add_argument("--popup-caption-es", required=True)
-
-    p.add_argument("--sms-en", required=True)
-    p.add_argument("--sms-es", required=True)
+    p.add_argument("--spec", required=True, help="Path to the pasted spec blob, or '-' to read it from stdin")
 
     p.add_argument("--name", default="comms_campaign", help="Output file basename (default: comms_campaign)")
     p.add_argument("--dry-run", action="store_true", help="Write prepared payload to out/ instead of a console script")
     args = p.parse_args()
 
+    spec_text = sys.stdin.read() if args.spec == "-" else Path(args.spec).read_text(encoding="utf-8")
+    spec = parse_spec(spec_text)
+    for w in spec.warnings:
+        print(f"  WARN  {w}", file=sys.stderr)
+    if not spec.nc.title_en or not spec.popup.title_en or not spec.sms.text_en:
+        print("\nspec is missing Notification/Pop-up/Sms copy — nothing written.", file=sys.stderr)
+        return 1
+
     body, report, start_local, stop_local = prepare_comms(
         date_str=args.date,
-        days=args.days,
         promo_page_id=args.promo_page_id,
         public_domain=args.public_domain,
         journey_name=args.journey_name,
-        nc={
-            "title_en": args.nc_title_en, "title_es": args.nc_title_es,
-            "desc_en": args.nc_desc_en, "desc_es": args.nc_desc_es,
-            "caption_en": args.nc_caption_en, "caption_es": args.nc_caption_es,
-        },
-        popup={
-            "title_en": args.popup_title_en, "title_es": args.popup_title_es,
-            "desc_en": args.popup_desc_en, "desc_es": args.popup_desc_es,
-            "caption_en": args.popup_caption_en, "caption_es": args.popup_caption_es,
-        },
-        sms={"text_en": args.sms_en, "text_es": args.sms_es},
+        nc=nc_dict_from_spec(spec.nc),
+        popup=popup_dict_from_spec(spec.popup),
+        sms=sms_dict_from_spec(spec.sms),
     )
 
     print("Applied:")
