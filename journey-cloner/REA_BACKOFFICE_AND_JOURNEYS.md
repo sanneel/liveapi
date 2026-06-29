@@ -819,6 +819,34 @@ per-tier header.
 > Figma/asset spec, so map them to slots by name (`itemImageKey`/`prizeImageKey`
 > = logo, `widgetImgKey` = banner), or fetch the live images and measure.
 
+### 17.9 Worked example: Promo Page — "one photo, used everywhere"
+Captured from editing the GOW **promo page** (single bundle `9cdc2ebb`). One
+source photo is placed into **3 image slots**; the UI stores a **separate uuid'd
+copy per slot**:
+
+| Slot | Target | Stored file |
+|------|--------|-------------|
+| `widgetImgKey` | `widget/` | `466e3dd9-….png` (banner/card) |
+| `HeaderImageKey` | `spa/` | `7c4b35cd-….png` (hero) |
+| `prizeImageKey` | `spa/` | `70f6edc8-….png` (logo) |
+| `prizeDefaultImageKey` | `spa/` | `box.png` (left as default) |
+| `background.imageUrl` | `spa/` | unchanged |
+
+So **"upload one photo and use it everywhere" = the same source image is uploaded
+once per slot**, each becoming its own `mf/v1/<bundle>/<target>/media/<uuid>.png`.
+The slot→media mapping is then written by `s3/upload` (content JSON) and saved by
+`PUT /promo-drafts/promo-page`.
+
+**Net difference in scope:**
+- **Promo page** = 1 bundle, ~3 image slots (`widgetImgKey`, `HeaderImageKey`,
+  `prizeImageKey`).
+- **Journey** = 1 offer bundle (`widgetImgKey` + `prizeImageKey` + N tier
+  `itemImageKey`) + 1 bundle per deposit-tier promotion (`widgetImgKey` +
+  `bonusHeaderImage`).
+
+A Figma→REA tool would therefore take **one logo + one banner + one header**
+source image and fan them out across all these slot paths in both objects.
+
 ---
 
 ## 18. Open questions / unknowns
