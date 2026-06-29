@@ -633,7 +633,121 @@ a value band (e.g. route by deposit size) without the interactive `deposit` node
 
 ---
 
-## 17. Open questions / unknowns
+## 17. The design / visual layer (and how Figma would connect)
+
+This is the part the user flagged as "the most problematic." The **design** of a
+Promo Page or Randomizer is **not** stored in the promo draft itself — the draft
+only holds two pointers, `contentId` and `frontId` (UUIDs). The actual visuals
+live in a **micro-frontend (mf) asset bundle in S3**, served through:
+```
+GET /api/ubo/api/v0/.../aws-get/mf/v1/<id>/...
+```
+
+### 17.1 How the two pointers map
+| Draft field | S3 bundle | Holds |
+|-------------|-----------|-------|
+| `frontId` | `mf/v1/<frontId>/spa/settings.json` (+ `widget/settings.json`) | **Theme / layout**: colours, background image, layout toggles |
+| `contentId` | `mf/v1/<contentId>/spa/content/content-<lang>-<hash>` (+ `widget/...`) | **Copy + images** per language (`en`, `es`) |
+
+Each bundle has **two render targets**: `spa/` (the full promo page) and
+`widget/` (the small banner widget). There's also a per-module default at
+`mf/player/<ModuleType>/assets/...` (`Randomizer`, `MultipurposePromotion`,
+`WidgetModulor`) used as a fallback.
+
+When a draft is created, `POST /promo/v2/s3/copy` (empty body) **clones a base
+asset bundle** and returns the new prefix `mf/v1/<uuid>` — that uuid becomes the
+draft's `contentId` / `frontId`.
+
+### 17.2 `frontId` → `settings.json` (the theme)
+Randomizer example:
+```jsonc
+{
+  "headerColor": "#613249",
+  "fortuneWheelColor": "#b6de13",                 // wheel-only
+  "background": {
+    "imageUrl": "mf/v1/background/34befd6e-….png", // S3 path to the bg PNG
+    "filePath": "mf/v1/background/34befd6e-….png",
+    "name": "Wheel bg.png"
+  },
+  "withDescription": true,
+  "hiddenBlocks": [],                              // e.g. ["prizes"] to hide a section
+  "redirects": [ { "id": "…", "redirect": {"targetPage":"to_bonus"} } ],
+  "listGroupBonuses": [ … ]                        // ordering/grouping of prize cards
+}
+```
+Promo-Page example is the same shape (`headerColor: "#189EF8"`,
+`background.imageUrl: "mf/v1/background/…png"`, `hiddenBlocks: ["prizes"]`).
+
+So the **theme = a few hex colours + a background PNG + layout toggles.**
+
+### 17.3 `contentId` → `content-<lang>.json` (copy + images)
+Keys are a mix of **text** and **image keys**. Image keys are S3 media paths
+`<bundle>/spa/media/<uuid>.png`:
+- `prizeDefaultImageKey` — fallback prize image (`Randomizer/assets/spa/media/box.png`).
+- `HeaderImageKey` — the page hero image (promo page).
+- **per-prize** `"<prizeActivityId>.prizeImageKey"` — the icon shown for each
+  wheel prize, keyed by the **same `activityId`** the prize points at in the
+  randomizer draft (§13). This is the link between a prize's reward and its
+  picture.
+- text keys: titles, button labels, terms — e.g. `randomizerBtnSpinText`,
+  `randomizerRewardTitle`, `TitleKey`, `TermsDescriptionText`,
+  `"prize_<id>.prizeTextKey"` (the prize's caption), localized per `en`/`es`.
+
+### 17.4 Journey design (for completeness)
+A **journey** has no page bundle; its visuals are the **notification activities'
+content**: each `notification_center` carries a `templates` id and an
+`objectForSend.variables` list with image URLs — `background_image_src`,
+`icon-src`, `icon` — pointing at `https://static.contentin.cloud/<account>/<uuid>.png`,
+plus the localized title/caption/description text. That's the cloner's
+`asset_overrides` mechanism (swap one image URL for another) and the
+`set_notification_metadata_journey_name` touch-points.
+
+### 17.5 So "change the design" means, concretely:
+1. Replace the **background PNG** (`settings.json → background.imageUrl`) and/or
+   **header/prize PNGs** (`content → *ImageKey`) in the S3 bundle.
+2. Change the **hex colours** (`headerColor`, `fortuneWheelColor`).
+3. Change the **text keys** per language.
+4. Re-`POST` the draft (the `contentId`/`frontId` keep pointing at the bundle).
+
+For journeys: swap the `static.contentin.cloud` image URLs and notification
+template variables.
+
+### 17.6 Connecting Figma — the realistic plan
+There is **no native Figma integration** in REA — the platform only consumes
+PNGs + hex + text from the S3 bundle. So Figma connects via a **custom export
+pipeline** we'd build:
+
+1. **Figma file conventions.** Name layers/frames so they map to keys:
+   - a frame `background` (1920×1080) → `settings.background.imageUrl`
+   - a frame `header` → `content.HeaderImageKey`
+   - frames `prize/<slot>` → each prize's `<activityId>.prizeImageKey`
+   - colour **styles/variables** `header`, `wheel` → `headerColor`,
+     `fortuneWheelColor`
+   - text layers → the corresponding text keys (per `en`/`es`).
+2. **Pull from Figma REST API** (needs a Figma token + file key):
+   - `GET /v1/files/{key}` — node tree + layer names.
+   - `GET /v1/images/{key}?ids=…&format=png&scale=2` — export named frames as PNG.
+   - colour tokens from node `fills` / `GET /v1/files/{key}/styles`; text from
+     node `characters`.
+3. **Upload the exported PNGs** into the promo asset bundle and get back their
+   `mf/v1/<id>/spa/media/<uuid>.png` paths.
+4. **Write** those paths + hex + text into `settings.json` / `content-<lang>.json`,
+   then `POST` the `promo-drafts/randomizer` (or `/promo-page`) draft.
+
+**One capture still missing to build this:** we have the asset **read** paths and
+`s3/copy`, but **not the per-file image upload endpoint** (how a new PNG lands in
+`mf/v1/<id>/spa/media/`). Capture "upload image" in the promo constructor
+(DevTools → Network → the `PUT`/`POST` that sends the file) and we'll have the
+last piece. Also required: a Figma API token and the design file key.
+
+> Summary: design = **hex colours + PNGs + localized text** in an S3 mf-bundle
+> referenced by `contentId`/`frontId`. Figma → REA is a build-it pipeline
+> (Figma REST export → upload to the bundle → write settings/content JSON), not
+> a toggle. The only blocker to building it is capturing the image-upload call.
+
+---
+
+## 18. Open questions / unknowns
 
 - Whether there are **further server-minted unique fields** beyond `campaignId`
   and `promotionDisplayId` that a clone must clear (none known to remain, but
