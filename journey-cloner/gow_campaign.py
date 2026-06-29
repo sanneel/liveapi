@@ -112,6 +112,21 @@ DEFAULT_PROMO_SOURCE_CONTENT_ID = "f8341ab2-1e83-4c28-a895-9fc4a12a9a34"
 DEFAULT_PROMO_SOURCE_FRONT_ID = "9c930c93-ecb5-4832-acb4-732217572f8f"
 DEFAULT_PROMO_DESCRIPTION = "JBCL | CS | RB - Game of the week | 50 FS"
 
+# The promo page's content-<lang>-<hash>.json mixes GOW's 4 reward items in
+# among unrelated other promotions' reward items in the same file. These are
+# the 4 GOW-specific reward-item UUIDs (ascending by bet tier) as found in
+# DEFAULT_PROMO_SOURCE_CONTENT_ID's bundle — if a different --promo-source-
+# content-id is used, this table would need updating too.
+PROMO_REWARD_IDS: list[str] = [
+    "29ebecb8-1535-4268-a07c-c427191271e8",
+    "4be12719-736b-4057-84ec-00cf67565d8e",
+    "5f782f80-a642-4312-8f9f-9d05fb8676dd",
+    "bff89a48-063b-44ed-bcb1-02bdfb23f01f",
+]
+
+WEEKDAYS_EN = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+WEEKDAYS_ES = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+
 
 def clean_journey_name(name: str, start_local: datetime) -> str:
     """Strip "Copy of " lineage prefixes and refresh the trailing date.
@@ -205,6 +220,12 @@ JS_TEMPLATE = r"""// Game-of-Week campaign console script — generated @GENERAT
   const SHOW_DATE = @SHOW_DATE@;
   const START_DATE = @START_DATE@;
   const END_DATE = @END_DATE@;
+  const BETS = @BETS@;
+  const GAME_NAME = @GAME_NAME@;
+  const PROVIDER_NAME = @PROVIDER_NAME@;
+  const END_WEEKDAY_EN = @END_WEEKDAY_EN@;
+  const END_WEEKDAY_ES = @END_WEEKDAY_ES@;
+  const PROMO_REWARD_IDS = @PROMO_REWARD_IDS@;
 
   const CRM_BASE = BASE.replace(/\/journey-builder\/v0$/, '');
   const AWS_BASE = new URL(BASE).origin + '/api/aws-get';
@@ -307,10 +328,11 @@ JS_TEMPLATE = r"""// Game-of-Week campaign console script — generated @GENERAT
     return undefined;
   }
   async function cloneBundle(oldId, newId, targets, role, itemContentIds) {
-    for (const t of targets) {
+    // Each target is an independent destination folder, safe to copy concurrently.
+    await Promise.all(targets.map((t) => {
       const filters = role ? contentFileFilters(t, role, itemContentIds || []) : undefined;
-      await copyContentsTarget(`mf/v1/${oldId}/${t}`, `mf/v1/${newId}/${t}`, filters);
-    }
+      return copyContentsTarget(`mf/v1/${oldId}/${t}`, `mf/v1/${newId}/${t}`, filters);
+    }));
   }
   async function copyBundleS3(oldId, newId) {
     const url = CRM_BASE + `/promo/v2/s3/copy?destination=${encodeURIComponent('mf/v1/' + newId)}&source=${encodeURIComponent('mf/v1/' + oldId)}`;
@@ -333,21 +355,51 @@ JS_TEMPLATE = r"""// Game-of-Week campaign console script — generated @GENERAT
     if (!r.ok) throw new Error('upload-content failed: HTTP ' + r.status + ' ' + await r.text());
   }
 
+  // The visual content also bakes the bet amounts / game name / a literal
+  // "until the end of <weekday>" line as plain marketing text (separate from
+  // the {{PLACEHOLDER}} tokens the backend substitutes at runtime, which
+  // need no fixing). These helpers rewrite that baked text to match this
+  // run's --bets/--game/--date instead of whatever the template last had.
+  function replaceBetText(str, bets) {
+    let i = 0;
+    return str.replace(/\b(Bet|Apuesta)\b(\s*)\$[\d,]+/gi, (m, w, sp) => {
+      const v = bets[Math.min(i, bets.length - 1)]; i++; return w + sp + '$' + v;
+    });
+  }
+  const WEEKDAY_RE_EN = /\b(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)\b/g;
+  const WEEKDAY_RE_ES = /\b(lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo)\b/gi;
+  function replaceWeekday(str, lang) {
+    return lang === 'es' ? str.replace(WEEKDAY_RE_ES, END_WEEKDAY_ES) : str.replace(WEEKDAY_RE_EN, END_WEEKDAY_EN);
+  }
+
   // content-<lang>.json embeds absolute self-paths that include the bundle's
   // own id; after a raw copy they still point at the OLD id, so fetch, fix,
   // reupload. Constant filenames on journey bundles (no hash suffix).
-  async function fixJourneyContentJson(newId, oldId) {
+  async function fixJourneyContentJson(newId, oldId, role, itemContentIds) {
     const targets = ['spa', 'widget', 'widgetModulor', 'cashier'];
     const langs = ['en', 'es'];
-    for (const t of targets) {
-      for (const l of langs) {
-        const path = `mf/v1/${newId}/${t}/content/content-${l}.json`;
-        let txt;
-        try { txt = await awsGet(path); } catch (e) { console.warn('  (no content at', path, '— skipping)'); continue; }
-        const fixed = txt.split(oldId).join(newId);
-        await s3Upload(path, JSON.parse(fixed));
+    // Each target/lang file is independent, safe to fetch+fix+reupload concurrently.
+    const jobs = [];
+    for (const t of targets) for (const l of langs) jobs.push([t, l]);
+    await Promise.all(jobs.map(async ([t, l]) => {
+      const path = `mf/v1/${newId}/${t}/content/content-${l}.json`;
+      let txt;
+      try { txt = await awsGet(path); } catch (e) { console.warn('  (no content at', path, '— skipping)'); return; }
+      const fixed = txt.split(oldId).join(newId);
+      const content = JSON.parse(fixed);
+      if (role === 'offer') {
+        if (typeof content.ToGetDescrText === 'string') content.ToGetDescrText = replaceBetText(content.ToGetDescrText, BETS);
+        (itemContentIds || []).forEach((id, i) => {
+          for (const suffix of ['FlowItemKey', 'bonusDescription']) {
+            const key = id + suffix;
+            if (typeof content[key] === 'string') content[key] = replaceBetText(content[key], [BETS[i]]);
+          }
+        });
+      } else if (typeof content.bonusToGetDescrText === 'string') {
+        content.bonusToGetDescrText = replaceWeekday(content.bonusToGetDescrText, l);
       }
-    }
+      await s3Upload(path, content);
+    }));
   }
 
   // Promo-page content filenames are hash-suffixed and discovered via
@@ -356,15 +408,29 @@ JS_TEMPLATE = r"""// Game-of-Week campaign console script — generated @GENERAT
   async function fixPromoContentJson(newId, oldId) {
     const baseName = (p) => (p || '').split('/').pop();
     const manifests = {};
-    for (const t of ['spa', 'widget']) {
+    await Promise.all(['spa', 'widget'].map(async (t) => {
       manifests[t] = JSON.parse(await awsGet(`mf/v1/${newId}/${t}/manifest.json`));
-      for (const [lang, fname] of Object.entries(manifests[t])) {
-        const path = `mf/v1/${newId}/${t}/content/${fname}`;
-        const txt = await awsGet(path);
-        const fixed = txt.split(oldId).join(newId);
-        await s3Upload(path, JSON.parse(fixed));
+    }));
+    const jobs = [];
+    for (const t of ['spa', 'widget']) for (const [lang, fname] of Object.entries(manifests[t])) jobs.push([t, lang, fname]);
+    await Promise.all(jobs.map(async ([t, lang, fname]) => {
+      const path = `mf/v1/${newId}/${t}/content/${fname}`;
+      const txt = await awsGet(path);
+      const fixed = txt.split(oldId).join(newId);
+      const content = JSON.parse(fixed);
+      if (t === 'spa') {
+        if (typeof content.ToGetDescrText === 'string') {
+          content.ToGetDescrText = replaceWeekday(replaceBetText(content.ToGetDescrText, BETS), lang);
+        }
+        PROMO_REWARD_IDS.forEach((id, i) => {
+          const titleKey = id + 'TitleItemKey';
+          const catKey = id + 'CategoryItemKey';
+          if (typeof content[titleKey] === 'string') content[titleKey] = replaceBetText(content[titleKey], [BETS[i]]);
+          if (typeof content[catKey] === 'string') content[catKey] = `<p>| ${GAME_NAME} | ${PROVIDER_NAME}&nbsp;</p>\n`;
+        });
       }
-    }
+      await s3Upload(path, content);
+    }));
     const spaFname = manifests.spa.en || Object.values(manifests.spa)[0];
     const spaContent = JSON.parse(await awsGet(`mf/v1/${newId}/spa/content/${spaFname}`));
     const widgetFname = manifests.widget.en || Object.values(manifests.widget)[0];
@@ -401,15 +467,20 @@ JS_TEMPLATE = r"""// Game-of-Week campaign console script — generated @GENERAT
   if (!r.ok) { console.error('FAILED HTTP ' + r.status, resp); throw new Error('Journey draft not created.'); }
   console.log('%cJourney draft created: ' + realId, 'color:#22c55e;font-weight:bold');
 
-  console.log('Cloning visual bundles and uploading the photo (5 placements)...');
+  console.log('Cloning visual bundles and uploading the photo (5 placements, in parallel)...');
   const placementErrors = [];
-  for (const p of PLACEMENTS) {
+  // The 5 placements clone to entirely distinct content/front ids, so they're
+  // safe to run concurrently instead of one after another — this is most of
+  // why earlier runs felt slow (dozens of strictly sequential round-trips).
+  await Promise.all(PLACEMENTS.map(async (p) => {
     const ids = fresh[p.role];
     console.log('  [' + p.role + ']', 'content', p.contentId, '->', ids.contentId, '| front', p.frontId, '->', ids.frontId);
     try {
-      await cloneBundle(p.contentId, ids.contentId, ['spa', 'widget', 'widgetModulor', 'cashier'], p.role, p.itemContentIds);
-      await cloneBundle(p.frontId, ids.frontId, ['spa', 'widget']);
-      await fixJourneyContentJson(ids.contentId, p.contentId);
+      await Promise.all([
+        cloneBundle(p.contentId, ids.contentId, ['spa', 'widget', 'widgetModulor', 'cashier'], p.role, p.itemContentIds),
+        cloneBundle(p.frontId, ids.frontId, ['spa', 'widget']),
+      ]);
+      await fixJourneyContentJson(ids.contentId, p.contentId, p.role, p.itemContentIds);
       const fields = {};
       fields[`mf/v1/${ids.contentId}/widget/media/widgetImgKey.png`] = photo;
       if (p.role === 'offer') {
@@ -419,12 +490,12 @@ JS_TEMPLATE = r"""// Game-of-Week campaign console script — generated @GENERAT
         fields[`mf/v1/${ids.contentId}/spa/media/bonusHeaderImage.png`] = photo;
       }
       await uploadContentMulti(fields);
-      console.log('    photo uploaded to', Object.keys(fields).length, 'slot(s)');
+      console.log('    [' + p.role + '] photo uploaded to', Object.keys(fields).length, 'slot(s)');
     } catch (e) {
       console.error('  [' + p.role + '] FAILED:', e.message);
       placementErrors.push(p.role + ': ' + e.message);
     }
-  }
+  }));
   if (placementErrors.length) {
     console.error('%cSome placements failed, continuing to the promo page anyway:', 'color:#ef4444', placementErrors);
   } else {
@@ -489,6 +560,11 @@ def build_js(
     show_date: str,
     start_date: str,
     end_date: str,
+    bets_major: list[int],
+    game_name: str,
+    provider_name: str,
+    end_weekday_en: str,
+    end_weekday_es: str,
 ) -> str:
     js = JS_TEMPLATE
     js = js.replace("@GENERATED_AT@", datetime.now(LOCAL_TZ).strftime("%Y-%m-%d %H:%M %Z"))
@@ -504,6 +580,12 @@ def build_js(
     js = js.replace("@SHOW_DATE@", json.dumps(show_date))
     js = js.replace("@START_DATE@", json.dumps(start_date))
     js = js.replace("@END_DATE@", json.dumps(end_date))
+    js = js.replace("@BETS@", json.dumps(bets_major))
+    js = js.replace("@GAME_NAME@", json.dumps(game_name))
+    js = js.replace("@PROVIDER_NAME@", json.dumps(provider_name))
+    js = js.replace("@END_WEEKDAY_EN@", json.dumps(end_weekday_en))
+    js = js.replace("@END_WEEKDAY_ES@", json.dumps(end_weekday_es))
+    js = js.replace("@PROMO_REWARD_IDS@", json.dumps(PROMO_REWARD_IDS))
     return js
 
 
@@ -561,6 +643,10 @@ def main() -> int:
     end_date = stop_local - timedelta(minutes=1)
     promo_internal_name = f"{BRAND}|CS|GOW-{start_local:%d-%m-%y}"
 
+    last_day = (stop_local - timedelta(days=1)).weekday()
+    end_weekday_en = WEEKDAYS_EN[last_day]
+    end_weekday_es = WEEKDAYS_ES[last_day]
+
     js = build_js(
         body,
         promo_source_content_id=args.promo_source_content_id,
@@ -570,7 +656,13 @@ def main() -> int:
         show_date=utc_dotnet(show_date),
         start_date=utc_dotnet(start_date),
         end_date=utc_dotnet(end_date),
+        bets_major=args.bets,
+        game_name=game["game_name"],
+        provider_name=game["provider_name"],
+        end_weekday_en=end_weekday_en,
+        end_weekday_es=end_weekday_es,
     )
+    print(f"\nVisual content text: bets {args.bets}, game {game['game_name']!r}, end weekday {end_weekday_en}/{end_weekday_es}")
 
     out = Path("console_scripts")
     out.mkdir(exist_ok=True)
