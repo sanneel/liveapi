@@ -693,14 +693,22 @@ Keys are a mix of **text** and **image keys**. Image keys are S3 media paths
   `randomizerRewardTitle`, `TitleKey`, `TermsDescriptionText`,
   `"prize_<id>.prizeTextKey"` (the prize's caption), localized per `en`/`es`.
 
-### 17.4 Journey design (for completeness)
-A **journey** has no page bundle; its visuals are the **notification activities'
-content**: each `notification_center` carries a `templates` id and an
-`objectForSend.variables` list with image URLs — `background_image_src`,
-`icon-src`, `icon` — pointing at `https://static.contentin.cloud/<account>/<uuid>.png`,
-plus the localized title/caption/description text. That's the cloner's
-`asset_overrides` mechanism (swap one image URL for another) and the
-`set_notification_metadata_journey_name` touch-points.
+### 17.4 Journey design — two places
+A journey's visuals come from **two** sources:
+
+**(a) Notification content** (sport-style journeys): each `notification_center`
+carries a `templates` id and an `objectForSend.variables` list with image URLs —
+`background_image_src`, `icon-src`, `icon` — pointing at
+`https://static.contentin.cloud/<account>/<uuid>.png`, plus localized text.
+That's the cloner's `asset_overrides` mechanism.
+
+**(b) Placement visual bundles** (casino-style / promo journeys): the
+`multipurpose_promotion` and `promotion` activities carry **`placements[]`**
+whose `data.ContentId` / `data.FrontId` (and per-flow `flowsData[].contentId`)
+point at the **same `mf/v1/<id>` S3 bundles** described in §17.1–17.3. **These are
+the "visual settings in the journey" that must be changed before publishing** —
+they are how the offer/prize art is shown to the player. Confirmed from the
+Game-of-Week journey (see §17.8).
 
 ### 17.5 So "change the design" means, concretely:
 1. Replace the **background PNG** (`settings.json → background.imageUrl`) and/or
@@ -782,6 +790,34 @@ the bundle is boilerplate that can be copied from the base via `s3/copy`.
 > `s3/upload-content` (files). Figma → REA is now a fully specified build-it
 > pipeline; the only externals are a Figma token, the file key, and a layer
 > naming convention.
+
+### 17.8 Worked example: Game-of-Week — every picture changed before publish
+Captured from a full "change all the pictures" session. The journey's
+`multipurpose_promotion` + 4 `promotion` placements reference **5 visual
+bundles**; the images uploaded into them (via `s3/upload-content`) are:
+
+| Bundle (`ContentId`) | Bound to | Images |
+|----------------------|----------|--------|
+| `f9107c2e…` | Multipurpose Promotion (offer) | `widgetImgKey.png`, **`prizeImageKey.png`**, **4× `<flowId>.itemImageKey.png`** |
+| `e3b199fb…` | Promotion "small dep" | `widgetImgKey.png`, `bonusHeaderImage.png` |
+| `22ea33ce…` | Promotion "middle dep" | `widgetImgKey.png`, `bonusHeaderImage.png` |
+| `1f4afead…` | Promotion "big dep" | `widgetImgKey.png`, `bonusHeaderImage.png` |
+| `d8cefb1a…` | Promotion "bigger dep" | `widgetImgKey.png`, `bonusHeaderImage.png` |
+
+The 4 multipurpose **flow `contentId`s** equal the 4 `itemImageKey` filenames in
+`f9107c2e` — i.e. each wheel/offer flow has its own tier image.
+
+**The logos** (the square game-logo cut, e.g. 360×330) are the
+**`prizeImageKey` + the 4 `itemImageKey`** slots = **5 logo placements in the
+journey**, plus the **promo page's `prizeImageKey`/`HeaderImageKey`** → the same
+logo is reused **~6 places** across journey + promo page. The wide
+**`widgetImgKey`** is the banner/card (e.g. 474×256); **`bonusHeaderImage`** is a
+per-tier header.
+
+> Note: pixel dimensions are **not** in any API payload and image bytes are
+> usually not captured in HARs — size categories (360×330 etc.) come from the
+> Figma/asset spec, so map them to slots by name (`itemImageKey`/`prizeImageKey`
+> = logo, `widgetImgKey` = banner), or fetch the live images and measure.
 
 ---
 
