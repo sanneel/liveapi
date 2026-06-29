@@ -72,6 +72,14 @@ GAMES: dict[str, dict[str, str]] = {
         "game_name": "La Gran Copa Jugabet",
         "provider_name": "Jugabet Games",
     },
+    "spinandscoremegaways": {
+        "lobby_game_id": "pragmatic-spin-score",
+        "wallet_game_id": "pp_spin_score",
+        "external_game_id": "pp_spin_score",
+        "provider": "pragmatic",
+        "game_name": "Spin & Score Megaways",
+        "provider_name": "Pragmatic Play",
+    },
 }
 
 
