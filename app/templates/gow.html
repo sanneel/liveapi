@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}GOW · Jugabet Admin{% endblock %}
+{% block content_theme %}content-light{% endblock %}
+{% block page_title %}GOW{% endblock %}
+{% block page_subtitle %}Paste the Game-of-the-Week spec and generate the console script(s) — casino campaign, communications, or both together.{% endblock %}
+
+{% block page_actions %}
+  <a href="/admin/gow" class="btn">Clear</a>
+{% endblock %}
+
+{% block content %}
+
+{% if error %}<div class="alert err">{{ error }}</div>{% endif %}
+{% if result %}
+  <div class="alert {% if result.ok %}ok{% else %}err{% endif %}">
+    {% if result.ok %}Console script generated.{% else %}Generation exited with code {{ result.exit_code }}.{% endif %}
+  </div>
+{% endif %}
+
+<div class="row-flex">
+  <form method="post" action="/admin/gow/console-script" class="card card-pad col-rail" style="display:flex; flex-direction:column; gap:14px" id="gow-form">
+    <div>
+      <h2 class="card-title">Create</h2>
+      <p class="card-sub">Tick what to generate. Game name, provider, bet tiers, and every Notification/Pop-up/SMS copy field come from the pasted spec below — nothing is typed by hand except the date.</p>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+      <label class="field" style="flex-direction:row; align-items:center; gap:8px; cursor:pointer">
+        <input type="checkbox" name="create_campaign" id="create_campaign" {% if form.create_campaign %}checked{% endif %}/>
+        <span class="lbl" style="margin:0">Create Campaign</span>
+      </label>
+      <label class="field" style="flex-direction:row; align-items:center; gap:8px; cursor:pointer">
+        <input type="checkbox" name="create_communication" id="create_communication" {% if form.create_communication %}checked{% endif %}/>
+        <span class="lbl" style="margin:0">Create Communication</span>
+      </label>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+      <div class="field">
+        <span class="lbl">Date</span>
+        <input class="input" name="date" type="date" required value="{{ form.date or '' }}"/>
+        <p class="help" style="margin-top:6px">Campaign window starts here (Chile). Comms always runs the same day, 12:00 → 19:00 Chile.</p>
+      </div>
+      <div class="field" id="days-field">
+        <span class="lbl">Days <span style="color:var(--t-faint)">(optional, campaign only)</span></span>
+        <input class="input" name="days" type="number" min="1" value="{{ form.days or '1' }}"/>
+        <p class="help" style="margin-top:6px">Campaign window length. Defaults to 1.</p>
+      </div>
+    </div>
+
+    <div class="field" id="promo-page-id-field" style="display:none">
+      <span class="lbl">Promo-page id</span>
+      <input class="input mono" name="promo_page_id" value="{{ form.promo_page_id or '' }}" placeholder="e885e241-af8b-4ef9-9d40-ca211b2e8e0b"/>
+      <p class="help" style="margin-top:6px">Required only when creating Communication without Campaign — from a previously created GOW promo page.</p>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+      <div class="field">
+        <span class="lbl">Free spins <span style="color:var(--t-faint)">(optional)</span></span>
+        <input class="input" name="spins" type="number" min="1" value="{{ form.spins or '' }}" placeholder="50"/>
+        <p class="help" style="margin-top:6px">Defaults to the template value.</p>
+      </div>
+      <div class="field">
+        <span class="lbl">Public domain <span style="color:var(--t-faint)">(optional)</span></span>
+        <input class="input" name="public_domain" value="{{ form.public_domain or '' }}" placeholder="win.jugabet.cl"/>
+        <p class="help" style="margin-top:6px">Used to build the absolute SMS link.</p>
+      </div>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Journey name <span style="color:var(--t-faint)">(optional)</span></span>
+      <input class="input" name="journey_name" value="{{ form.journey_name or '' }}" placeholder="JBCL | CS&amp;SP | ..."/>
+      <p class="help" style="margin-top:6px">Defaults to refreshing the template's existing name with the new date.</p>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Spec</span>
+      <textarea class="input mono" name="spec" required rows="16" spellcheck="false" style="font-size:12px" placeholder="Paste the whole Product / Offer / Communication channels table here (tab-separated, as copied from the sheet).">{{ form.spec or '' }}</textarea>
+      <p class="help" style="margin-top:6px">Paste the full spec table: Product/Event/Offer (game, provider, bet tiers) and the Communication channels section (Notification, Notification Pop-up (Cat-fish), Sms — EN/ES copy with TRUE/FALSE flags). Email and Push pop-up are left untouched.</p>
+    </div>
+
+    <button class="btn primary" style="justify-content:center">Generate console script</button>
+    <p class="help">No token needed — the script grabs it from the backoffice tab on paste, pops file pickers for any images needed, then creates the journey draft(s) and (for Campaign) the promo page.</p>
+  </form>
+
+  <div class="col-main stack">
+    {% if console_script %}
+      <section class="card" style="overflow:hidden">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">Console Script Ready</h2>
+            <p class="card-sub">{{ console_script.name }}</p>
+          </div>
+          <button type="button" id="copy-console-script" class="btn primary">Copy script</button>
+        </div>
+        <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+          <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
+            <li>Click <b>Copy script</b> above.</li>
+            <li>On the computer with the office VPN, open the Journey Builder backoffice in Chrome (logged in).</li>
+            <li>Press <span class="mono">F12</span> and open the <b>Console</b> tab. If Chrome warns about pasting, type <span class="mono">allow pasting</span> and press Enter.</li>
+            <li>Paste the script and press Enter, then pick each image when its file picker pops up.</li>
+            <li>Watch for the green <b>DONE</b> with the created JRN id(s). Email (and any field not in the spec) is left untouched.</li>
+          </ol>
+          <textarea id="console-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ console_script.text }}</textarea>
+        </div>
+      </section>
+      <script>
+        (function () {
+          var btn = document.getElementById('copy-console-script');
+          var area = document.getElementById('console-script-text');
+          if (!btn || !area) return;
+          btn.addEventListener('click', function () {
+            var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); });
+            } else { area.select(); document.execCommand('copy'); done(); }
+          });
+        })();
+      </script>
+    {% endif %}
+
+    {% if result %}
+      <section class="card" style="overflow:hidden">
+        <div class="card-head"><h2 class="card-title">Run Output</h2></div>
+        <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+          <div>
+            <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Command</div>
+            <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0">{{ result.command }}</pre>
+          </div>
+          <div>
+            <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Output</div>
+            <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:32rem; margin:0">{{ result.output }}</pre>
+          </div>
+        </div>
+      </section>
+    {% else %}
+      <section class="card card-pad">
+        <h2 class="card-title" style="margin-bottom:8px">How it works</h2>
+        <div class="help" style="line-height:1.7">
+          <p style="margin:0 0 8px"><b>Create Campaign</b> builds the journey draft (free-spin offer with deposit tiers) and the promo page, with the campaign photo uploaded into every visual slot.</p>
+          <p style="margin:0 0 8px"><b>Create Communication</b> builds the Notification Center push, the Pop-up (Cat-Fish), and the SMS — all pointed at the promo page. Tick both to create them together in one paste, with the comms links wired to the promo page created in the same run.</p>
+          <p style="margin:0">If a required field is missing from the spec, or the game/provider doesn't match a catalog entry, the script stops with a clear error — nothing is created.</p>
+        </div>
+      </section>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  (function () {
+    var campaign = document.getElementById('create_campaign');
+    var comms = document.getElementById('create_communication');
+    var promoField = document.getElementById('promo-page-id-field');
+    var daysField = document.getElementById('days-field');
+    function sync() {
+      var onlyComms = comms.checked && !campaign.checked;
+      promoField.style.display = onlyComms ? '' : 'none';
+      daysField.style.display = campaign.checked ? '' : 'none';
+    }
+    campaign.addEventListener('change', sync);
+    comms.addEventListener('change', sync);
+    sync();
+  })();
+</script>
+
+{% endblock %}
