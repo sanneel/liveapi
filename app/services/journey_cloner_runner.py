@@ -173,6 +173,96 @@ def generate_console_script(
     return proc.returncode, output, display_cmd, js_text, js_filename
 
 
+GOW_SCRIPT_PATH = CLONER_DIR / "gow_campaign.py"
+
+
+def parse_bets(raw: str) -> List[int]:
+    """Parse the bets field ('120 200 500 800' or '120,200,500,800') to ints."""
+    parts = [p for p in re.split(r"[\s,]+", (raw or "").strip()) if p]
+    if not parts:
+        raise ValueError("Enter the per-tier bet values, e.g. 120 200 500 800")
+    try:
+        bets = [int(p) for p in parts]
+    except ValueError:
+        raise ValueError(f"Bets must be whole numbers, got: {raw!r}")
+    if any(b <= 0 for b in bets):
+        raise ValueError("Bet values must be positive.")
+    return bets
+
+
+def _gow_basename(game_name: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "_", (game_name or "").lower()).strip("_")
+    return f"gow_{slug or 'campaign'}"
+
+
+def generate_gow_console_script(
+    *,
+    game_name: str,
+    provider: str,
+    date: str,
+    bets: List[int],
+    provider_name: str = "",
+    spins: int | None = None,
+) -> Tuple[int, str, str, str | None, str]:
+    """Generate the paste-into-DevTools console script for a Game-of-the-Week
+    casino campaign (free-spin offer + 4 deposit tiers + promo page).
+
+    The real game ids are resolved from the live games catalog at paste time, so
+    only the game name + provider slug are needed here.
+
+    Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
+    """
+    basename = _gow_basename(game_name)
+    cmd = [
+        python_executable(),
+        str(GOW_SCRIPT_PATH),
+        "--date",
+        date.strip(),
+        "--game-name",
+        game_name.strip(),
+        "--provider",
+        provider.strip(),
+        "--bets",
+        *[str(b) for b in bets],
+        "--name",
+        basename,
+    ]
+    if provider_name.strip():
+        cmd += ["--provider-name", provider_name.strip()]
+    if spins is not None:
+        cmd += ["--spins", str(spins)]
+
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+
+    display_cmd = " ".join(
+        part if " " not in part else repr(part) for part in cmd
+    )
+
+    proc = subprocess.run(
+        cmd,
+        cwd=CLONER_DIR,
+        env=env,
+        text=True,
+        encoding="utf-8",
+        capture_output=True,
+        timeout=300,
+    )
+    output = proc.stdout
+    if proc.stderr:
+        output += "\nSTDERR:\n" + proc.stderr
+
+    js_filename = f"{basename}_console.js"
+    js_text = None
+    if proc.returncode == 0:
+        js_path = CLONER_DIR / "console_scripts" / js_filename
+        if js_path.exists():
+            js_text = js_path.read_text(encoding="utf-8")
+        else:
+            output += f"\nERROR: expected script file not found: {js_path}"
+    return proc.returncode, output, display_cmd, js_text, js_filename
+
+
 def run_journey_cloner(
     *,
     token: str,

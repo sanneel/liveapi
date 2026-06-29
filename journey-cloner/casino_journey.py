@@ -366,11 +366,24 @@ def resolve_game(args: argparse.Namespace) -> dict[str, str]:
     for k, v in overrides.items():
         if v:
             game[k] = v
+    # Live-resolution mode: with a provider + game name but no game ids, fill
+    # placeholder ids. The generated console script looks the real
+    # lobby/wallet/external ids up from the games catalog at paste time and swaps
+    # them in (matching by provider + game name), so they need not be known here.
+    id_keys = ("lobby_game_id", "wallet_game_id", "external_game_id")
+    if game.get("provider") and game.get("game_name") and not any(game.get(k) for k in id_keys):
+        game["lobby_game_id"] = "RESOLVE_AT_PASTE_LOBBY"
+        game["wallet_game_id"] = "RESOLVE_AT_PASTE_WALLET"
+        game["external_game_id"] = "RESOLVE_AT_PASTE_EXTERNAL"
+    # Display-only provider label defaults to the provider slug if not given.
+    if game.get("provider") and not game.get("provider_name"):
+        game["provider_name"] = game["provider"]
     missing = [k for k in ("lobby_game_id", "wallet_game_id", "external_game_id",
                            "provider", "game_name", "provider_name") if not game.get(k)]
     if missing:
         raise SystemExit(
-            "Game not fully specified. Use --game <known> or pass: "
+            "Game not fully specified. Use --game <known>, or pass --provider and "
+            "--game-name (ids resolved at paste time), or all of: "
             + ", ".join("--" + m.replace("_", "-") for m in missing)
         )
     return game

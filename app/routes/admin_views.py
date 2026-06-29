@@ -35,7 +35,9 @@ from ..services.journey_cloner_runner import (
     DEFAULT_TEAM,
     TEAMS,
     generate_console_script,
+    generate_gow_console_script,
     missing_templates,
+    parse_bets,
     run_journey_cloner,
     save_template_from_fetch,
     team_inherits,
@@ -624,6 +626,91 @@ def journey_cloner_save_template(
             "form": {},
         },
     )
+
+
+def _gow_context(*, form, error="", console_script=None, result=None):
+    return {
+        "active_page": "gow_campaign",
+        "form": form,
+        "error": error,
+        "console_script": console_script,
+        "result": result,
+    }
+
+
+@router.get("/admin/gow-campaign", response_class=HTMLResponse)
+def gow_campaign_page(
+    request: Request,
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    ctx = _gow_context(form={})
+    ctx["current_user"] = user
+    return templates.TemplateResponse(request, "gow_campaign.html", ctx)
+
+
+@router.post("/admin/gow-campaign/console-script", response_class=HTMLResponse)
+def gow_campaign_console_script(
+    request: Request,
+    game_name: str = Form(...),
+    provider: str = Form(...),
+    provider_name: str = Form(""),
+    date: str = Form(...),
+    bets: str = Form(...),
+    spins: str = Form(""),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    form = {
+        "game_name": game_name,
+        "provider": provider,
+        "provider_name": provider_name,
+        "date": date,
+        "bets": bets,
+        "spins": spins,
+    }
+    error = ""
+    result = None
+    console_script = None
+
+    parsed_spins: Optional[int] = None
+    try:
+        bet_values = parse_bets(bets)
+        if spins.strip():
+            parsed_spins = int(spins.strip())
+        if not game_name.strip():
+            raise ValueError("Game name is required.")
+        if not provider.strip():
+            raise ValueError("Provider is required (the catalog slug, e.g. pragmatic).")
+        if not date.strip():
+            raise ValueError("Date is required.")
+    except ValueError as exc:
+        error = str(exc)
+
+    if not error:
+        try:
+            exit_code, output, display_cmd, js_text, js_name = generate_gow_console_script(
+                game_name=game_name,
+                provider=provider,
+                provider_name=provider_name,
+                date=date,
+                bets=bet_values,
+                spins=parsed_spins,
+            )
+            result = {
+                "exit_code": exit_code,
+                "output": output,
+                "command": display_cmd,
+                "ok": exit_code == 0 and js_text is not None,
+            }
+            if exit_code == 0 and js_text is not None:
+                console_script = {"name": js_name, "text": js_text}
+            else:
+                error = "Console script was not generated. Check the run output below."
+        except Exception as exc:  # noqa: BLE001
+            error = str(exc)
+
+    ctx = _gow_context(form=form, error=error, console_script=console_script, result=result)
+    ctx["current_user"] = user
+    return templates.TemplateResponse(request, "gow_campaign.html", ctx)
 
 
 @router.post("/admin/parser-feeds")
