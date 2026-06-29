@@ -734,16 +734,54 @@ pipeline** we'd build:
 4. **Write** those paths + hex + text into `settings.json` / `content-<lang>.json`,
    then `POST` the `promo-drafts/randomizer` (or `/promo-page`) draft.
 
-**One capture still missing to build this:** we have the asset **read** paths and
-`s3/copy`, but **not the per-file image upload endpoint** (how a new PNG lands in
-`mf/v1/<id>/spa/media/`). Capture "upload image" in the promo constructor
-(DevTools → Network → the `PUT`/`POST` that sends the file) and we'll have the
-last piece. Also required: a Figma API token and the design file key.
+**Upload endpoints (now captured — the pipeline is fully buildable):**
+- **`POST /promo/v2/s3/upload`** (JSON) — writes a **JSON file** to the bundle.
+  Body: `{"path":"mf/v1/<id>/spa/settings.json","data":{…}}`; returns
+  `{"path":"…"}`. Used for `settings.json` and `content-<lang>.json`.
+- **`POST /promo/v2/s3/upload-content`** (multipart/form-data) — writes a
+  **binary file**. The multipart **field name is the target S3 path** (e.g.
+  `mf/v1/<id>/widget/media/widgetImgKey.png`) and the part body is the file
+  bytes; returns `["mf/v1/…png"]`.
+- (`POST /promo/v2/s3/copy` still clones a base bundle to get a fresh
+  `mf/v1/<uuid>` prefix first.)
+
+So the full **Figma → REA** flow is now:
+1. Figma REST export the named frames → PNGs (and read hex/text).
+2. `s3/copy` → fresh bundle prefix.
+3. `s3/upload-content` each PNG to its slot path (see the slot list in §17.7).
+4. `s3/upload` the `settings.json` + `content-en.json` / `content-es.json`
+   referencing those paths + hex + text.
+5. `POST` the `randomizer` / `promo-page` draft pointing `contentId`/`frontId`
+   at the bundle.
+
+Still required externally: a Figma API token + the design file key, and a
+naming convention in the Figma file that maps layers → the slot keys in §17.7.
+
+### 17.7 The recurring image slots ("the same photos, every time")
+Per promo, the **same fixed set of image slots** is replaced each time. Each
+bundle renders in **three targets** — `spa/` (full page), `widget/` (banner),
+`widgetModulor/` (modular widget) — so most images are uploaded once per target.
+
+| Slot key | Path | What it is |
+|----------|------|------------|
+| `widgetImgKey` | `mf/v1/<id>/widget/media/widgetImgKey.png` | the **banner/widget** image (the thing on the promotions page) |
+| `HeaderImageKey` | `mf/v1/<id>/spa/media/HeaderImageKey.png` | the **page hero/header** image |
+| `prizeImageKey` | `mf/v1/<id>/spa/media/prizeImageKey.png` | the main **prize** image |
+| `prizeDefaultImageKey` | `…/{spa,widget,widgetModulor}/media/box.png` | default prize "box" image (per target) |
+| `<itemId>.itemImageKey` | `mf/v1/<id>/spa/media/<uuid>.png` | per **bonus-item** image (one per listed bonus) |
+| `<prizeActivityId>.prizeImageKey` | `mf/v1/<id>/spa/media/<uuid>.png` | per **wheel-prize** image (randomizer; keyed by the prize's `activityId`) |
+| `background.imageUrl` | `mf/v1/background/<uuid>.png` | page **background** (in `settings.json`) |
+
+That's the answer to "always the same photos to be changed": a campaign swap =
+re-upload **widgetImgKey + HeaderImageKey + background + one image per
+prize/bonus item**, then rewrite the text keys + hex colours. Everything else in
+the bundle is boilerplate that can be copied from the base via `s3/copy`.
 
 > Summary: design = **hex colours + PNGs + localized text** in an S3 mf-bundle
-> referenced by `contentId`/`frontId`. Figma → REA is a build-it pipeline
-> (Figma REST export → upload to the bundle → write settings/content JSON), not
-> a toggle. The only blocker to building it is capturing the image-upload call.
+> referenced by `contentId`/`frontId`, written via `s3/upload` (JSON) and
+> `s3/upload-content` (files). Figma → REA is now a fully specified build-it
+> pipeline; the only externals are a Figma token, the file key, and a layer
+> naming convention.
 
 ---
 
