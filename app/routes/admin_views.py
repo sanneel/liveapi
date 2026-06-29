@@ -34,6 +34,7 @@ from ..repositories.match_repo import MatchRepository
 from ..services.journey_cloner_runner import (
     DEFAULT_TEAM,
     TEAMS,
+    generate_comms_console_script,
     generate_console_script,
     generate_gow_console_script,
     missing_templates,
@@ -711,6 +712,127 @@ def gow_campaign_console_script(
     ctx = _gow_context(form=form, error=error, console_script=console_script, result=result)
     ctx["current_user"] = user
     return templates.TemplateResponse(request, "gow_campaign.html", ctx)
+
+
+def _gow_comms_context(*, form, error="", console_script=None, result=None):
+    return {
+        "active_page": "gow_comms",
+        "form": form,
+        "error": error,
+        "console_script": console_script,
+        "result": result,
+    }
+
+
+@router.get("/admin/gow-comms", response_class=HTMLResponse)
+def gow_comms_page(
+    request: Request,
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    ctx = _gow_comms_context(form={})
+    ctx["current_user"] = user
+    return templates.TemplateResponse(request, "gow_comms.html", ctx)
+
+
+@router.post("/admin/gow-comms/console-script", response_class=HTMLResponse)
+def gow_comms_console_script(
+    request: Request,
+    date: str = Form(...),
+    days: str = Form("7"),
+    promo_page_id: str = Form(...),
+    public_domain: str = Form(""),
+    journey_name: str = Form(""),
+    nc_title_en: str = Form(...),
+    nc_title_es: str = Form(...),
+    nc_desc_en: str = Form(...),
+    nc_desc_es: str = Form(...),
+    nc_caption_en: str = Form(...),
+    nc_caption_es: str = Form(...),
+    popup_title_en: str = Form(...),
+    popup_title_es: str = Form(...),
+    popup_desc_en: str = Form(...),
+    popup_desc_es: str = Form(...),
+    popup_caption_en: str = Form(...),
+    popup_caption_es: str = Form(...),
+    sms_en: str = Form(...),
+    sms_es: str = Form(...),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    form = {
+        "date": date,
+        "days": days,
+        "promo_page_id": promo_page_id,
+        "public_domain": public_domain,
+        "journey_name": journey_name,
+        "nc_title_en": nc_title_en,
+        "nc_title_es": nc_title_es,
+        "nc_desc_en": nc_desc_en,
+        "nc_desc_es": nc_desc_es,
+        "nc_caption_en": nc_caption_en,
+        "nc_caption_es": nc_caption_es,
+        "popup_title_en": popup_title_en,
+        "popup_title_es": popup_title_es,
+        "popup_desc_en": popup_desc_en,
+        "popup_desc_es": popup_desc_es,
+        "popup_caption_en": popup_caption_en,
+        "popup_caption_es": popup_caption_es,
+        "sms_en": sms_en,
+        "sms_es": sms_es,
+    }
+    error = ""
+    result = None
+    console_script = None
+
+    parsed_days = 7
+    try:
+        if not date.strip():
+            raise ValueError("Date is required.")
+        if not promo_page_id.strip():
+            raise ValueError("Promo-page id is required (from the GOW promo page).")
+        if days.strip():
+            parsed_days = int(days.strip())
+    except ValueError as exc:
+        error = str(exc) if "invalid literal" not in str(exc) else "Days must be a whole number."
+
+    if not error:
+        try:
+            exit_code, output, display_cmd, js_text, js_name = generate_comms_console_script(
+                date=date,
+                days=parsed_days,
+                promo_page_id=promo_page_id,
+                public_domain=public_domain,
+                journey_name=journey_name,
+                nc_title_en=nc_title_en,
+                nc_title_es=nc_title_es,
+                nc_desc_en=nc_desc_en,
+                nc_desc_es=nc_desc_es,
+                nc_caption_en=nc_caption_en,
+                nc_caption_es=nc_caption_es,
+                popup_title_en=popup_title_en,
+                popup_title_es=popup_title_es,
+                popup_desc_en=popup_desc_en,
+                popup_desc_es=popup_desc_es,
+                popup_caption_en=popup_caption_en,
+                popup_caption_es=popup_caption_es,
+                sms_en=sms_en,
+                sms_es=sms_es,
+            )
+            result = {
+                "exit_code": exit_code,
+                "output": output,
+                "command": display_cmd,
+                "ok": exit_code == 0 and js_text is not None,
+            }
+            if exit_code == 0 and js_text is not None:
+                console_script = {"name": js_name, "text": js_text}
+            else:
+                error = "Console script was not generated. Check the run output below."
+        except Exception as exc:  # noqa: BLE001
+            error = str(exc)
+
+    ctx = _gow_comms_context(form=form, error=error, console_script=console_script, result=result)
+    ctx["current_user"] = user
+    return templates.TemplateResponse(request, "gow_comms.html", ctx)
 
 
 @router.post("/admin/parser-feeds")

@@ -263,6 +263,119 @@ def generate_gow_console_script(
     return proc.returncode, output, display_cmd, js_text, js_filename
 
 
+COMMS_SCRIPT_PATH = CLONER_DIR / "comms_campaign.py"
+
+
+def _comms_basename(journey_name: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "_", (journey_name or "").lower()).strip("_")
+    return f"comms_{slug or 'campaign'}"
+
+
+def generate_comms_console_script(
+    *,
+    date: str,
+    promo_page_id: str,
+    nc_title_en: str,
+    nc_title_es: str,
+    nc_desc_en: str,
+    nc_desc_es: str,
+    nc_caption_en: str,
+    nc_caption_es: str,
+    popup_title_en: str,
+    popup_title_es: str,
+    popup_desc_en: str,
+    popup_desc_es: str,
+    popup_caption_en: str,
+    popup_caption_es: str,
+    sms_en: str,
+    sms_es: str,
+    days: int = 7,
+    public_domain: str = "",
+    journey_name: str = "",
+) -> Tuple[int, str, str, str | None, str]:
+    """Generate the paste-into-DevTools console script for the GOW
+    communications journey (Notification Center + Pop-up + SMS; Email is
+    left untouched and edited by hand).
+
+    Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
+    """
+    basename = _comms_basename(journey_name or "comms_campaign")
+    cmd = [
+        python_executable(),
+        str(COMMS_SCRIPT_PATH),
+        "--date",
+        date.strip(),
+        "--days",
+        str(days),
+        "--promo-page-id",
+        promo_page_id.strip(),
+        "--nc-title-en",
+        nc_title_en,
+        "--nc-title-es",
+        nc_title_es,
+        "--nc-desc-en",
+        nc_desc_en,
+        "--nc-desc-es",
+        nc_desc_es,
+        "--nc-caption-en",
+        nc_caption_en,
+        "--nc-caption-es",
+        nc_caption_es,
+        "--popup-title-en",
+        popup_title_en,
+        "--popup-title-es",
+        popup_title_es,
+        "--popup-desc-en",
+        popup_desc_en,
+        "--popup-desc-es",
+        popup_desc_es,
+        "--popup-caption-en",
+        popup_caption_en,
+        "--popup-caption-es",
+        popup_caption_es,
+        "--sms-en",
+        sms_en,
+        "--sms-es",
+        sms_es,
+        "--name",
+        basename,
+    ]
+    if public_domain.strip():
+        cmd += ["--public-domain", public_domain.strip()]
+    if journey_name.strip():
+        cmd += ["--journey-name", journey_name.strip()]
+
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+
+    display_cmd = " ".join(
+        part if " " not in part else repr(part) for part in cmd
+    )
+
+    proc = subprocess.run(
+        cmd,
+        cwd=CLONER_DIR,
+        env=env,
+        text=True,
+        encoding="utf-8",
+        capture_output=True,
+        timeout=300,
+    )
+    output = proc.stdout
+    if proc.stderr:
+        output += "\nSTDERR:\n" + proc.stderr
+
+    js_filename = f"{basename}_console.js"
+    js_text = None
+    if proc.returncode == 0:
+        js_path = CLONER_DIR / "console_scripts" / js_filename
+        if js_path.exists():
+            js_text = js_path.read_text(encoding="utf-8")
+        else:
+            output += f"\nERROR: expected script file not found: {js_path}"
+    return proc.returncode, output, display_cmd, js_text, js_filename
+
+
 def run_journey_cloner(
     *,
     token: str,
