@@ -301,6 +301,37 @@ JS_TEMPLATE = r"""// Game-of-Week campaign console script — generated @GENERAT
     return id;
   }
 
+  // Find the first freespinActivity anywhere in the payload (they all share the
+  // same game), so we know the baked provider + game ids to look up / replace.
+  function findFreespin(o) {
+    if (!o || typeof o !== 'object') return null;
+    if (o.freespinActivity && typeof o.freespinActivity === 'object' && o.freespinActivity.lobbyGameId) return o.freespinActivity;
+    for (const k in o) { if (o[k] && typeof o[k] === 'object') { const r = findFreespin(o[k]); if (r) return r; } }
+    return null;
+  }
+  const normGame = (s) => (s || '').replace(/[™®]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+  // Resolve the real lobbyId/walletId/externalGameId from the live games catalog.
+  // The baked ids in the template can be stale/guessed; if they don't match a
+  // catalog game the casino backend rejects publish with "Game with lobbyId=...
+  // is not found". We search by provider + the game's first word, then match the
+  // exact translationKey (ignoring the trademark glyph the catalog appends).
+  async function resolveGameIds(provider, gameName) {
+    const term = (gameName || '').trim().split(/\s+/)[0];
+    const url = BASE + '/journey-activities/free-spins-bonus-deposit/data/games'
+      + '?freeSpinTypes=regular&productType=slots&page=0&size=100'
+      + '&gameProvider=' + encodeURIComponent(provider)
+      + '&translationKey=' + encodeURIComponent(term);
+    const r = await fetch(url, { headers: headers('application/json'), credentials: 'include' });
+    if (!r.ok) throw new Error('Game search HTTP ' + r.status + ' for ' + provider + ' / ' + gameName);
+    const items = ((await r.json()) || {}).items || [];
+    const want = normGame(gameName);
+    const hit = items.find((it) => normGame(it.translationKey) === want)
+      || items.find((it) => normGame(it.translationKey).indexOf(want) === 0)
+      || items.find((it) => normGame(it.translationKey).indexOf(want) !== -1);
+    if (!hit) throw new Error('Game "' + gameName + '" not found in catalog for provider "' + provider + '" — candidates: ' + items.map((i) => i.translationKey).join(', '));
+    return { lobbyId: hit.lobbyId, walletId: hit.walletId, externalGameId: hit.externalGameId };
+  }
+
   async function copyContentsTarget(srcPath, destPath, fileFilters) {
     const body = { sourcePath: srcPath, destinationPath: destPath };
     if (fileFilters) body.fileFilters = fileFilters;
@@ -457,7 +488,22 @@ JS_TEMPLATE = r"""// Game-of-Week campaign console script — generated @GENERAT
   }
   walkReplace(PAYLOAD, idMap);
 
-  let text = JSON.stringify(PAYLOAD).split('DRY-RUN-CASINO').join(realId);
+  // Swap the baked free-spin game ids for the real catalog ones before posting.
+  const fsSample = findFreespin(PAYLOAD);
+  let text = JSON.stringify(PAYLOAD);
+  if (fsSample && fsSample.provider) {
+    const resolved = await resolveGameIds(fsSample.provider, GAME_NAME);
+    console.log('Resolved game "' + GAME_NAME + '" ->', resolved);
+    const swaps = [];
+    if (fsSample.lobbyGameId && resolved.lobbyId && fsSample.lobbyGameId !== resolved.lobbyId) swaps.push([fsSample.lobbyGameId, resolved.lobbyId]);
+    if (fsSample.walletGameId && resolved.walletId && fsSample.walletGameId !== resolved.walletId) swaps.push([fsSample.walletGameId, resolved.walletId]);
+    if (fsSample.externalGameId && resolved.externalGameId && fsSample.externalGameId !== resolved.externalGameId) swaps.push([fsSample.externalGameId, resolved.externalGameId]);
+    // longest baked id first, so one id that is a substring of another can't be partly rewritten
+    swaps.sort((a, b) => b[0].length - a[0].length);
+    for (const [a, b] of swaps) text = text.split(a).join(b);
+    if (swaps.length) console.log('  rewrote baked game ids:', swaps.map((s) => s[0] + ' -> ' + s[1]).join(', '));
+  }
+  text = text.split('DRY-RUN-CASINO').join(realId);
   const regenResult = regen(text);
   const body = JSON.parse(regenResult.text);
 

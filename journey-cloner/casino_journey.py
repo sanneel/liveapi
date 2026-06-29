@@ -73,9 +73,9 @@ GAMES: dict[str, dict[str, str]] = {
         "provider_name": "Jugabet Games",
     },
     "spinandscoremegaways": {
-        "lobby_game_id": "pragmatic-spin-score",
-        "wallet_game_id": "pp_spin_score",
-        "external_game_id": "pp_spin_score",
+        "lobby_game_id": "pragmatic-spin-score-megaways",
+        "wallet_game_id": "vswaysfrywld",
+        "external_game_id": "vswaysfrywld",
         "provider": "pragmatic",
         "game_name": "Spin & Score Megaways",
         "provider_name": "Pragmatic Play",
@@ -200,10 +200,13 @@ def set_dates(body: dict, start_local: datetime, stop_local: datetime) -> None:
         info["isImmediatelyAfterPublish"] = False
         info["timeZoneId"] = "Chile/Continental"
 
-    # Free-spin validity window = the campaign window.
+    # Free-spin validity window: starts with the campaign, but its end date is
+    # always start + 7 days (the free spins stay claimable for a week regardless
+    # of how short the journey's own --days window is).
+    fs_stop_local = start_local + timedelta(days=7)
     for fa in freespin_activities(body):
         fa["startAt"] = utc_plain(start_local)
-        fa["stopAt"] = utc_plain(stop_local)
+        fa["stopAt"] = utc_plain(fs_stop_local)
 
 
 def prepare(
