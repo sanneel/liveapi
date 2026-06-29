@@ -280,12 +280,37 @@ JS_TEMPLATE = r"""// Game-of-Week campaign console script — generated @GENERAT
     return id;
   }
 
-  async function copyContentsTarget(srcPath, destPath) {
-    const r = await fetch(CRM_BASE + '/contents/v1/copy', { method: 'POST', headers: headers('application/json'), credentials: 'include', body: JSON.stringify({ sourcePath: srcPath, destinationPath: destPath }) });
+  async function copyContentsTarget(srcPath, destPath, fileFilters) {
+    const body = { sourcePath: srcPath, destinationPath: destPath };
+    if (fileFilters) body.fileFilters = fileFilters;
+    const r = await fetch(CRM_BASE + '/contents/v1/copy', { method: 'POST', headers: headers('application/json'), credentials: 'include', body: JSON.stringify(body) });
     if (!r.ok) throw new Error('copy failed ' + srcPath + ' -> ' + destPath + ': HTTP ' + r.status + ' ' + await r.text());
   }
-  async function cloneBundle(oldId, newId, targets) {
-    for (const t of targets) await copyContentsTarget(`mf/v1/${oldId}/${t}`, `mf/v1/${newId}/${t}`);
+  // Mirrors what the real backoffice "duplicate" action sends: an unfiltered
+  // copy on a multi-year-old bundle folder can hang/stall recursively
+  // enumerating ancient assets, so the real UI always scopes ContentId
+  // copies to named files via fileFilters. FrontId copies (spa/widget only)
+  // are small and copied unfiltered, same as production.
+  const JSON_FILTERS = ['manifest.json', 'content/content-es.json', 'content/content-en.json'];
+  function contentFileFilters(target, role, itemContentIds) {
+    if (target === 'widgetModulor' || target === 'cashier') return JSON_FILTERS;
+    if (target === 'widget') return JSON_FILTERS.concat(['media/box.png', 'media/widgetImgKey.png']);
+    if (target === 'spa') {
+      if (role === 'offer') {
+        return JSON_FILTERS.concat(
+          ['media/HeaderImageKey.png', 'media/prizeImageKey.png'],
+          itemContentIds.map((id) => `media/${id}.itemImageKey.png`)
+        );
+      }
+      return JSON_FILTERS.concat(['media/box.png', 'media/bonusHeaderImage.png']);
+    }
+    return undefined;
+  }
+  async function cloneBundle(oldId, newId, targets, role, itemContentIds) {
+    for (const t of targets) {
+      const filters = role ? contentFileFilters(t, role, itemContentIds || []) : undefined;
+      await copyContentsTarget(`mf/v1/${oldId}/${t}`, `mf/v1/${newId}/${t}`, filters);
+    }
   }
   async function copyBundleS3(oldId, newId) {
     const url = CRM_BASE + `/promo/v2/s3/copy?destination=${encodeURIComponent('mf/v1/' + newId)}&source=${encodeURIComponent('mf/v1/' + oldId)}`;
@@ -377,24 +402,34 @@ JS_TEMPLATE = r"""// Game-of-Week campaign console script — generated @GENERAT
   console.log('%cJourney draft created: ' + realId, 'color:#22c55e;font-weight:bold');
 
   console.log('Cloning visual bundles and uploading the photo (5 placements)...');
+  const placementErrors = [];
   for (const p of PLACEMENTS) {
     const ids = fresh[p.role];
     console.log('  [' + p.role + ']', 'content', p.contentId, '->', ids.contentId, '| front', p.frontId, '->', ids.frontId);
-    await cloneBundle(p.contentId, ids.contentId, ['spa', 'widget', 'widgetModulor', 'cashier']);
-    await cloneBundle(p.frontId, ids.frontId, ['spa', 'widget']);
-    await fixJourneyContentJson(ids.contentId, p.contentId);
-    const fields = {};
-    fields[`mf/v1/${ids.contentId}/widget/media/widgetImgKey.png`] = photo;
-    if (p.role === 'offer') {
-      for (const itemId of p.itemContentIds) fields[`mf/v1/${ids.contentId}/spa/media/${itemId}.itemImageKey.png`] = photo;
-      fields[`mf/v1/${ids.contentId}/spa/media/prizeImageKey.png`] = photo;
-    } else {
-      fields[`mf/v1/${ids.contentId}/spa/media/bonusHeaderImage.png`] = photo;
+    try {
+      await cloneBundle(p.contentId, ids.contentId, ['spa', 'widget', 'widgetModulor', 'cashier'], p.role, p.itemContentIds);
+      await cloneBundle(p.frontId, ids.frontId, ['spa', 'widget']);
+      await fixJourneyContentJson(ids.contentId, p.contentId);
+      const fields = {};
+      fields[`mf/v1/${ids.contentId}/widget/media/widgetImgKey.png`] = photo;
+      if (p.role === 'offer') {
+        for (const itemId of p.itemContentIds) fields[`mf/v1/${ids.contentId}/spa/media/${itemId}.itemImageKey.png`] = photo;
+        fields[`mf/v1/${ids.contentId}/spa/media/prizeImageKey.png`] = photo;
+      } else {
+        fields[`mf/v1/${ids.contentId}/spa/media/bonusHeaderImage.png`] = photo;
+      }
+      await uploadContentMulti(fields);
+      console.log('    photo uploaded to', Object.keys(fields).length, 'slot(s)');
+    } catch (e) {
+      console.error('  [' + p.role + '] FAILED:', e.message);
+      placementErrors.push(p.role + ': ' + e.message);
     }
-    await uploadContentMulti(fields);
-    console.log('    photo uploaded to', Object.keys(fields).length, 'slot(s)');
   }
-  console.log('%cAll 5 visual bundles cloned + photo uploaded.', 'color:#22c55e');
+  if (placementErrors.length) {
+    console.error('%cSome placements failed, continuing to the promo page anyway:', 'color:#ef4444', placementErrors);
+  } else {
+    console.log('%cAll 5 visual bundles cloned + photo uploaded.', 'color:#22c55e');
+  }
 
   const offerPlacement = PLACEMENTS.find((p) => p.role === 'offer');
   const offerNewActivityId = regenResult.map.get(offerPlacement.activityId);

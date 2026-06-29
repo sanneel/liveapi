@@ -116,7 +116,28 @@ def distinct_bet_tiers(body: dict, currency: str = "CLP") -> list[int]:
 
 
 def set_game(body: dict, game: dict[str, str], spins: int | None) -> int:
+    """Set the game/provider on every freespin_bonus activity, including the
+    human-facing display name shown in the journey builder UI (activity card
+    title + rawJourneyData.activitiesConfiguration), which mirrors
+    "<provider_name> | <game_name>" but is NOT derived from
+    gameTranslationKey/providerTranslationKey on the wire — it's a separate
+    label that has to be set explicitly or it keeps showing the template's
+    original game.
+    """
     count = 0
+    display_name = f"{game['provider_name']} | {game['game_name']}"
+    freespin_ids = {
+        a["activityId"]
+        for a in body.get("activities", [])
+        if a.get("activityName") == "freespin_bonus"
+    }
+    for activity in body.get("activities", []):
+        if activity["activityId"] in freespin_ids:
+            activity["activityDisplayName"] = display_name
+    config = body.get("rawJourneyData", {}).get("activitiesConfiguration", {})
+    for activity_id, cfg in config.items():
+        if activity_id in freespin_ids and isinstance(cfg, dict) and "displayName" in cfg:
+            cfg["displayName"] = display_name
     for fa in freespin_activities(body):
         fa["lobbyGameId"] = game["lobby_game_id"]
         fa["walletGameId"] = game["wallet_game_id"]
