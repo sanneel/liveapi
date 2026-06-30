@@ -780,15 +780,21 @@ def main() -> int:
             print("--figma-game requires --figma-key (or a built-in default).", file=sys.stderr)
             return 1
         import figma_export
-        slots = figma_export.export_game(
-            args.figma_key, args.figma_game,
-            page=args.figma_page or None, out=str(Path("figma_out")),
-        )
+        # A Figma failure must not abort the run — fall back to the file picker.
+        slots: dict = {}
+        try:
+            slots = figma_export.export_game(
+                args.figma_key, args.figma_game,
+                page=args.figma_page or None, out=str(Path("figma_out")),
+            )
+        except SystemExit as exc:
+            print(f"  WARN  Figma export failed ({exc}); falling back to the file picker.", file=sys.stderr)
+        except Exception as exc:  # noqa: BLE001
+            print(f"  WARN  Figma export error ({exc}); falling back to the file picker.", file=sys.stderr)
         photo_src = slots.get("campaign")
-        if not photo_src:
+        if not photo_src and slots:
             print("Figma export produced no campaign (360x330) image — got: "
-                  + ", ".join(sorted(slots)) + ". Run figma_export.py --inspect.", file=sys.stderr)
-            return 1
+                  + ", ".join(sorted(slots)) + ". Falling back to the file picker.", file=sys.stderr)
     if photo_src:
         if not photo_src.exists():
             print(f"Photo not found: {photo_src}", file=sys.stderr)

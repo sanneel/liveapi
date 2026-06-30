@@ -814,10 +814,17 @@ def main() -> int:
             print("--figma-game requires --figma-key (or a built-in default).", file=sys.stderr)
             return 1
         import figma_export
-        figma_slots = figma_export.export_game(
-            args.figma_key, args.figma_game,
-            page=args.figma_page or None, out=str(Path("figma_out")),
-        )
+        # A Figma failure (rate limit, game not found, no token) must not abort
+        # the run — fall back to the file pickers so a script still gets made.
+        try:
+            figma_slots = figma_export.export_game(
+                args.figma_key, args.figma_game,
+                page=args.figma_page or None, out=str(Path("figma_out")),
+            )
+        except SystemExit as exc:
+            print(f"  WARN  Figma export failed ({exc}); falling back to file pickers.", file=sys.stderr)
+        except Exception as exc:  # noqa: BLE001
+            print(f"  WARN  Figma export error ({exc}); falling back to file pickers.", file=sys.stderr)
 
     def _slot_b64(local_arg, figma_key, label):
         src = Path(local_arg) if local_arg else figma_slots.get(figma_key)
