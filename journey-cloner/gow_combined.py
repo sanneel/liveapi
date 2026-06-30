@@ -55,6 +55,8 @@ from comms_campaign import (
     NC_ICON_TOKEN,
     POPUP_BG_TOKEN,
     email_dict_from_spec,
+    make_cs_variant,
+    RESERVED_ID_CS_TOKEN,
     nc_dict_from_spec,
     popup_dict_from_spec,
     prepare_comms,
@@ -128,6 +130,8 @@ JS_TEMPLATE = r"""// GOW combined console script (campaign + comms) — generate
   const BRAND = @BRAND@;
   const CAMPAIGN_PAYLOAD = @CAMPAIGN_PAYLOAD@;
   const COMMS_PAYLOAD = @COMMS_PAYLOAD@;
+  const COMMS_PAYLOAD_CS = @COMMS_PAYLOAD_CS@;   // CS (segment 301) duplicate, null if not made
+  const RESERVED_ID_CS_TOKEN = @RESERVED_ID_CS_TOKEN@;
   const PLACEMENTS = @PLACEMENTS@;
   const PROMO_SOURCE_CONTENT_ID = @PROMO_SOURCE_CONTENT_ID@;
   const PROMO_SOURCE_FRONT_ID = @PROMO_SOURCE_FRONT_ID@;
@@ -595,10 +599,29 @@ JS_TEMPLATE = r"""// GOW combined console script (campaign + comms) — generate
   resp = await r.text();
   if (!r.ok) { console.error('FAILED HTTP ' + r.status, resp); throw new Error('Comms journey draft not created.'); }
 
+  let csCommsId = null;
+  if (COMMS_PAYLOAD_CS) {
+    csCommsId = await reserveId();
+    console.log('  reserved comms (CS)', csCommsId);
+    let t2 = JSON.stringify(COMMS_PAYLOAD_CS);
+    t2 = t2.split(RESERVED_ID_CS_TOKEN).join(csCommsId);
+    t2 = t2.split(NC_ICON_TOKEN).join(ncIconUrl);
+    t2 = t2.split(POPUP_BG_TOKEN).join(popupBgUrl);
+    t2 = t2.split(PROMO_PAGE_ID_TOKEN).join(promoPageId);
+    if (emailContentId) t2 = t2.split(EMAIL_CONTENT_ID_TOKEN).join(emailContentId);
+    t2 = regen(t2).text;
+    const csBody = JSON.parse(t2);
+    console.log('Creating CS comms journey draft', csCommsId, ':', csBody.journeyName);
+    const rcs = await fetch(BASE + '/journey-drafts', { method: 'POST', headers: headers('application/json'), credentials: 'include', body: JSON.stringify(csBody) });
+    const respcs = await rcs.text();
+    if (!rcs.ok) { console.error('FAILED HTTP ' + rcs.status, respcs); throw new Error('CS comms journey draft not created.'); }
+  }
+
   console.log('%cDONE.', 'color:#22c55e;font-weight:bold;font-size:14px');
   console.log('  Campaign journey draft: ' + campaignJourneyId);
   console.log('  Promo page draft id:    ' + promoPageId);
-  console.log('  Comms journey draft:    ' + commsJourneyId);
+  console.log('  Comms journey draft (CS&SP): ' + commsJourneyId);
+  if (csCommsId) console.log('  Comms journey draft (CS):    ' + csCommsId);
   if (emailContentId) console.log('  Email content created + published: ' + emailContentId);
   else console.log('  Email activity left untouched — edit it by hand in the backoffice.');
 })();
@@ -623,8 +646,11 @@ def build_js(
     end_weekday_es: str,
     public_domain: str,
     email_content: dict | None = None,
+    comms_cs_body: dict | None = None,
 ) -> str:
     js = JS_TEMPLATE
+    js = js.replace("@COMMS_PAYLOAD_CS@", json.dumps(comms_cs_body, ensure_ascii=False))
+    js = js.replace("@RESERVED_ID_CS_TOKEN@", json.dumps(RESERVED_ID_CS_TOKEN))
     js = js.replace("@GENERATED_AT@", datetime.now(LOCAL_TZ).strftime("%Y-%m-%d %H:%M %Z"))
     js = js.replace("@CAMPAIGN_JOURNEY_NAME@", str(campaign_body.get("journeyName", "")))
     js = js.replace("@COMMS_JOURNEY_NAME@", str(comms_body.get("journeyName", "")))
@@ -699,6 +725,8 @@ def main() -> int:
         nc=nc_dict_from_spec(spec.nc), popup=popup_dict_from_spec(spec.popup), sms=sms_dict_from_spec(spec.sms),
         email=email_dict_from_spec(spec),
     )
+    comms_cs_body = make_cs_variant(comms_body)
+    comms_report.append(f"CS variant: segment 301, journeyName = {comms_cs_body.get('journeyName')!r}")
 
     print("Campaign:")
     for line in campaign_report:
@@ -725,6 +753,7 @@ def main() -> int:
         out.mkdir(exist_ok=True)
         (out / f"{args.name}_campaign_journey.json").write_text(json.dumps(campaign_body, ensure_ascii=False, indent=2), encoding="utf-8")
         (out / f"{args.name}_comms_journey.json").write_text(json.dumps(comms_body, ensure_ascii=False, indent=2), encoding="utf-8")
+        (out / f"{args.name}_comms_cs_journey.json").write_text(json.dumps(comms_cs_body, ensure_ascii=False, indent=2), encoding="utf-8")
         if email_content is not None:
             (out / f"{args.name}_email.json").write_text(json.dumps(email_content, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"\nDry run — journey payloads written under out/{args.name}_*.json")
@@ -756,6 +785,7 @@ def main() -> int:
         end_weekday_es=end_weekday_es,
         public_domain=args.public_domain,
         email_content=email_content,
+        comms_cs_body=comms_cs_body,
     )
     print(f"\nVisual content text: bets {spec.bets}, game {game['game_name']!r}, end weekday {end_weekday_en}/{end_weekday_es}")
     print(f"Comms window: {comms_start_local:%Y-%m-%d %H:%M} -> {comms_stop_local:%H:%M} Chile")
