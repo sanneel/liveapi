@@ -43,6 +43,7 @@ payload to out/ without generating a script.
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import re
 import sys
@@ -114,6 +115,37 @@ def find_sms(body: dict) -> dict:
         if a.get("activityName") == "dextra_sms":
             return a
     raise ValueError("dextra_sms activity not found in template")
+
+
+def mirror_into_raw_journey_data(body: dict, activity: dict) -> bool:
+    """Sync an activity's editor-side copy from the compiled one we just edited.
+
+    Every activity is stored twice: once compiled in body["activities"] (the
+    runtime form) and once in body["rawJourneyData"].activitiesConfiguration
+    [activityId] (the editor's working copy). The Journey Builder UI renders
+    the activity from the editor copy, so if only the compiled copy is updated
+    the created draft still shows the old template text in the editor. The two
+    are separate objects, so the edit has to be applied to both.
+
+    The editor copy keeps initializationData's fields under ["data"] but holds
+    "displayData" one level up (at the config level, not inside ["data"]), so
+    split it back out to match the captured structure exactly.
+    """
+    raw = body.get("rawJourneyData")
+    if not isinstance(raw, dict):
+        return False
+    ac = raw.get("activitiesConfiguration")
+    if not isinstance(ac, dict):
+        return False
+    cfg = ac.get(activity.get("activityId"))
+    if not isinstance(cfg, dict):
+        return False
+    data = copy.deepcopy(activity["initializationData"])
+    display = data.pop("displayData", None)
+    cfg["data"] = data
+    if display is not None and "displayData" in cfg:
+        cfg["displayData"] = copy.deepcopy(display)
+    return True
 
 
 def promo_link_relative(promo_page_id: str) -> str:
@@ -235,7 +267,11 @@ def update_sms(
     raw = init["rawValues"]
     raw["languageCode"] = "es"
     raw["messageText"] = f"{body_es}\n{raw_link}"
+    # The captured template carries both an "es" and an "en" entry here, and
+    # the editor's per-language tabs read from them; keep both so neither tab
+    # falls back to the old template copy.
     raw["localizedMessageTexts"] = {
+        "es": {"variables": [], "messageText": f"{body_es}\n{raw_link}", "languageCode": "es"},
         "en": {"variables": [], "messageText": f"{body_en}\n{raw_link}", "languageCode": "en"},
     }
 
@@ -315,6 +351,7 @@ def prepare_comms(
         caption_en=nc["caption_en"], caption_es=nc["caption_es"],
         link=link, deeplink=deeplink, icon_token=NC_ICON_TOKEN,
     )
+    mirror_into_raw_journey_data(body, notif)
     report.append("Notification (template 1935): title/description/caption/link set, icon pending photo upload")
 
     popup_act = find_notification(body, contract=5)
@@ -325,6 +362,7 @@ def prepare_comms(
         caption_en=popup["caption_en"], caption_es=popup["caption_es"],
         link=link, deeplink=deeplink, bg_token=POPUP_BG_TOKEN,
     )
+    mirror_into_raw_journey_data(body, popup_act)
     report.append("Pop-up (template 20678): title/description/caption/link set, background pending photo upload")
 
     sms_act = find_sms(body)
@@ -333,6 +371,7 @@ def prepare_comms(
         text_en=sms["text_en"], text_es=sms["text_es"],
         promo_page_id=promo_page_id, public_domain=public_domain,
     )
+    mirror_into_raw_journey_data(body, sms_act)
     report.append("SMS: body + promo-page link set for EN/ES (email left untouched)")
 
     body["reservedJourneyId"] = RESERVED_ID_TOKEN
@@ -349,6 +388,14 @@ def verify(body: dict, promo_page_id: str) -> list[tuple[bool, str]]:
 
     link = promo_link_relative(promo_page_id)
     checks.append((link in serialized, f"promo-page link {link!r} present"))
+
+    # The editor-side copy (rawJourneyData) must carry the edits too, or the
+    # created draft shows the old template copy in the Journey Builder UI.
+    raw = body.get("rawJourneyData") or {}
+    raw_serialized = json.dumps(raw, ensure_ascii=False)
+    checks.append((link in raw_serialized, f"promo-page link present in editor copy (rawJourneyData)"))
+    checks.append((_editor_copies_in_sync(body), "editor copy (rawJourneyData) matches the edited activities"))
+
     checks.append((NC_ICON_TOKEN in serialized, "NC icon placeholder present (filled at paste time)"))
     checks.append((POPUP_BG_TOKEN in serialized, "Pop-up background placeholder present (filled at paste time)"))
     checks.append(("JugaBet |" in serialized, "SMS text carries the required 'JugaBet |' prefix"))
@@ -358,6 +405,35 @@ def verify(body: dict, promo_page_id: str) -> list[tuple[bool, str]]:
     promo_display_ids = [d["promotionDisplayId"] for d in _walk_dicts(body) if "promotionDisplayId" in d]
     checks.append((not promo_display_ids, "no stale promotionDisplayId in payload" if not promo_display_ids else f"stale promotionDisplayId(s): {promo_display_ids}"))
     return checks
+
+
+def _editor_copies_in_sync(body: dict) -> bool:
+    """True if every edited activity's editor copy matches its compiled copy.
+
+    Guards the rawJourneyData mirroring: the data under
+    rawJourneyData.activitiesConfiguration[id] must equal the activity's
+    initializationData (with displayData split back out to the config level).
+    """
+    ac = (body.get("rawJourneyData") or {}).get("activitiesConfiguration") or {}
+    for a in body.get("activities", []):
+        name = a.get("activityName")
+        init = a.get("initializationData") or {}
+        if name == "notification_center" and init.get("contract") in (1, 5):
+            pass
+        elif name == "dextra_sms":
+            pass
+        else:
+            continue
+        cfg = ac.get(a.get("activityId"))
+        if not isinstance(cfg, dict):
+            return False
+        expected = copy.deepcopy(init)
+        expected_display = expected.pop("displayData", None)
+        if cfg.get("data") != expected:
+            return False
+        if expected_display is not None and cfg.get("displayData") != expected_display:
+            return False
+    return True
 
 
 def _walk_dicts(obj: Any):
