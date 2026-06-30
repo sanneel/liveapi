@@ -1,0 +1,9 @@
+# Game-of-the-Week campaign (matches the real gow.json shape)
+campaign: Game of the Week - 50 FS
+source: api[PromoPage]
+source.PlayerAdded -> multipurpose_promotion
+multipurpose_promotion.PromotionAccepted -> deposit
+deposit.DepositConditionSatisfied -> promotion
+promotion.PromotionAccepted -> freespin_bonus(spins=50, game="Gates of Olympus")
+freespin_bonus.FreespinBonusCollectingFinished -> casino_bonus_v2(percent=100, wager=30)
+casino_bonus_v2.WageringBonusFinished -> end
