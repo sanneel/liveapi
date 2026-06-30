@@ -3,6 +3,20 @@
     "automation": "sport_wheel_of_fortune",
     "endpoint": "POST /api/ubo/api/v0/crm/promo/v2/randomizer?draftId=<draftId>",
     "source": "captured from the Sport WOF console script (JBCL|SP|WOF)",
+    "visual": {
+      "current_contentId": "50691caf-4694-4a47-9ff2-bac498c3a8ee",
+      "current_frontId": "a3d54b7c-a8e2-4970-b6d3-7f6ef8e76480",
+      "previous_contentId": "0b3f17d3-d3e3-46c1-a12e-267eb749a190",
+      "previous_frontId": "1fb86b0b-0500-41a0-b717-c8c81aba53ea",
+      "bundle_capture": "templates/sport/wof_visual/ (content-en/es, settings, manifest from the new bundle)",
+      "change_flow": [
+        "the visual is the content bundle (contentId: mf/v1/<contentId>/{spa,widget}/content/content-<lang>.json + media) plus the front/theme (frontId: mf/v1/<frontId>/{spa,widget}/settings.json)",
+        "1. upload content+settings JSON: POST /promo/v2/s3/upload  body {path:'mf/v1/<id>/...json', data:{...}} -> {path}",
+        "2. upload media binaries: POST /promo/v2/s3/upload-content  (multipart, e.g. mf/v1/background/<uuid>.png)",
+        "3. repoint the randomizer: PUT /promo/v2/randomizer/<RND-id>  with new contentId/frontId, isExternalVisualSettings:false (keeps prizes/dates/segment)",
+        "To reuse an already-uploaded bundle (like this one), just set contentId/frontId to it and PUT — no re-upload needed."
+      ]
+    },
     "knobs": {
       "draftId": "query param, the randomizer draft being filled",
       "showDate": "promoDay 04:00Z",
@@ -38,8 +52,8 @@
   "initialShowDate": "2026-05-12T04:00:00.0000000Z",
   "initialEndDate": "2026-05-13T03:59:00.0000000Z",
   "currencies": [{ "brand": "JBCL", "currency": "CLP" }],
-  "contentId": "0b3f17d3-d3e3-46c1-a12e-267eb749a190",
-  "frontId": "1fb86b0b-0500-41a0-b717-c8c81aba53ea",
+  "contentId": "50691caf-4694-4a47-9ff2-bac498c3a8ee",
+  "frontId": "a3d54b7c-a8e2-4970-b6d3-7f6ef8e76480",
   "prizes": [
     { "weight": "0.1", "type": "JourneyPrize", "isLimitedPrize": false, "prizeQuantity": null,
       "journeyPrizeSettings": { "journeyId": "JRN-0-222277", "activityId": "73371e55-46e1-47c6-be64-0271db68583f", "isEmptyPrize": false, "activityDescription": "JBCL | SP | RB - Wheel of fortune | Free | Money" } },
