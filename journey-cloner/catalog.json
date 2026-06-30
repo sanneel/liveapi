@@ -9,9 +9,92 @@
       "gow.json",
       "gow_comms.json",
       "gow_email.json",
-      "segment_cs_301.json"
+      "segment_cs_301.json",
+      "sport/sport_wof_randomizer.json"
     ]
   },
+  "automations": [
+    {
+      "key": "promo_page",
+      "label": "Promo Page (journey-cloner)",
+      "creates": "a /promo/offers/promoPage/<id> landing page draft",
+      "endpoint": "POST /promo/v2/promo-drafts/promo-page",
+      "knobs": [
+        "internal name",
+        "show/start/end dates",
+        "contentId/frontId visual bundle",
+        "reward items"
+      ],
+      "notes": "The page every channel links to. Built by gow_campaign.py's run alongside the campaign."
+    },
+    {
+      "key": "gow",
+      "label": "Game of the Week (GOW)",
+      "creates": "campaign journey + promo page + 2 comms journeys (CS&SP, CS) + email content",
+      "endpoint": "POST /journey-drafts (+ promo-page, + content-studio email)",
+      "knobs": [
+        "game/provider",
+        "4 bet tiers",
+        "spins",
+        "date",
+        "per-channel EN/ES copy",
+        "photos",
+        "segment (CS&SP/CS-301)"
+      ],
+      "compiler": "gow_combined.py / gow_campaign.py / comms_campaign.py",
+      "starts": "immediately after publish"
+    },
+    {
+      "key": "sport_wof",
+      "label": "Sport Wheel of Fortune (Randomizer)",
+      "creates": "a FortuneWheel randomizer promo whose weighted slices route winners to journeys",
+      "endpoint": "POST /promo/v2/randomizer?draftId=<draftId>",
+      "knobs": [
+        "draftId",
+        "show/start/hide/end dates (promoDay 04:00Z window)",
+        "urlShortName sport-dd-mm-yyyy",
+        "internalName JBCL|SP|WOF|dd.mm.yy",
+        "prizes[].weight",
+        "prizes[].journeyPrizeSettings.{journeyId,activityId}",
+        "segment filterConditions"
+      ],
+      "shot_policy": "Once",
+      "segment": "fairplay_sport_segment notIn [VIP*, risk/abuse statuses]",
+      "template": "templates/sport/sport_wof_randomizer.json",
+      "prizes": [
+        {
+          "weight": "0.1",
+          "routes_to_journey": "JRN-0-222277",
+          "description": "JBCL | SP | RB - Wheel of fortune | Free | Money"
+        },
+        {
+          "weight": "3",
+          "routes_to_journey": "JRN-0-253210",
+          "description": "JBCL | SP | RB - Wheel of fortune | Free | Bonuses"
+        },
+        {
+          "weight": "25",
+          "routes_to_journey": "JRN-0-253216",
+          "description": "JBCL | SP | RB - Wheel of fortune | Dep | Bonus"
+        },
+        {
+          "weight": "10",
+          "routes_to_journey": "JRN-0-253218",
+          "description": "JBCL | SP | RB - Wheel of fortune | Bet | Insurance"
+        },
+        {
+          "weight": "36.9",
+          "routes_to_journey": "JRN-0-222272",
+          "description": "JBCL | SP | RB - Wheel of fortune | Dep | Freebet"
+        },
+        {
+          "weight": "25",
+          "routes_to_journey": "JRN-0-222271",
+          "description": "JBCL | SP | RB - Wheel of fortune | Bet | Freebet"
+        }
+      ]
+    }
+  ],
   "activities": [
     {
       "key": "ams_decision_split",

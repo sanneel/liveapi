@@ -91,6 +91,55 @@ RECIPES = [
 ]
 
 
+def build_automations() -> list[dict]:
+    """The top-level 'automation graph': the named things you can generate in
+    this backoffice, each a distinct endpoint/output. Curated, but the WOF
+    prize routing is read from the captured template."""
+    autos = [
+        {
+            "key": "promo_page",
+            "label": "Promo Page (journey-cloner)",
+            "creates": "a /promo/offers/promoPage/<id> landing page draft",
+            "endpoint": "POST /promo/v2/promo-drafts/promo-page",
+            "knobs": ["internal name", "show/start/end dates", "contentId/frontId visual bundle", "reward items"],
+            "notes": "The page every channel links to. Built by gow_campaign.py's run alongside the campaign.",
+        },
+        {
+            "key": "gow",
+            "label": "Game of the Week (GOW)",
+            "creates": "campaign journey + promo page + 2 comms journeys (CS&SP, CS) + email content",
+            "endpoint": "POST /journey-drafts (+ promo-page, + content-studio email)",
+            "knobs": ["game/provider", "4 bet tiers", "spins", "date", "per-channel EN/ES copy", "photos", "segment (CS&SP/CS-301)"],
+            "compiler": "gow_combined.py / gow_campaign.py / comms_campaign.py",
+            "starts": "immediately after publish",
+        },
+    ]
+    # Sport Wheel of Fortune (randomizer) — read prize routing from the template
+    wof_path = TPL.parent / "sport" / "sport_wof_randomizer.json"
+    wof = {
+        "key": "sport_wof",
+        "label": "Sport Wheel of Fortune (Randomizer)",
+        "creates": "a FortuneWheel randomizer promo whose weighted slices route winners to journeys",
+        "endpoint": "POST /promo/v2/randomizer?draftId=<draftId>",
+        "knobs": ["draftId", "show/start/hide/end dates (promoDay 04:00Z window)",
+                  "urlShortName sport-dd-mm-yyyy", "internalName JBCL|SP|WOF|dd.mm.yy",
+                  "prizes[].weight", "prizes[].journeyPrizeSettings.{journeyId,activityId}", "segment filterConditions"],
+        "shot_policy": "Once",
+        "segment": "fairplay_sport_segment notIn [VIP*, risk/abuse statuses]",
+        "template": "templates/sport/sport_wof_randomizer.json",
+    }
+    if wof_path.exists():
+        w = json.loads(wof_path.read_text(encoding="utf-8"))
+        wof["prizes"] = [
+            {"weight": p.get("weight"),
+             "routes_to_journey": p.get("journeyPrizeSettings", {}).get("journeyId"),
+             "description": p.get("journeyPrizeSettings", {}).get("activityDescription")}
+            for p in w.get("prizes", [])
+        ]
+    autos.append(wof)
+    return autos
+
+
 def build() -> dict:
     activities: dict[str, dict] = {}
     transitions: list[dict] = []
@@ -194,8 +243,9 @@ def build() -> dict:
             "brand": "JBCL", "operator": "PMI", "currency": "CLP (minor units x100)",
             "timezone": "Chile/Continental",
             "note": "Auto-extracted from templates/casino/. activities/transitions/rewards/segments are read from real journeys; recipes and knobs are curated.",
-            "source_templates": list(JOURNEY_TEMPLATES.values()) + [EMAIL_TEMPLATE] + SEGMENT_FRAGMENTS,
+            "source_templates": list(JOURNEY_TEMPLATES.values()) + [EMAIL_TEMPLATE] + SEGMENT_FRAGMENTS + ["sport/sport_wof_randomizer.json"],
         },
+        "automations": build_automations(),
         "activities": out_activities,
         "transitions_observed": sorted(transitions, key=lambda t: (t["from"], t["on_event"], t["to"])),
         "channels": channels,
@@ -217,6 +267,7 @@ def main() -> int:
     out = HERE / "catalog.json"
     out.write_text(json.dumps(cat, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Wrote {out}")
+    print(f"  automations: {[a['key'] for a in cat['automations']]}")
     print(f"  activities: {len(cat['activities'])}")
     print(f"  observed transitions: {len(cat['transitions_observed'])}")
     print(f"  reward presets: {len(cat['reward_presets'])}  segments: {len(cat['segments'])}  recipes: {len(cat['recipes'])}")
