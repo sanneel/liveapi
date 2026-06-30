@@ -13,7 +13,7 @@ import subprocess
 from pathlib import Path
 from typing import List, Tuple
 
-from ..config import BASE_DIR
+from ..config import BASE_DIR, get_settings
 
 CLONER_DIR = BASE_DIR / "journey-cloner"
 SCRIPT = CLONER_DIR / "figma_export.py"
@@ -25,9 +25,16 @@ def python_executable() -> str:
     return sys.executable or "python3"
 
 
+def _token() -> str:
+    return (get_settings().figma_token or os.environ.get("FIGMA_TOKEN", "")).strip()
+
+
 def _run(args: List[str], timeout: int = 120) -> Tuple[int, str, str]:
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
+    tok = _token()
+    if tok:
+        env["FIGMA_TOKEN"] = tok  # make .env-configured token visible to the subprocess
     cmd = [python_executable(), str(SCRIPT), *args]
     display = " ".join(c if " " not in c else repr(c) for c in cmd)
     proc = subprocess.run(cmd, cwd=CLONER_DIR, env=env, text=True, encoding="utf-8",
@@ -37,7 +44,7 @@ def _run(args: List[str], timeout: int = 120) -> Tuple[int, str, str]:
 
 
 def token_present() -> bool:
-    return bool(os.environ.get("FIGMA_TOKEN", "").strip())
+    return bool(_token())
 
 
 def inspect(file_key: str, page: str = "") -> Tuple[int, str, str]:

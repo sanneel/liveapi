@@ -28,6 +28,11 @@ class Settings(BaseSettings):
 
     app_env: str = "development"
 
+    # ── Figma (GOW image export) ─────────────────────────────────────
+    # Read-only File-content personal access token. Set it in .env or the
+    # process environment; used by app/services/figma_runner.py.
+    figma_token: str = ""
+
     # ── Database ──────────────────────────────────────────────────────
     database_url: str = f"sqlite:///{BASE_DIR / 'data' / 'jugabet.db'}"
 
