@@ -219,6 +219,24 @@ def set_dates(body: dict, start_local: datetime, stop_local: datetime) -> None:
         fa["stopAt"] = utc_plain(fs_stop_local)
 
 
+def set_immediately_after_publish(body: dict) -> None:
+    """Make the journey start as soon as it's published (no scheduled startAt).
+
+    Mirrors the captured immediate-publish state: journey-level startAt is null
+    and isImmediatelyAfterPublish is true. The free-spin activities keep their
+    own concrete validity window (set by set_dates) — only the journey's entry
+    is made immediate.
+    """
+    body["startAt"] = None
+    body["isImmediatelyAfterPublish"] = True
+    raw = body.get("rawJourneyData")
+    if isinstance(raw, dict):
+        info = raw.get("infoValues")
+        if isinstance(info, dict):
+            info["startAt"] = None
+            info["isImmediatelyAfterPublish"] = True
+
+
 def prepare(
     *,
     date_str: str,
@@ -275,12 +293,15 @@ def verify(body: dict, game: dict[str, str], bets_major: list[int]) -> list[tupl
     ))
     leftovers = [d["promotionDisplayId"] for d in walk_dicts(body) if d.get("promotionDisplayId")]
     checks.append((not leftovers, "no stale promotionDisplayId" if not leftovers else f"leftover: {leftovers}"))
-    try:
-        s = datetime.strptime(body["startAt"][:19], "%Y-%m-%dT%H:%M:%S")
-        e = datetime.strptime(body["stopAt"][:19], "%Y-%m-%dT%H:%M:%S")
-        checks.append((s < e, f"startAt < stopAt ({body['startAt']} < {body['stopAt']})"))
-    except (KeyError, ValueError) as exc:
-        checks.append((False, f"date parse failed: {exc}"))
+    if body.get("isImmediatelyAfterPublish") and not body.get("startAt"):
+        checks.append((bool(body.get("stopAt")), f"starts immediately after publish, stopAt {body.get('stopAt')}"))
+    else:
+        try:
+            s = datetime.strptime(body["startAt"][:19], "%Y-%m-%dT%H:%M:%S")
+            e = datetime.strptime(body["stopAt"][:19], "%Y-%m-%dT%H:%M:%S")
+            checks.append((s < e, f"startAt < stopAt ({body['startAt']} < {body['stopAt']})"))
+        except (KeyError, ValueError, TypeError) as exc:
+            checks.append((False, f"date parse failed: {exc}"))
     return checks
 
 

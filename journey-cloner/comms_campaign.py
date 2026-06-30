@@ -401,7 +401,10 @@ def prepare_comms(
         report.append(f"removed {dd} stale promotionDisplayId(s)")
 
     link = promo_link_relative(promo_page_id)
-    deeplink = promo_link_absolute(promo_page_id, public_domain)
+    # The Notification/Pop-up deeplink uses the same relative promo-page path as
+    # the link (e.g. /promo/offers/promoPage/<id>?%$utm_tags%), not the absolute
+    # win.jugabet.cl form.
+    deeplink = link
 
     notif = find_notification(body, contract=1)
     update_notification(

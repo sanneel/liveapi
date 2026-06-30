@@ -57,6 +57,7 @@ from casino_journey import (
     set_bets,
     set_dates,
     set_game,
+    set_immediately_after_publish,
     utc_dotnet,
     verify as casino_verify,
 )
@@ -173,9 +174,13 @@ def prepare_campaign(
 
     start_local, stop_local = chile_window(date_str, days)
     set_dates(body, start_local, stop_local)
+    # The GOW campaign journey enters players as soon as it's published, rather
+    # than waiting for a scheduled startAt (the free-spin validity window still
+    # runs from --date for 7 days).
+    set_immediately_after_publish(body)
     report.append(
-        f"startAt {body['startAt']} ({start_local:%Y-%m-%d %H:%M} Chile) -> "
-        f"stopAt {body['stopAt']} ({stop_local:%Y-%m-%d %H:%M} Chile)"
+        f"startAt immediate-after-publish -> "
+        f"stopAt {body['stopAt']} (free spins {start_local:%Y-%m-%d %H:%M} +7d Chile)"
     )
 
     new_name = set_name(body, start_local)
