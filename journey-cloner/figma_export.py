@@ -31,6 +31,7 @@ import urllib.request
 from pathlib import Path
 
 API = "https://api.figma.com/v1"
+CACHE_DIR = Path(__file__).resolve().parent / "figma_cache"
 
 # (w, h) -> slot name.  360x330 is exported once as 'campaign' and reused for
 # nc_icon + promo by the GOW generator (same image, three uses).
@@ -47,12 +48,32 @@ def _get(url: str) -> bytes:
     if not tok:
         sys.exit("FIGMA_TOKEN env var is not set (read-only File-content PAT).")
     req = urllib.request.Request(url, headers={"X-Figma-Token": tok})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return r.read()
+    try:
+        with urllib.request.urlopen(req, timeout=120) as r:
+            return r.read()
+    except urllib.error.HTTPError as e:
+        if e.code == 429:
+            ra = e.headers.get("Retry-After", "?")
+            sys.exit(f"Figma rate-limited (429). The full-file fetch is heavy; wait ~{ra}s "
+                     f"then run once with --refresh to rebuild the cache. After that, runs reuse "
+                     f"figma_cache/ and won't refetch.")
+        raise
 
 
 def get_json(url: str) -> dict:
     return json.loads(_get(url))
+
+
+def load_doc(key: str, refresh: bool = False) -> dict:
+    """The /v1/files tree is huge (146k nodes) and rate-limited; cache it to
+    disk and reuse it. Only --refresh (or a missing cache) re-fetches."""
+    CACHE_DIR.mkdir(exist_ok=True)
+    cf = CACHE_DIR / f"{key}.json"
+    if cf.exists() and not refresh:
+        return json.loads(cf.read_text(encoding="utf-8"))
+    raw = _get(f"{API}/files/{key}")
+    cf.write_bytes(raw)
+    return json.loads(raw)
 
 
 def walk(node, page=None, acc=None):
@@ -66,8 +87,8 @@ def walk(node, page=None, acc=None):
     return acc
 
 
-def load_nodes(key: str, page_filter: str | None):
-    doc = get_json(f"{API}/files/{key}")["document"]
+def load_nodes(key: str, page_filter: str | None, refresh: bool = False):
+    doc = load_doc(key, refresh)["document"]
     nodes = []
     for pg in doc.get("children", []):
         if page_filter and page_filter.lower() not in (pg.get("name", "").lower()):
@@ -89,8 +110,8 @@ def text_value(node):
     return (node.get("characters") or node.get("name") or "").strip()
 
 
-def cmd_inspect(key, page, game=""):
-    nodes = load_nodes(key, page)
+def cmd_inspect(key, page, game="", refresh=False):
+    nodes = load_nodes(key, page, refresh)
     if game.strip():  # restrict to the column+row vicinity of one game
         nodes = _near_game(nodes, game)
     print(f"{len(nodes)} nodes with bounds")
@@ -123,8 +144,8 @@ def _near_game(nodes, game):
     return out
 
 
-def cmd_export(key, page, game, scale, out):
-    nodes = load_nodes(key, page)
+def cmd_export(key, page, game, scale, out, refresh=False):
+    nodes = load_nodes(key, page, refresh)
     # game bands = TEXT nodes; sort by vertical position
     texts = sorted([(n, pg) for n, pg in nodes if n.get("type") == "TEXT"],
                    key=lambda x: x[0]["absoluteBoundingBox"]["y"])
@@ -191,12 +212,13 @@ def main():
     p.add_argument("--scale", default="1")
     p.add_argument("--out", default="figma_out")
     p.add_argument("--inspect", action="store_true")
+    p.add_argument("--refresh", action="store_true", help="re-fetch the file tree (rebuild figma_cache)")
     a = p.parse_args()
     if a.inspect:
-        return cmd_inspect(a.key, a.page, a.game or "")
+        return cmd_inspect(a.key, a.page, a.game or "", a.refresh)
     if not a.game:
         sys.exit("pass --game \"NAME\" to export, or --inspect to see the tree.")
-    return cmd_export(a.key, a.page, a.game, a.scale, a.out)
+    return cmd_export(a.key, a.page, a.game, a.scale, a.out, a.refresh)
 
 
 if __name__ == "__main__":
