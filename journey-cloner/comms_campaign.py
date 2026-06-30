@@ -83,6 +83,8 @@ DEFAULT_PUBLIC_DOMAIN = "win.jugabet.cl"
 NC_ICON_TOKEN = "@@NC_ICON_URL@@"
 POPUP_BG_TOKEN = "@@POPUP_BG_URL@@"
 RESERVED_ID_TOKEN = "DRY-RUN-COMMS"
+RESERVED_ID_CS_TOKEN = "DRY-RUN-COMMS-CS"
+SEGMENT_CS_301_PATH = Path(__file__).resolve().parent / "templates" / "casino" / "segment_cs_301.json"
 
 SMS_PREFIX = "JugaBet | "
 
@@ -175,6 +177,37 @@ def update_email_activity(activity: dict, content_name: str) -> None:
     settings["template"] = {"id": EMAIL_CONTENT_ID_TOKEN}
     settings["emailSource"] = "Template"
     init["displayData"] = [f"{EMAIL_CONTENT_ID_TOKEN} {content_name}"]
+
+
+def make_cs_variant(cs_sp_body: dict) -> dict:
+    """Duplicate the CS&SP comms journey as the CS one: swap the entry segment
+    to "301. JBCL |CS| Active / Dep <14d" and rename CS&SP -> CS. Everything
+    else (copy, links, photos, email) is identical."""
+    body = copy.deepcopy(cs_sp_body)
+    seg = json.loads(SEGMENT_CS_301_PATH.read_text(encoding="utf-8"))
+    for a in body.get("activities", []):
+        if a.get("activityName") == "dwh_source":
+            init = a["initializationData"]
+            init["filterDetails"] = copy.deepcopy(seg["filterDetails"])
+            init["currentTemplate"] = copy.deepcopy(seg["currentTemplate"])
+            init["dataSourceName"] = seg.get("dataSourceName", "default")
+            cfg = ((body.get("rawJourneyData") or {}).get("activitiesConfiguration") or {}).get(a["activityId"])
+            if isinstance(cfg, dict) and isinstance(cfg.get("data"), dict):
+                cfg["data"]["filterDetails"] = copy.deepcopy(seg["filterDetails"])
+                cfg["data"]["currentTemplate"] = copy.deepcopy(seg["currentTemplate"])
+                cfg["data"]["dataSourceName"] = seg.get("dataSourceName", "default")
+            break
+
+    def _cs(name: str) -> str:
+        return re.sub(r"CS&SP", "CS", name or "")
+
+    body["journeyName"] = _cs(body.get("journeyName", ""))
+    raw = body.get("rawJourneyData")
+    if isinstance(raw, dict) and isinstance(raw.get("infoValues"), dict):
+        raw["infoValues"]["journeyName"] = _cs(raw["infoValues"].get("journeyName", ""))
+    set_notification_metadata_journey_name(body, body["journeyName"])
+    body["reservedJourneyId"] = RESERVED_ID_CS_TOKEN
+    return body
 
 
 def mirror_into_raw_journey_data(body: dict, activity: dict) -> bool:
@@ -558,6 +591,8 @@ JS_TEMPLATE = r"""// GOW Communications console script — generated @GENERATED_
   const BASE = @BASE_URL@;
   const BRAND = @BRAND@;
   const PAYLOAD = @PAYLOAD@;
+  const PAYLOAD_CS = @PAYLOAD_CS@;            // null when only the CS&SP journey is made
+  const RESERVED_ID_CS_TOKEN = @RESERVED_ID_CS_TOKEN@;
   const FOLDER_ID = @FOLDER_ID@;
   const NC_ICON_TOKEN = @NC_ICON_TOKEN@;
   const POPUP_BG_TOKEN = @POPUP_BG_TOKEN@;
@@ -721,16 +756,36 @@ JS_TEMPLATE = r"""// GOW Communications console script — generated @GENERATED_
   const resp = await r.text();
   if (!r.ok) { console.error('FAILED HTTP ' + r.status, resp); throw new Error('Comms journey draft not created.'); }
 
+  let csId = null;
+  if (PAYLOAD_CS) {
+    csId = await reserveId();
+    console.log('  reserved (CS)', csId);
+    let t2 = JSON.stringify(PAYLOAD_CS);
+    t2 = t2.split(RESERVED_ID_CS_TOKEN).join(csId);
+    t2 = t2.split(NC_ICON_TOKEN).join(ncIconUrl);
+    t2 = t2.split(POPUP_BG_TOKEN).join(popupBgUrl);
+    if (emailContentId) t2 = t2.split(EMAIL_CONTENT_ID_TOKEN).join(emailContentId);
+    t2 = regen(t2);
+    const body2 = JSON.parse(t2);
+    console.log('Creating CS comms journey draft', csId, ':', body2.journeyName);
+    const r2 = await fetch(BASE + '/journey-drafts', { method: 'POST', headers: { ...headers(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(body2) });
+    const resp2 = await r2.text();
+    if (!r2.ok) { console.error('FAILED HTTP ' + r2.status, resp2); throw new Error('CS comms journey draft not created.'); }
+  }
+
   console.log('%cDONE.', 'color:#22c55e;font-weight:bold;font-size:14px');
-  console.log('  Comms journey draft: ' + realId);
+  console.log('  Comms journey draft (CS&SP): ' + realId);
+  if (csId) console.log('  Comms journey draft (CS): ' + csId);
   if (emailContentId) console.log('  Email content created + published: ' + emailContentId);
   else console.log('  Email activity left untouched — edit it by hand in the backoffice.');
 })();
 """
 
 
-def build_js(body: dict, email_content: dict | None = None) -> str:
+def build_js(body: dict, email_content: dict | None = None, cs_body: dict | None = None) -> str:
     js = JS_TEMPLATE
+    js = js.replace("@PAYLOAD_CS@", json.dumps(cs_body, ensure_ascii=False))
+    js = js.replace("@RESERVED_ID_CS_TOKEN@", json.dumps(RESERVED_ID_CS_TOKEN))
     js = js.replace("@GENERATED_AT@", datetime.now(LOCAL_TZ).strftime("%Y-%m-%d %H:%M %Z"))
     js = js.replace("@JOURNEY_NAME@", str(body.get("journeyName", "")))
     js = js.replace("@BASE_URL@", json.dumps(DEFAULT_BASE_URL))
@@ -780,6 +835,9 @@ def main() -> int:
         email=email_dict_from_spec(spec),
     )
 
+    cs_body = make_cs_variant(body)
+    report.append(f"CS variant: segment 301, journeyName = {cs_body.get('journeyName')!r}")
+
     print("Applied:")
     for line in report:
         print("  " + line)
@@ -799,13 +857,14 @@ def main() -> int:
         path = out / f"{args.name}_journey.json"
         path.write_text(json.dumps(body, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"\nDry run — journey payload written: {path}")
+        (out / f"{args.name}_cs_journey.json").write_text(json.dumps(cs_body, ensure_ascii=False, indent=2), encoding="utf-8")
         if email_content is not None:
             epath = out / f"{args.name}_email.json"
             epath.write_text(json.dumps(email_content, ensure_ascii=False, indent=2), encoding="utf-8")
             print(f"Dry run — email content written: {epath}")
         return 0
 
-    js = build_js(body, email_content)
+    js = build_js(body, email_content, cs_body)
     out = Path("console_scripts")
     out.mkdir(exist_ok=True)
     path = out / f"{args.name}_console.js"
