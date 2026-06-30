@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Figma · Jugabet Admin{% endblock %}
+{% block content_theme %}content-light{% endblock %}
+{% block page_title %}Figma → GOW images{% endblock %}
+{% block page_subtitle %}Pull the GOW slot images (474×256 pop-up, 360×330 NC/promo/campaign, 600×400 email) straight from the Figma file. Inspect the tree first, then export a game.{% endblock %}
+
+{% block page_actions %}
+  <a href="/admin/figma" class="btn">Clear</a>
+{% endblock %}
+
+{% block content %}
+
+{% if not token_present %}
+  <div class="alert err">FIGMA_TOKEN is not set in the server environment — set a read-only File-content PAT before running.</div>
+{% endif %}
+{% if error %}<div class="alert err">{{ error }}</div>{% endif %}
+
+<form method="post" action="/admin/figma/run" class="card" style="display:grid;gap:12px;max-width:720px">
+  <label class="field"><span class="lbl">Figma file key</span>
+    <input class="input mono" name="file_key" required value="{{ form.file_key or '' }}" placeholder="go1ZVyvYRnccMRGxzgiucv">
+  </label>
+  <label class="field"><span class="lbl">Page (name contains)</span>
+    <input class="input" name="page" value="{{ form.page or '' }}" placeholder="GAME OF THE WEEK (JULY)">
+  </label>
+  <label class="field"><span class="lbl">Game (for export)</span>
+    <input class="input" name="game" value="{{ form.game or '' }}" placeholder="SPIN & SCORE MEGAWAYS">
+  </label>
+  <div style="display:flex;gap:8px">
+    <button class="btn" name="mode" value="inspect" style="justify-content:center">Inspect tree</button>
+    <button class="btn primary" name="mode" value="export" style="justify-content:center">Export game images</button>
+  </div>
+  <p class="help">Inspect lists every node with its size + id so we can confirm slot matching. Export renders this game's slots to PNG and previews them below.</p>
+</form>
+
+{% if images %}
+  <h3 style="margin-top:18px">Exported slots</h3>
+  <div style="display:flex;gap:16px;flex-wrap:wrap">
+    {% for im in images %}
+      <div class="card" style="padding:8px;text-align:center">
+        <img src="{{ im.data_uri }}" alt="{{ im.slot }}" style="max-width:240px;display:block;margin:0 auto 6px;border:1px solid #ddd">
+        <div class="mono" style="font-size:12px">{{ im.slot }} · {{ im.bytes }} b</div>
+      </div>
+    {% endfor %}
+  </div>
+  <p class="help">campaign.png (360×330) is reused for NC icon + promo + the GOW campaign photo.</p>
+{% endif %}
+
+{% if result %}
+  <div class="alert {% if result.ok %}ok{% else %}err{% endif %}" style="margin-top:16px">
+    exit {{ result.exit_code }} · <span class="mono">{{ result.command }}</span>
+  </div>
+  <textarea class="input mono" readonly rows="18" spellcheck="false" style="font-size:12px;width:100%">{{ result.output }}</textarea>
+{% endif %}
+
+{% endblock %}

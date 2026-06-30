@@ -649,6 +649,56 @@ def gow_page(
     return templates.TemplateResponse(request, "gow.html", ctx)
 
 
+def _figma_context(*, form, result=None, error="", images=None):
+    from ..services import figma_runner
+    return {
+        "active_page": "figma",
+        "form": form,
+        "result": result,
+        "error": error,
+        "images": images or [],
+        "token_present": figma_runner.token_present(),
+    }
+
+
+@router.get("/admin/figma", response_class=HTMLResponse)
+def figma_page(request: Request, user: User = Depends(require_role("editor"))) -> HTMLResponse:
+    ctx = _figma_context(form={"file_key": "go1ZVyvYRnccMRGxzgiucv", "page": "GAME OF THE WEEK (JULY)"})
+    ctx["current_user"] = user
+    return templates.TemplateResponse(request, "figma.html", ctx)
+
+
+@router.post("/admin/figma/run", response_class=HTMLResponse)
+def figma_run(
+    request: Request,
+    file_key: str = Form(...),
+    page: str = Form(""),
+    game: str = Form(""),
+    mode: str = Form("inspect"),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    from ..services import figma_runner
+    form = {"file_key": file_key, "page": page, "game": game, "mode": mode}
+    error, result, images = "", None, []
+    try:
+        if not file_key.strip():
+            raise ValueError("File key is required.")
+        if mode == "export":
+            if not game.strip():
+                raise ValueError("Game name is required for export.")
+            rc, out, cmd, images = figma_runner.export(file_key, game, page)
+        else:
+            rc, out, cmd = figma_runner.inspect(file_key, page)
+        result = {"exit_code": rc, "output": out, "command": cmd, "ok": rc == 0}
+        if rc != 0:
+            error = "figma_export returned a non-zero exit code (see output)."
+    except Exception as exc:  # noqa: BLE001
+        error = str(exc)
+    ctx = _figma_context(form=form, result=result, error=error, images=images)
+    ctx["current_user"] = user
+    return templates.TemplateResponse(request, "figma.html", ctx)
+
+
 @router.post("/admin/gow/console-script", response_class=HTMLResponse)
 def gow_console_script(
     request: Request,
