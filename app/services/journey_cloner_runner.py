@@ -7,6 +7,7 @@ import json
 import re
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -182,6 +183,16 @@ def _date_slug(date: str) -> str:
     return re.sub(r"[^0-9]", "", date) or "date"
 
 
+def _unique_basename(prefix: str, date: str) -> str:
+    # console_scripts/<basename>_console.js is a shared filesystem path, and
+    # _run_gow_cli writes then immediately reads it back. A date-only name
+    # let two concurrent requests for the same date (the sync route runs in
+    # FastAPI's threadpool, so this does happen) race: one request's read
+    # could pick up the other request's freshly-overwritten file instead of
+    # its own. The uuid suffix makes every generated script its own file.
+    return f"{prefix}_{_date_slug(date)}_{uuid.uuid4().hex[:8]}"
+
+
 def _run_gow_cli(
     cmd: List[str], *, spec_text: str, basename: str
 ) -> Tuple[int, str, str, str | None, str]:
@@ -236,7 +247,7 @@ def generate_gow_console_script(
 
     Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
     """
-    basename = f"gow_campaign_{_date_slug(date)}"
+    basename = _unique_basename("gow_campaign", date)
     cmd = [
         python_executable(),
         str(GOW_SCRIPT_PATH),
@@ -269,7 +280,7 @@ def generate_comms_console_script(
 
     Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
     """
-    basename = f"gow_comms_{_date_slug(date)}"
+    basename = _unique_basename("gow_comms", date)
     cmd = [
         python_executable(),
         str(COMMS_SCRIPT_PATH),
@@ -305,7 +316,7 @@ def generate_gow_combined_console_script(
 
     Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
     """
-    basename = f"gow_combined_{_date_slug(date)}"
+    basename = _unique_basename("gow_combined", date)
     cmd = [
         python_executable(),
         str(COMBINED_SCRIPT_PATH),
