@@ -140,9 +140,12 @@ def cmd_export(key, page, game, scale, out):
         b = n["absoluteBoundingBox"]
         return b["x"] < col_r and b["x"] + b["width"] > col_l
 
-    # next game band *in the same column* below this one bounds the row window
+    # next game band *in the same column* below this one bounds the row window.
+    # Only band-sized TEXT counts (height >= 100) — ignore small labels like the
+    # "nuevo" badge or "$500" tier chips that sit in the image row.
     later = [t["absoluteBoundingBox"]["y"] for t, pg in texts
              if pg == gpage and t is not gnode and x_overlaps(t)
+             and t["absoluteBoundingBox"]["height"] >= 100
              and t["absoluteBoundingBox"]["y"] > g_y + 50]
     next_y = min(later) if later else g_y + 2000
 
