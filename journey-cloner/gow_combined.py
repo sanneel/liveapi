@@ -49,8 +49,12 @@ from gow_campaign import (
 from comms_campaign import (
     DEFAULT_FOLDER_ID,
     DEFAULT_PUBLIC_DOMAIN,
+    EMAIL_CONTENT_ID_TOKEN,
+    EMAIL_HERO_TOKEN,
+    EMAIL_PROMO_TOKEN,
     NC_ICON_TOKEN,
     POPUP_BG_TOKEN,
+    email_dict_from_spec,
     nc_dict_from_spec,
     popup_dict_from_spec,
     prepare_comms,
@@ -76,6 +80,7 @@ def prepare_both(
     nc: dict[str, str],
     popup: dict[str, str],
     sms: dict[str, str],
+    email: dict[str, str] | None = None,
 ):
     campaign_body, campaign_report, start_local, stop_local = prepare_campaign(
         date_str=date_str, days=days, game=game, bets_major=bets_major,
@@ -83,17 +88,20 @@ def prepare_both(
     )
     # The comms entry window is always same-day 12:00->19:00 Chile time on
     # --date, independent of the campaign's own (possibly multi-day) window.
-    comms_body, comms_report, comms_start_local, comms_stop_local = prepare_comms(
+    # The promo page is created in this same run, so its id is only known at
+    # paste time — promo links stay as PROMO_PAGE_ID_TOKEN here (in both the
+    # journey payload and the email content) and the console script fills them.
+    comms_body, comms_report, comms_start_local, comms_stop_local, email_content = prepare_comms(
         date_str=date_str,
         promo_page_id=PROMO_PAGE_ID_TOKEN,
         public_domain=public_domain,
         journey_name=journey_name,
-        nc=nc, popup=popup, sms=sms,
+        nc=nc, popup=popup, sms=sms, email=email,
     )
     comms_body["reservedJourneyId"] = RESERVED_COMMS_ID_TOKEN
     return (
         campaign_body, comms_body, campaign_report, comms_report,
-        start_local, stop_local, comms_start_local, comms_stop_local,
+        start_local, stop_local, comms_start_local, comms_stop_local, email_content,
     )
 
 
@@ -140,8 +148,13 @@ JS_TEMPLATE = r"""// GOW combined console script (campaign + comms) — generate
   const RESERVED_CAMPAIGN_ID_TOKEN = @RESERVED_CAMPAIGN_ID_TOKEN@;
   const RESERVED_COMMS_ID_TOKEN = @RESERVED_COMMS_ID_TOKEN@;
   const PROMO_PAGE_ID_TOKEN = @PROMO_PAGE_ID_TOKEN@;
+  const EMAIL_CONTENT = @EMAIL_CONTENT@;            // null when email is left untouched
+  const EMAIL_HERO_TOKEN = @EMAIL_HERO_TOKEN@;
+  const EMAIL_PROMO_TOKEN = @EMAIL_PROMO_TOKEN@;
+  const EMAIL_CONTENT_ID_TOKEN = @EMAIL_CONTENT_ID_TOKEN@;
 
   const CRM_BASE = BASE.replace(/\/journey-builder\/v0$/, '');
+  const CONTENT_BASE = CRM_BASE + '/content-studio/v0/eb-backoffice/email/contents';
   const AWS_BASE = new URL(BASE).origin + '/api/aws-get';
 
   const decodeJwt = (t) => { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); } catch (e) { return null; } };
@@ -213,7 +226,34 @@ JS_TEMPLATE = r"""// GOW combined console script (campaign + comms) — generate
     const tr = await fetch(CRM_BASE + '/media-library/v0/asset/thumb/' + asset.id + '.png', { method: 'PUT', headers: headers(), credentials: 'include', body: thumbFd });
     if (!tr.ok) console.warn('  [' + label + '] thumbnail upload failed (non-fatal): HTTP ' + tr.status, await tr.text());
 
-    return asset.absolute_link;
+    return asset;
+  }
+
+  // Creates the marketing-email content (create -> save -> publish), wiring in
+  // the uploaded hero photo and the promo-page link created in step 1, and
+  // returns its CSE id so the journey's email activity can point at it.
+  async function buildAndPublishEmail(promoPageId) {
+    const heroFile = await pickFile('EMAIL HERO');
+    const heroAsset = await uploadAsset(heroFile, 'EMAIL HERO');
+    let cText = JSON.stringify(EMAIL_CONTENT);
+    cText = cText.split(EMAIL_HERO_TOKEN).join('https://{{cdn_hostname}}' + heroAsset.relative_link);
+    if (promoPageId) cText = cText.split(EMAIL_PROMO_TOKEN).join(promoPageId);
+    const content = JSON.parse(cText);
+
+    let r = await fetch(CONTENT_BASE, { method: 'POST', headers: { ...headers(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(content) });
+    let resp = await r.text();
+    if (!r.ok) throw new Error('Email content create failed: HTTP ' + r.status + ' ' + resp);
+    const cseId = JSON.parse(resp).id;
+    console.log('  created email content', cseId);
+
+    r = await fetch(CONTENT_BASE + '/' + cseId, { method: 'POST', headers: { ...headers(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(content) });
+    resp = await r.text();
+    if (!r.ok) throw new Error('Email content save failed: HTTP ' + r.status + ' ' + resp);
+
+    r = await fetch(CONTENT_BASE + '/' + cseId + '/publish', { method: 'PATCH', headers: { ...headers(), 'content-type': 'application/json' }, credentials: 'include', body: '{}' });
+    if (!r.ok) throw new Error('Email content publish failed: HTTP ' + r.status + ' ' + await r.text());
+    console.log('  published email content', cseId);
+    return cseId;
   }
 
   const newUuid = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID()
@@ -525,11 +565,17 @@ JS_TEMPLATE = r"""// GOW combined console script (campaign + comms) — generate
   if (!r.ok) { console.error('FAILED HTTP ' + r.status, resp); throw new Error('Promo page draft not created (journey draft ' + campaignJourneyId + ' was already created).'); }
   console.log('%cSTEP 1/2 DONE — promo page id: ' + promoPageId, 'color:#22c55e;font-weight:bold');
 
-  console.log('%c=== STEP 2/2: Communications (Notification + Pop-up + SMS) ===', 'color:#3b82f6;font-weight:bold');
+  console.log('%c=== STEP 2/2: Communications (Notification + Pop-up + SMS' + (EMAIL_CONTENT ? ' + Email' : '') + ') ===', 'color:#3b82f6;font-weight:bold');
   const ncIconFile = await pickFile('NC ICON');
-  const ncIconUrl = await uploadAsset(ncIconFile, 'NC ICON');
+  const ncIconUrl = (await uploadAsset(ncIconFile, 'NC ICON')).absolute_link;
   const popupBgFile = await pickFile('POP-UP BACKGROUND');
-  const popupBgUrl = await uploadAsset(popupBgFile, 'POP-UP BACKGROUND');
+  const popupBgUrl = (await uploadAsset(popupBgFile, 'POP-UP BACKGROUND')).absolute_link;
+
+  let emailContentId = null;
+  if (EMAIL_CONTENT) {
+    console.log('Creating + publishing email content (promo page ' + promoPageId + ')...');
+    emailContentId = await buildAndPublishEmail(promoPageId);
+  }
 
   console.log('Reserving comms journey id...');
   const commsJourneyId = await reserveId();
@@ -540,6 +586,7 @@ JS_TEMPLATE = r"""// GOW combined console script (campaign + comms) — generate
   commsText = commsText.split(NC_ICON_TOKEN).join(ncIconUrl);
   commsText = commsText.split(POPUP_BG_TOKEN).join(popupBgUrl);
   commsText = commsText.split(PROMO_PAGE_ID_TOKEN).join(promoPageId);
+  if (emailContentId) commsText = commsText.split(EMAIL_CONTENT_ID_TOKEN).join(emailContentId);
   commsText = regen(commsText).text;
   const commsBody = JSON.parse(commsText);
 
@@ -552,7 +599,8 @@ JS_TEMPLATE = r"""// GOW combined console script (campaign + comms) — generate
   console.log('  Campaign journey draft: ' + campaignJourneyId);
   console.log('  Promo page draft id:    ' + promoPageId);
   console.log('  Comms journey draft:    ' + commsJourneyId);
-  console.log('  Email activity left untouched — edit it by hand in the backoffice.');
+  if (emailContentId) console.log('  Email content created + published: ' + emailContentId);
+  else console.log('  Email activity left untouched — edit it by hand in the backoffice.');
 })();
 """
 
@@ -574,6 +622,7 @@ def build_js(
     end_weekday_en: str,
     end_weekday_es: str,
     public_domain: str,
+    email_content: dict | None = None,
 ) -> str:
     js = JS_TEMPLATE
     js = js.replace("@GENERATED_AT@", datetime.now(LOCAL_TZ).strftime("%Y-%m-%d %H:%M %Z"))
@@ -603,6 +652,10 @@ def build_js(
     js = js.replace("@RESERVED_CAMPAIGN_ID_TOKEN@", json.dumps(RESERVED_CAMPAIGN_ID_TOKEN))
     js = js.replace("@RESERVED_COMMS_ID_TOKEN@", json.dumps(RESERVED_COMMS_ID_TOKEN))
     js = js.replace("@PROMO_PAGE_ID_TOKEN@", json.dumps(PROMO_PAGE_ID_TOKEN))
+    js = js.replace("@EMAIL_CONTENT@", json.dumps(email_content, ensure_ascii=False))
+    js = js.replace("@EMAIL_HERO_TOKEN@", json.dumps(EMAIL_HERO_TOKEN))
+    js = js.replace("@EMAIL_PROMO_TOKEN@", json.dumps(EMAIL_PROMO_TOKEN))
+    js = js.replace("@EMAIL_CONTENT_ID_TOKEN@", json.dumps(EMAIL_CONTENT_ID_TOKEN))
     return js
 
 
@@ -639,11 +692,12 @@ def main() -> int:
 
     (
         campaign_body, comms_body, campaign_report, comms_report,
-        start_local, stop_local, comms_start_local, comms_stop_local,
+        start_local, stop_local, comms_start_local, comms_stop_local, email_content,
     ) = prepare_both(
         date_str=args.date, days=args.days, game=game, bets_major=spec.bets,
         spins=args.spins, public_domain=args.public_domain, journey_name=args.journey_name,
         nc=nc_dict_from_spec(spec.nc), popup=popup_dict_from_spec(spec.popup), sms=sms_dict_from_spec(spec.sms),
+        email=email_dict_from_spec(spec),
     )
 
     print("Campaign:")
@@ -671,6 +725,8 @@ def main() -> int:
         out.mkdir(exist_ok=True)
         (out / f"{args.name}_campaign_journey.json").write_text(json.dumps(campaign_body, ensure_ascii=False, indent=2), encoding="utf-8")
         (out / f"{args.name}_comms_journey.json").write_text(json.dumps(comms_body, ensure_ascii=False, indent=2), encoding="utf-8")
+        if email_content is not None:
+            (out / f"{args.name}_email.json").write_text(json.dumps(email_content, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"\nDry run — journey payloads written under out/{args.name}_*.json")
         print("(promo-page payload is built at paste-time in the browser, not in dry-run output)")
         return 0
@@ -699,6 +755,7 @@ def main() -> int:
         end_weekday_en=end_weekday_en,
         end_weekday_es=end_weekday_es,
         public_domain=args.public_domain,
+        email_content=email_content,
     )
     print(f"\nVisual content text: bets {spec.bets}, game {game['game_name']!r}, end weekday {end_weekday_en}/{end_weekday_es}")
     print(f"Comms window: {comms_start_local:%Y-%m-%d %H:%M} -> {comms_stop_local:%H:%M} Chile")
@@ -709,7 +766,10 @@ def main() -> int:
     path.write_text(js, encoding="utf-8")
     print(f"\nConsole script written: {path}")
     print("Paste it into the DevTools console on a logged-in backoffice tab.")
-    print("Three file pickers will pop up in turn: campaign photo, then NC icon, then Pop-up background.")
+    if email_content is not None:
+        print("Four file pickers will pop up in turn: campaign photo, NC icon, Pop-up background, then Email hero.")
+    else:
+        print("Three file pickers will pop up in turn: campaign photo, then NC icon, then Pop-up background.")
     return 0
 
 

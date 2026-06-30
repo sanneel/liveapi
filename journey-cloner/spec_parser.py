@@ -30,13 +30,14 @@ _TRADEMARK_RE = re.compile(r"[™®©]")
 _NOTIFICATION = "notification"
 _POPUP = "notification pop-up"
 _SMS = "sms"
+_EMAIL = "email"
 _KNOWN_CHANNEL_PREFIXES = (
     # More specific prefixes must be checked before shorter ones they
     # contain (e.g. "notification pop-up..." also starts with
     # "notification", so it has to win the match first).
     _POPUP,
     _NOTIFICATION,
-    "email",
+    _EMAIL,
     _SMS,
     "promo lobby",
     "slider",
@@ -62,6 +63,15 @@ class SmsCopy:
 
 
 @dataclass
+class EmailCopy:
+    enabled: bool = False
+    subject_en: str = ""
+    subject_es: str = ""
+    preheader_en: str = ""
+    preheader_es: str = ""
+
+
+@dataclass
 class ParsedSpec:
     game_name: str = ""
     provider: str = ""
@@ -71,6 +81,7 @@ class ParsedSpec:
     nc: ChannelCopy = field(default_factory=ChannelCopy)
     popup: ChannelCopy = field(default_factory=ChannelCopy)
     sms: SmsCopy = field(default_factory=SmsCopy)
+    email: EmailCopy = field(default_factory=EmailCopy)
     warnings: list = field(default_factory=list)
 
 
@@ -171,6 +182,8 @@ def parse_spec(text: str) -> ParsedSpec:
                 spec.popup.enabled = _row_bool(row)
             elif channel == _SMS:
                 spec.sms.enabled = _row_bool(row)
+            elif channel == _EMAIL:
+                spec.email.enabled = _row_bool(row)
             continue
 
         if not current_channel:
@@ -199,12 +212,22 @@ def parse_spec(text: str) -> ParsedSpec:
         _, en, es = sms_rows[0]
         spec.sms.text_en, spec.sms.text_es = en, es
 
+    for label, en, es in field_rows.get(_EMAIL, []):
+        if label.startswith("tit"):
+            # "Tittle"/"Title" row = the email subject line.
+            spec.email.subject_en, spec.email.subject_es = en, es
+        elif "header" in label:
+            # "Pre-header" row.
+            spec.email.preheader_en, spec.email.preheader_es = en, es
+
     if spec.nc.enabled and not (spec.nc.title_en and spec.nc.desc_en and spec.nc.caption_en):
         spec.warnings.append("Notification is ticked TRUE but some Notification fields are missing.")
     if spec.popup.enabled and not (spec.popup.title_en and spec.popup.desc_en and spec.popup.caption_en):
         spec.warnings.append("Pop-up (Cat-fish) is ticked TRUE but some Pop-up fields are missing.")
     if spec.sms.enabled and not (spec.sms.text_en and spec.sms.text_es):
         spec.warnings.append("Sms is ticked TRUE but the Sms text is missing.")
+    if spec.email.enabled and not (spec.email.subject_es and spec.email.preheader_es):
+        spec.warnings.append("Email is ticked TRUE but the subject/pre-header is missing.")
 
     return spec
 
@@ -221,4 +244,5 @@ if __name__ == "__main__":
     print("nc:", result.nc)
     print("popup:", result.popup)
     print("sms:", result.sms)
+    print("email:", result.email)
     print("warnings:", result.warnings)

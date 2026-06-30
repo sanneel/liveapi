@@ -76,7 +76,7 @@
     <div class="field">
       <span class="lbl">Spec</span>
       <textarea class="input mono" name="spec" required rows="16" spellcheck="false" style="font-size:12px" placeholder="Paste the whole Product / Offer / Communication channels table here (tab-separated, as copied from the sheet).">{{ form.spec or '' }}</textarea>
-      <p class="help" style="margin-top:6px">Paste the full spec table: Product/Event/Offer (game, provider, bet tiers) and the Communication channels section (Notification, Notification Pop-up (Cat-fish), Sms — EN/ES copy with TRUE/FALSE flags). Email and Push pop-up are left untouched.</p>
+      <p class="help" style="margin-top:6px">Paste the full spec table: Product/Event/Offer (game, provider, bet tiers) and the Communication channels section (Notification, Notification Pop-up (Cat-fish), Sms, Email — EN/ES copy with TRUE/FALSE flags). When Email is ticked TRUE, its content is created + published and the journey's email activity is repointed to it (you'll pick the email hero photo too). Push pop-up is left untouched.</p>
     </div>
 
     <button class="btn primary" style="justify-content:center">Generate console script</button>
@@ -99,7 +99,7 @@
             <li>On the computer with the office VPN, open the Journey Builder backoffice in Chrome (logged in).</li>
             <li>Press <span class="mono">F12</span> and open the <b>Console</b> tab. If Chrome warns about pasting, type <span class="mono">allow pasting</span> and press Enter.</li>
             <li>Paste the script and press Enter, then pick each image when its file picker pops up.</li>
-            <li>Watch for the green <b>DONE</b> with the created JRN id(s). Email (and any field not in the spec) is left untouched.</li>
+            <li>Watch for the green <b>DONE</b> with the created JRN id(s) (and the published email content id when Email is in the spec). Any field not in the spec is left untouched.</li>
           </ol>
           <textarea id="console-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ console_script.text }}</textarea>
         </div>

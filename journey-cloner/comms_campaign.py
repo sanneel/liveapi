@@ -60,7 +60,14 @@ from create_journeys import (
     strip_promotion_display_ids,
 )
 from casino_journey import DEFAULT_BASE_URL, chile_same_day_window, set_dates, utc_dotnet
-from spec_parser import ChannelCopy, SmsCopy, parse_spec
+from spec_parser import ChannelCopy, EmailCopy, SmsCopy, parse_spec
+from email_content import (
+    EMAIL_CONTENT_ID_TOKEN,
+    EMAIL_HERO_TOKEN,
+    PROMO_PAGE_ID_TOKEN as EMAIL_PROMO_TOKEN,
+    email_name,
+    prepare_email_content,
+)
 
 TEMPLATE_PATH = Path(__file__).resolve().parent / "templates" / "casino" / "gow_comms.json"
 
@@ -102,6 +109,21 @@ def sms_dict_from_spec(sms: SmsCopy) -> dict[str, str]:
     return {"text_en": sms.text_en, "text_es": sms.text_es}
 
 
+def email_dict_from_spec(spec) -> dict[str, str] | None:
+    """Email content inputs, or None when the spec doesn't drive the email
+    (Email row not ticked TRUE, or subject/pre-header missing) — in which case
+    the journey's email activity is left untouched."""
+    email = spec.email
+    if not (email.enabled and email.subject_es and email.preheader_es):
+        return None
+    return {
+        "subject_es": email.subject_es,
+        "preheader_es": email.preheader_es,
+        "game_name": spec.game_name,
+        "provider_name": spec.provider_name,
+    }
+
+
 def find_notification(body: dict, contract: int) -> dict:
     for a in body.get("activities", []):
         init = a.get("initializationData") or {}
@@ -115,6 +137,27 @@ def find_sms(body: dict) -> dict:
         if a.get("activityName") == "dextra_sms":
             return a
     raise ValueError("dextra_sms activity not found in template")
+
+
+def find_email(body: dict) -> dict:
+    for a in body.get("activities", []):
+        if a.get("activityName") == "dextra_email":
+            return a
+    raise ValueError("dextra_email activity not found in template")
+
+
+def update_email_activity(activity: dict, content_name: str) -> None:
+    """Point the journey's email activity at the about-to-be-created content.
+
+    The real content id is only known once the console script creates it at
+    paste time, so leave EMAIL_CONTENT_ID_TOKEN here and let the script swap
+    it in (the same way RESERVED_ID_TOKEN is handled for the journey id).
+    """
+    init = activity["initializationData"]
+    settings = init["emailSettings"]
+    settings["template"] = {"id": EMAIL_CONTENT_ID_TOKEN}
+    settings["emailSource"] = "Template"
+    init["displayData"] = [f"{EMAIL_CONTENT_ID_TOKEN} {content_name}"]
 
 
 def mirror_into_raw_journey_data(body: dict, activity: dict) -> bool:
@@ -316,7 +359,8 @@ def prepare_comms(
     nc: dict[str, str],
     popup: dict[str, str],
     sms: dict[str, str],
-) -> tuple[dict, list[str], datetime, datetime]:
+    email: dict[str, str] | None = None,
+) -> tuple[dict, list[str], datetime, datetime, dict | None]:
     body = json.loads(TEMPLATE_PATH.read_text(encoding="utf-8-sig"))
     report: list[str] = []
 
@@ -372,11 +416,30 @@ def prepare_comms(
         promo_page_id=promo_page_id, public_domain=public_domain,
     )
     mirror_into_raw_journey_data(body, sms_act)
-    report.append("SMS: body + promo-page link set for EN/ES (email left untouched)")
+    report.append("SMS: body + promo-page link set for EN/ES")
+
+    email_content = None
+    if email:
+        content_name = email_name(date_str)
+        email_content = prepare_email_content(
+            date_str=date_str,
+            game_name=email["game_name"], provider_name=email["provider_name"],
+            subject_es=email["subject_es"], preheader_es=email["preheader_es"],
+            promo_page_id=promo_page_id,
+        )
+        email_act = find_email(body)
+        update_email_activity(email_act, content_name)
+        mirror_into_raw_journey_data(body, email_act)
+        report.append(
+            f"Email: content {content_name!r} prepared (subject/pre-header/heading/promo "
+            "set, hero pending photo upload); journey email activity repointed to new content"
+        )
+    else:
+        report.append("Email left untouched (edit it by hand in the backoffice)")
 
     body["reservedJourneyId"] = RESERVED_ID_TOKEN
     report.append(f"reservedJourneyId = {RESERVED_ID_TOKEN}")
-    return body, report, start_local, stop_local
+    return body, report, start_local, stop_local, email_content
 
 
 def verify(body: dict, promo_page_id: str) -> list[tuple[bool, str]]:
@@ -404,6 +467,14 @@ def verify(body: dict, promo_page_id: str) -> list[tuple[bool, str]]:
 
     promo_display_ids = [d["promotionDisplayId"] for d in _walk_dicts(body) if "promotionDisplayId" in d]
     checks.append((not promo_display_ids, "no stale promotionDisplayId in payload" if not promo_display_ids else f"stale promotionDisplayId(s): {promo_display_ids}"))
+
+    # When the email is driven by the spec, the email activity must point at
+    # the to-be-created content (token), not the stale captured CSE id.
+    email_act = next((a for a in body.get("activities", []) if a.get("activityName") == "dextra_email"), None)
+    if email_act is not None:
+        tmpl_id = ((email_act.get("initializationData") or {}).get("emailSettings") or {}).get("template", {}).get("id")
+        if tmpl_id == EMAIL_CONTENT_ID_TOKEN:
+            checks.append((EMAIL_CONTENT_ID_TOKEN in raw_serialized, "email activity repoint mirrored into editor copy"))
     return checks
 
 
@@ -467,8 +538,14 @@ JS_TEMPLATE = r"""// GOW Communications console script — generated @GENERATED_
   const NC_ICON_TOKEN = @NC_ICON_TOKEN@;
   const POPUP_BG_TOKEN = @POPUP_BG_TOKEN@;
   const RESERVED_ID_TOKEN = @RESERVED_ID_TOKEN@;
+  const EMAIL_CONTENT = @EMAIL_CONTENT@;            // null when email is left untouched
+  const EMAIL_HERO_TOKEN = @EMAIL_HERO_TOKEN@;
+  const EMAIL_PROMO_TOKEN = @EMAIL_PROMO_TOKEN@;
+  const EMAIL_CONTENT_ID_TOKEN = @EMAIL_CONTENT_ID_TOKEN@;
+  const EMAIL_PROMO_PAGE_ID = @EMAIL_PROMO_PAGE_ID@; // '' for comms (link already baked)
 
   const CRM_BASE = BASE.replace(/\/journey-builder\/v0$/, '');
+  const CONTENT_BASE = CRM_BASE + '/content-studio/v0/eb-backoffice/email/contents';
 
   const decodeJwt = (t) => { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); } catch (e) { return null; } };
   const usableAuth = (v) => {
@@ -541,7 +618,35 @@ JS_TEMPLATE = r"""// GOW Communications console script — generated @GENERATED_
     const tr = await fetch(CRM_BASE + '/media-library/v0/asset/thumb/' + asset.id + '.png', { method: 'PUT', headers: headers(), credentials: 'include', body: thumbFd });
     if (!tr.ok) console.warn('  [' + label + '] thumbnail upload failed (non-fatal): HTTP ' + tr.status, await tr.text());
 
-    return asset.absolute_link;
+    return asset;
+  }
+
+  // Creates the marketing-email content (create -> save -> publish), wiring in
+  // the uploaded hero photo and the promo-page link, and returns its CSE id so
+  // the journey's email activity can be pointed at it.
+  async function buildAndPublishEmail(promoPageId) {
+    const heroFile = await pickFile('EMAIL HERO');
+    const heroAsset = await uploadAsset(heroFile, 'EMAIL HERO');
+    let cText = JSON.stringify(EMAIL_CONTENT);
+    // The email body references images as https://{{cdn_hostname}}<relative>.
+    cText = cText.split(EMAIL_HERO_TOKEN).join('https://{{cdn_hostname}}' + heroAsset.relative_link);
+    if (promoPageId) cText = cText.split(EMAIL_PROMO_TOKEN).join(promoPageId);
+    const content = JSON.parse(cText);
+
+    let r = await fetch(CONTENT_BASE, { method: 'POST', headers: { ...headers(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(content) });
+    let resp = await r.text();
+    if (!r.ok) throw new Error('Email content create failed: HTTP ' + r.status + ' ' + resp);
+    const cseId = JSON.parse(resp).id;
+    console.log('  created email content', cseId);
+
+    r = await fetch(CONTENT_BASE + '/' + cseId, { method: 'POST', headers: { ...headers(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(content) });
+    resp = await r.text();
+    if (!r.ok) throw new Error('Email content save failed: HTTP ' + r.status + ' ' + resp);
+
+    r = await fetch(CONTENT_BASE + '/' + cseId + '/publish', { method: 'PATCH', headers: { ...headers(), 'content-type': 'application/json' }, credentials: 'include', body: '{}' });
+    if (!r.ok) throw new Error('Email content publish failed: HTTP ' + r.status + ' ' + await r.text());
+    console.log('  published email content', cseId);
+    return cseId;
   }
 
   async function reserveId() {
@@ -565,9 +670,15 @@ JS_TEMPLATE = r"""// GOW Communications console script — generated @GENERATED_
 
   console.log('Uploading photos...');
   const ncIconFile = await pickFile('NC ICON');
-  const ncIconUrl = await uploadAsset(ncIconFile, 'NC ICON');
+  const ncIconUrl = (await uploadAsset(ncIconFile, 'NC ICON')).absolute_link;
   const popupBgFile = await pickFile('POP-UP BACKGROUND');
-  const popupBgUrl = await uploadAsset(popupBgFile, 'POP-UP BACKGROUND');
+  const popupBgUrl = (await uploadAsset(popupBgFile, 'POP-UP BACKGROUND')).absolute_link;
+
+  let emailContentId = null;
+  if (EMAIL_CONTENT) {
+    console.log('Creating + publishing email content...');
+    emailContentId = await buildAndPublishEmail(EMAIL_PROMO_PAGE_ID);
+  }
 
   console.log('Reserving journey id...');
   const realId = await reserveId();
@@ -577,6 +688,7 @@ JS_TEMPLATE = r"""// GOW Communications console script — generated @GENERATED_
   text = text.split(RESERVED_ID_TOKEN).join(realId);
   text = text.split(NC_ICON_TOKEN).join(ncIconUrl);
   text = text.split(POPUP_BG_TOKEN).join(popupBgUrl);
+  if (emailContentId) text = text.split(EMAIL_CONTENT_ID_TOKEN).join(emailContentId);
   text = regen(text);
   const body = JSON.parse(text);
 
@@ -587,12 +699,13 @@ JS_TEMPLATE = r"""// GOW Communications console script — generated @GENERATED_
 
   console.log('%cDONE.', 'color:#22c55e;font-weight:bold;font-size:14px');
   console.log('  Comms journey draft: ' + realId);
-  console.log('  Email activity left untouched — edit it by hand in the backoffice.');
+  if (emailContentId) console.log('  Email content created + published: ' + emailContentId);
+  else console.log('  Email activity left untouched — edit it by hand in the backoffice.');
 })();
 """
 
 
-def build_js(body: dict) -> str:
+def build_js(body: dict, email_content: dict | None = None) -> str:
     js = JS_TEMPLATE
     js = js.replace("@GENERATED_AT@", datetime.now(LOCAL_TZ).strftime("%Y-%m-%d %H:%M %Z"))
     js = js.replace("@JOURNEY_NAME@", str(body.get("journeyName", "")))
@@ -603,6 +716,12 @@ def build_js(body: dict) -> str:
     js = js.replace("@NC_ICON_TOKEN@", json.dumps(NC_ICON_TOKEN))
     js = js.replace("@POPUP_BG_TOKEN@", json.dumps(POPUP_BG_TOKEN))
     js = js.replace("@RESERVED_ID_TOKEN@", json.dumps(RESERVED_ID_TOKEN))
+    js = js.replace("@EMAIL_CONTENT@", json.dumps(email_content, ensure_ascii=False))
+    js = js.replace("@EMAIL_HERO_TOKEN@", json.dumps(EMAIL_HERO_TOKEN))
+    js = js.replace("@EMAIL_PROMO_TOKEN@", json.dumps(EMAIL_PROMO_TOKEN))
+    js = js.replace("@EMAIL_CONTENT_ID_TOKEN@", json.dumps(EMAIL_CONTENT_ID_TOKEN))
+    # Comms bakes the promo link directly, so the script need not re-fill it.
+    js = js.replace("@EMAIL_PROMO_PAGE_ID@", json.dumps(""))
     return js
 
 
@@ -626,7 +745,7 @@ def main() -> int:
         print("\nspec is missing Notification/Pop-up/Sms copy — nothing written.", file=sys.stderr)
         return 1
 
-    body, report, start_local, stop_local = prepare_comms(
+    body, report, start_local, stop_local, email_content = prepare_comms(
         date_str=args.date,
         promo_page_id=args.promo_page_id,
         public_domain=args.public_domain,
@@ -634,6 +753,7 @@ def main() -> int:
         nc=nc_dict_from_spec(spec.nc),
         popup=popup_dict_from_spec(spec.popup),
         sms=sms_dict_from_spec(spec.sms),
+        email=email_dict_from_spec(spec),
     )
 
     print("Applied:")
@@ -655,16 +775,23 @@ def main() -> int:
         path = out / f"{args.name}_journey.json"
         path.write_text(json.dumps(body, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"\nDry run — journey payload written: {path}")
+        if email_content is not None:
+            epath = out / f"{args.name}_email.json"
+            epath.write_text(json.dumps(email_content, ensure_ascii=False, indent=2), encoding="utf-8")
+            print(f"Dry run — email content written: {epath}")
         return 0
 
-    js = build_js(body)
+    js = build_js(body, email_content)
     out = Path("console_scripts")
     out.mkdir(exist_ok=True)
     path = out / f"{args.name}_console.js"
     path.write_text(js, encoding="utf-8")
     print(f"\nConsole script written: {path}")
     print("Paste it into the DevTools console on a logged-in backoffice tab.")
-    print("Two file pickers will pop up in turn — NC icon first, then the Pop-up background.")
+    if email_content is not None:
+        print("Three file pickers will pop up in turn — NC icon, Pop-up background, then Email hero.")
+    else:
+        print("Two file pickers will pop up in turn — NC icon first, then the Pop-up background.")
     return 0
 
 
