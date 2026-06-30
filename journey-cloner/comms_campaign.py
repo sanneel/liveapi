@@ -86,6 +86,23 @@ RESERVED_ID_TOKEN = "DRY-RUN-COMMS"
 
 SMS_PREFIX = "JugaBet | "
 
+# The SMS promo link now uses the {{BrandDomain}} dwh variable for the host
+# and the /services/promo/... path (no utm tags), and the BrandDomain variable
+# is declared ("ticked") on the activity. Captured from the updcoms HAR — the
+# leading // after the host is reproduced exactly as the marketing team saved
+# it. BrandDomain resolves to the public site host at send time.
+SMS_BRAND_VAR = {
+    "name": "BrandDomain",
+    "activityId": "",
+    "dataSource": "dwh_source",
+    "isRequired": True,
+    "defaultValue": "",
+}
+
+
+def sms_brand_link(promo_page_id: str) -> str:
+    return "https://{{BrandDomain}}//services/promo/offers/promoPage/" + promo_page_id
+
 # The comms entry window is always same-day 12:00 -> 19:00 Chile time,
 # independent of the GOW journey's own (possibly multi-day) activation
 # window — this is the channel send window, not the offer's validity.
@@ -301,33 +318,32 @@ def update_sms(
 ) -> None:
     body_es = sms_text(text_es)
     body_en = sms_text(text_en)
-    link_abs = promo_link_absolute(promo_page_id, public_domain)
-    # rawValues keeps the editable {{BrandDomain}} templated form (matches
-    # what the backoffice's own SMS editor shows before it flattens it).
-    raw_link = "https://{{BrandDomain}}\n" + promo_link_relative(promo_page_id)
+    brand_link = sms_brand_link(promo_page_id)
 
     init = activity["initializationData"]
     raw = init["rawValues"]
     raw["languageCode"] = "es"
-    raw["messageText"] = f"{body_es}\n{raw_link}"
-    # The captured template carries both an "es" and an "en" entry here, and
-    # the editor's per-language tabs read from them; keep both so neither tab
-    # falls back to the old template copy.
+    raw["variables"] = []
+    raw["messageText"] = f"{body_es}\n{brand_link}"
+    # Both an "es" and an "en" entry, each declaring the BrandDomain variable
+    # so the editor's per-language tabs show it ticked and resolve {{BrandDomain}}.
     raw["localizedMessageTexts"] = {
-        "es": {"variables": [], "messageText": f"{body_es}\n{raw_link}", "languageCode": "es"},
-        "en": {"variables": [], "messageText": f"{body_en}\n{raw_link}", "languageCode": "en"},
+        "es": {"variables": [dict(SMS_BRAND_VAR)], "messageText": f"{body_es}\n{brand_link}", "languageCode": "es"},
+        "en": {"variables": [dict(SMS_BRAND_VAR)], "messageText": f"{body_en}\n{brand_link}", "languageCode": "en"},
     }
 
-    flattened_es = f"{body_es} {link_abs}"
-    flattened_en = f"{body_en} {link_abs}"
+    flattened_es = f"{body_es} {brand_link}"
+    flattened_en = f"{body_en} {brand_link}"
     settings = init["smsSettings"]
     settings["languageCode"] = "es"
+    settings["variables"] = [dict(SMS_BRAND_VAR)]
     settings["messageText"] = flattened_es
     settings["localizedMessageTexts"] = [
-        {"variables": [], "messageText": flattened_es, "languageCode": "es"},
-        {"variables": [], "messageText": flattened_en, "languageCode": "en"},
+        {"variables": [dict(SMS_BRAND_VAR)], "messageText": flattened_es, "languageCode": "es"},
+        {"variables": [dict(SMS_BRAND_VAR)], "messageText": flattened_en, "languageCode": "en"},
     ]
     init["displayData"] = [flattened_es]
+    init["listOfUsedVariables"] = ["BrandDomain"]
 
 
 def set_comms_name(body: dict, start_local: datetime, name_override: str = "") -> str:
@@ -462,6 +478,11 @@ def verify(body: dict, promo_page_id: str) -> list[tuple[bool, str]]:
     checks.append((NC_ICON_TOKEN in serialized, "NC icon placeholder present (filled at paste time)"))
     checks.append((POPUP_BG_TOKEN in serialized, "Pop-up background placeholder present (filled at paste time)"))
     checks.append(("JugaBet |" in serialized, "SMS text carries the required 'JugaBet |' prefix"))
+    checks.append((sms_brand_link(promo_page_id) in serialized, "SMS uses the {{BrandDomain}}//services promo link"))
+    sms_act = next((a for a in body.get("activities", []) if a.get("activityName") == "dextra_sms"), None)
+    if sms_act is not None:
+        luv = (sms_act.get("initializationData") or {}).get("listOfUsedVariables") or []
+        checks.append(("BrandDomain" in luv, "SMS declares the BrandDomain variable (ticked)"))
     checks.append(("duplicatedFromId" not in body, "no stale duplicatedFromId"))
     checks.append(("duplicatedFromVersion" not in body, "no stale duplicatedFromVersion"))
 
