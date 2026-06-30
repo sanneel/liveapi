@@ -145,6 +145,12 @@ def _near_game(nodes, game):
 
 
 def cmd_export(key, page, game, scale, out, refresh=False):
+    # If we already know this game's slot node ids, render via /images only and
+    # skip the rate-limited /files tree fetch entirely.
+    cached = _load_all_slots(key).get(_slug(game))
+    if cached and not refresh:
+        print(f"  using cached slot ids for {game!r}: {cached}")
+        return render_ids(key, cached, scale, out, game)
     nodes = load_nodes(key, page, refresh)
     # game bands = TEXT nodes; sort by vertical position
     texts = sorted([(n, pg) for n, pg in nodes if n.get("type") == "TEXT"],
@@ -184,11 +190,35 @@ def cmd_export(key, page, game, scale, out, refresh=False):
         print(f"    slot {slot} <- {nid}")
     if not picks:
         sys.exit("no slot-sized images found under that game. Run --inspect.")
+    _save_slots(key, game, picks)   # remember ids so we never need the tree again
+    return render_ids(key, picks, scale, out, game)
 
+
+def _slug(game):
+    return re.sub(r"[^a-z0-9]+", "_", game.lower()).strip("_")
+
+
+def _slots_path(key):
+    CACHE_DIR.mkdir(exist_ok=True)
+    return CACHE_DIR / f"slots_{key}.json"
+
+
+def _load_all_slots(key):
+    p = _slots_path(key)
+    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+
+
+def _save_slots(key, game, picks):
+    d = _load_all_slots(key)
+    d[_slug(game)] = picks
+    _slots_path(key).write_text(json.dumps(d, indent=1), encoding="utf-8")
+
+
+def render_ids(key, picks, scale, out, game):
+    """Render specific node ids to PNG via /v1/images (no /files call)."""
     ids = ",".join(picks.values())
     imgs = get_json(f"{API}/images/{key}?ids={ids}&format=png&scale={scale}")["images"]
-    slug = re.sub(r"[^a-z0-9]+", "_", game.lower()).strip("_")
-    dest = Path(out) / slug
+    dest = Path(out) / _slug(game)
     dest.mkdir(parents=True, exist_ok=True)
     for slot, nid in picks.items():
         url = imgs.get(nid)
@@ -198,9 +228,6 @@ def cmd_export(key, page, game, scale, out, refresh=False):
         print(f"  saved {dest/slot}.png")
     print(f"\nDone: {game}  -> {dest}")
     print("  (campaign.png is the 360x330 image — reuse it for nc_icon + promo too)")
-    missing = set(SLOT_SIZES.values()) - set(picks)
-    if missing:
-        print(f"  NOTE missing slots: {sorted(missing)} — check sizes in --inspect")
     return 0
 
 
@@ -213,7 +240,17 @@ def main():
     p.add_argument("--out", default="figma_out")
     p.add_argument("--inspect", action="store_true")
     p.add_argument("--refresh", action="store_true", help="re-fetch the file tree (rebuild figma_cache)")
+    p.add_argument("--ids", default=None,
+                   help="render exact node ids, no /files call: 'popup_bg=1078:2286,email_hero=1078:2810,campaign=1078:2911'")
     a = p.parse_args()
+    if a.ids:
+        if not a.game:
+            sys.exit("--ids needs --game NAME (used as the output folder + cache key).")
+        picks = dict(kv.split("=", 1) for kv in a.ids.split(",") if "=" in kv)
+        if not picks:
+            sys.exit("could not parse --ids (use slot=nodeId,slot=nodeId)")
+        _save_slots(a.key, a.game, picks)  # seed the cache so plain --game works next time
+        return render_ids(a.key, picks, a.scale, a.out, a.game)
     if a.inspect:
         return cmd_inspect(a.key, a.page, a.game or "", a.refresh)
     if not a.game:
