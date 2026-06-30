@@ -130,14 +130,44 @@ def build_automations() -> list[dict]:
     }
     if wof_path.exists():
         w = json.loads(wof_path.read_text(encoding="utf-8"))
-        wof["prizes"] = [
-            {"weight": p.get("weight"),
-             "routes_to_journey": p.get("journeyPrizeSettings", {}).get("journeyId"),
-             "description": p.get("journeyPrizeSettings", {}).get("activityDescription")}
-            for p in w.get("prizes", [])
-        ]
+        wof["prizes"] = _prize_table(w)
     autos.append(wof)
+
+    # Other captured randomizers (scratch card, casino wheel) — read generically.
+    more = [
+        ("casino_scratch_card", "Casino Scratch Card (Raspa y Gana)",
+         "a ScratchCard randomizer; scratch slices route winners to journeys",
+         "casino/raspaygana_scratchcard.json"),
+        ("casino_wof", "Casino Wheel of Fortune",
+         "a FortuneWheel randomizer (casino, distinct from the sport WOF)",
+         "casino/casino_wof_randomizer.json"),
+    ]
+    for key, label, creates, rel in more:
+        path = TPL.parent / rel
+        if not path.exists():
+            continue
+        d = json.loads(path.read_text(encoding="utf-8"))
+        autos.append({
+            "key": key, "label": label, "creates": creates,
+            "endpoint": "POST /promo/v2/promo-drafts/randomizer  then  PUT .../randomizer/<id>",
+            "randomizationType": d.get("randomizationType"),
+            "brand": (d.get("currencies") or [{}])[0].get("brand"),
+            "shot_policy": d.get("randomizerShotPolicy"),
+            "segment": [f.get("filterType") for f in d.get("filterConditions", [])],
+            "visual": {"contentId": d.get("contentId"), "frontId": d.get("frontId")},
+            "template": f"templates/{rel}",
+            "prizes": _prize_table(d),
+        })
     return autos
+
+
+def _prize_table(d: dict) -> list[dict]:
+    return [
+        {"weight": p.get("weight"),
+         "routes_to_journey": (p.get("journeyPrizeSettings") or {}).get("journeyId"),
+         "description": (p.get("journeyPrizeSettings") or {}).get("activityDescription")}
+        for p in d.get("prizes", [])
+    ]
 
 
 def build() -> dict:

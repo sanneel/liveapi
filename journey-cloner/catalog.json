@@ -93,6 +93,89 @@
           "description": "JBCL | SP | RB - Wheel of fortune | Bet | Freebet"
         }
       ]
+    },
+    {
+      "key": "casino_scratch_card",
+      "label": "Casino Scratch Card (Raspa y Gana)",
+      "creates": "a ScratchCard randomizer; scratch slices route winners to journeys",
+      "endpoint": "POST /promo/v2/promo-drafts/randomizer  then  PUT .../randomizer/<id>",
+      "randomizationType": "ScratchCard",
+      "brand": "PMCL",
+      "shot_policy": "Once",
+      "segment": [
+        "fairplay_business_segment"
+      ],
+      "visual": {
+        "contentId": "1185f89f-eb30-4053-a3a9-11b7839ab782",
+        "frontId": "c02fbc11-d41b-4589-ba4d-cdcd40d352c5"
+      },
+      "template": "templates/casino/raspaygana_scratchcard.json",
+      "prizes": [
+        {
+          "weight": 3,
+          "routes_to_journey": "JRN-0-424485",
+          "description": "PMCL | CS | RB - Weekend Scratch Card - 100 No deposit FS"
+        },
+        {
+          "weight": 50,
+          "routes_to_journey": "JRN-0-426567",
+          "description": "PMCL | CS | RB - Weekend Scratch Card - 50 deposit FS"
+        },
+        {
+          "weight": 42,
+          "routes_to_journey": "JRN-0-426571",
+          "description": "PMCL | CS | RB - Weekend Scratch Card - 50% deposit bonus"
+        },
+        {
+          "weight": 5,
+          "routes_to_journey": "JRN-0-426582",
+          "description": "PMCL | CS | RB - Weekend Scratch Card - 100% deposit bonus"
+        },
+        {
+          "weight": 0,
+          "routes_to_journey": "JRN-0-426590",
+          "description": "PMCL | CS | RB - Weekend Scratch Card - empty prize"
+        }
+      ]
+    },
+    {
+      "key": "casino_wof",
+      "label": "Casino Wheel of Fortune",
+      "creates": "a FortuneWheel randomizer (casino, distinct from the sport WOF)",
+      "endpoint": "POST /promo/v2/promo-drafts/randomizer  then  PUT .../randomizer/<id>",
+      "randomizationType": "FortuneWheel",
+      "brand": "JBCL",
+      "shot_policy": "Once",
+      "segment": [
+        "fairplay_business_segment"
+      ],
+      "visual": {
+        "contentId": "7ba28ac6-a192-4e7c-90fd-3f76e3ffe8df",
+        "frontId": "83d4e58a-fbcd-4300-b20b-50482bcc6b36"
+      },
+      "template": "templates/casino/casino_wof_randomizer.json",
+      "prizes": [
+        {
+          "weight": 55,
+          "routes_to_journey": "JRN-0-572381",
+          "description": "Wheel of fortune | 50FS to dep"
+        },
+        {
+          "weight": 42,
+          "routes_to_journey": "JRN-0-572307",
+          "description": "JBCL | CS | RB - Wheel of fortune | dep bonuses"
+        },
+        {
+          "weight": 2.7,
+          "routes_to_journey": "JRN-0-423152",
+          "description": "JBCL | 50 FS no-dep Wheel of Fortune "
+        },
+        {
+          "weight": 0.3,
+          "routes_to_journey": "JRN-0-572386",
+          "description": "JBCL | 50 FS no-dep Wheel of Fortune "
+        }
+      ]
     }
   ],
   "activities": [

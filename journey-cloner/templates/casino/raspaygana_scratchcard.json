@@ -1,0 +1,140 @@
+{
+ "_meta": {
+  "automation": "casino_scratch_card",
+  "endpoint": "POST /promo/v2/promo-drafts/randomizer then PUT .../randomizer/<id>",
+  "source": "captured create-draft body",
+  "knobs": [
+   "showDate/startDate/hideDate/endDate",
+   "urlShortName",
+   "internalName",
+   "prizes[].weight",
+   "prizes[].journeyPrizeSettings.{journeyId,activityId}",
+   "contentId/frontId (visual)",
+   "filterConditions (segment)"
+  ],
+  "visual": {
+   "contentId": "1185f89f-eb30-4053-a3a9-11b7839ab782",
+   "frontId": "c02fbc11-d41b-4589-ba4d-cdcd40d352c5"
+  }
+ },
+ "randomizationType": "ScratchCard",
+ "type": "Randomizer",
+ "isExternalVisualSettings": false,
+ "internalName": "FTCL|CS|FDSC|27.06",
+ "promoCode": null,
+ "randomizerShotPolicy": "Once",
+ "showDate": "2026-06-27T04:00:00.0000000Z",
+ "startDate": "2026-06-27T04:01:00.0000000Z",
+ "endDate": "2026-06-29T03:59:00.0000000Z",
+ "hideDate": "2026-06-29T04:00:00.0000000Z",
+ "daysToAccept": null,
+ "currencies": [
+  {
+   "brand": "PMCL",
+   "currency": "CLP"
+  }
+ ],
+ "currencyMode": "single",
+ "urlShortName": "29-06-26",
+ "playerVisibility": "Authorized",
+ "filterConditions": [
+  {
+   "values": [
+    {
+     "id": 31,
+     "name": "Negative"
+    },
+    {
+     "id": 34,
+     "name": "Premium"
+    }
+   ],
+   "conditionType": "MultiSelect",
+   "key": "Business",
+   "filterType": "fairplay_business_segment",
+   "displayName": "fairplay_business_segment",
+   "operator": "notIn"
+  }
+ ],
+ "promotionDisplayId": null,
+ "languages": [
+  "es"
+ ],
+ "prizes": [
+  {
+   "id": "41056226-cbd5-4bc2-ac92-6d29ccf1a87e",
+   "weight": 3,
+   "type": "JourneyPrize",
+   "isEmptyPrize": false,
+   "isLimitedPrize": false,
+   "prizeQuantity": null,
+   "journeyPrizeSettings": {
+    "journeyId": "JRN-0-424485",
+    "activityId": "41056226-cbd5-4bc2-ac92-6d29ccf1a87e",
+    "activityDescription": "PMCL | CS | RB - Weekend Scratch Card - 100 No deposit FS",
+    "isEmptyPrize": false
+   }
+  },
+  {
+   "id": "7b7a3306-9fba-44bd-aeab-186f84a1d248",
+   "weight": 50,
+   "type": "JourneyPrize",
+   "isEmptyPrize": false,
+   "isLimitedPrize": false,
+   "prizeQuantity": null,
+   "journeyPrizeSettings": {
+    "journeyId": "JRN-0-426567",
+    "activityId": "7b7a3306-9fba-44bd-aeab-186f84a1d248",
+    "activityDescription": "PMCL | CS | RB - Weekend Scratch Card - 50 deposit FS",
+    "isEmptyPrize": false
+   }
+  },
+  {
+   "id": "454f0df8-0d80-41b6-9001-c68a5c2c671e",
+   "weight": 42,
+   "type": "JourneyPrize",
+   "isEmptyPrize": false,
+   "isLimitedPrize": false,
+   "prizeQuantity": null,
+   "journeyPrizeSettings": {
+    "journeyId": "JRN-0-426571",
+    "activityId": "454f0df8-0d80-41b6-9001-c68a5c2c671e",
+    "activityDescription": "PMCL | CS | RB - Weekend Scratch Card - 50% deposit bonus",
+    "isEmptyPrize": false
+   }
+  },
+  {
+   "id": "95fb49fd-d895-42ee-9a54-e5b5997eb878",
+   "weight": 5,
+   "type": "JourneyPrize",
+   "isEmptyPrize": false,
+   "isLimitedPrize": false,
+   "prizeQuantity": null,
+   "journeyPrizeSettings": {
+    "journeyId": "JRN-0-426582",
+    "activityId": "95fb49fd-d895-42ee-9a54-e5b5997eb878",
+    "activityDescription": "PMCL | CS | RB - Weekend Scratch Card - 100% deposit bonus",
+    "isEmptyPrize": false
+   }
+  },
+  {
+   "id": "a0e58dd8-5ea5-4fe9-ade4-ac321b952d00",
+   "weight": 0,
+   "type": "JourneyPrize",
+   "isEmptyPrize": true,
+   "isLimitedPrize": false,
+   "prizeQuantity": null,
+   "journeyPrizeSettings": {
+    "journeyId": "JRN-0-426590",
+    "activityId": "a0e58dd8-5ea5-4fe9-ade4-ac321b952d00",
+    "activityDescription": "PMCL | CS | RB - Weekend Scratch Card - empty prize",
+    "isEmptyPrize": true
+   }
+  }
+ ],
+ "isUsedInJourney": false,
+ "completedBy": null,
+ "riskLevels": null,
+ "contentId": "1185f89f-eb30-4053-a3a9-11b7839ab782",
+ "frontId": "c02fbc11-d41b-4589-ba4d-cdcd40d352c5"
+}
