@@ -155,13 +155,19 @@ def parse_spec(text: str) -> ParsedSpec:
 
         channel = _channel_key(label)
         if channel:
+            if channel == _POPUP and "cat-fish" not in label.lower():
+                # Only the Cat-fish pop-up is wired up today. The Push variant
+                # shares the same "Notification pop-up..." prefix, so without
+                # this it would keep current_channel pointed at _POPUP and its
+                # (usually empty) rows would land in the same field_rows list,
+                # overwriting the real Cat-fish copy below.
+                current_channel = ""
+                continue
             current_channel = channel
             field_rows.setdefault(channel, [])
             if channel == _NOTIFICATION:
                 spec.nc.enabled = _row_bool(row)
-            elif channel == _POPUP and "cat-fish" in label.lower():
-                # Only the Cat-fish pop-up is wired up today; the Push
-                # variant has no fields in the example spec and is ignored.
+            elif channel == _POPUP:
                 spec.popup.enabled = _row_bool(row)
             elif channel == _SMS:
                 spec.sms.enabled = _row_bool(row)
@@ -177,7 +183,8 @@ def parse_spec(text: str) -> ParsedSpec:
 
     def _fill_channel(target: ChannelCopy, rows_for_channel: list) -> None:
         for label, en, es in rows_for_channel:
-            if "title" in label:
+            if label.startswith("tit"):
+                # Matches both "Title" and the sheet's "Tittle" spelling.
                 target.title_en, target.title_es = en, es
             elif "desc" in label:
                 target.desc_en, target.desc_es = en, es
