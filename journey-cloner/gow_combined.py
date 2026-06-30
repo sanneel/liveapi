@@ -14,14 +14,18 @@ Usage:
   python gow_combined.py --date 2026-07-01 --spec spec.txt
 
 Then paste console_scripts/<name>_console.js into the DevTools console on a
-logged-in backoffice tab. Three file pickers will pop up in turn: the
-campaign photo, then the NC icon, then the Pop-up background. Use --dry-run
-to write both prepared payloads to out/ without generating a script.
+logged-in backoffice tab. By default three file pickers pop up in turn: the
+campaign photo, the NC icon, then the Pop-up background. Pass
+--figma-game "NAME" to pull those images straight from the GOW Figma board
+and bake them in (no pickers); --photo/--popup/--email-hero override
+individual slots with local PNGs. Use --dry-run to write both prepared
+payloads to out/ without generating a script.
 """
 
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import sys
 from datetime import datetime, timedelta
@@ -37,6 +41,7 @@ from casino_journey import (
     verify as casino_verify,
 )
 from gow_campaign import (
+    DEFAULT_FIGMA_KEY,
     DEFAULT_PROMO_DESCRIPTION,
     DEFAULT_PROMO_SOURCE_CONTENT_ID,
     DEFAULT_PROMO_SOURCE_FRONT_ID,
@@ -156,6 +161,10 @@ JS_TEMPLATE = r"""// GOW combined console script (campaign + comms) — generate
   const EMAIL_HERO_TOKEN = @EMAIL_HERO_TOKEN@;
   const EMAIL_PROMO_TOKEN = @EMAIL_PROMO_TOKEN@;
   const EMAIL_CONTENT_ID_TOKEN = @EMAIL_CONTENT_ID_TOKEN@;
+  // Baked-in images (Figma/--photo). Empty -> the matching file picker is shown.
+  const EMBED_CAMPAIGN_B64 = @EMBED_CAMPAIGN_B64@;      // 360x330: campaign photo + NC icon
+  const EMBED_POPUP_B64 = @EMBED_POPUP_B64@;            // 474x256: Pop-up background
+  const EMBED_EMAIL_HERO_B64 = @EMBED_EMAIL_HERO_B64@;  // 600x400: email hero
 
   const CRM_BASE = BASE.replace(/\/journey-builder\/v0$/, '');
   const CONTENT_BASE = CRM_BASE + '/content-studio/v0/eb-backoffice/email/contents';
@@ -179,6 +188,19 @@ JS_TEMPLATE = r"""// GOW combined console script (campaign + comms) — generate
       const t = setTimeout(() => { if (!done) { done = true; clean(); reject(new Error('No token in 3 min. Click around the UI and rerun.')); } }, 180000);
       console.log('%cWaiting for a token — click anything in the backoffice UI.', 'color:#eab308');
     });
+  }
+
+  function b64ToFile(b64, name) {
+    const bin = atob(b64);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new File([arr], name, { type: 'image/png' });
+  }
+
+  // Use the baked-in image when present, otherwise fall back to a file picker.
+  function getImage(b64, name, label) {
+    if (b64) { console.log('%cUsing embedded ' + label + ' — no picker.', 'color:#22c55e'); return Promise.resolve(b64ToFile(b64, name)); }
+    return pickFile(label);
   }
 
   function pickFile(label) {
@@ -237,7 +259,7 @@ JS_TEMPLATE = r"""// GOW combined console script (campaign + comms) — generate
   // the uploaded hero photo and the promo-page link created in step 1, and
   // returns its CSE id so the journey's email activity can point at it.
   async function buildAndPublishEmail(promoPageId) {
-    const heroFile = await pickFile('EMAIL HERO');
+    const heroFile = await getImage(EMBED_EMAIL_HERO_B64, 'email_hero.png', 'EMAIL HERO');
     const heroAsset = await uploadAsset(heroFile, 'EMAIL HERO');
     let cText = JSON.stringify(EMAIL_CONTENT);
     cText = cText.split(EMAIL_HERO_TOKEN).join('https://{{cdn_hostname}}' + heroAsset.relative_link);
@@ -453,7 +475,7 @@ JS_TEMPLATE = r"""// GOW combined console script (campaign + comms) — generate
   }
 
   console.log('%c=== STEP 1/2: Campaign (free-spin journey + promo page) ===', 'color:#3b82f6;font-weight:bold');
-  const campaignPhoto = await pickFile('campaign photo');
+  const campaignPhoto = await getImage(EMBED_CAMPAIGN_B64, 'campaign.png', 'campaign photo');
 
   console.log('Reserving campaign journey id...');
   const campaignJourneyId = await reserveId();
@@ -570,9 +592,9 @@ JS_TEMPLATE = r"""// GOW combined console script (campaign + comms) — generate
   console.log('%cSTEP 1/2 DONE — promo page id: ' + promoPageId, 'color:#22c55e;font-weight:bold');
 
   console.log('%c=== STEP 2/2: Communications (Notification + Pop-up + SMS' + (EMAIL_CONTENT ? ' + Email' : '') + ') ===', 'color:#3b82f6;font-weight:bold');
-  const ncIconFile = await pickFile('NC ICON');
+  const ncIconFile = await getImage(EMBED_CAMPAIGN_B64, 'nc_icon.png', 'NC ICON');
   const ncIconUrl = (await uploadAsset(ncIconFile, 'NC ICON')).absolute_link;
-  const popupBgFile = await pickFile('POP-UP BACKGROUND');
+  const popupBgFile = await getImage(EMBED_POPUP_B64, 'popup_bg.png', 'POP-UP BACKGROUND');
   const popupBgUrl = (await uploadAsset(popupBgFile, 'POP-UP BACKGROUND')).absolute_link;
 
   let emailContentId = null;
@@ -647,6 +669,9 @@ def build_js(
     public_domain: str,
     email_content: dict | None = None,
     comms_cs_body: dict | None = None,
+    embed_campaign_b64: str = "",
+    embed_popup_b64: str = "",
+    embed_email_hero_b64: str = "",
 ) -> str:
     js = JS_TEMPLATE
     js = js.replace("@COMMS_PAYLOAD_CS@", json.dumps(comms_cs_body, ensure_ascii=False))
@@ -682,6 +707,9 @@ def build_js(
     js = js.replace("@EMAIL_HERO_TOKEN@", json.dumps(EMAIL_HERO_TOKEN))
     js = js.replace("@EMAIL_PROMO_TOKEN@", json.dumps(EMAIL_PROMO_TOKEN))
     js = js.replace("@EMAIL_CONTENT_ID_TOKEN@", json.dumps(EMAIL_CONTENT_ID_TOKEN))
+    js = js.replace("@EMBED_CAMPAIGN_B64@", json.dumps(embed_campaign_b64))
+    js = js.replace("@EMBED_POPUP_B64@", json.dumps(embed_popup_b64))
+    js = js.replace("@EMBED_EMAIL_HERO_B64@", json.dumps(embed_email_hero_b64))
     return js
 
 
@@ -697,6 +725,12 @@ def main() -> int:
     p.add_argument("--promo-source-front-id", default=DEFAULT_PROMO_SOURCE_FRONT_ID)
     p.add_argument("--promo-description", default=DEFAULT_PROMO_DESCRIPTION)
     p.add_argument("--name", default="gow_combined", help="Output file basename (default: gow_combined)")
+    p.add_argument("--figma-game", help="Export the slot images from Figma for this game and embed them (no file pickers)")
+    p.add_argument("--figma-key", default=DEFAULT_FIGMA_KEY, help="Figma file key used with --figma-game")
+    p.add_argument("--figma-page", help="Restrict the Figma export to a page whose name contains this")
+    p.add_argument("--photo", help="Local 360x330 PNG to embed for campaign photo + NC icon (overrides Figma's campaign slot)")
+    p.add_argument("--popup", help="Local 474x256 PNG to embed for the Pop-up background (overrides Figma's popup slot)")
+    p.add_argument("--email-hero", help="Local 600x400 PNG to embed for the email hero (overrides Figma's email slot)")
     p.add_argument("--dry-run", action="store_true", help="Write both prepared payloads to out/ instead of a console script")
     args = p.parse_args()
 
@@ -769,6 +803,37 @@ def main() -> int:
     end_weekday_en = WEEKDAYS_EN[last_day]
     end_weekday_es = WEEKDAYS_ES[last_day]
 
+    # Resolve embedded images so the console script needs no file pickers.
+    # --figma-game pulls all three slots; --photo/--popup/--email-hero override
+    # individual slots with local PNGs. campaign (360x330) fills both the
+    # campaign photo and the NC icon; popup_bg (474x256) the Pop-up; email_hero
+    # (600x400) the email hero.
+    figma_slots: dict = {}
+    if args.figma_game:
+        if not args.figma_key:
+            print("--figma-game requires --figma-key (or a built-in default).", file=sys.stderr)
+            return 1
+        import figma_export
+        figma_slots = figma_export.export_game(
+            args.figma_key, args.figma_game,
+            page=args.figma_page or None, out=str(Path("figma_out")),
+        )
+
+    def _slot_b64(local_arg, figma_key, label):
+        src = Path(local_arg) if local_arg else figma_slots.get(figma_key)
+        if not src:
+            return ""
+        src = Path(src)
+        if not src.exists():
+            print(f"{label} image not found: {src}", file=sys.stderr)
+            sys.exit(1)
+        print(f"  embedding {label}: {src} ({src.stat().st_size} bytes)")
+        return base64.b64encode(src.read_bytes()).decode("ascii")
+
+    embed_campaign_b64 = _slot_b64(args.photo, "campaign", "campaign/NC icon")
+    embed_popup_b64 = _slot_b64(args.popup, "popup_bg", "Pop-up background")
+    embed_email_hero_b64 = _slot_b64(args.email_hero, "email_hero", "email hero") if email_content is not None else ""
+
     js = build_js(
         campaign_body, comms_body,
         promo_source_content_id=args.promo_source_content_id,
@@ -786,6 +851,9 @@ def main() -> int:
         public_domain=args.public_domain,
         email_content=email_content,
         comms_cs_body=comms_cs_body,
+        embed_campaign_b64=embed_campaign_b64,
+        embed_popup_b64=embed_popup_b64,
+        embed_email_hero_b64=embed_email_hero_b64,
     )
     print(f"\nVisual content text: bets {spec.bets}, game {game['game_name']!r}, end weekday {end_weekday_en}/{end_weekday_es}")
     print(f"Comms window: {comms_start_local:%Y-%m-%d %H:%M} -> {comms_stop_local:%H:%M} Chile")
@@ -796,10 +864,17 @@ def main() -> int:
     path.write_text(js, encoding="utf-8")
     print(f"\nConsole script written: {path}")
     print("Paste it into the DevTools console on a logged-in backoffice tab.")
-    if email_content is not None:
-        print("Four file pickers will pop up in turn: campaign photo, NC icon, Pop-up background, then Email hero.")
+    pickers = []
+    if not embed_campaign_b64:
+        pickers += ["campaign photo", "NC icon"]
+    if not embed_popup_b64:
+        pickers += ["Pop-up background"]
+    if email_content is not None and not embed_email_hero_b64:
+        pickers += ["Email hero"]
+    if pickers:
+        print("File picker(s) will pop up in turn: " + ", ".join(pickers) + ".")
     else:
-        print("Three file pickers will pop up in turn: campaign photo, then NC icon, then Pop-up background.")
+        print("All images are embedded — no file pickers will appear.")
     return 0
 
 

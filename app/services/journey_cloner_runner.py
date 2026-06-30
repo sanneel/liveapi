@@ -11,7 +11,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from ..config import BASE_DIR
+from ..config import BASE_DIR, get_settings
 
 
 CLONER_DIR = BASE_DIR / "journey-cloner"
@@ -202,6 +202,11 @@ def _run_gow_cli(
     """
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
+    # Make the .env-configured Figma token visible to the subprocess so a
+    # --figma-game export can reach api.figma.com (same source figma_runner uses).
+    figma_token = (get_settings().figma_token or os.environ.get("FIGMA_TOKEN", "")).strip()
+    if figma_token:
+        env["FIGMA_TOKEN"] = figma_token
 
     display_cmd = " ".join(
         part if " " not in part else repr(part) for part in cmd
@@ -308,11 +313,17 @@ def generate_gow_combined_console_script(
     spins: int | None = None,
     public_domain: str = "",
     journey_name: str = "",
+    figma_game: str = "",
+    figma_key: str = "",
 ) -> Tuple[int, str, str, str | None, str]:
     """Generate the paste-into-DevTools console script that creates the GOW
     casino campaign (free-spin offer + promo page) AND the communications
     journey (Notification Center + Pop-up + SMS) together in one paste, with
     the comms links pointed at the promo page created in the same run.
+
+    When ``figma_game`` is given, the campaign/NC/Pop-up images are exported
+    from Figma and embedded into the script so no file pickers appear at paste
+    time. Requires FIGMA_TOKEN to be configured (read from settings/env).
 
     Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
     """
@@ -335,6 +346,10 @@ def generate_gow_combined_console_script(
         cmd += ["--public-domain", public_domain.strip()]
     if journey_name.strip():
         cmd += ["--journey-name", journey_name.strip()]
+    if figma_game.strip():
+        cmd += ["--figma-game", figma_game.strip()]
+        if figma_key.strip():
+            cmd += ["--figma-key", figma_key.strip()]
     return _run_gow_cli(cmd, spec_text=spec_text, basename=basename)
 
 

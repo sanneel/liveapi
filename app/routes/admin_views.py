@@ -711,6 +711,7 @@ def gow_console_script(
     promo_page_id: str = Form(""),
     public_domain: str = Form(""),
     journey_name: str = Form(""),
+    figma_game: str = Form(""),
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
     do_campaign = create_campaign.strip().lower() in ("on", "true", "1", "yes")
@@ -725,6 +726,7 @@ def gow_console_script(
         "promo_page_id": promo_page_id,
         "public_domain": public_domain,
         "journey_name": journey_name,
+        "figma_game": figma_game,
     }
     error = ""
     result = None
@@ -761,6 +763,7 @@ def gow_console_script(
                     spins=parsed_spins,
                     public_domain=public_domain,
                     journey_name=journey_name,
+                    figma_game=figma_game,
                 )
             elif do_campaign:
                 exit_code, output, display_cmd, js_text, js_name = generate_gow_console_script(

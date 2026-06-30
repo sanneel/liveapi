@@ -21,9 +21,11 @@ Usage:
       --game lagrancopa --bets 120 200 400 800
 
 Then paste console_scripts/<name>_console.js into the DevTools console on a
-logged-in backoffice tab. A file picker will pop up — select the campaign
-photo there (nothing is embedded in the script). Use --dry-run to write the
-prepared journey payload to out/ without generating a script.
+logged-in backoffice tab. By default a file picker pops up — select the
+campaign photo there. Pass --photo PATH (a local 360x330 PNG) or
+--figma-game "NAME" (pulls the campaign image from the GOW Figma board) to
+bake the photo in so no picker appears. Use --dry-run to write the prepared
+journey payload to out/ without generating a script.
 
 The promo-page visual bundle is cloned from a known-good prior GOW promo page
 (see PROMO_SOURCE_CONTENT_ID/PROMO_SOURCE_FRONT_ID below — these are exactly
@@ -35,6 +37,7 @@ run this, override with --promo-source-content-id/--promo-source-front-id.
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import re
 import sys
@@ -113,6 +116,10 @@ PLACEMENTS: list[dict] = [
 DEFAULT_PROMO_SOURCE_CONTENT_ID = "f8341ab2-1e83-4c28-a895-9fc4a12a9a34"
 DEFAULT_PROMO_SOURCE_FRONT_ID = "9c930c93-ecb5-4832-acb4-732217572f8f"
 DEFAULT_PROMO_DESCRIPTION = "JBCL | CS | RB - Game of the week | 50 FS"
+
+# Default Figma file key for --figma-game (the GOW board). Not a secret — the
+# secret is FIGMA_TOKEN, read by figma_export.py from the environment.
+DEFAULT_FIGMA_KEY = "go1ZVyvYRnccMRGxzgiucv"
 
 # The promo page's content-<lang>-<hash>.json mixes GOW's 4 reward items in
 # among unrelated other promotions' reward items in the same file. These are
@@ -232,6 +239,7 @@ JS_TEMPLATE = r"""// Game-of-Week campaign console script — generated @GENERAT
   const END_WEEKDAY_EN = @END_WEEKDAY_EN@;
   const END_WEEKDAY_ES = @END_WEEKDAY_ES@;
   const PROMO_REWARD_IDS = @PROMO_REWARD_IDS@;
+  const EMBEDDED_PHOTO_B64 = @PHOTO_B64@;  // campaign image baked in (Figma/--photo); empty -> file picker
 
   const CRM_BASE = BASE.replace(/\/journey-builder\/v0$/, '');
   const AWS_BASE = new URL(BASE).origin + '/api/aws-get';
@@ -254,6 +262,13 @@ JS_TEMPLATE = r"""// Game-of-Week campaign console script — generated @GENERAT
       const t = setTimeout(() => { if (!done) { done = true; clean(); reject(new Error('No token in 3 min. Click around the UI and rerun.')); } }, 180000);
       console.log('%cWaiting for a token — click anything in the backoffice UI.', 'color:#eab308');
     });
+  }
+
+  function b64ToFile(b64, name) {
+    const bin = atob(b64);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new File([arr], name, { type: 'image/png' });
   }
 
   function pickFile() {
@@ -500,7 +515,10 @@ JS_TEMPLATE = r"""// Game-of-Week campaign console script — generated @GENERAT
     };
   }
 
-  const photo = await pickFile();
+  const photo = EMBEDDED_PHOTO_B64
+    ? b64ToFile(EMBEDDED_PHOTO_B64, 'campaign.png')
+    : await pickFile();
+  if (EMBEDDED_PHOTO_B64) console.log('%cUsing embedded campaign photo (' + photo.size + ' bytes) — no file picker.', 'color:#22c55e');
 
   console.log('Reserving journey id...');
   const realId = await reserveId();
@@ -642,6 +660,7 @@ def build_js(
     provider_name: str,
     end_weekday_en: str,
     end_weekday_es: str,
+    photo_b64: str = "",
 ) -> str:
     js = JS_TEMPLATE
     js = js.replace("@GENERATED_AT@", datetime.now(LOCAL_TZ).strftime("%Y-%m-%d %H:%M %Z"))
@@ -663,6 +682,7 @@ def build_js(
     js = js.replace("@END_WEEKDAY_EN@", json.dumps(end_weekday_en))
     js = js.replace("@END_WEEKDAY_ES@", json.dumps(end_weekday_es))
     js = js.replace("@PROMO_REWARD_IDS@", json.dumps(PROMO_REWARD_IDS))
+    js = js.replace("@PHOTO_B64@", json.dumps(photo_b64))
     return js
 
 
@@ -684,6 +704,10 @@ def main() -> int:
     p.add_argument("--promo-source-front-id", default=DEFAULT_PROMO_SOURCE_FRONT_ID, help="FrontId of an existing GOW promo page to clone the visual bundle from")
     p.add_argument("--promo-description", default=DEFAULT_PROMO_DESCRIPTION, help="Free-text activityDescription shown in the promo page's journey link")
     p.add_argument("--name", default="gow_campaign", help="Output file basename (default: gow_campaign)")
+    p.add_argument("--photo", help="Path to a local 360x330 PNG to embed (no file picker at paste time)")
+    p.add_argument("--figma-game", help="Export the campaign image from Figma for this game name and embed it (no file picker)")
+    p.add_argument("--figma-key", default=DEFAULT_FIGMA_KEY, help="Figma file key used with --figma-game")
+    p.add_argument("--figma-page", help="Restrict the Figma export to a page whose name contains this")
     p.add_argument("--dry-run", action="store_true", help="Write prepared payload to out/ instead of a console script")
     args = p.parse_args()
 
@@ -743,6 +767,35 @@ def main() -> int:
     end_weekday_en = WEEKDAYS_EN[last_day]
     end_weekday_es = WEEKDAYS_ES[last_day]
 
+    # Resolve the campaign photo so the console script has no file picker.
+    # --photo embeds a local PNG; --figma-game pulls campaign.png from Figma.
+    photo_b64 = ""
+    photo_src: Path | None = None
+    if args.photo:
+        photo_src = Path(args.photo)
+        if args.figma_game:
+            print("  (--photo given; ignoring --figma-game)", file=sys.stderr)
+    elif args.figma_game:
+        if not args.figma_key:
+            print("--figma-game requires --figma-key (or a built-in default).", file=sys.stderr)
+            return 1
+        import figma_export
+        slots = figma_export.export_game(
+            args.figma_key, args.figma_game,
+            page=args.figma_page or None, out=str(Path("figma_out")),
+        )
+        photo_src = slots.get("campaign")
+        if not photo_src:
+            print("Figma export produced no campaign (360x330) image — got: "
+                  + ", ".join(sorted(slots)) + ". Run figma_export.py --inspect.", file=sys.stderr)
+            return 1
+    if photo_src:
+        if not photo_src.exists():
+            print(f"Photo not found: {photo_src}", file=sys.stderr)
+            return 1
+        photo_b64 = base64.b64encode(photo_src.read_bytes()).decode("ascii")
+        print(f"Embedding campaign photo: {photo_src} ({photo_src.stat().st_size} bytes) — no file picker.")
+
     js = build_js(
         body,
         promo_source_content_id=args.promo_source_content_id,
@@ -757,6 +810,7 @@ def main() -> int:
         provider_name=game["provider_name"],
         end_weekday_en=end_weekday_en,
         end_weekday_es=end_weekday_es,
+        photo_b64=photo_b64,
     )
     print(f"\nVisual content text: bets {args.bets}, game {game['game_name']!r}, end weekday {end_weekday_en}/{end_weekday_es}")
 
@@ -766,7 +820,10 @@ def main() -> int:
     path.write_text(js, encoding="utf-8")
     print(f"\nConsole script written: {path}")
     print("Paste it into the DevTools console on a logged-in backoffice tab.")
-    print("A file picker will pop up at the top-left of the page — pick the campaign photo there.")
+    if photo_b64:
+        print("The campaign photo is embedded — no file picker will appear.")
+    else:
+        print("A file picker will pop up at the top-left of the page — pick the campaign photo there.")
     return 0
 
 

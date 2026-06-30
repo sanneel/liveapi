@@ -194,6 +194,17 @@ def cmd_export(key, page, game, scale, out, refresh=False):
     return render_ids(key, picks, scale, out, game)
 
 
+def export_game(key, game, page=None, scale="1", out="figma_out", refresh=False):
+    """Programmatic entry point: export one game's slots and return {slot: Path}.
+
+    Used by the GOW generator to embed campaign.png into the console script.
+    Raises SystemExit (with a friendly message) on the same failures the CLI hits
+    — missing token, game not found, rate-limited /files, no slot images."""
+    cmd_export(key, page, game, scale, out, refresh)
+    dest = Path(out) / _slug(game)
+    return {p.stem: p for p in sorted(dest.glob("*.png"))}
+
+
 def _slug(game):
     return re.sub(r"[^a-z0-9]+", "_", game.lower()).strip("_")
 
