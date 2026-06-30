@@ -89,19 +89,38 @@ def text_value(node):
     return (node.get("characters") or node.get("name") or "").strip()
 
 
-def cmd_inspect(key, page):
+def cmd_inspect(key, page, game=""):
     nodes = load_nodes(key, page)
+    if game.strip():  # restrict to the column+row vicinity of one game
+        nodes = _near_game(nodes, game)
     print(f"{len(nodes)} nodes with bounds")
-    for n, pg in nodes:
-        bb = n["absoluteBoundingBox"]
-        w, h = round(bb["width"]), round(bb["height"])
-        slot = slot_of(n)
-        tag = f"  <{slot}>" if slot else ""
-        t = n.get("type")
-        label = text_value(n)[:40]
-        if slot or t == "TEXT":
-            print(f"  [{pg}] {t:<9} {w}x{h:<5} y={round(bb['y'])}  {label!r}{tag}  id={n['id']}")
+    try:
+        for n, pg in nodes:
+            bb = n["absoluteBoundingBox"]
+            w, h = round(bb["width"]), round(bb["height"])
+            slot = slot_of(n)
+            t = n.get("type")
+            if slot or t == "TEXT":
+                tag = f"  <{slot}>" if slot else ""
+                print(f"  [{pg}] {t:<9} {w}x{h:<6} y={round(bb['y'])} x={round(bb['x'])}  {text_value(n)[:38]!r}{tag}  id={n['id']}")
+    except BrokenPipeError:
+        pass
     return 0
+
+
+def _near_game(nodes, game):
+    """Keep only nodes in the same column+row as the named game band."""
+    texts = [(n, pg) for n, pg in nodes if n.get("type") == "TEXT" and game.lower() in text_value(n).lower()]
+    if not texts:
+        return nodes
+    g = texts[0][0]["absoluteBoundingBox"]
+    gl, gr, gy = g["x"], g["x"] + g["width"], g["y"]
+    out = []
+    for n, pg in nodes:
+        b = n["absoluteBoundingBox"]
+        if b["x"] < gr and b["x"] + b["width"] > gl and gy - 20 < b["y"] < gy + 1200:
+            out.append((n, pg))
+    return out
 
 
 def cmd_export(key, page, game, scale, out):
@@ -114,21 +133,31 @@ def cmd_export(key, page, game, scale, out):
     if gi is None:
         sys.exit(f"game {game!r} not found as a text node. Run --inspect to see names.")
     gnode, gpage = texts[gi]
-    g_y = gnode["absoluteBoundingBox"]["y"]
-    # next text band on the same page that sits below this one -> window end
-    next_y = min([t["absoluteBoundingBox"]["y"] for t, pg in texts[gi + 1:]
-                  if pg == gpage and t["absoluteBoundingBox"]["y"] > g_y + 5] or [1e9])
+    gb = gnode["absoluteBoundingBox"]
+    g_y, col_l, col_r = gb["y"], gb["x"], gb["x"] + gb["width"]
 
+    def x_overlaps(n):  # same column as the game band (months are side-by-side)
+        b = n["absoluteBoundingBox"]
+        return b["x"] < col_r and b["x"] + b["width"] > col_l
+
+    # next game band *in the same column* below this one bounds the row window
+    later = [t["absoluteBoundingBox"]["y"] for t, pg in texts
+             if pg == gpage and t is not gnode and x_overlaps(t)
+             and t["absoluteBoundingBox"]["y"] > g_y + 50]
+    next_y = min(later) if later else g_y + 2000
+
+    # slot images in this column+row, nearest-below first
+    cands = sorted(
+        [n for n, pg in nodes if pg == gpage and slot_of(n) and x_overlaps(n)
+         and g_y < n["absoluteBoundingBox"]["y"] < next_y],
+        key=lambda n: n["absoluteBoundingBox"]["y"])
     picks = {}
-    for n, pg in nodes:
-        if pg != gpage:
-            continue
+    for n in cands:
         slot = slot_of(n)
-        if not slot:
-            continue
-        y = n["absoluteBoundingBox"]["y"]
-        if g_y < y < next_y and slot not in picks:
-            picks[slot] = n["id"]
+        picks.setdefault(slot, n["id"])
+    print(f"  game band {gnode.get('id')} col x[{round(col_l)},{round(col_r)}] y[{round(g_y)},{round(next_y)}]")
+    for slot, nid in picks.items():
+        print(f"    slot {slot} <- {nid}")
     if not picks:
         sys.exit("no slot-sized images found under that game. Run --inspect.")
 
@@ -161,7 +190,7 @@ def main():
     p.add_argument("--inspect", action="store_true")
     a = p.parse_args()
     if a.inspect:
-        return cmd_inspect(a.key, a.page)
+        return cmd_inspect(a.key, a.page, a.game or "")
     if not a.game:
         sys.exit("pass --game \"NAME\" to export, or --inspect to see the tree.")
     return cmd_export(a.key, a.page, a.game, a.scale, a.out)
