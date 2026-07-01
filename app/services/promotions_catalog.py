@@ -25,9 +25,9 @@ CATALOG_PATH = CLONER_DIR / "catalog.json"
 AUTOMATION_TABS: Dict[str, Optional[str]] = {
     "promo_page": "gow",
     "gow": "gow",
-    "sport_wof": None,
-    "casino_scratch_card": None,
-    "casino_wof": None,
+    "sport_wof": "randomizers",
+    "casino_scratch_card": "randomizers",
+    "casino_wof": "randomizers",
 }
 
 # Files (repo-relative to journey-cloner/) that implement each automation.
@@ -52,6 +52,7 @@ AUTOMATION_SCRIPTS: Dict[str, List[str]] = {
         "templates/casino/segment_cs_301.json",
     ],
     "sport_wof": [
+        "randomizer_campaign.py",
         "templates/sport/sport_wof_randomizer.json",
         "templates/sport/wof_visual/content-en.json",
         "templates/sport/wof_visual/content-es.json",
@@ -59,9 +60,11 @@ AUTOMATION_SCRIPTS: Dict[str, List[str]] = {
         "templates/sport/wof_visual/manifest.json",
     ],
     "casino_scratch_card": [
+        "randomizer_campaign.py",
         "templates/casino/raspaygana_scratchcard.json",
     ],
     "casino_wof": [
+        "randomizer_campaign.py",
         "templates/casino/casino_wof_randomizer.json",
     ],
 }

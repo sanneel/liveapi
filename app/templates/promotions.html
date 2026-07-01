@@ -10,6 +10,7 @@
   <button type="button" class="tab" data-tab="overview">Overview</button>
   <button type="button" class="tab" data-tab="gow">GOW</button>
   <button type="button" class="tab" data-tab="journey_cloner">Journey Cloner</button>
+  <button type="button" class="tab" data-tab="randomizers">Randomizers</button>
   <button type="button" class="tab" data-tab="scripts">All scripts</button>
 </div>
 
@@ -101,6 +102,122 @@
           template_saved=jc.template_saved, template_error=jc.template_error %}
     {% include "partials/_journey_cloner_form.html" %}
   {% endwith %}
+</section>
+
+{# ── Randomizers (Sport WOF / Casino WOF / Scratch card) ─────────────── #}
+<section data-panel="randomizers" hidden>
+  {% if rnd.error %}<div class="alert err">{{ rnd.error }}</div>{% endif %}
+  {% if rnd.result %}
+    <div class="alert {% if rnd.result.ok %}ok{% else %}err{% endif %}">
+      {% if rnd.result.ok %}Console script generated.{% else %}Generation exited with code {{ rnd.result.exit_code }}.{% endif %}
+    </div>
+  {% endif %}
+
+  <div class="row-flex">
+    <form method="post" action="/admin/promotions/randomizer" class="card card-pad col-rail" style="display:flex; flex-direction:column; gap:14px">
+      <div>
+        <h2 class="card-title">Create randomizer</h2>
+        <p class="card-sub">Prize slices, routed journeys, segment and the visual bundle come from the captured template — only the dates &amp; name change. Optionally override the weights and the routed journeys.</p>
+      </div>
+
+      <div class="field">
+        <span class="lbl">Type</span>
+        <select class="input" name="kind">
+          {% for k, label in rnd.kinds.items() %}
+            <option value="{{ k }}" {% if k == rnd.kind %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+        <div class="field">
+          <span class="lbl">Promo date</span>
+          <input class="input" name="date" type="date" required value="{{ rnd.date or '' }}"/>
+          <p class="help" style="margin-top:6px">The promo day (UTC 04:00 window).</p>
+        </div>
+        <div class="field">
+          <span class="lbl">Days <span style="color:var(--t-faint)">(optional)</span></span>
+          <input class="input" name="days" type="number" min="1" value="{{ rnd.days or '' }}"/>
+          <p class="help" style="margin-top:6px">Window length. Defaults per type (Scratch = 2).</p>
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="lbl">Weights <span style="color:var(--t-faint)">(optional)</span></span>
+        <input class="input mono" name="weights" value="{{ rnd.weights or '' }}" placeholder="55 42 2.7 0.3"/>
+        <p class="help" style="margin-top:6px">Space-separated, in prize order. Must match the template's prize count.</p>
+      </div>
+
+      <div class="field">
+        <span class="lbl">Journeys <span style="color:var(--t-faint)">(optional)</span></span>
+        <input class="input mono" name="journeys" value="{{ rnd.journeys or '' }}" placeholder="JRN-0-572381 JRN-0-572307 ..."/>
+        <p class="help" style="margin-top:6px">Space-separated routed journey ids, in prize order. Leave blank to keep the template's.</p>
+      </div>
+
+      <button class="btn primary" style="justify-content:center">Generate console script</button>
+      <p class="help">The script creates the randomizer draft then fills it. Set <span class="mono">PREVIEW=true</span> at the top to inspect the request bodies before sending.</p>
+    </form>
+
+    <div class="col-main stack">
+      {% if rnd.console_script %}
+        <section class="card" style="overflow:hidden">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Console Script Ready</h2>
+              <p class="card-sub">{{ rnd.console_script.name }}</p>
+            </div>
+            <button type="button" id="rnd-copy" class="btn primary">Copy script</button>
+          </div>
+          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+            <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
+              <li>Click <b>Copy script</b> above.</li>
+              <li>Open the backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
+              <li>Paste and press Enter. If it says "Waiting for a token", click anything in the UI.</li>
+              <li>Watch for the green <b>DONE</b> with the created randomizer draft id.</li>
+            </ol>
+            <textarea id="rnd-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ rnd.console_script.text }}</textarea>
+          </div>
+        </section>
+        <script>
+          (function () {
+            var btn = document.getElementById('rnd-copy');
+            var area = document.getElementById('rnd-script-text');
+            if (!btn || !area) return;
+            btn.addEventListener('click', function () {
+              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
+              if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); });
+              } else { area.select(); document.execCommand('copy'); done(); }
+            });
+          })();
+        </script>
+      {% endif %}
+
+      {% if rnd.result %}
+        <section class="card" style="overflow:hidden">
+          <div class="card-head"><h2 class="card-title">Run Output</h2></div>
+          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+            <div>
+              <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Command</div>
+              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0">{{ rnd.result.command }}</pre>
+            </div>
+            <div>
+              <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Output</div>
+              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:32rem; margin:0">{{ rnd.result.output }}</pre>
+            </div>
+          </div>
+        </section>
+      {% else %}
+        <section class="card card-pad">
+          <h2 class="card-title" style="margin-bottom:8px">How it works</h2>
+          <div class="help" style="line-height:1.7">
+            <p style="margin:0 0 8px">A randomizer is a weighted set of prize slices; each slice routes a winning player to a journey. This keeps the captured prizes, segment and visual, and only re-dates + re-names the promo for a new run.</p>
+            <p style="margin:0">The two-step create flow (create draft → fill) is inferred from the captured bodies. If a call 404s, the draft is easy to delete — send me that request and I'll correct the endpoint.</p>
+          </div>
+        </section>
+      {% endif %}
+    </div>
+  </div>
 </section>
 
 {# ── All scripts ─────────────────────────────────────────────────────── #}

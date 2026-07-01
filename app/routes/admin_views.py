@@ -633,7 +633,7 @@ def figma_run(
     return templates.TemplateResponse(request, "figma.html", ctx)
 
 
-_PROMO_TABS = {"overview", "gow", "journey_cloner", "scripts"}
+_PROMO_TABS = {"overview", "gow", "journey_cloner", "randomizers", "scripts"}
 _JC_TYPES = ["followup", "bfr", "two_hours", "aft"]
 
 
@@ -665,9 +665,25 @@ def _jc_ns(*, team=DEFAULT_TEAM, form=None, selected_types=None, dry_run=True,
     }
 
 
-def _promotions_context(*, user, active_tab="overview", gow=None, jc=None) -> dict:
-    """Full context for the unified Promotions page: automation graph + both
-    embedded generators (GOW, Journey Cloner) + the all-scripts list."""
+def _rnd_ns(*, kind="sport_wof", date="", days="", weights="", journeys="",
+           error="", result=None, console_script=None) -> dict:
+    from ..services.journey_cloner_runner import RANDOMIZER_KINDS
+    return {
+        "kinds": RANDOMIZER_KINDS,
+        "kind": kind if kind in RANDOMIZER_KINDS else "sport_wof",
+        "date": date,
+        "days": days,
+        "weights": weights,
+        "journeys": journeys,
+        "error": error,
+        "result": result,
+        "console_script": console_script,
+    }
+
+
+def _promotions_context(*, user, active_tab="overview", gow=None, jc=None, rnd=None) -> dict:
+    """Full context for the unified Promotions page: automation graph + the
+    embedded generators (GOW, Journey Cloner, Randomizers) + all-scripts list."""
     from ..services import promotions_catalog as pc
     cat = pc.load_catalog()
     return {
@@ -679,6 +695,7 @@ def _promotions_context(*, user, active_tab="overview", gow=None, jc=None) -> di
         "all_scripts": pc.all_scripts(),
         "gow": gow if gow is not None else _gow_ns(),
         "jc": jc if jc is not None else _jc_ns(),
+        "rnd": rnd if rnd is not None else _rnd_ns(),
     }
 
 
@@ -720,6 +737,55 @@ def promotions_download(
         filename=resolved.name,
         content_disposition_type=disposition,
     )
+
+
+@router.post("/admin/promotions/randomizer", response_class=HTMLResponse)
+def promotions_randomizer(
+    request: Request,
+    kind: str = Form(...),
+    date: str = Form(...),
+    days: str = Form(""),
+    weights: str = Form(""),
+    journeys: str = Form(""),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """Generate a Randomizer console script (Sport WOF / Casino WOF / Scratch
+    card) from the Promotions page's Randomizers tab."""
+    from ..services.journey_cloner_runner import (
+        RANDOMIZER_KINDS,
+        generate_randomizer_console_script,
+    )
+    error = ""
+    result = None
+    console_script = None
+    try:
+        if kind not in RANDOMIZER_KINDS:
+            raise ValueError("Pick a randomizer type.")
+        if not date.strip():
+            raise ValueError("Date is required.")
+        if days.strip():
+            int(days.strip())  # validate
+        exit_code, output, display_cmd, js_text, js_name = generate_randomizer_console_script(
+            kind=kind, date=date, days=days, weights=weights, journeys=journeys,
+        )
+        result = {"exit_code": exit_code, "output": output, "command": display_cmd,
+                  "ok": exit_code == 0 and js_text is not None}
+        if exit_code == 0 and js_text is not None:
+            console_script = {"name": js_name, "text": js_text}
+        else:
+            error = "Console script was not generated. Check the run output below."
+    except ValueError as exc:
+        error = str(exc) if "invalid literal" not in str(exc) else "Days must be a whole number."
+    except Exception as exc:  # noqa: BLE001
+        error = str(exc)
+
+    ctx = _promotions_context(
+        user=user,
+        active_tab="randomizers",
+        rnd=_rnd_ns(kind=kind, date=date, days=days, weights=weights, journeys=journeys,
+                    error=error, result=result, console_script=console_script),
+    )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
 
 
 @router.post("/admin/gow/console-script", response_class=HTMLResponse)

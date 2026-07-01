@@ -177,6 +177,15 @@ def generate_console_script(
 GOW_SCRIPT_PATH = CLONER_DIR / "gow_campaign.py"
 COMMS_SCRIPT_PATH = CLONER_DIR / "comms_campaign.py"
 COMBINED_SCRIPT_PATH = CLONER_DIR / "gow_combined.py"
+RANDOMIZER_SCRIPT_PATH = CLONER_DIR / "randomizer_campaign.py"
+
+# Randomizer promos (weighted prize wheels / scratch cards). Keys must match
+# randomizer_campaign.py --kind.
+RANDOMIZER_KINDS: Dict[str, str] = {
+    "sport_wof": "Sport Wheel of Fortune",
+    "casino_wof": "Casino Wheel of Fortune",
+    "casino_scratch": "Raspa y Gana (Scratch Card)",
+}
 
 
 def _date_slug(date: str) -> str:
@@ -194,9 +203,10 @@ def _unique_basename(prefix: str, date: str) -> str:
 
 
 def _run_gow_cli(
-    cmd: List[str], *, spec_text: str, basename: str
+    cmd: List[str], *, spec_text: str | None = None, basename: str
 ) -> Tuple[int, str, str, str | None, str]:
-    """Run one of the gow_*.py CLIs, piping the pasted spec via stdin.
+    """Run one of the generator CLIs. When spec_text is given it is piped via
+    stdin (the gow_*.py spec-driven flow); randomizer CLIs pass None.
 
     Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
     """
@@ -210,7 +220,7 @@ def _run_gow_cli(
 
     display_cmd = " ".join(
         part if " " not in part else repr(part) for part in cmd
-    ) + "  < (pasted spec piped via stdin)"
+    ) + ("  < (pasted spec piped via stdin)" if spec_text is not None else "")
 
     proc = subprocess.run(
         cmd,
@@ -351,6 +361,39 @@ def generate_gow_combined_console_script(
         if figma_key.strip():
             cmd += ["--figma-key", figma_key.strip()]
     return _run_gow_cli(cmd, spec_text=spec_text, basename=basename)
+
+
+def generate_randomizer_console_script(
+    *,
+    kind: str,
+    date: str,
+    days: str = "",
+    weights: str = "",
+    journeys: str = "",
+) -> Tuple[int, str, str, str | None, str]:
+    """Generate the console script for a Randomizer promo (Sport WOF, Casino WOF,
+    or Raspa y Gana scratch card). Prizes/segment/visual come from the captured
+    template; only dates, name and optional weights/journeys change.
+
+    Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
+    """
+    if kind not in RANDOMIZER_KINDS:
+        raise ValueError(f"Unknown randomizer kind: {kind}")
+    basename = _unique_basename(f"randomizer_{kind}", date)
+    cmd = [
+        python_executable(),
+        str(RANDOMIZER_SCRIPT_PATH),
+        "--kind", kind,
+        "--date", date.strip(),
+        "--name", basename,
+    ]
+    if days.strip():
+        cmd += ["--days", days.strip()]
+    if weights.strip():
+        cmd += ["--weights", *weights.split()]
+    if journeys.strip():
+        cmd += ["--journeys", *journeys.split()]
+    return _run_gow_cli(cmd, basename=basename)
 
 
 def run_journey_cloner(
