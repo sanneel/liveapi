@@ -800,11 +800,16 @@ def gow_console_script(
     promo_page_id: str = Form(""),
     public_domain: str = Form(""),
     journey_name: str = Form(""),
+    use_figma: str = Form(""),
     figma_game: str = Form(""),
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
     do_campaign = create_campaign.strip().lower() in ("on", "true", "1", "yes")
     do_comms = create_communication.strip().lower() in ("on", "true", "1", "yes")
+    do_figma = use_figma.strip().lower() in ("on", "true", "1", "yes")
+    # The toggle gates the Figma export: only pull from Figma when it's on AND a
+    # game is named. Off (or blank game) -> file pickers at paste time, as before.
+    effective_figma_game = figma_game.strip() if do_figma else ""
     form = {
         "date": date,
         "spec": spec,
@@ -815,6 +820,7 @@ def gow_console_script(
         "promo_page_id": promo_page_id,
         "public_domain": public_domain,
         "journey_name": journey_name,
+        "use_figma": "on" if do_figma else "",
         "figma_game": figma_game,
     }
     error = ""
@@ -835,6 +841,10 @@ def gow_console_script(
                 "Promo-page id is required when creating Communication without Campaign "
                 "(from a previously created GOW promo page)."
             )
+        if do_figma and not figma_game.strip():
+            raise ValueError("Enter the Figma game name, or turn off 'Pull images from Figma'.")
+        if do_figma and not do_campaign:
+            raise ValueError("Figma images apply to the Campaign — tick Create Campaign, or turn Figma off.")
         if days.strip():
             parsed_days = int(days.strip())
         if spins.strip():
@@ -852,13 +862,14 @@ def gow_console_script(
                     spins=parsed_spins,
                     public_domain=public_domain,
                     journey_name=journey_name,
-                    figma_game=figma_game,
+                    figma_game=effective_figma_game,
                 )
             elif do_campaign:
                 exit_code, output, display_cmd, js_text, js_name = generate_gow_console_script(
                     date=date,
                     spec_text=spec,
                     spins=parsed_spins,
+                    figma_game=effective_figma_game,
                 )
             else:
                 exit_code, output, display_cmd, js_text, js_name = generate_comms_console_script(

@@ -252,13 +252,16 @@ def generate_gow_console_script(
     date: str,
     spec_text: str,
     spins: int | None = None,
+    figma_game: str = "",
+    figma_key: str = "",
 ) -> Tuple[int, str, str, str | None, str]:
     """Generate the paste-into-DevTools console script for a Game-of-the-Week
     casino campaign (free-spin offer + 4 deposit tiers + promo page).
 
     Game name, provider, and bet tiers are all parsed from the pasted spec
     blob; the real game ids are resolved from the live games catalog at
-    paste time.
+    paste time. When figma_game is given, the campaign photo is exported from
+    Figma and embedded (no file picker).
 
     Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
     """
@@ -275,6 +278,10 @@ def generate_gow_console_script(
     ]
     if spins is not None:
         cmd += ["--spins", str(spins)]
+    if figma_game.strip():
+        cmd += ["--figma-game", figma_game.strip()]
+        if figma_key.strip():
+            cmd += ["--figma-key", figma_key.strip()]
     return _run_gow_cli(cmd, spec_text=spec_text, basename=basename)
 
 

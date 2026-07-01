@@ -61,10 +61,16 @@
       <p class="help" style="margin-top:6px">Defaults to refreshing the template's existing name with the new date.</p>
     </div>
 
-    <div class="field">
-      <span class="lbl">Figma game <span style="color:var(--t-faint)">(optional, Campaign + Communication only)</span></span>
-      <input class="input" name="figma_game" value="{{ form.figma_game or '' }}" placeholder="SPIN &amp; SCORE MEGAWAYS"/>
-      <p class="help" style="margin-top:6px">Exact game name on the GOW Figma board. When set, the campaign photo, NC icon and Pop-up background are pulled from Figma and baked into the script — no file pickers appear at paste time. Needs FIGMA_TOKEN configured on the server.</p>
+    <div class="field" style="border:1px solid var(--border-in,#e6e6ee); border-radius:10px; padding:12px">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer">
+        <input type="checkbox" name="use_figma" id="use_figma" {% if form.use_figma %}checked{% endif %}/>
+        <span class="lbl" style="margin:0">Pull images from Figma <span style="color:var(--t-faint)">(no file pickers)</span></span>
+      </label>
+      <div id="figma-game-field" style="margin-top:10px; {% if not form.use_figma %}display:none{% endif %}">
+        <span class="lbl">Figma game</span>
+        <input class="input" name="figma_game" id="figma_game" value="{{ form.figma_game or '' }}" placeholder="SPIN &amp; SCORE MEGAWAYS"/>
+        <p class="help" style="margin-top:6px">Exact game name on the GOW Figma board. The campaign photo (+ NC icon &amp; Pop-up background when creating Communication) are exported from Figma and baked into the script. Needs FIGMA_TOKEN configured on the server; if the export fails the script falls back to file pickers.</p>
+      </div>
     </div>
 
     <div class="field">
@@ -146,13 +152,21 @@
     var comms = document.getElementById('create_communication');
     var promoField = document.getElementById('promo-page-id-field');
     var daysField = document.getElementById('days-field');
+    var useFigma = document.getElementById('use_figma');
+    var figmaField = document.getElementById('figma-game-field');
+    var figmaInput = document.getElementById('figma_game');
     function sync() {
       var onlyComms = comms.checked && !campaign.checked;
       promoField.style.display = onlyComms ? '' : 'none';
       daysField.style.display = campaign.checked ? '' : 'none';
+      if (useFigma && figmaField) {
+        figmaField.style.display = useFigma.checked ? '' : 'none';
+        if (figmaInput) figmaInput.required = useFigma.checked;
+      }
     }
     campaign.addEventListener('change', sync);
     comms.addEventListener('change', sync);
+    if (useFigma) useFigma.addEventListener('change', sync);
     sync();
   })();
 </script>
