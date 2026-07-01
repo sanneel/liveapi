@@ -20,10 +20,11 @@ from ..config import BASE_DIR
 CLONER_DIR = BASE_DIR / "journey-cloner"
 CATALOG_PATH = CLONER_DIR / "catalog.json"
 
-# Live admin generator page per automation key (None -> template-only today).
-AUTOMATION_LINKS: Dict[str, Optional[str]] = {
-    "promo_page": "/admin/gow",   # the promo page is created by the GOW run
-    "gow": "/admin/gow",
+# In-page tab that generates each automation (None -> template-only today).
+# The promo page is produced by the GOW run, so both point at the GOW tab.
+AUTOMATION_TABS: Dict[str, Optional[str]] = {
+    "promo_page": "gow",
+    "gow": "gow",
     "sport_wof": None,
     "casino_scratch_card": None,
     "casino_wof": None,
@@ -91,7 +92,7 @@ def automations() -> List[dict]:
     for a in cat.get("automations", []):
         key = a.get("key", "")
         scripts = [m for rel in AUTOMATION_SCRIPTS.get(key, []) if (m := _file_meta(rel))]
-        out.append({**a, "link": AUTOMATION_LINKS.get(key), "scripts": scripts})
+        out.append({**a, "tab": AUTOMATION_TABS.get(key), "scripts": scripts})
     return out
 
 

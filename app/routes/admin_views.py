@@ -397,34 +397,20 @@ def live_parses_page(
     )
 
 
-@router.get("/admin/journey-cloner", response_class=HTMLResponse)
+@router.get("/admin/journey-cloner")
 def journey_cloner_page(
-    request: Request,
     template_saved: str = "",
     template_error: str = "",
     team: str = DEFAULT_TEAM,
     user: User = Depends(require_role("editor")),
-) -> HTMLResponse:
-    team = team if team in TEAMS else DEFAULT_TEAM
-    return templates.TemplateResponse(
-        request,
-        "journey_cloner.html",
-        {
-            "active_page": "journey_cloner",
-            "current_user": user,
-            "teams": TEAMS,
-            "team": team,
-            "template_status": template_status(team),
-            "team_inherits": team_inherits(team),
-            "selected_types": ["followup", "bfr", "two_hours", "aft"],
-            "dry_run": True,
-            "result": None,
-            "error": "",
-            "template_saved": template_saved,
-            "template_error": template_error,
-            "form": {},
-        },
-    )
+) -> RedirectResponse:
+    # Journey Cloner now lives as a tab inside the unified Promotions page.
+    params = {"tab": "journey_cloner", "team": team if team in TEAMS else DEFAULT_TEAM}
+    if template_saved:
+        params["template_saved"] = template_saved
+    if template_error:
+        params["template_error"] = template_error
+    return RedirectResponse(f"/admin/promotions?{urlencode(params)}", status_code=status.HTTP_302_FOUND)
 
 
 @router.post("/admin/journey-cloner", response_class=HTMLResponse)
@@ -487,25 +473,13 @@ def journey_cloner_run(
         except Exception as exc:
             error = str(exc)
 
-    return templates.TemplateResponse(
-        request,
-        "journey_cloner.html",
-        {
-            "active_page": "journey_cloner",
-            "current_user": user,
-            "teams": TEAMS,
-            "team": team,
-            "template_status": template_status(team),
-            "team_inherits": team_inherits(team),
-            "selected_types": selected_types,
-            "dry_run": is_dry_run,
-            "result": result,
-            "error": error,
-            "template_saved": "",
-            "template_error": "",
-            "form": form,
-        },
+    ctx = _promotions_context(
+        user=user,
+        active_tab="journey_cloner",
+        jc=_jc_ns(team=team, form=form, selected_types=selected_types,
+                  dry_run=is_dry_run, result=result, error=error),
     )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
 
 
 @router.post("/admin/journey-cloner/console-script", response_class=HTMLResponse)
@@ -566,26 +540,13 @@ def journey_cloner_console_script(
         except Exception as exc:
             error = str(exc)
 
-    return templates.TemplateResponse(
-        request,
-        "journey_cloner.html",
-        {
-            "active_page": "journey_cloner",
-            "current_user": user,
-            "teams": TEAMS,
-            "team": team,
-            "template_status": template_status(team),
-            "team_inherits": team_inherits(team),
-            "selected_types": selected_types,
-            "dry_run": True,
-            "result": result,
-            "error": error,
-            "template_saved": "",
-            "template_error": "",
-            "form": form,
-            "console_script": console_script,
-        },
+    ctx = _promotions_context(
+        user=user,
+        active_tab="journey_cloner",
+        jc=_jc_ns(team=team, form=form, selected_types=selected_types,
+                  result=result, error=error, console_script=console_script),
     )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
 
 
 @router.post("/admin/journey-cloner/templates", response_class=HTMLResponse)
@@ -608,45 +569,18 @@ def journey_cloner_save_template(
     except Exception as exc:
         template_error = str(exc)
 
-    return templates.TemplateResponse(
-        request,
-        "journey_cloner.html",
-        {
-            "active_page": "journey_cloner",
-            "current_user": user,
-            "teams": TEAMS,
-            "team": team,
-            "template_status": template_status(team),
-            "team_inherits": team_inherits(team),
-            "selected_types": ["followup", "bfr", "two_hours", "aft"],
-            "dry_run": True,
-            "result": None,
-            "error": "",
-            "template_saved": template_saved,
-            "template_error": template_error,
-            "form": {},
-        },
+    ctx = _promotions_context(
+        user=user,
+        active_tab="journey_cloner",
+        jc=_jc_ns(team=team, template_saved=template_saved, template_error=template_error),
     )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
 
 
-def _gow_context(*, form, error="", console_script=None, result=None):
-    return {
-        "active_page": "gow",
-        "form": form,
-        "error": error,
-        "console_script": console_script,
-        "result": result,
-    }
-
-
-@router.get("/admin/gow", response_class=HTMLResponse)
-def gow_page(
-    request: Request,
-    user: User = Depends(require_role("editor")),
-) -> HTMLResponse:
-    ctx = _gow_context(form={"create_campaign": "on", "create_communication": "on"})
-    ctx["current_user"] = user
-    return templates.TemplateResponse(request, "gow.html", ctx)
+@router.get("/admin/gow")
+def gow_page(user: User = Depends(require_role("editor"))) -> RedirectResponse:
+    # GOW now lives as a tab inside the unified Promotions page.
+    return RedirectResponse("/admin/promotions?tab=gow", status_code=status.HTTP_302_FOUND)
 
 
 def _figma_context(*, form, result=None, error="", images=None):
@@ -699,24 +633,71 @@ def figma_run(
     return templates.TemplateResponse(request, "figma.html", ctx)
 
 
-@router.get("/admin/promotions", response_class=HTMLResponse)
-def promotions_page(
-    request: Request,
-    user: User = Depends(require_role("editor")),
-) -> HTMLResponse:
-    """Promotions hub: every promo automation (from journey-cloner/catalog.json)
-    plus all the generator scripts and captured templates behind them."""
+_PROMO_TABS = {"overview", "gow", "journey_cloner", "scripts"}
+_JC_TYPES = ["followup", "bfr", "two_hours", "aft"]
+
+
+def _gow_ns(*, form=None, error="", result=None, console_script=None) -> dict:
+    return {
+        "form": form if form is not None else {"create_campaign": "on", "create_communication": "on"},
+        "error": error,
+        "result": result,
+        "console_script": console_script,
+    }
+
+
+def _jc_ns(*, team=DEFAULT_TEAM, form=None, selected_types=None, dry_run=True,
+           result=None, error="", template_saved="", template_error="", console_script=None) -> dict:
+    team = team if team in TEAMS else DEFAULT_TEAM
+    return {
+        "teams": TEAMS,
+        "team": team,
+        "template_status": template_status(team),
+        "team_inherits": team_inherits(team),
+        "selected_types": selected_types if selected_types is not None else list(_JC_TYPES),
+        "dry_run": dry_run,
+        "result": result,
+        "error": error,
+        "template_saved": template_saved,
+        "template_error": template_error,
+        "form": form or {},
+        "console_script": console_script,
+    }
+
+
+def _promotions_context(*, user, active_tab="overview", gow=None, jc=None) -> dict:
+    """Full context for the unified Promotions page: automation graph + both
+    embedded generators (GOW, Journey Cloner) + the all-scripts list."""
     from ..services import promotions_catalog as pc
     cat = pc.load_catalog()
-    ctx = {
+    return {
         "active_page": "promotions",
         "current_user": user,
+        "active_tab": active_tab if active_tab in _PROMO_TABS else "overview",
         "meta": cat.get("meta", {}),
         "automations": pc.automations(),
         "all_scripts": pc.all_scripts(),
-        "channels": cat.get("channels", []),
-        "segments": cat.get("segments", []),
+        "gow": gow if gow is not None else _gow_ns(),
+        "jc": jc if jc is not None else _jc_ns(),
     }
+
+
+@router.get("/admin/promotions", response_class=HTMLResponse)
+def promotions_page(
+    request: Request,
+    tab: str = "overview",
+    team: str = DEFAULT_TEAM,
+    template_saved: str = "",
+    template_error: str = "",
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """Promotions hub: automation graph + the GOW and Journey Cloner generators
+    (as tabs) + every generator script and captured template."""
+    ctx = _promotions_context(
+        user=user,
+        active_tab=tab,
+        jc=_jc_ns(team=team, template_saved=template_saved, template_error=template_error),
+    )
     return templates.TemplateResponse(request, "promotions.html", ctx)
 
 
@@ -834,9 +815,12 @@ def gow_console_script(
         except Exception as exc:  # noqa: BLE001
             error = str(exc)
 
-    ctx = _gow_context(form=form, error=error, console_script=console_script, result=result)
-    ctx["current_user"] = user
-    return templates.TemplateResponse(request, "gow.html", ctx)
+    ctx = _promotions_context(
+        user=user,
+        active_tab="gow",
+        gow=_gow_ns(form=form, error=error, result=result, console_script=console_script),
+    )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
 
 
 @router.post("/admin/parser-feeds")

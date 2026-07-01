@@ -2,117 +2,167 @@
 {% block title %}Promotions · Jugabet Admin{% endblock %}
 {% block content_theme %}content-light{% endblock %}
 {% block page_title %}Promotions{% endblock %}
-{% block page_subtitle %}Every promo automation we have — Promo Page, GOW, Sport &amp; Casino Wheel of Fortune, Scratch Card — with the generator scripts and captured templates behind each. Open a generator, or download any script.{% endblock %}
+{% block page_subtitle %}One place for every promo automation — the GOW generator, the Journey Cloner, the automation graph, and all the scripts.{% endblock %}
 
 {% block content %}
 
-{% if not automations %}
-  <div class="alert err">No catalog found. Run <span class="mono">journey-cloner/build_catalog.py</span> to generate <span class="mono">catalog.json</span>.</div>
-{% endif %}
+<div class="tabs" id="promo-tabs" data-active="{{ active_tab or 'overview' }}">
+  <button type="button" class="tab" data-tab="overview">Overview</button>
+  <button type="button" class="tab" data-tab="gow">GOW</button>
+  <button type="button" class="tab" data-tab="journey_cloner">Journey Cloner</button>
+  <button type="button" class="tab" data-tab="scripts">All scripts</button>
+</div>
 
-{% if meta %}
-  <p class="help" style="margin-bottom:14px">Catalog: brand <b>{{ meta.brand or 'JBCL' }}</b>{% if meta.operator %} · {{ meta.operator }}{% endif %}{% if meta.timezone %} · {{ meta.timezone }}{% endif %}.{% if meta.note %} {{ meta.note }}{% endif %}</p>
-{% endif %}
+{# ── OVERVIEW: automation graph ──────────────────────────────────────── #}
+<section data-panel="overview">
+  {% if not automations %}
+    <div class="alert err">No catalog found. Run <span class="mono">journey-cloner/build_catalog.py</span> to generate <span class="mono">catalog.json</span>.</div>
+  {% endif %}
+  {% if meta %}
+    <p class="help" style="margin-bottom:14px">Catalog: brand <b>{{ meta.brand or 'JBCL' }}</b>{% if meta.operator %} · {{ meta.operator }}{% endif %}{% if meta.timezone %} · {{ meta.timezone }}{% endif %}.{% if meta.note %} {{ meta.note }}{% endif %}</p>
+  {% endif %}
 
-{# ── Automation cards (the automation graph) ─────────────────────────── #}
-<div style="display:grid; gap:16px">
-  {% for a in automations %}
-  <div class="card" style="padding:16px">
-    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap">
-      <div>
-        <h3 style="margin:0">{{ a.label }}</h3>
-        {% if a.creates %}<div class="help" style="margin-top:2px">Creates {{ a.creates }}.</div>{% endif %}
+  <div style="display:grid; gap:16px">
+    {% for a in automations %}
+    <div class="card" style="padding:16px">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap">
+        <div>
+          <h3 style="margin:0">{{ a.label }}</h3>
+          {% if a.creates %}<div class="help" style="margin-top:2px">Creates {{ a.creates }}.</div>{% endif %}
+        </div>
+        <div style="display:flex; gap:8px">
+          {% if a.tab %}<button type="button" class="btn primary tab-jump" data-tab="{{ a.tab }}">Open generator →</button>
+          {% elif a.link %}<a href="{{ a.link }}" class="btn primary">Open generator →</a>
+          {% else %}<span class="badge">Template-only</span>{% endif %}
+        </div>
       </div>
-      <div style="display:flex; gap:8px">
-        {% if a.link %}<a href="{{ a.link }}" class="btn primary">Open generator →</a>{% else %}<span class="badge">Template-only</span>{% endif %}
-      </div>
-    </div>
 
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:12px">
-      <div>
-        {% if a.endpoint %}<div style="margin-bottom:8px"><span class="lbl">Endpoint</span><div class="mono" style="font-size:12px">{{ a.endpoint }}</div></div>{% endif %}
-        {% if a.compiler %}<div style="margin-bottom:8px"><span class="lbl">Compiler</span><div class="mono" style="font-size:12px">{{ a.compiler }}</div></div>{% endif %}
-        {% if a.template %}<div style="margin-bottom:8px"><span class="lbl">Template</span><div class="mono" style="font-size:12px">{{ a.template }}</div></div>{% endif %}
-        {% if a.segment %}<div style="margin-bottom:8px"><span class="lbl">Segment</span><div class="mono" style="font-size:12px">{{ a.segment }}</div></div>{% endif %}
-        {% if a.starts %}<div style="margin-bottom:8px"><span class="lbl">Starts</span> <span class="mono" style="font-size:12px">{{ a.starts }}</span></div>{% endif %}
-        {% if a.shot_policy %}<div style="margin-bottom:8px"><span class="lbl">Shot policy</span> <span class="mono" style="font-size:12px">{{ a.shot_policy }}</span></div>{% endif %}
-        {% if a.knobs %}
-          <span class="lbl">Knobs</span>
-          <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px">
-            {% for k in a.knobs %}<span class="chip">{{ k }}</span>{% endfor %}
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:12px">
+        <div>
+          {% if a.endpoint %}<div style="margin-bottom:8px"><span class="lbl">Endpoint</span><div class="mono" style="font-size:12px">{{ a.endpoint }}</div></div>{% endif %}
+          {% if a.compiler %}<div style="margin-bottom:8px"><span class="lbl">Compiler</span><div class="mono" style="font-size:12px">{{ a.compiler }}</div></div>{% endif %}
+          {% if a.template %}<div style="margin-bottom:8px"><span class="lbl">Template</span><div class="mono" style="font-size:12px">{{ a.template }}</div></div>{% endif %}
+          {% if a.segment %}<div style="margin-bottom:8px"><span class="lbl">Segment</span><div class="mono" style="font-size:12px">{{ a.segment }}</div></div>{% endif %}
+          {% if a.starts %}<div style="margin-bottom:8px"><span class="lbl">Starts</span> <span class="mono" style="font-size:12px">{{ a.starts }}</span></div>{% endif %}
+          {% if a.shot_policy %}<div style="margin-bottom:8px"><span class="lbl">Shot policy</span> <span class="mono" style="font-size:12px">{{ a.shot_policy }}</span></div>{% endif %}
+          {% if a.knobs %}
+            <span class="lbl">Knobs</span>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px">
+              {% for k in a.knobs %}<span class="chip">{{ k }}</span>{% endfor %}
+            </div>
+          {% endif %}
+        </div>
+        <div>
+          {% if a.prizes %}
+            <span class="lbl">Prize slices → journeys</span>
+            <table class="mini-table" style="width:100%; margin-top:4px; font-size:12px">
+              <thead><tr><th style="text-align:left">weight</th><th style="text-align:left">routes to</th><th style="text-align:left">description</th></tr></thead>
+              <tbody>
+                {% for p in a.prizes %}
+                <tr><td class="mono">{{ p.weight }}</td><td class="mono">{{ p.routes_to_journey or '—' }}</td><td>{{ p.description or '' }}</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% endif %}
+          {% if a.notes %}<p class="help" style="margin-top:8px">{{ a.notes }}</p>{% endif %}
+        </div>
+      </div>
+
+      {% if a.scripts %}
+        <div style="margin-top:12px">
+          <span class="lbl">Scripts &amp; templates</span>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px">
+            {% for s in a.scripts %}
+              <span class="file-pill">
+                <a href="/admin/promotions/download?path={{ s.path | urlencode }}" target="_blank" class="mono" title="View {{ s.path }}">{{ s.name }}</a>
+                <a href="/admin/promotions/download?path={{ s.path | urlencode }}&amp;dl=1" title="Download {{ s.name }}" class="dl">↓</a>
+              </span>
+            {% endfor %}
           </div>
-        {% endif %}
-      </div>
-
-      <div>
-        {% if a.prizes %}
-          <span class="lbl">Prize slices → journeys</span>
-          <table class="mini-table" style="width:100%; margin-top:4px; font-size:12px">
-            <thead><tr><th style="text-align:left">weight</th><th style="text-align:left">routes to</th><th style="text-align:left">description</th></tr></thead>
-            <tbody>
-              {% for p in a.prizes %}
-              <tr>
-                <td class="mono">{{ p.weight }}</td>
-                <td class="mono">{{ p.routes_to_journey or '—' }}</td>
-                <td>{{ p.description or '' }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        {% endif %}
-        {% if a.notes %}<p class="help" style="margin-top:8px">{{ a.notes }}</p>{% endif %}
-      </div>
+        </div>
+      {% endif %}
     </div>
+    {% endfor %}
+  </div>
+</section>
 
-    {% if a.scripts %}
-      <div style="margin-top:12px">
-        <span class="lbl">Scripts &amp; templates</span>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px">
-          {% for s in a.scripts %}
+{# ── GOW generator ───────────────────────────────────────────────────── #}
+<section data-panel="gow" hidden>
+  {% with form=gow.form, error=gow.error, result=gow.result, console_script=gow.console_script %}
+    {% include "partials/_gow_form.html" %}
+  {% endwith %}
+</section>
+
+{# ── Journey Cloner ──────────────────────────────────────────────────── #}
+<section data-panel="journey_cloner" hidden>
+  {% with form=jc.form, error=jc.error, result=jc.result, console_script=jc.console_script,
+          team=jc.team, teams=jc.teams, template_status=jc.template_status,
+          team_inherits=jc.team_inherits, selected_types=jc.selected_types, dry_run=jc.dry_run,
+          template_saved=jc.template_saved, template_error=jc.template_error %}
+    {% include "partials/_journey_cloner_form.html" %}
+  {% endwith %}
+</section>
+
+{# ── All scripts ─────────────────────────────────────────────────────── #}
+<section data-panel="scripts" hidden>
+  {% if all_scripts %}
+    <p class="help">Everything under <span class="mono">journey-cloner/</span> (generators, captured templates, catalog, docs). Click a name to view, ↓ to download.</p>
+    {% set groups = all_scripts | groupby('group') %}
+    <div style="display:grid; gap:14px; margin-top:8px">
+      {% for group, files in groups %}
+      <div class="card" style="padding:12px">
+        <div class="mono" style="font-weight:600; margin-bottom:8px">{{ group }}/</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          {% for s in files %}
             <span class="file-pill">
-              <a href="/admin/promotions/download?path={{ s.path | urlencode }}" target="_blank" class="mono" title="View {{ s.path }}">{{ s.name }}</a>
+              <a href="/admin/promotions/download?path={{ s.path | urlencode }}" target="_blank" class="mono" title="{{ s.path }}">{{ s.name }}</a>
+              <span class="help" style="font-size:11px">{{ s.bytes }} b</span>
               <a href="/admin/promotions/download?path={{ s.path | urlencode }}&amp;dl=1" title="Download {{ s.name }}" class="dl">↓</a>
             </span>
           {% endfor %}
         </div>
       </div>
-    {% endif %}
-  </div>
-  {% endfor %}
-</div>
-
-{# ── All scripts, grouped by folder ──────────────────────────────────── #}
-{% if all_scripts %}
-  <h3 style="margin-top:22px">All scripts &amp; templates</h3>
-  <p class="help">Everything under <span class="mono">journey-cloner/</span> (generators, captured templates, catalog, docs). Click a name to view, ↓ to download.</p>
-  {% set groups = all_scripts | groupby('group') %}
-  <div style="display:grid; gap:14px; margin-top:8px">
-    {% for group, files in groups %}
-    <div class="card" style="padding:12px">
-      <div class="mono" style="font-weight:600; margin-bottom:8px">{{ group }}/</div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap">
-        {% for s in files %}
-          <span class="file-pill">
-            <a href="/admin/promotions/download?path={{ s.path | urlencode }}" target="_blank" class="mono" title="{{ s.path }}">{{ s.name }}</a>
-            <span class="help" style="font-size:11px">{{ s.bytes }} b</span>
-            <a href="/admin/promotions/download?path={{ s.path | urlencode }}&amp;dl=1" title="Download {{ s.name }}" class="dl">↓</a>
-          </span>
-        {% endfor %}
-      </div>
+      {% endfor %}
     </div>
-    {% endfor %}
-  </div>
-{% endif %}
+  {% endif %}
+</section>
 
 <style>
-  .chip { display:inline-block; padding:2px 8px; border:1px solid var(--border, #dcdce4); border-radius:999px; font-size:11px; background:#f6f6fa; }
+  .tabs { display:flex; gap:4px; border-bottom:2px solid var(--border-in,#e6e6ee); margin-bottom:18px; flex-wrap:wrap; }
+  .tabs .tab { background:none; border:none; padding:10px 16px; font-size:14px; font-weight:600; color:var(--t-faint,#889); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; }
+  .tabs .tab:hover { color:var(--t,#223); }
+  .tabs .tab.active { color:var(--t,#223); border-bottom-color:#4a6cf7; }
+  .chip { display:inline-block; padding:2px 8px; border:1px solid var(--border,#dcdce4); border-radius:999px; font-size:11px; background:#f6f6fa; }
   .badge { display:inline-block; padding:4px 10px; border-radius:6px; font-size:12px; background:#eef; color:#446; }
-  .file-pill { display:inline-flex; align-items:center; gap:8px; padding:4px 10px; border:1px solid var(--border, #dcdce4); border-radius:6px; background:#fafafe; }
+  .file-pill { display:inline-flex; align-items:center; gap:8px; padding:4px 10px; border:1px solid var(--border,#dcdce4); border-radius:6px; background:#fafafe; }
   .file-pill .dl { text-decoration:none; font-weight:700; color:#4a6; }
   .file-pill a.mono { text-decoration:none; }
   .file-pill a.mono:hover { text-decoration:underline; }
   .mini-table th, .mini-table td { padding:2px 6px; border-bottom:1px solid #eee; vertical-align:top; }
-  .lbl { display:block; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--t-faint, #889); margin-bottom:2px; }
+  .lbl { display:block; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--t-faint,#889); margin-bottom:2px; }
 </style>
+
+<script>
+  (function () {
+    var wrap = document.getElementById('promo-tabs');
+    if (!wrap) return;
+    var tabs = Array.prototype.slice.call(wrap.querySelectorAll('.tab'));
+    var panels = Array.prototype.slice.call(document.querySelectorAll('[data-panel]'));
+    function show(name) {
+      var found = false;
+      panels.forEach(function (p) { var on = p.getAttribute('data-panel') === name; p.hidden = !on; found = found || on; });
+      if (!found) { name = 'overview'; panels.forEach(function (p) { p.hidden = p.getAttribute('data-panel') !== 'overview'; }); }
+      tabs.forEach(function (t) { t.classList.toggle('active', t.getAttribute('data-tab') === name); });
+      if (history.replaceState) history.replaceState(null, '', '#' + name);
+    }
+    tabs.forEach(function (t) { t.addEventListener('click', function () { show(t.getAttribute('data-tab')); }); });
+    // "Open generator →" buttons on the overview cards jump to a tab.
+    document.querySelectorAll('.tab-jump').forEach(function (b) {
+      b.addEventListener('click', function () { show(b.getAttribute('data-tab')); window.scrollTo(0, 0); });
+    });
+    var initial = (location.hash || '').replace('#', '') || wrap.getAttribute('data-active') || 'overview';
+    show(initial);
+  })();
+</script>
 
 {% endblock %}
