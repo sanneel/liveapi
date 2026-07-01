@@ -257,7 +257,17 @@ def main():
     if a.ids:
         if not a.game:
             sys.exit("--ids needs --game NAME (used as the output folder + cache key).")
-        picks = dict(kv.split("=", 1) for kv in a.ids.split(",") if "=" in kv)
+        picks = {}
+        for kv in a.ids.split(","):
+            if "=" not in kv:
+                continue
+            slot, nid = kv.split("=", 1)
+            nid = nid.strip()
+            # Figma layer URLs write node ids with a dash (node-id=1078-2286);
+            # the API wants a colon (1078:2286). Accept either so ids can be
+            # pasted straight from the browser URL.
+            nid = re.sub(r"^(\d+)-(\d+)$", r"\1:\2", nid)
+            picks[slot.strip()] = nid
         if not picks:
             sys.exit("could not parse --ids (use slot=nodeId,slot=nodeId)")
         _save_slots(a.key, a.game, picks)  # seed the cache so plain --game works next time
