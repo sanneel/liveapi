@@ -1,4 +1,5 @@
 {% if error %}<div class="alert err">{{ error }}</div>{% endif %}
+{% if warn %}<div class="alert" style="background:#fff7ed; border:1px solid #fdba74; color:#9a3412">{{ warn }}</div>{% endif %}
 {% if result %}
   <div class="alert {% if result.ok %}ok{% else %}err{% endif %}">
     {% if result.ok %}Console script generated.{% else %}Generation exited with code {{ result.exit_code }}.{% endif %}

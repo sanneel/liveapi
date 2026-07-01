@@ -89,7 +89,7 @@
 
 {# ── GOW generator ───────────────────────────────────────────────────── #}
 <section data-panel="gow" hidden>
-  {% with form=gow.form, error=gow.error, result=gow.result, console_script=gow.console_script %}
+  {% with form=gow.form, error=gow.error, result=gow.result, console_script=gow.console_script, warn=gow.warn %}
     {% include "partials/_gow_form.html" %}
   {% endwith %}
 </section>

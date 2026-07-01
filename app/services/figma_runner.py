@@ -54,19 +54,32 @@ def inspect(file_key: str, page: str = "") -> Tuple[int, str, str]:
     return _run(args)
 
 
+def _collect_images(game: str) -> List[dict]:
+    import re
+    slug = re.sub(r"[^a-z0-9]+", "_", game.lower()).strip("_")
+    folder = OUT_DIR / slug
+    images: List[dict] = []
+    if folder.exists():
+        for png in sorted(folder.glob("*.png")):
+            data = base64.b64encode(png.read_bytes()).decode("ascii")
+            images.append({"slot": png.stem, "data_uri": f"data:image/png;base64,{data}",
+                           "bytes": png.stat().st_size})
+    return images
+
+
 def export(file_key: str, game: str, page: str = "", scale: str = "1") -> Tuple[int, str, str, List[dict]]:
     args = ["--key", file_key.strip(), "--game", game.strip(), "--scale", (scale or "1").strip(), "--out", str(OUT_DIR)]
     if page.strip():
         args += ["--page", page.strip()]
     rc, out, display = _run(args)
-    images: List[dict] = []
-    if rc == 0:
-        import re
-        slug = re.sub(r"[^a-z0-9]+", "_", game.lower()).strip("_")
-        folder = OUT_DIR / slug
-        if folder.exists():
-            for png in sorted(folder.glob("*.png")):
-                data = base64.b64encode(png.read_bytes()).decode("ascii")
-                images.append({"slot": png.stem, "data_uri": f"data:image/png;base64,{data}",
-                               "bytes": png.stat().st_size})
-    return rc, out, display, images
+    return rc, out, display, (_collect_images(game) if rc == 0 else [])
+
+
+def seed(file_key: str, game: str, ids: str, scale: str = "1") -> Tuple[int, str, str, List[dict]]:
+    """Seed a game's slot node ids so a plain --game export works later without
+    the rate-limited /files tree. `ids` is 'slot=nodeId,slot=nodeId' as read from
+    Figma layer links. Renders + caches them under journey-cloner/figma_cache."""
+    args = ["--key", file_key.strip(), "--game", game.strip(),
+            "--ids", ids.strip(), "--scale", (scale or "1").strip(), "--out", str(OUT_DIR)]
+    rc, out, display = _run(args)
+    return rc, out, display, (_collect_images(game) if rc == 0 else [])

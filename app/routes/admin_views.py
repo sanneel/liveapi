@@ -608,11 +608,12 @@ def figma_run(
     file_key: str = Form(...),
     page: str = Form(""),
     game: str = Form(""),
+    ids: str = Form(""),
     mode: str = Form("inspect"),
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
     from ..services import figma_runner
-    form = {"file_key": file_key, "page": page, "game": game, "mode": mode}
+    form = {"file_key": file_key, "page": page, "game": game, "ids": ids, "mode": mode}
     error, result, images = "", None, []
     try:
         if not file_key.strip():
@@ -621,6 +622,12 @@ def figma_run(
             if not game.strip():
                 raise ValueError("Game name is required for export.")
             rc, out, cmd, images = figma_runner.export(file_key, game, page)
+        elif mode == "seed":
+            if not game.strip():
+                raise ValueError("Game name is required to seed node ids.")
+            if not ids.strip():
+                raise ValueError("Paste the node ids, e.g. popup_bg=1078:2286,email_hero=1078:2810,campaign=1078:2911")
+            rc, out, cmd, images = figma_runner.seed(file_key, game, ids)
         else:
             rc, out, cmd = figma_runner.inspect(file_key, page)
         result = {"exit_code": rc, "output": out, "command": cmd, "ok": rc == 0}
@@ -637,12 +644,13 @@ _PROMO_TABS = {"overview", "gow", "journey_cloner", "randomizers", "scripts"}
 _JC_TYPES = ["followup", "bfr", "two_hours", "aft"]
 
 
-def _gow_ns(*, form=None, error="", result=None, console_script=None) -> dict:
+def _gow_ns(*, form=None, error="", result=None, console_script=None, warn="") -> dict:
     return {
         "form": form if form is not None else {"create_campaign": "on", "create_communication": "on"},
         "error": error,
         "result": result,
         "console_script": console_script,
+        "warn": warn,
     }
 
 
@@ -892,12 +900,40 @@ def gow_console_script(
         except Exception as exc:  # noqa: BLE001
             error = str(exc)
 
+    # The Figma toggle was on but the export fell back to file pickers — say so
+    # loudly instead of showing a plain "ready", and surface the actual reason.
+    warn = ""
+    if effective_figma_game and result and console_script:
+        out_low = (result.get("output") or "").lower()
+        if "falling back to" in out_low or "figma export failed" in out_low or "figma export error" in out_low:
+            reason = _extract_figma_reason(result.get("output") or "")
+            warn = (
+                f"⚠️ Figma export did NOT run for “{effective_figma_game}”, so the script still uses "
+                f"file pickers. Reason: {reason} "
+                "Fix: set FIGMA_TOKEN in the server env, make sure the game name matches the Figma board exactly, "
+                "and (for a new game) seed its node ids once via the Figma tab / figma_export.py --ids."
+            )
+
     ctx = _promotions_context(
         user=user,
         active_tab="gow",
-        gow=_gow_ns(form=form, error=error, result=result, console_script=console_script),
+        gow=_gow_ns(form=form, error=error, result=result, console_script=console_script, warn=warn),
     )
     return templates.TemplateResponse(request, "promotions.html", ctx)
+
+
+def _extract_figma_reason(output: str) -> str:
+    """Pull the human reason out of a gow_*.py Figma fallback WARN line."""
+    for line in output.splitlines():
+        low = line.lower()
+        if "falling back" in low or "figma export" in low:
+            # e.g. "  WARN  Figma export failed (Figma rate-limited (429)...); falling back..."
+            import re
+            m = re.search(r"\((.*)\)", line)
+            if m:
+                return m.group(1).strip()
+            return line.strip().lstrip("WARN").strip()
+    return "see the run output below."
 
 
 @router.post("/admin/parser-feeds")

@@ -22,14 +22,22 @@
   <label class="field"><span class="lbl">Page (name contains)</span>
     <input class="input" name="page" value="{{ form.page or '' }}" placeholder="GAME OF THE WEEK (JULY)">
   </label>
-  <label class="field"><span class="lbl">Game (for export)</span>
+  <label class="field"><span class="lbl">Game (for export / seed)</span>
     <input class="input" name="game" value="{{ form.game or '' }}" placeholder="SPIN & SCORE MEGAWAYS">
   </label>
-  <div style="display:flex;gap:8px">
+  <label class="field"><span class="lbl">Node ids (for seed)</span>
+    <input class="input mono" name="ids" value="{{ form.ids or '' }}" placeholder="popup_bg=1078:2286,email_hero=1078:2810,campaign=1078:2911">
+  </label>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
     <button class="btn" name="mode" value="inspect" style="justify-content:center">Inspect tree</button>
     <button class="btn primary" name="mode" value="export" style="justify-content:center">Export game images</button>
+    <button class="btn" name="mode" value="seed" style="justify-content:center">Seed node ids</button>
   </div>
-  <p class="help">Inspect lists every node with its size + id so we can confirm slot matching. Export renders this game's slots to PNG and previews them below.</p>
+  <p class="help">
+    <b>Export</b> renders a game's slots to PNG (needs the file tree; blocked while Figma is rate-limited).
+    <b>Seed</b> is the workaround for a new game while rate-limited: in Figma, select each slot layer and read its node id from the URL (<span class="mono">node-id=1078-2286</span> → use <span class="mono">1078:2286</span>); paste them as
+    <span class="mono">popup_bg=…,email_hero=…,campaign=…</span> and Seed. That caches the ids so the GOW “Pull images from Figma” toggle works for this game with no further tree fetch.
+  </p>
 </form>
 
 {% if images %}
