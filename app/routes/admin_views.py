@@ -18,8 +18,8 @@ from pathlib import Path
 from typing import List, Optional
 from urllib.parse import parse_qs, urlencode, urlparse
 
-from fastapi import APIRouter, Depends, Form, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from datetime import datetime, timedelta
@@ -697,6 +697,48 @@ def figma_run(
     ctx = _figma_context(form=form, result=result, error=error, images=images)
     ctx["current_user"] = user
     return templates.TemplateResponse(request, "figma.html", ctx)
+
+
+@router.get("/admin/promotions", response_class=HTMLResponse)
+def promotions_page(
+    request: Request,
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """Promotions hub: every promo automation (from journey-cloner/catalog.json)
+    plus all the generator scripts and captured templates behind them."""
+    from ..services import promotions_catalog as pc
+    cat = pc.load_catalog()
+    ctx = {
+        "active_page": "promotions",
+        "current_user": user,
+        "meta": cat.get("meta", {}),
+        "automations": pc.automations(),
+        "all_scripts": pc.all_scripts(),
+        "channels": cat.get("channels", []),
+        "segments": cat.get("segments", []),
+    }
+    return templates.TemplateResponse(request, "promotions.html", ctx)
+
+
+@router.get("/admin/promotions/download")
+def promotions_download(
+    path: str,
+    dl: str = "",
+    user: User = Depends(require_role("editor")),
+) -> FileResponse:
+    """Serve a single journey-cloner script/template. Inline for viewing in the
+    browser, or as an attachment when dl=1. Path-whitelisted to journey-cloner/."""
+    from ..services import promotions_catalog as pc
+    resolved = pc.resolve_script(path)
+    if resolved is None:
+        raise HTTPException(status_code=404, detail="Script not found.")
+    disposition = "attachment" if dl.strip() in ("1", "true", "yes") else "inline"
+    return FileResponse(
+        resolved,
+        media_type="text/plain; charset=utf-8",
+        filename=resolved.name,
+        content_disposition_type=disposition,
+    )
 
 
 @router.post("/admin/gow/console-script", response_class=HTMLResponse)
