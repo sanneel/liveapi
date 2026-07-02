@@ -131,30 +131,82 @@
 
       <div class="field">
         <span class="lbl">Promo date(s)</span>
-        <textarea class="input mono" name="date" required rows="3" spellcheck="false" placeholder="2026-07-22 2026-07-29 2026-08-05">{{ rnd.date or '' }}</textarea>
-        <p class="help" style="margin-top:6px">One date per promo (UTC 04:00 window), space/comma/newline separated. Enter several to create many randomizers in one paste.</p>
-      </div>
-      <div class="field">
-        <span class="lbl">Days <span style="color:var(--t-faint)">(optional)</span></span>
-        <input class="input" name="days" type="number" min="1" value="{{ rnd.days or '' }}"/>
-        <p class="help" style="margin-top:6px">Window length (applied to every date). Defaults per type (Scratch = 2).</p>
-      </div>
-
-      <div class="field">
-        <span class="lbl">Weights <span style="color:var(--t-faint)">(optional)</span></span>
-        <input class="input mono" name="weights" value="{{ rnd.weights or '' }}" placeholder="55 42 2.7 0.3"/>
-        <p class="help" style="margin-top:6px">Space-separated, in prize order. Must match the template's prize count.</p>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+          <input class="input" type="date" id="rnd-datepick" style="max-width:190px"/>
+          <button type="button" class="btn" id="rnd-adddate">Add date</button>
+        </div>
+        <div id="rnd-chips" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px"></div>
+        <input type="hidden" name="date" id="rnd-dates" value="{{ rnd.date or '' }}"/>
+        <p class="help" style="margin-top:6px">Pick a date from the calendar and click <b>Add</b> — repeat for as many promos as you want. Each date becomes one randomizer, all created in one paste.</p>
       </div>
 
-      <div class="field">
-        <span class="lbl">Journeys <span style="color:var(--t-faint)">(optional)</span></span>
-        <input class="input mono" name="journeys" value="{{ rnd.journeys or '' }}" placeholder="JRN-0-572381 JRN-0-572307 ..."/>
-        <p class="help" style="margin-top:6px">Space-separated routed journey ids, in prize order. Leave blank to keep the template's.</p>
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:2px">
+        <input type="checkbox" id="rnd-adv" {% if rnd.days or rnd.weights or rnd.journeys %}checked{% endif %}/>
+        <span class="lbl" style="margin:0">Advanced options <span style="color:var(--t-faint)">(days, weights, journeys)</span></span>
+      </label>
+
+      <div id="rnd-adv-fields" style="display:{% if rnd.days or rnd.weights or rnd.journeys %}flex{% else %}none{% endif %}; flex-direction:column; gap:14px">
+        <div class="field">
+          <span class="lbl">Days</span>
+          <input class="input" name="days" type="number" min="1" value="{{ rnd.days or '' }}"/>
+          <p class="help" style="margin-top:6px">Window length (applied to every date). Defaults per type (Scratch = 2).</p>
+        </div>
+        <div class="field">
+          <span class="lbl">Weights</span>
+          <input class="input mono" name="weights" value="{{ rnd.weights or '' }}" placeholder="55 42 2.7 0.3"/>
+          <p class="help" style="margin-top:6px">Space-separated, in prize order. Must match the template's prize count.</p>
+        </div>
+        <div class="field">
+          <span class="lbl">Journeys</span>
+          <input class="input mono" name="journeys" value="{{ rnd.journeys or '' }}" placeholder="JRN-0-572381 JRN-0-572307 ..."/>
+          <p class="help" style="margin-top:6px">Space-separated routed journey ids, in prize order. Leave blank to keep the template's.</p>
+        </div>
       </div>
 
       <button class="btn primary" style="justify-content:center">Generate console script</button>
       <p class="help">The script creates the randomizer draft then fills it. Set <span class="mono">PREVIEW=true</span> at the top to inspect the request bodies before sending.</p>
     </form>
+    <script>
+      (function () {
+        var pick = document.getElementById('rnd-datepick'),
+            add = document.getElementById('rnd-adddate'),
+            chips = document.getElementById('rnd-chips'),
+            hidden = document.getElementById('rnd-dates'),
+            adv = document.getElementById('rnd-adv'),
+            advFields = document.getElementById('rnd-adv-fields');
+        if (!hidden) return;
+        var dates = (hidden.value.match(/\d{4}-\d{2}-\d{2}/g) || []);
+        function render() {
+          chips.innerHTML = '';
+          dates.forEach(function (d, i) {
+            var c = document.createElement('span');
+            c.className = 'chip';
+            c.style.cssText = 'display:inline-flex; align-items:center; gap:6px; padding:4px 10px; font-size:13px';
+            c.appendChild(document.createTextNode(d));
+            var x = document.createElement('a');
+            x.href = '#'; x.textContent = '✕'; x.title = 'remove';
+            x.style.cssText = 'text-decoration:none; color:#b91c1c; font-weight:700';
+            x.addEventListener('click', function (e) { e.preventDefault(); dates.splice(i, 1); render(); });
+            c.appendChild(x); chips.appendChild(c);
+          });
+          hidden.value = dates.join(' ');
+        }
+        function addDate() {
+          var v = pick.value; if (!v) return;
+          if (dates.indexOf(v) === -1) { dates.push(v); dates.sort(); }
+          pick.value = ''; render();
+        }
+        add.addEventListener('click', addDate);
+        pick.addEventListener('change', addDate);   // picking from the calendar adds it
+        if (adv && advFields) adv.addEventListener('change', function () { advFields.style.display = adv.checked ? 'flex' : 'none'; });
+        // block submit with no dates (hidden field can't use `required`)
+        var form = hidden.form;
+        if (form) form.addEventListener('submit', function (e) {
+          if (!hidden.value.trim()) { e.preventDefault(); pick.focus(); alert('Add at least one promo date.'); }
+        });
+        render();
+      })();
+    </script>
 
     <div class="col-main stack">
       {% if rnd.console_script %}
