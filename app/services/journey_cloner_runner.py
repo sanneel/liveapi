@@ -378,20 +378,25 @@ def generate_randomizer_console_script(
     weights: str = "",
     journeys: str = "",
 ) -> Tuple[int, str, str, str | None, str]:
-    """Generate the console script for a Randomizer promo (Sport WOF, Casino WOF,
-    or Raspa y Gana scratch card). Prizes/segment/visual come from the captured
-    template; only dates, name and optional weights/journeys change.
+    """Generate the console script for one or MORE Randomizer promos (Sport WOF,
+    Casino WOF, or Raspa y Gana scratch card). `date` may hold several dates
+    (space/comma/newline separated) -> one draft per date, created in one paste.
+    Prizes/segment/visual come from the captured template; only dates, name and
+    optional weights/journeys change.
 
     Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
     """
     if kind not in RANDOMIZER_KINDS:
         raise ValueError(f"Unknown randomizer kind: {kind}")
-    basename = _unique_basename(f"randomizer_{kind}", date)
+    dates = [d for d in re.split(r"[\s,;]+", date.strip()) if d]
+    if not dates:
+        raise ValueError("At least one date is required.")
+    basename = _unique_basename(f"randomizer_{kind}", dates[0])
     cmd = [
         python_executable(),
         str(RANDOMIZER_SCRIPT_PATH),
         "--kind", kind,
-        "--date", date.strip(),
+        "--dates", *dates,
         "--name", basename,
     ]
     if days.strip():

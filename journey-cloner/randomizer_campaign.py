@@ -21,8 +21,12 @@ the first error. Randomizer drafts are drafts (not published), so a wrong call
 just 404s and creates nothing to clean up. Set PREVIEW=true at the top of the
 script to log the two request bodies without sending them.
 
+Many dates at once: pass --dates to create one draft per date in a single
+console paste (same prizes/segment/visual, per-date name + window).
+
 Usage:
   python randomizer_campaign.py --kind sport_wof     --date 2026-07-06
+  python randomizer_campaign.py --kind sport_wof     --dates 2026-07-06 2026-07-13 2026-07-20
   python randomizer_campaign.py --kind casino_wof    --date 2026-07-06
   python randomizer_campaign.py --kind casino_scratch --date 2026-07-06 --days 2
 
@@ -165,12 +169,13 @@ def verify(body: dict) -> list[tuple[bool, str]]:
 
 
 JS_TEMPLATE = r"""// Randomizer console script — @LABEL@ — generated @GENERATED_AT@
-// internalName: @INTERNAL_NAME@
+// randomizers: @INTERNAL_NAME@
 //
 // Paste into the DevTools console on a logged-in backoffice tab. It:
 //   1. captures the auth token from the page's own requests,
-//   2. creates a randomizer draft (POST /promo/v2/promo-drafts/randomizer),
-//   3. fills it (@FLOW_DESC@).
+//   2. for EACH randomizer in the batch: creates a draft
+//      (POST /promo/v2/promo-drafts/randomizer) then fills it (@FLOW_DESC@).
+// One bad one doesn't stop the rest; a summary prints at the end.
 // Set PREVIEW=true to log the request bodies WITHOUT sending them.
 (async () => {
   'use strict';
@@ -179,7 +184,7 @@ JS_TEMPLATE = r"""// Randomizer console script — @LABEL@ — generated @GENERA
   const BASE = @BASE_URL@;
   const BRAND = @BRAND@;
   const FLOW = @FLOW@;             // 'create_put' | 'draftid_post'
-  const PAYLOAD = @PAYLOAD@;
+  const PAYLOADS = @PAYLOADS@;     // one randomizer body per date
   const CRM_BASE = BASE.replace(/\/journey-builder\/v0$/, '');
 
   const decodeJwt = (t) => { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); } catch (e) { return null; } };
@@ -206,34 +211,41 @@ JS_TEMPLATE = r"""// Randomizer console script — @LABEL@ — generated @GENERA
   const headers = () => ({ accept: 'application/json, text/plain, */*', authorization: auth, 'content-type': 'application/json', 'x-brand': BRAND });
 
   if (PREVIEW) {
-    console.log('%cPREVIEW — not sending. Create-draft body then fill body:', 'color:#eab308;font-weight:bold');
-    console.log(JSON.stringify(PAYLOAD, null, 2));
+    console.log('%cPREVIEW — not sending. ' + PAYLOADS.length + ' randomizer(s):', 'color:#eab308;font-weight:bold');
+    PAYLOADS.forEach((P) => console.log(P.internalName + '  (' + P.showDate + ')', P));
     return;
   }
 
-  // 1) create the draft
-  console.log('Creating randomizer draft...');
-  let r = await fetch(CRM_BASE + '/promo/v2/promo-drafts/randomizer', { method: 'POST', headers: headers(), credentials: 'include', body: JSON.stringify(PAYLOAD) });
-  let resp = await r.text();
-  if (!r.ok) { console.error('FAILED create HTTP ' + r.status, resp); throw new Error('Randomizer draft not created.'); }
-  let created = {}; try { created = JSON.parse(resp); } catch (e) {}
-  const id = created.id || created.draftId || created.promotionDraftId || (created.data && created.data.id);
-  if (!id) { console.error('Create response had no id:', resp); throw new Error('Could not read the new draft id from the create response.'); }
-  console.log('%c  draft created: ' + id, 'color:#22c55e');
-
-  // 2) fill it
-  if (FLOW === 'draftid_post') {
-    console.log('Filling draft via POST /promo/v2/randomizer?draftId=' + id);
-    r = await fetch(CRM_BASE + '/promo/v2/randomizer?draftId=' + encodeURIComponent(id), { method: 'POST', headers: headers(), credentials: 'include', body: JSON.stringify(PAYLOAD) });
-  } else {
-    console.log('Saving draft via PUT /promo/v2/randomizer/' + id);
-    r = await fetch(CRM_BASE + '/promo/v2/randomizer/' + encodeURIComponent(id), { method: 'PUT', headers: headers(), credentials: 'include', body: JSON.stringify({ ...PAYLOAD, id: id }) });
+  // create one draft then fill it; returns the new draft id
+  async function createOne(P) {
+    let r = await fetch(CRM_BASE + '/promo/v2/promo-drafts/randomizer', { method: 'POST', headers: headers(), credentials: 'include', body: JSON.stringify(P) });
+    let resp = await r.text();
+    if (!r.ok) throw new Error('create HTTP ' + r.status + ' ' + resp);
+    let created = {}; try { created = JSON.parse(resp); } catch (e) {}
+    const id = created.id || created.draftId || created.promotionDraftId || (created.data && created.data.id);
+    if (!id) throw new Error('no draft id in create response: ' + resp);
+    if (FLOW === 'draftid_post') {
+      r = await fetch(CRM_BASE + '/promo/v2/randomizer?draftId=' + encodeURIComponent(id), { method: 'POST', headers: headers(), credentials: 'include', body: JSON.stringify(P) });
+    } else {
+      r = await fetch(CRM_BASE + '/promo/v2/randomizer/' + encodeURIComponent(id), { method: 'PUT', headers: headers(), credentials: 'include', body: JSON.stringify({ ...P, id: id }) });
+    }
+    resp = await r.text();
+    if (!r.ok) throw new Error('draft ' + id + ' created but fill failed HTTP ' + r.status + ' ' + resp);
+    return id;
   }
-  resp = await r.text();
-  if (!r.ok) { console.error('FAILED fill HTTP ' + r.status, resp); throw new Error('Randomizer draft ' + id + ' was created but not filled — check it in the UI.'); }
 
-  console.log('%cDONE.', 'color:#22c55e;font-weight:bold;font-size:14px');
-  console.log('  Randomizer draft: ' + id + '  (' + PAYLOAD.internalName + ')');
+  console.log('Creating ' + PAYLOADS.length + ' randomizer draft(s)...');
+  const ok = [], fail = [];
+  for (const P of PAYLOADS) {
+    console.log('  ' + P.internalName + ' ...');
+    try { const id = await createOne(P); ok.push({ name: P.internalName, id }); console.log('%c    ✓ ' + id, 'color:#22c55e'); }
+    catch (e) { const msg = String((e && e.message) || e); fail.push({ name: P.internalName, err: msg }); console.error('    ✗ ' + P.internalName + ' — ' + msg); }
+  }
+
+  console.log('%cDONE — ' + ok.length + ' created, ' + fail.length + ' failed.',
+              'color:' + (fail.length ? '#f59e0b' : '#22c55e') + ';font-weight:bold;font-size:14px');
+  ok.forEach((o) => console.log('  ✓ ' + o.id + '  (' + o.name + ')'));
+  fail.forEach((f) => console.log('  ✗ ' + f.name + ' — ' + f.err));
 })();
 """
 
@@ -243,48 +255,83 @@ FLOW_DESC = {
 }
 
 
-def build_js(kind: str, body: dict) -> str:
+def build_js(kind: str, bodies: list[dict]) -> str:
     cfg = KINDS[kind]
-    brand = (body.get("currencies") or [{}])[0].get("brand", "JBCL")
+    brand = (bodies[0].get("currencies") or [{}])[0].get("brand", "JBCL")
+    names = ", ".join(str(b.get("internalName", "")) for b in bodies)
+    header = f"{len(bodies)}: {names}"
     js = JS_TEMPLATE
     js = js.replace("@LABEL@", cfg["label"])
     js = js.replace("@GENERATED_AT@", datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"))
-    js = js.replace("@INTERNAL_NAME@", str(body.get("internalName", "")))
+    js = js.replace("@INTERNAL_NAME@", header)
     js = js.replace("@FLOW_DESC@", FLOW_DESC[cfg["flow"]])
     js = js.replace("@BASE_URL@", json.dumps(DEFAULT_BASE_URL))
     js = js.replace("@BRAND@", json.dumps(brand))
     js = js.replace("@FLOW@", json.dumps(cfg["flow"]))
-    js = js.replace("@PAYLOAD@", json.dumps(body, ensure_ascii=False))
+    js = js.replace("@PAYLOADS@", json.dumps(bodies, ensure_ascii=False))
     return js
+
+
+def _split_dates(raw: list[str]) -> list[str]:
+    """Flatten dates given as repeated args and/or comma/space/newline lists."""
+    out: list[str] = []
+    for chunk in raw:
+        for tok in re.split(r"[\s,;]+", chunk.strip()):
+            if tok:
+                out.append(tok)
+    # de-dupe, keep order
+    seen, uniq = set(), []
+    for d in out:
+        if d not in seen:
+            seen.add(d); uniq.append(d)
+    return uniq
 
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--kind", required=True, choices=sorted(KINDS), help="which randomizer to build")
-    p.add_argument("--date", required=True, help="promo start date YYYY-MM-DD (UTC promo day)")
+    p.add_argument("--date", help="single promo date YYYY-MM-DD (UTC promo day)")
+    p.add_argument("--dates", nargs="+", help="MANY promo dates -> one draft each, created in one script "
+                                              "(space/comma/newline separated, e.g. 2026-07-22 2026-07-29)")
     p.add_argument("--days", type=int, help="window length in days (default per kind)")
-    p.add_argument("--internal-name", default="", help="override internalName")
-    p.add_argument("--url-short", default="", help="override urlShortName")
-    p.add_argument("--weights", nargs="+", help="prize weights, in template prize order")
-    p.add_argument("--journeys", nargs="+", help="routed journeyIds, in template prize order")
+    p.add_argument("--internal-name", default="", help="override internalName (single date only)")
+    p.add_argument("--url-short", default="", help="override urlShortName (single date only)")
+    p.add_argument("--weights", nargs="+", help="prize weights, in template prize order (applied to every date)")
+    p.add_argument("--journeys", nargs="+", help="routed journeyIds, in template prize order (applied to every date)")
     p.add_argument("--name", default="", help="output basename (default: <kind>)")
-    p.add_argument("--dry-run", action="store_true", help="write the prepared body to out/ instead of a script")
+    p.add_argument("--dry-run", action="store_true", help="write the prepared bodies to out/ instead of a script")
     args = p.parse_args()
 
-    body, report = prepare(
-        args.kind, args.date, days=args.days,
-        internal_name=args.internal_name, url_short=args.url_short,
-        weights=args.weights, journeys=args.journeys,
-    )
-    print(f"{KINDS[args.kind]['label']} — applied:")
-    for line in report:
-        print("  " + line)
+    dates = _split_dates(args.dates) if args.dates else ([args.date] if args.date else [])
+    if not dates:
+        print("Pass --date YYYY-MM-DD, or --dates D1 D2 ... for a batch.", file=sys.stderr)
+        return 1
+    if len(dates) > 1 and (args.internal_name or args.url_short):
+        print("--internal-name/--url-short only make sense with a single date "
+              "(each date is auto-named); drop them for a batch.", file=sys.stderr)
+        return 1
+
+    bodies: list[dict] = []
+    print(f"{KINDS[args.kind]['label']} — {len(dates)} randomizer(s):")
+    for d in dates:
+        body, report = prepare(
+            args.kind, d, days=args.days,
+            internal_name=args.internal_name, url_short=args.url_short,
+            weights=args.weights, journeys=args.journeys,
+        )
+        bodies.append(body)
+        print(f"  • {d}:")
+        for line in report:
+            print("      " + line)
 
     print("Verification:")
     all_ok = True
-    for ok, msg in verify(body):
-        print(f"  {'OK  ' if ok else 'FAIL'} {msg}")
-        all_ok = all_ok and ok
+    for body in bodies:
+        for ok, msg in verify(body):
+            if not ok:
+                print(f"  FAIL [{body.get('internalName')}] {msg}")
+            all_ok = all_ok and ok
+    print(f"  {'OK  ' if all_ok else 'FAIL'} {len(bodies)} body(ies) verified")
     if not all_ok:
         print("\nVERIFICATION FAILED — not writing output.", file=sys.stderr)
         return 1
@@ -293,15 +340,16 @@ def main() -> int:
     if args.dry_run:
         out = Path("out"); out.mkdir(exist_ok=True)
         path = out / f"{basename}_randomizer.json"
-        path.write_text(json.dumps(body, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(f"\nDry run — body written: {path}")
+        payload = bodies[0] if len(bodies) == 1 else bodies
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"\nDry run — {len(bodies)} body(ies) written: {path}")
         return 0
 
-    js = build_js(args.kind, body)
+    js = build_js(args.kind, bodies)
     out = Path("console_scripts"); out.mkdir(exist_ok=True)
     path = out / f"{basename}_console.js"
     path.write_text(js, encoding="utf-8")
-    print(f"\nConsole script written: {path}")
+    print(f"\nConsole script written: {path}  ({len(bodies)} randomizer(s) in one paste)")
     print("Paste it into the DevTools console on a logged-in backoffice tab.")
     print("Tip: set PREVIEW=true at the top of the script to inspect the request bodies first.")
     return 0

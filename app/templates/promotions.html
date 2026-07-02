@@ -129,17 +129,15 @@
         </select>
       </div>
 
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
-        <div class="field">
-          <span class="lbl">Promo date</span>
-          <input class="input" name="date" type="date" required value="{{ rnd.date or '' }}"/>
-          <p class="help" style="margin-top:6px">The promo day (UTC 04:00 window).</p>
-        </div>
-        <div class="field">
-          <span class="lbl">Days <span style="color:var(--t-faint)">(optional)</span></span>
-          <input class="input" name="days" type="number" min="1" value="{{ rnd.days or '' }}"/>
-          <p class="help" style="margin-top:6px">Window length. Defaults per type (Scratch = 2).</p>
-        </div>
+      <div class="field">
+        <span class="lbl">Promo date(s)</span>
+        <textarea class="input mono" name="date" required rows="3" spellcheck="false" placeholder="2026-07-22 2026-07-29 2026-08-05">{{ rnd.date or '' }}</textarea>
+        <p class="help" style="margin-top:6px">One date per promo (UTC 04:00 window), space/comma/newline separated. Enter several to create many randomizers in one paste.</p>
+      </div>
+      <div class="field">
+        <span class="lbl">Days <span style="color:var(--t-faint)">(optional)</span></span>
+        <input class="input" name="days" type="number" min="1" value="{{ rnd.days or '' }}"/>
+        <p class="help" style="margin-top:6px">Window length (applied to every date). Defaults per type (Scratch = 2).</p>
       </div>
 
       <div class="field">
