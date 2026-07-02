@@ -177,6 +177,8 @@ JS_TEMPLATE = r"""// Randomizer console script — @LABEL@ — generated @GENERA
 //      (POST /promo/v2/promo-drafts/randomizer) then fills it (@FLOW_DESC@).
 // One bad one doesn't stop the rest; a summary prints at the end.
 // Set PREVIEW=true to log the request bodies WITHOUT sending them.
+// Set DEBUG=true to create ONE draft and print the create response (to find
+// the right fill identifier) without attempting the fill.
 (async () => {
   'use strict';
   const PREVIEW = false;
@@ -216,12 +218,23 @@ JS_TEMPLATE = r"""// Randomizer console script — @LABEL@ — generated @GENERA
     return;
   }
 
+  // While the exact fill identifier is being confirmed, DEBUG=true creates ONE
+  // draft, logs the full create response (so we can see which field is the
+  // randomization id), and does NOT attempt the fill — avoids piling up orphans.
+  const DEBUG = @DEBUG@;
+
   // create one draft then fill it; returns the new draft id
   async function createOne(P) {
     let r = await fetch(CRM_BASE + '/promo/v2/promo-drafts/randomizer', { method: 'POST', headers: headers(), credentials: 'include', body: JSON.stringify(P) });
     let resp = await r.text();
     if (!r.ok) throw new Error('create HTTP ' + r.status + ' ' + resp);
     let created = {}; try { created = JSON.parse(resp); } catch (e) {}
+    if (DEBUG) {
+      console.log('%cCREATE RESPONSE (copy this whole object to share):', 'color:#eab308;font-weight:bold');
+      console.log(JSON.stringify(created, null, 2));
+      console.log('%ctop-level keys: ' + Object.keys(created).join(', '), 'color:#eab308');
+      throw new Error('DEBUG mode — stopped before fill so nothing else is created. See CREATE RESPONSE above.');
+    }
     const id = created.id || created.draftId || created.promotionDraftId || (created.data && created.data.id);
     if (!id) throw new Error('no draft id in create response: ' + resp);
     if (FLOW === 'draftid_post') {
@@ -236,7 +249,8 @@ JS_TEMPLATE = r"""// Randomizer console script — @LABEL@ — generated @GENERA
     return id;
   }
 
-  console.log('Creating ' + PAYLOADS.length + ' randomizer draft(s)...');
+  const QUEUE = DEBUG ? PAYLOADS.slice(0, 1) : PAYLOADS;
+  console.log('Creating ' + QUEUE.length + ' randomizer draft(s)...' + (DEBUG ? ' (DEBUG: 1 only, no fill)' : ''));
   const ok = [], fail = [];
   for (const P of PAYLOADS) {
     console.log('  ' + P.internalName + ' ...');
@@ -257,7 +271,7 @@ FLOW_DESC = {
 }
 
 
-def build_js(kind: str, bodies: list[dict]) -> str:
+def build_js(kind: str, bodies: list[dict], debug: bool = False) -> str:
     cfg = KINDS[kind]
     brand = (bodies[0].get("currencies") or [{}])[0].get("brand", "JBCL")
     names = ", ".join(str(b.get("internalName", "")) for b in bodies)
@@ -271,6 +285,7 @@ def build_js(kind: str, bodies: list[dict]) -> str:
     js = js.replace("@BRAND@", json.dumps(brand))
     js = js.replace("@FLOW@", json.dumps(cfg["flow"]))
     js = js.replace("@PAYLOADS@", json.dumps(bodies, ensure_ascii=False))
+    js = js.replace("@DEBUG@", "true" if debug else "false")
     return js
 
 
@@ -302,6 +317,8 @@ def main() -> int:
     p.add_argument("--journeys", nargs="+", help="routed journeyIds, in template prize order (applied to every date)")
     p.add_argument("--name", default="", help="output basename (default: <kind>)")
     p.add_argument("--dry-run", action="store_true", help="write the prepared bodies to out/ instead of a script")
+    p.add_argument("--debug", action="store_true", help="emit a script that creates ONE draft and logs the create "
+                                                        "response without filling (to inspect the id fields)")
     args = p.parse_args()
 
     dates = _split_dates(args.dates) if args.dates else ([args.date] if args.date else [])
@@ -347,7 +364,7 @@ def main() -> int:
         print(f"\nDry run — {len(bodies)} body(ies) written: {path}")
         return 0
 
-    js = build_js(args.kind, bodies)
+    js = build_js(args.kind, bodies, debug=args.debug)
     out = Path("console_scripts"); out.mkdir(exist_ok=True)
     path = out / f"{basename}_console.js"
     path.write_text(js, encoding="utf-8")
