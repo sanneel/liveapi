@@ -80,7 +80,9 @@ KINDS: dict[str, dict] = {
         "days_default": 1,
         "date_offsets": {"show": (0, "04:01"), "start": (0, "04:02"),
                          "end": ("+days", "03:58"), "hide": ("+days", "03:59")},
-        "url_short": lambda promo, end: promo.strftime("%d-%m-%y"),
+        # urlShortName must be globally unique (a bare date 409s
+        # "UrlShortNameAlreadyUsed"); prefix it per type like Sport WOF.
+        "url_short": lambda promo, end: f"casino-wof-{promo.day:02d}-{promo.month:02d}-{promo.year}",
     },
     "casino_scratch": {
         "label": "Raspa y Gana (Scratch Card)",
@@ -91,7 +93,7 @@ KINDS: dict[str, dict] = {
         "days_default": 2,
         "date_offsets": {"show": (0, "04:00"), "start": (0, "04:01"),
                          "end": ("+days", "03:59"), "hide": ("+days", "04:00")},
-        "url_short": lambda promo, end: promo.strftime("%d-%m-%y"),
+        "url_short": lambda promo, end: f"raspa-{promo.day:02d}-{promo.month:02d}-{promo.year}",
     },
 }
 
