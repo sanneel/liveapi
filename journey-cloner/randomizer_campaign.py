@@ -227,7 +227,9 @@ JS_TEMPLATE = r"""// Randomizer console script — @LABEL@ — generated @GENERA
     if (FLOW === 'draftid_post') {
       r = await fetch(CRM_BASE + '/promo/v2/randomizer?draftId=' + encodeURIComponent(id), { method: 'POST', headers: headers(), credentials: 'include', body: JSON.stringify(P) });
     } else {
-      r = await fetch(CRM_BASE + '/promo/v2/randomizer/' + encodeURIComponent(id), { method: 'PUT', headers: headers(), credentials: 'include', body: JSON.stringify({ ...P, id: id }) });
+      // the fill model wants id as a STRING (a numeric id 400s with
+      // "$.id could not be converted to System.String").
+      r = await fetch(CRM_BASE + '/promo/v2/randomizer/' + encodeURIComponent(id), { method: 'PUT', headers: headers(), credentials: 'include', body: JSON.stringify({ ...P, id: String(id) }) });
     }
     resp = await r.text();
     if (!r.ok) throw new Error('draft ' + id + ' created but fill failed HTTP ' + r.status + ' ' + resp);
