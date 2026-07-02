@@ -8,13 +8,15 @@ segment (filterConditions) and visual bundle (contentId/frontId) from the
 template and only re-date + re-name the promo for a new run. Prize weights and
 the routed journeys can be overridden.
 
-Two creation flows are used by the backoffice (captured in each template's
-_meta.endpoint):
+Creation flow (all three kinds, matching the Sport WOF console script):
 
-  * casino_wof / casino_scratch:  POST /promo/v2/promo-drafts/randomizer  (create
-    the draft, returns its id)  →  PUT /promo/v2/randomizer/<id>  (save details).
-  * sport_wof:  POST /promo/v2/promo-drafts/randomizer  (create draft) →
-    POST /promo/v2/randomizer?draftId=<id>  (fill it).
+  POST /promo/v2/promo-drafts/randomizer   -> create the draft, returns a
+                                              numeric draft id
+  POST /promo/v2/randomizer?draftId=<id>   -> fill that draft with the body
+
+(The PUT /promo/v2/randomizer/<id> variant expects a different randomization
+GUID and 422s "Invalid Randomization identifier" on the numeric draft id, so we
+use the query-param fill the working Sport WOF script uses.)
 
 The generated script creates the draft, then fills it — heavy logging, stops at
 the first error. Randomizer drafts are drafts (not published), so a wrong call
@@ -69,7 +71,10 @@ KINDS: dict[str, dict] = {
     "casino_wof": {
         "label": "Casino Wheel of Fortune",
         "template": HERE / "templates" / "casino" / "casino_wof_randomizer.json",
-        "flow": "create_put",     # PUT /promo/v2/randomizer/<id>
+        # Same fill as Sport WOF: POST /promo/v2/randomizer?draftId=<numeric draft
+        # id>. The PUT /randomizer/<id> variant wants a different randomization
+        # GUID and 422s "Invalid Randomization identifier" on the draft id.
+        "flow": "draftid_post",
         "name_prefix": "JBCL|CS|WOF|",
         "name_fmt": "%d.%m.%y",
         "days_default": 1,
@@ -80,7 +85,7 @@ KINDS: dict[str, dict] = {
     "casino_scratch": {
         "label": "Raspa y Gana (Scratch Card)",
         "template": HERE / "templates" / "casino" / "raspaygana_scratchcard.json",
-        "flow": "create_put",
+        "flow": "draftid_post",   # same query-param fill as Sport WOF
         "name_prefix": "FTCL|CS|FDSC|",
         "name_fmt": "%d.%m",
         "days_default": 2,
