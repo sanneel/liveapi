@@ -1963,10 +1963,15 @@ def refresh_once(key: Tuple[str, str]) -> None:
     attempt_epoch = int(time.time())
     with _state_lock:
         prev = _state[key]
+        was_ok = bool(prev.meta.get("ok"))
         prev.meta = {
             **prev.meta,
-            "ok": False,
-            "error": "refresh in progress",
+            # A refresh can wait in the single Playwright queue for minutes.
+            # Keep last-known health while the next attempt is in flight;
+            # otherwise every healthy feed flickers to failing on each cycle.
+            "ok": was_ok,
+            "error": None if was_ok else "refresh in progress",
+            "refresh_in_progress": True,
             "last_attempt_epoch": attempt_epoch,
             "source_url": url,
             "sport": sport,
@@ -2015,6 +2020,7 @@ def refresh_once(key: Tuple[str, str]) -> None:
                     "ok": False,
                     "error": reason,
                     "empty": True,
+                    "refresh_in_progress": False,
                     "last_attempt_epoch": attempt_epoch,
                     "last_updated_epoch": now_epoch,
                     "last_success_epoch": prev_success,
@@ -2035,6 +2041,8 @@ def refresh_once(key: Tuple[str, str]) -> None:
                 meta={
                     "ok": True,
                     "error": None,
+                    "empty": False,
+                    "refresh_in_progress": False,
                     "last_attempt_epoch": attempt_epoch,
                     "last_updated_epoch": now_epoch,
                     "last_success_epoch": now_epoch,
@@ -2106,6 +2114,7 @@ def refresh_once(key: Tuple[str, str]) -> None:
             prev.meta = {
                 "ok": False,
                 "error": str(e),
+                "refresh_in_progress": False,
                 "last_attempt_epoch": attempt_epoch,
                 "last_updated_epoch": now_epoch,
                 "last_success_epoch": last_success,
@@ -2793,6 +2802,7 @@ def feed_health_snapshot() -> Dict[str, Any]:
                 "health": health,
                 "ok": bool(meta.get("ok")),
                 "error": meta.get("error"),
+                "refresh_in_progress": bool(meta.get("refresh_in_progress")),
                 "count": int(meta.get("count") or 0),
                 "age_seconds_since_success": age_ok,
                 "age_seconds_since_attempt": age_any,
@@ -2925,6 +2935,7 @@ def health() -> Dict[str, Any]:
             feeds[f"{key[0]}/{key[1]}"] = {
                 "ok": bool(meta.get("ok")),
                 "error": meta.get("error"),
+                "refresh_in_progress": bool(meta.get("refresh_in_progress")),
                 "last_attempt_epoch": meta.get("last_attempt_epoch"),
                 "last_updated_epoch": meta.get("last_updated_epoch"),
                 "count": meta.get("count", 0),
