@@ -2341,6 +2341,7 @@ def _run_migrations_on_startup() -> None:
 # silently-dead thread and respawn it. The dict is keyed by FEEDS key.
 _feed_threads: Dict[Tuple[str, str], threading.Thread] = {}
 _feed_threads_lock = threading.Lock()
+_feed_no_success_warned: Dict[Tuple[str, str], bool] = {}
 
 
 def _spawn_feed_thread(key: Tuple[str, str], initial_delay: float = 0.0) -> None:
@@ -2409,11 +2410,11 @@ def _feed_watchdog_loop() -> None:
     every feed thread is silently parked on `fut.result(timeout=600)` and
     the system looks "fine" except no data is ever produced.
 
-    A feed is considered dead when EITHER:
-      * its thread object is missing or not alive, OR
-      * meta.last_success_epoch is None AND the thread has been running for
-        more than (3 * REFRESH_SECONDS) seconds (first fetch should have
-        completed by then; if not, the thread is probably wedged).
+    A feed is considered dead only when its thread object is missing or not
+    alive. A live thread with no successful parse yet is left alone: empty
+    feeds, soft-blocked feeds, or newly added parser links can legitimately
+    have no success for a while, and respawning them duplicates work until the
+    process wedges.
     """
     global _pw_worker_started
     started_at = time.time()
@@ -2446,11 +2447,21 @@ def _feed_watchdog_loop() -> None:
                 t = threads.get(key)
                 alive = bool(t and t.is_alive())
                 last_success, _last_attempt = snap.get(key, (None, None))
-                stuck = (
-                    last_success is None
+                first_success_missing = (
+                    alive
+                    and last_success is None
                     and (now - started_at) > grace
                 )
-                if not alive or stuck:
+                if first_success_missing:
+                    if not _feed_no_success_warned.get(key):
+                        logger.warning(
+                            f"watchdog: feed {key} is alive but has not produced "
+                            f"a successful parse yet; not respawning duplicate "
+                            f"thread"
+                        )
+                        _feed_no_success_warned[key] = True
+                    continue
+                if not alive:
                     logger.warning(
                         f"watchdog: respawning feed {key} "
                         f"(alive={alive}, last_success={last_success})"

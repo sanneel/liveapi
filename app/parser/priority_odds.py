@@ -16,11 +16,11 @@ Featured league set, recomputed each pass:
 
 from __future__ import annotations
 
-import re
 import threading
 import time
 from collections import defaultdict
-from typing import Dict, List, Set, Tuple
+from typing import Dict, Set, Tuple
+from urllib.parse import parse_qsl, urlparse
 
 from ..database import db_session
 from ..logging_config import get_logger
@@ -30,8 +30,6 @@ from ..repositories.match_repo import MatchRepository
 from .embedded_odds import fetch_embedded
 from .extra_feeds import load_extra_feeds
 
-_TID_RE = re.compile(r"tournaments=([0-9a-fA-F,]+)")
-
 logger = get_logger("app.parser.priority_odds")
 
 PRIORITY_INTERVAL_SECONDS = 45.0
@@ -39,6 +37,36 @@ WORLDCUP_TID = "c19cb5ffb4404c31b869b53dd90161de"
 _SITE = "https://jugabet.cl"
 # Sports whose overlay pages we know follow the /<sport>/all/1 pattern.
 _KNOWN_SPORTS = {"football", "basketball", "tennis", "cybersport", "boxing", "mma", "ufc"}
+_priority_started = False
+_priority_start_lock = threading.Lock()
+_tid_backoff_until: Dict[Tuple[str, str], float] = {}
+_tid_backoff_lock = threading.Lock()
+_EMPTY_BACKOFF_SECONDS = 5 * 60
+
+
+def _tournament_ids_from_url(url: str) -> Set[str]:
+    """Extract Jugabet tournament ids from normal or copied SPA URLs."""
+    out: Set[str] = set()
+    parsed = urlparse(str(url or ""))
+    query_parts = [parsed.query]
+    if parsed.fragment:
+        frag = urlparse(parsed.fragment)
+        fragment_query = frag.query or parsed.fragment.partition("?")[2]
+        if not fragment_query and "=" in parsed.fragment:
+            fragment_query = parsed.fragment.lstrip("?#")
+        query_parts.append(fragment_query)
+    for query in query_parts:
+        if not query:
+            continue
+        for key, value in parse_qsl(query, keep_blank_values=False):
+            normalized_key = key.lower().removesuffix("[]")
+            if normalized_key not in {"tournament", "tournaments"}:
+                continue
+            for tid in value.split(","):
+                tid = tid.strip()
+                if tid:
+                    out.add(tid)
+    return out
 
 
 def collect_priority_tids() -> Dict[str, Set[str]]:
@@ -77,11 +105,8 @@ def collect_priority_tids() -> Dict[str, Set[str]]:
             if not feed.get("enabled", True):
                 continue
             sport = str(feed.get("sport") or "")
-            m = _TID_RE.search(str(feed.get("url") or ""))
-            if sport in _KNOWN_SPORTS and m:
-                for tid in m.group(1).split(","):
-                    if tid:
-                        out[sport].add(tid)
+            if sport in _KNOWN_SPORTS:
+                out[sport].update(_tournament_ids_from_url(str(feed.get("url") or "")))
     except Exception:
         logger.exception("priority_odds: extra-feed tids failed")
     return out
@@ -89,6 +114,43 @@ def collect_priority_tids() -> Dict[str, Set[str]]:
 
 def _overlay_url(sport: str, tid: str) -> str:
     return f"{_SITE}/{sport}/all/1?tournaments={tid}"
+
+
+def _tid_backoff_remaining(sport: str, tid: str) -> float:
+    key = (sport, tid)
+    with _tid_backoff_lock:
+        until = _tid_backoff_until.get(key)
+    if not until:
+        return 0.0
+    remaining = until - time.monotonic()
+    if remaining <= 0:
+        with _tid_backoff_lock:
+            _tid_backoff_until.pop(key, None)
+        return 0.0
+    return remaining
+
+
+def _set_tid_backoff(sport: str, tid: str, seconds: int) -> None:
+    with _tid_backoff_lock:
+        _tid_backoff_until[(sport, tid)] = time.monotonic() + max(1, seconds)
+
+
+def _invalidate_sport_caches(sport: str) -> None:
+    try:
+        from ..routes.public_render import _cache_invalidate_sport
+
+        _cache_invalidate_sport(sport)
+    except Exception:
+        logger.exception("priority_odds: campaign cache invalidation failed")
+    try:
+        from ..services import png_cache
+
+        png_cache.invalidate_prefix(f"hot:{sport}")
+        if sport == "football":
+            png_cache.invalidate_prefix("cube:")
+            png_cache.invalidate_prefix("cube_odds:")
+    except Exception:
+        logger.exception("priority_odds: public cache invalidation failed")
 
 
 def refresh_once() -> Tuple[int, int]:
@@ -106,8 +168,11 @@ def refresh_once() -> Tuple[int, int]:
     by_sport = collect_priority_tids()
     updated = 0
     leagues = 0
+    changed_sports: Set[str] = set()
     for sport, tids in by_sport.items():
         for tid in sorted(tids):
+            if _tid_backoff_remaining(sport, tid) > 0:
+                continue
             leagues += 1
             odds, event_tids = fetch_embedded(_overlay_url(sport, tid))
             # event_tids maps every event on the page -> its tournament id,
@@ -115,16 +180,23 @@ def refresh_once() -> Tuple[int, int]:
             # oddsless upcoming fixtures that `odds` omits.
             seen_ids = list(event_tids.keys()) or list(odds.keys())
             if not seen_ids:
+                _set_tid_backoff(sport, tid, _EMPTY_BACKOFF_SECONDS)
                 continue
             try:
+                changed = 0
                 with db_session() as s:
                     repo = MatchRepository(s)
                     repo.touch_seen(seen_ids)
                     for eid, outcomes in odds.items():
                         if repo.update_result_odds(eid, outcomes):
+                            changed += 1
                             updated += 1
+                if changed:
+                    changed_sports.add(sport)
             except Exception:
                 logger.exception("priority_odds: persist failed for %s/%s", sport, tid)
+    for sport in changed_sports:
+        _invalidate_sport_caches(sport)
     return updated, leagues
 
 
@@ -142,5 +214,12 @@ def _loop() -> None:
         time.sleep(max(5.0, PRIORITY_INTERVAL_SECONDS - elapsed))
 
 
-def start_priority_odds_thread() -> None:
+def start_priority_odds_thread() -> bool:
+    global _priority_started
+    with _priority_start_lock:
+        if _priority_started:
+            logger.info("priority_odds: thread already started")
+            return False
+        _priority_started = True
     threading.Thread(target=_loop, name="priority-odds", daemon=True).start()
+    return True

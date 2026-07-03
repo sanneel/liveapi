@@ -119,13 +119,16 @@ class MatchRepository:
         # Update all fields. Use existing value as fallback to avoid wiping
         # data on a partial refresh.
         match.sport = sport
-        # H4: don't let a prematch cycle clobber a row that's been promoted
-        # to live by the live feed. The match disappearing from /hot during
-        # the next prematch parse was the most common "missing match" cause.
         incoming_status = (event.get("status") or "").strip().lower()
-        if mode == "live" or incoming_status == "live" or match.mode != "live":
-            match.mode = mode
-        match.status = event.get("status") or match.status or "prematch"
+        effective_mode = incoming_status if incoming_status in {"live", "prematch"} else mode
+        # H4: don't let a prematch cycle clobber a row that's been promoted
+        # to live by the live feed. Tournament-overlay parser links are a
+        # special case: they may be saved as "prematch" while carrying live
+        # events, so promote those rows to live from the event's own status.
+        if effective_mode == "live" or match.mode != "live":
+            match.mode = effective_mode
+        if incoming_status == "live" or mode == "live" or match.status != "live":
+            match.status = incoming_status or match.status or "prematch"
         match.home_name = home_name
         match.away_name = away_name
         match.home_logo = home.get("logo") or match.home_logo
