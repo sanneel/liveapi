@@ -133,18 +133,63 @@ def card_html(idx: int, suit_glyph: str, deposit: str, bet: str, free_spins: str
   </div>"""
 
 
+def back_html(suit_glyph: str) -> str:
+    return f"""  <div class="card back">
+    <div class="inner backface">
+      <span class="rule"></span>
+      <div class="bpips t"><span class="gold-text">&#9824;</span><span class="gold-text">&#9829;</span><span class="gold-text">&#9830;</span><span class="gold-text">&#9827;</span></div>
+      <div class="bcore">
+        <div class="bmedal"><span class="gold-text">A{suit_glyph}</span></div>
+        <div class="bword gold-text">JUGABET</div>
+        <div class="bline"></div>
+        <div class="btag gold-text">Premium Casino</div>
+      </div>
+      <div class="bpips b"><span class="gold-text">&#9827;</span><span class="gold-text">&#9830;</span><span class="gold-text">&#9829;</span><span class="gold-text">&#9824;</span></div>
+    </div>
+  </div>"""
+
+
 def deck_html(free_spins: str) -> str:
-    cards = "\n".join(card_html(i + 1, g, d, b, free_spins) for i, (_, g, d, b) in enumerate(SUITS))
+    scenes = []
+    for i, (_, g, d, b) in enumerate(SUITS):
+        front = card_html(i + 1, g, d, b, free_spins)
+        back = back_html(g)
+        delay = -2.75 * i  # stagger so the four cards spin out of phase
+        scenes.append(f'<div class="scene"><div class="spinner" style="animation-delay:{delay}s">\n{front}\n{back}\n</div></div>')
+    deck = "\n".join(scenes)
     return f"""<style>{CSS}
-  body{{min-height:100vh;padding:5vmin;background:radial-gradient(120% 90% at 50% 0%,#16161a 0%,#0b0b0d 55%,#050506 100%);}}
-  .deck-scroll{{overflow-x:auto;padding-bottom:10px;}}
-  .deck{{display:flex;gap:4vmin;width:max-content;margin:0 auto;}}
+  body{{min-height:100vh;padding:6vmin 5vmin;background:radial-gradient(120% 90% at 50% 0%,#16161a 0%,#0b0b0d 55%,#050506 100%);}}
+  .deck-scroll{{overflow-x:auto;padding:26px 0 18px;}}
+  .deck{{display:flex;gap:6vmin;width:max-content;margin:0 auto;perspective:2000px;}}
+  .scene{{width:360px;aspect-ratio:2/3;flex:0 0 auto;}}
+  .spinner{{position:relative;width:100%;height:100%;transform-style:preserve-3d;animation:spin 12s cubic-bezier(.65,.03,.35,.97) infinite;}}
+  .spinner .card{{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;
+    -webkit-backface-visibility:hidden;backface-visibility:hidden;}}
+  .spinner .card .inner{{min-height:0;}}
+  .spinner .card.back{{transform:rotateY(180deg);}}
+  @keyframes spin{{0%{{transform:rotateY(0deg)}}45%{{transform:rotateY(180deg)}}55%{{transform:rotateY(180deg)}}100%{{transform:rotateY(360deg)}}}}
+  /* ── JUGABET card back ── */
+  .backface{{padding:8cqw 7cqw;align-items:center;justify-content:space-between;}}
+  .backface::before{{opacity:.9;background-image:
+    repeating-linear-gradient(45deg,rgba(233,197,101,.11) 0 1.5px,transparent 1.5px 15px),
+    repeating-linear-gradient(-45deg,rgba(233,197,101,.11) 0 1.5px,transparent 1.5px 15px);}}
+  .bpips{{display:flex;gap:5cqw;font-size:5cqw;justify-content:center;z-index:1;}}
+  .bcore{{display:flex;flex-direction:column;align-items:center;gap:2.5cqw;z-index:1;}}
+  .bmedal{{width:34cqw;height:34cqw;border-radius:50%;display:grid;place-items:center;
+    border:2px solid rgba(233,197,101,.6);box-shadow:0 0 0 5px rgba(233,197,101,.12),inset 0 0 22px rgba(201,150,47,.2);
+    background:radial-gradient(circle at 50% 38%,#181818,#070707);}}
+  .bmedal span{{font-family:Georgia,serif;font-weight:700;font-size:15cqw;letter-spacing:-.03em;}}
+  .bword{{font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:12cqw;letter-spacing:.16em;}}
+  .bline{{width:44cqw;height:2px;box-shadow:0 0 6px rgba(201,150,47,.4);
+    background:linear-gradient(90deg,transparent,var(--gold-mid),transparent);}}
+  .btag{{font-family:Georgia,serif;font-size:4.2cqw;letter-spacing:.34em;text-transform:uppercase;}}
   @media(prefers-reduced-motion:no-preference){{.card{{animation:glow 6s ease-in-out infinite;}}
     @keyframes glow{{0%,100%{{box-shadow:0 0 0 1px rgba(0,0,0,.6),0 26px 60px -20px rgba(0,0,0,.8),0 0 40px -10px rgba(201,150,47,.32);}}
       50%{{box-shadow:0 0 0 1px rgba(0,0,0,.6),0 26px 60px -20px rgba(0,0,0,.8),0 0 66px -4px rgba(246,226,122,.55);}}}}}}
+  @media(prefers-reduced-motion:reduce){{.spinner{{animation:none;}}}}
 </style>
 <div class="deck-scroll"><div class="deck">
-{cards}
+{deck}
 </div></div>
 """
 
