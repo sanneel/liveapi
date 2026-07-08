@@ -23,7 +23,7 @@ from PIL import Image
 
 import render_cards as R
 
-BG = (10, 10, 12)     # solid GIF background (email-safe on dark)
+TRANSP_IDX = 255      # palette index reserved for transparency
 
 
 def _smooth(t: float) -> float:
@@ -43,7 +43,7 @@ def flip_frames() -> list[tuple[float, int]]:
 
 
 def render_face(html: str, scale: int = 2) -> Image.Image:
-    W, H = 460, 648
+    W, H = 400, 584
     with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False, encoding="utf-8") as f:
         f.write(html)
         tmp = f.name
@@ -64,36 +64,53 @@ def render_face(html: str, scale: int = 2) -> Image.Image:
         out.unlink(missing_ok=True)
 
 
+def _quant(rgb: Image.Image, palette: Image.Image) -> Image.Image:
+    return rgb.quantize(palette=palette, dither=Image.NONE)
+
+
 def make_one(idx: int, free_spins: str, width: int, out_dir: Path) -> Path:
+    from PIL import ImageEnhance
     front = render_face(R.single_html(idx, free_spins))
     back = render_face(R.single_back_html(idx))
     W, H = front.size
+    th = int(round(width * H / W))
+    # one shared 255-colour palette (index 255 reserved for transparency) so the
+    # GIF has a single global colour table (avoids malformed per-frame palettes).
+    both = Image.new("RGB", (W, H * 2))
+    both.paste(front.convert("RGB"), (0, 0)); both.paste(back.convert("RGB"), (0, H))
+    palette = both.resize((width, th * 2)).quantize(colors=255, method=Image.FASTOCTREE)
+
     frames, durs = [], []
     for angle, dur in flip_frames():
         c = math.cos(math.radians(angle))
         face = front if c >= 0 else back
         w = max(2, int(round(W * abs(c))))
         scaled = face.resize((w, H), Image.LANCZOS)
-        # slight dim as the face turns edge-on, for depth
-        if abs(c) < 0.999:
-            from PIL import ImageEnhance
-            scaled = ImageEnhance.Brightness(scaled).enhance(0.72 + 0.28 * abs(c))
-        canvas = Image.new("RGBA", (W, H), BG + (255,))
+        if abs(c) < 0.999:  # dim slightly as it turns edge-on
+            r, g, b, a = scaled.split()
+            scaled = Image.merge("RGBA", (*ImageEnhance.Brightness(Image.merge("RGB", (r, g, b))).enhance(0.72 + 0.28 * abs(c)).split(), a))
+        canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         canvas.paste(scaled, ((W - w) // 2, 0), scaled)
-        fr = canvas.convert("RGB").resize((width, int(round(width * H / W))), Image.LANCZOS)
-        frames.append(fr.quantize(colors=256, method=Image.FASTOCTREE, dither=Image.FLOYDSTEINBERG))
+        canvas = canvas.resize((width, th), Image.LANCZOS)
+        p = _quant(canvas.convert("RGB"), palette)
+        transparent = canvas.getchannel("A").point(lambda v: 255 if v < 128 else 0).convert("1")
+        p.paste(TRANSP_IDX, (0, 0), transparent)
+        frames.append(p)
         durs.append(dur)
     name, _, deposit, _ = R.SUITS[idx]
     dep = deposit.replace("$", "").replace(".", "")
     path = out_dir / f"card_{name}_{dep}_flip.gif"
-    frames[0].save(path, save_all=True, append_images=frames[1:], duration=durs, loop=0, optimize=True, disposal=2)
+    for fr in frames:
+        fr.info["transparency"] = TRANSP_IDX
+    frames[0].save(path, save_all=True, append_images=frames[1:], duration=durs, loop=0,
+                   transparency=TRANSP_IDX, disposal=2)
     return path
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--free-spins", default="{{FREE_SPINS}}")
-    ap.add_argument("--width", type=int, default=340, help="GIF width in px (default 340)")
+    ap.add_argument("--width", type=int, default=300, help="GIF width in px (default 300)")
     ap.add_argument("--only", help="one suit only (hearts/diamonds/clubs/spades)")
     ap.add_argument("--out", default=str(R.HERE / "out"))
     a = ap.parse_args()

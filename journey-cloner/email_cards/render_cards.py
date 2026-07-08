@@ -200,24 +200,25 @@ def deck_html(free_spins: str) -> str:
 """
 
 
+# flat, tight, transparent card for email assets (no gold glow, no animation)
+FLAT_CSS = r"""
+  body{background:transparent;display:grid;place-items:center;min-height:100vh;padding:0;}
+  .card{width:360px;height:540px;aspect-ratio:auto;animation:none !important;
+    box-shadow:0 8px 18px rgba(0,0,0,.55) !important;}
+  .inner{min-height:0;}
+"""
+
+
 def single_html(idx: int, free_spins: str) -> str:
     _, glyph, deposit, bet = SUITS[idx]
-    return f"""<!doctype html><html><head><meta charset="utf-8"><style>{CSS}
-  body{{background:transparent;display:grid;place-items:center;min-height:100vh;padding:0;}}
-  .card{{width:360px;height:540px;aspect-ratio:auto;}}
-  .inner{{min-height:0;}}
-</style></head><body>
+    return f"""<!doctype html><html><head><meta charset="utf-8"><style>{CSS}{FLAT_CSS}</style></head><body>
 {card_html(idx + 1, glyph, deposit, bet, free_spins)}
 </body></html>"""
 
 
 def single_back_html(idx: int) -> str:
     _, glyph, _deposit, _bet = SUITS[idx]
-    return f"""<!doctype html><html><head><meta charset="utf-8"><style>{CSS}{BACK_CSS}
-  body{{background:transparent;display:grid;place-items:center;min-height:100vh;padding:0;}}
-  .card{{width:360px;height:540px;aspect-ratio:auto;}}
-  .inner{{min-height:0;}}
-</style></head><body>
+    return f"""<!doctype html><html><head><meta charset="utf-8"><style>{CSS}{BACK_CSS}{FLAT_CSS}</style></head><body>
 {back_html(glyph)}
 </body></html>"""
 
@@ -232,8 +233,8 @@ def chrome_bin() -> str:
 
 
 def render_png(html: str, out: Path, scale: int) -> None:
-    # card 360x540 centered, + room for the outer glow -> 460 x 648 viewport
-    W, H = 460, 648
+    # card 360x540 centered, tight margin for the soft shadow -> 400 x 584
+    W, H = 400, 584
     with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False, encoding="utf-8") as f:
         f.write(html)
         tmp = f.name
