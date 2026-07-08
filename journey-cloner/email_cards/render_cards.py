@@ -28,12 +28,12 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 
-# fixed deposits per suit (Chilean format $10.000)
+# fixed per suit (Chilean format $10.000). deposit tier -> paired spin value.
 SUITS = [
-    ("hearts",   "&#9829;", "$10.000"),
-    ("diamonds", "&#9830;", "$20.000"),
-    ("clubs",    "&#9827;", "$30.000"),
-    ("spades",   "&#9824;", "$50.000"),
+    ("hearts",   "&#9829;", "$10.000", "$100"),
+    ("diamonds", "&#9830;", "$20.000", "$200"),
+    ("clubs",    "&#9827;", "$30.000", "$500"),
+    ("spades",   "&#9824;", "$50.000", "$800"),
 ]
 
 CSS = r"""
@@ -70,15 +70,18 @@ CSS = r"""
   .divider .line{flex:1;height:2px;box-shadow:0 0 6px rgba(201,150,47,.35);
     background:linear-gradient(90deg,transparent,rgba(233,197,101,.15),var(--gold-mid),rgba(233,197,101,.15),transparent);}
   .divider .gem{font-size:3.2cqw;filter:drop-shadow(0 0 4px rgba(233,197,101,.5));}
-  .hero{display:flex;align-items:center;justify-content:center;gap:2.6cqw;margin-top:3cqw;}
-  .reel{width:12.5cqw;height:12.5cqw;flex:0 0 auto;filter:drop-shadow(0 3px 6px rgba(0,0,0,.6));}
+  .hero{display:flex;align-items:center;justify-content:center;gap:2.4cqw;margin-top:2.6cqw;}
+  .reel{width:16cqw;height:auto;flex:0 0 auto;filter:drop-shadow(0 3px 6px rgba(0,0,0,.55));}
   .hero .fs{font-family:"Arial Black","Helvetica Neue",Arial,sans-serif;font-weight:900;font-size:13cqw;letter-spacing:-.01em;}
   .hero .fsl{font-family:"Arial Black","Helvetica Neue",Arial,sans-serif;font-weight:800;font-size:7.4cqw;letter-spacing:.02em;margin-left:2.2cqw;}
-  .deposit{text-align:center;margin-top:3cqw;}
-  .deposit .k{font-size:4.2cqw;font-weight:700;letter-spacing:.3em;text-transform:uppercase;}
-  .deposit .v{font-family:"Arial Black","Helvetica Neue",Arial,sans-serif;font-weight:800;font-size:12.5cqw;
-    line-height:1.05;margin-top:.8cqw;white-space:nowrap;font-variant-numeric:tabular-nums;}
-  .deposit .cur{font-size:.62em;letter-spacing:.02em;}
+  .stats{display:grid;grid-template-columns:1.14fr 1px 0.86fr;align-items:center;column-gap:2cqw;margin-top:3.4cqw;}
+  .stats .cell{text-align:center;min-width:0;}
+  .stats .k{font-size:3.4cqw;font-weight:700;letter-spacing:.18em;text-transform:uppercase;}
+  .stats .v{font-family:"Arial Black","Helvetica Neue",Arial,sans-serif;font-weight:800;font-size:8.4cqw;
+    line-height:1.05;margin-top:1.2cqw;white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .stats .cur{font-size:.46em;letter-spacing:.01em;margin-left:.12em;}
+  .stats .vsep{width:1px;height:12cqw;align-self:center;box-shadow:0 0 6px rgba(201,150,47,.4);
+    background:linear-gradient(180deg,transparent,var(--gold-mid),transparent);}
   .cta{position:relative;margin:3.6cqw auto 0;display:block;width:66%;border:none;cursor:pointer;border-radius:999px;padding:3cqw 3cqw;
     background:linear-gradient(180deg,var(--green-hi) 0%,var(--green) 46%,var(--green-lo) 100%);
     box-shadow:inset 0 2px 1px rgba(255,255,255,.5),inset 0 -3px 6px rgba(0,0,0,.45),0 0 0 2px var(--gold-mid),
@@ -91,7 +94,7 @@ CSS = r"""
 """
 
 
-def card_html(idx: int, suit_glyph: str, deposit: str, free_spins: str) -> str:
+def card_html(idx: int, suit_glyph: str, deposit: str, bet: str, free_spins: str) -> str:
     gid = f"g{idx}"
     return f"""  <div class="card">
     <div class="inner">
@@ -101,18 +104,29 @@ def card_html(idx: int, suit_glyph: str, deposit: str, free_spins: str) -> str:
       <div class="well"></div>
       <div class="divider"><span class="line"></span><span class="gem gold-text">&#9670;</span><span class="line"></span></div>
       <div class="hero">
-        <svg class="reel" viewBox="0 0 64 64" aria-hidden="true">
-          <defs><linearGradient id="{gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fdf3c0"/><stop offset=".5" stop-color="#e9c565"/><stop offset="1" stop-color="#a9781f"/></linearGradient></defs>
-          <rect x="8" y="16" width="40" height="34" rx="7" fill="url(#{gid})" stroke="#7c561a" stroke-width="2"/>
-          <rect x="13" y="21" width="30" height="24" rx="4" fill="#0b0b0d"/>
-          <g fill="url(#{gid})" font-family="Arial Black, Arial" font-weight="900" font-size="15" text-anchor="middle"><text x="21" y="38">7</text><text x="35" y="38">7</text></g>
-          <circle cx="52" cy="24" r="4" fill="url(#{gid})" stroke="#7c561a" stroke-width="1.5"/><rect x="50.5" y="24" width="3" height="16" fill="url(#{gid})"/>
+        <svg class="reel" viewBox="0 0 72 62" aria-hidden="true">
+          <defs>
+            <linearGradient id="{gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fdf3c0"/><stop offset=".45" stop-color="#e9c565"/><stop offset="1" stop-color="#a9781f"/></linearGradient>
+            <linearGradient id="{gid}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff6a5a"/><stop offset="1" stop-color="#c31f1f"/></linearGradient>
+          </defs>
+          <rect x="12" y="50" width="34" height="6" rx="2.5" fill="url(#{gid})" stroke="#7c561a" stroke-width="1"/>
+          <rect x="22" y="8" width="14" height="9" rx="2.5" fill="url(#{gid})" stroke="#7c561a" stroke-width="1.5"/>
+          <rect x="4" y="15" width="50" height="36" rx="9" fill="url(#{gid})" stroke="#7c561a" stroke-width="2"/>
+          <rect x="9" y="21" width="40" height="24" rx="4" fill="#0b0b0d" stroke="#5a3f12" stroke-width="1"/>
+          <line x1="22.3" y1="22" x2="22.3" y2="44" stroke="#33251a" stroke-width="1"/>
+          <line x1="35.6" y1="22" x2="35.6" y2="44" stroke="#33251a" stroke-width="1"/>
+          <g fill="url(#{gid}s)" font-family="Arial Black, Arial" font-weight="900" font-size="17" text-anchor="middle">
+            <text x="15.6" y="39.5">7</text><text x="29" y="39.5">7</text><text x="42.4" y="39.5">7</text>
+          </g>
+          <rect x="56.5" y="21" width="3" height="17" rx="1.5" fill="url(#{gid})"/>
+          <circle cx="58" cy="17" r="4.4" fill="url(#{gid}s)" stroke="#7c561a" stroke-width="1.2"/>
         </svg>
         <span class="fs gold-text">{free_spins}</span><span class="fsl white-text">Free Spins</span>
       </div>
-      <div class="deposit">
-        <div class="k gold-text">Deposit</div>
-        <div class="v gold-text">{deposit}<span class="cur"> CLP</span></div>
+      <div class="stats">
+        <div class="cell"><div class="k gold-text">Deposit</div><div class="v gold-text">{deposit}<span class="cur"> CLP</span></div></div>
+        <span class="vsep"></span>
+        <div class="cell"><div class="k gold-text">Spin Value</div><div class="v gold-text">{bet}<span class="cur"> CLP</span></div></div>
       </div>
       <button class="cta" type="button"><span class="txt"><span class="spark">&#9670;</span><span class="white-text">Play Now</span><span class="spark">&#9670;</span></span></button>
     </div>
@@ -120,7 +134,7 @@ def card_html(idx: int, suit_glyph: str, deposit: str, free_spins: str) -> str:
 
 
 def deck_html(free_spins: str) -> str:
-    cards = "\n".join(card_html(i + 1, g, d, free_spins) for i, (_, g, d) in enumerate(SUITS))
+    cards = "\n".join(card_html(i + 1, g, d, b, free_spins) for i, (_, g, d, b) in enumerate(SUITS))
     return f"""<style>{CSS}
   body{{min-height:100vh;padding:5vmin;background:radial-gradient(120% 90% at 50% 0%,#16161a 0%,#0b0b0d 55%,#050506 100%);}}
   .deck-scroll{{overflow-x:auto;padding-bottom:10px;}}
@@ -136,13 +150,13 @@ def deck_html(free_spins: str) -> str:
 
 
 def single_html(idx: int, free_spins: str) -> str:
-    _, glyph, deposit = SUITS[idx]
+    _, glyph, deposit, bet = SUITS[idx]
     return f"""<!doctype html><html><head><meta charset="utf-8"><style>{CSS}
   body{{background:transparent;display:grid;place-items:center;min-height:100vh;padding:0;}}
   .card{{width:360px;height:540px;aspect-ratio:auto;}}
   .inner{{min-height:0;}}
 </style></head><body>
-{card_html(idx + 1, glyph, deposit, free_spins)}
+{card_html(idx + 1, glyph, deposit, bet, free_spins)}
 </body></html>"""
 
 
@@ -190,7 +204,7 @@ def main() -> int:
 
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
     fs = args.free_spins
-    for i, (name, _, deposit) in enumerate(SUITS):
+    for i, (name, _, deposit, _bet) in enumerate(SUITS):
         dep = deposit.replace("$", "").replace(".", "")
         png = out / f"card_{name}_{dep}_fs{fs if fs.isdigit() else 'var'}.png"
         render_png(single_html(i, fs), png, args.scale)
