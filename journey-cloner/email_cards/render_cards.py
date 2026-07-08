@@ -19,6 +19,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import base64
 import os
 import shutil
 import subprocess
@@ -27,6 +28,17 @@ import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+LOGO_PATH = HERE.parent.parent / "logos" / "logo_jugabet.png"
+
+
+def _logo_uri() -> str:
+    try:
+        return "data:image/png;base64," + base64.b64encode(LOGO_PATH.read_bytes()).decode("ascii")
+    except OSError:
+        return ""
+
+
+LOGO_URI = _logo_uri()
 
 # fixed per suit (Chilean format $10.000). deposit tier -> paired spin value.
 SUITS = [
@@ -93,6 +105,19 @@ CSS = r"""
   .cta .spark{font-family:Georgia,serif;color:var(--gold-hi);filter:drop-shadow(0 1px 2px rgba(0,0,0,.5));}
 """
 
+# JUGABET card back (shared by the deck and the GIF renderer)
+BACK_CSS = r"""
+  .backface{padding:10cqw 7cqw;align-items:center;justify-content:space-between;}
+  .backface::before{opacity:.9;background-image:
+    repeating-linear-gradient(45deg,rgba(233,197,101,.11) 0 1.5px,transparent 1.5px 15px),
+    repeating-linear-gradient(-45deg,rgba(233,197,101,.11) 0 1.5px,transparent 1.5px 15px);}
+  .bpips{display:flex;gap:5cqw;font-size:5cqw;justify-content:center;z-index:1;}
+  .bcore{position:relative;z-index:1;flex:1;width:100%;display:grid;place-items:center;}
+  .bglow{position:absolute;width:90%;height:42%;border-radius:50%;filter:blur(26px);
+    background:radial-gradient(closest-side,rgba(180,216,0,.22),transparent 72%);}
+  .blogo{position:relative;width:76%;height:auto;filter:drop-shadow(0 4px 12px rgba(0,0,0,.6));}
+"""
+
 
 def card_html(idx: int, suit_glyph: str, deposit: str, bet: str, free_spins: str) -> str:
     gid = f"g{idx}"
@@ -137,14 +162,9 @@ def back_html(suit_glyph: str) -> str:
     return f"""  <div class="card back">
     <div class="inner backface">
       <span class="rule"></span>
-      <div class="bpips t"><span class="gold-text">&#9824;</span><span class="gold-text">&#9829;</span><span class="gold-text">&#9830;</span><span class="gold-text">&#9827;</span></div>
-      <div class="bcore">
-        <div class="bmedal"><span class="gold-text">A{suit_glyph}</span></div>
-        <div class="bword gold-text">JUGABET</div>
-        <div class="bline"></div>
-        <div class="btag gold-text">Premium Casino</div>
-      </div>
-      <div class="bpips b"><span class="gold-text">&#9827;</span><span class="gold-text">&#9830;</span><span class="gold-text">&#9829;</span><span class="gold-text">&#9824;</span></div>
+      <div class="bpips"><span class="gold-text">&#9824;</span><span class="gold-text">&#9829;</span><span class="gold-text">&#9830;</span><span class="gold-text">&#9827;</span></div>
+      <div class="bcore"><div class="bglow"></div><img class="blogo" src="{LOGO_URI}" alt="JugaBet"/></div>
+      <div class="bpips"><span class="gold-text">&#9827;</span><span class="gold-text">&#9830;</span><span class="gold-text">&#9829;</span><span class="gold-text">&#9824;</span></div>
     </div>
   </div>"""
 
@@ -168,21 +188,7 @@ def deck_html(free_spins: str) -> str:
   .spinner .card .inner{{min-height:0;}}
   .spinner .card.back{{transform:rotateY(180deg);}}
   @keyframes spin{{0%{{transform:rotateY(0deg)}}45%{{transform:rotateY(180deg)}}55%{{transform:rotateY(180deg)}}100%{{transform:rotateY(360deg)}}}}
-  /* ── JUGABET card back ── */
-  .backface{{padding:8cqw 7cqw;align-items:center;justify-content:space-between;}}
-  .backface::before{{opacity:.9;background-image:
-    repeating-linear-gradient(45deg,rgba(233,197,101,.11) 0 1.5px,transparent 1.5px 15px),
-    repeating-linear-gradient(-45deg,rgba(233,197,101,.11) 0 1.5px,transparent 1.5px 15px);}}
-  .bpips{{display:flex;gap:5cqw;font-size:5cqw;justify-content:center;z-index:1;}}
-  .bcore{{display:flex;flex-direction:column;align-items:center;gap:2.5cqw;z-index:1;}}
-  .bmedal{{width:34cqw;height:34cqw;border-radius:50%;display:grid;place-items:center;
-    border:2px solid rgba(233,197,101,.6);box-shadow:0 0 0 5px rgba(233,197,101,.12),inset 0 0 22px rgba(201,150,47,.2);
-    background:radial-gradient(circle at 50% 38%,#181818,#070707);}}
-  .bmedal span{{font-family:Georgia,serif;font-weight:700;font-size:15cqw;letter-spacing:-.03em;}}
-  .bword{{font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:12cqw;letter-spacing:.16em;}}
-  .bline{{width:44cqw;height:2px;box-shadow:0 0 6px rgba(201,150,47,.4);
-    background:linear-gradient(90deg,transparent,var(--gold-mid),transparent);}}
-  .btag{{font-family:Georgia,serif;font-size:4.2cqw;letter-spacing:.34em;text-transform:uppercase;}}
+  /* ── JUGABET card back ── */{BACK_CSS}
   @media(prefers-reduced-motion:no-preference){{.card{{animation:glow 6s ease-in-out infinite;}}
     @keyframes glow{{0%,100%{{box-shadow:0 0 0 1px rgba(0,0,0,.6),0 26px 60px -20px rgba(0,0,0,.8),0 0 40px -10px rgba(201,150,47,.32);}}
       50%{{box-shadow:0 0 0 1px rgba(0,0,0,.6),0 26px 60px -20px rgba(0,0,0,.8),0 0 66px -4px rgba(246,226,122,.55);}}}}}}
@@ -202,6 +208,17 @@ def single_html(idx: int, free_spins: str) -> str:
   .inner{{min-height:0;}}
 </style></head><body>
 {card_html(idx + 1, glyph, deposit, bet, free_spins)}
+</body></html>"""
+
+
+def single_back_html(idx: int) -> str:
+    _, glyph, _deposit, _bet = SUITS[idx]
+    return f"""<!doctype html><html><head><meta charset="utf-8"><style>{CSS}{BACK_CSS}
+  body{{background:transparent;display:grid;place-items:center;min-height:100vh;padding:0;}}
+  .card{{width:360px;height:540px;aspect-ratio:auto;}}
+  .inner{{min-height:0;}}
+</style></head><body>
+{back_html(glyph)}
 </body></html>"""
 
 

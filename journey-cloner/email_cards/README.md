@@ -24,3 +24,14 @@ python render_cards.py --free-spins 100 --scale 3 # bigger, sharper
 python render_cards.py --html                     # just rewrite the template
 ```
 Needs a Chromium binary (uses PLAYWRIGHT_BROWSERS_PATH, or chromium on PATH).
+
+
+## Animated flip GIFs (email)
+CSS 3D doesn't run in email, so the flip is baked into looping GIFs — front
+offer flips to the JUGABET card back (logo from `logos/logo_jugabet.png`).
+```bash
+python make_gif.py --free-spins 50            # 4 GIFs (one per tier) -> out/*_flip.gif
+python make_gif.py --free-spins 100 --only spades --width 360
+```
+`render_cards.py` also renders the JUGABET back preview (`out/card_back.png`).
+The spinning HTML deck (`casino_card.html`) flips front<->back live for a landing page.
