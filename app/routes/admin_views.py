@@ -640,7 +640,7 @@ def figma_run(
     return templates.TemplateResponse(request, "figma.html", ctx)
 
 
-_PROMO_TABS = {"overview", "gow", "journey_cloner", "randomizers", "scripts"}
+_PROMO_TABS = {"overview", "gow", "journey_cloner", "randomizers", "nc_discount", "scripts"}
 _JC_TYPES = ["followup", "bfr", "two_hours", "aft"]
 
 
@@ -689,9 +689,14 @@ def _rnd_ns(*, kind="sport_wof", date="", days="", weights="", journeys="",
     }
 
 
-def _promotions_context(*, user, active_tab="overview", gow=None, jc=None, rnd=None) -> dict:
+def _nc_ns(*, error="", result=None, console_script=None) -> dict:
+    return {"error": error, "result": result, "console_script": console_script}
+
+
+def _promotions_context(*, user, active_tab="overview", gow=None, jc=None, rnd=None, nc=None) -> dict:
     """Full context for the unified Promotions page: automation graph + the
-    embedded generators (GOW, Journey Cloner, Randomizers) + all-scripts list."""
+    embedded generators (GOW, Journey Cloner, Randomizers, Discount NC) +
+    all-scripts list."""
     from ..services import promotions_catalog as pc
     cat = pc.load_catalog()
     return {
@@ -704,6 +709,7 @@ def _promotions_context(*, user, active_tab="overview", gow=None, jc=None, rnd=N
         "gow": gow if gow is not None else _gow_ns(),
         "jc": jc if jc is not None else _jc_ns(),
         "rnd": rnd if rnd is not None else _rnd_ns(),
+        "nc": nc if nc is not None else _nc_ns(),
     }
 
 
@@ -792,6 +798,36 @@ def promotions_randomizer(
         active_tab="randomizers",
         rnd=_rnd_ns(kind=kind, date=date, days=days, weights=weights, journeys=journeys,
                     error=error, result=result, console_script=console_script),
+    )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
+
+
+@router.post("/admin/promotions/nc-discount", response_class=HTMLResponse)
+def promotions_nc_discount(
+    request: Request,
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """Generate the "NC For Discount" console script (one notification journey
+    per game/day from the baked July calendar)."""
+    from ..services.journey_cloner_runner import generate_nc_discount_console_script
+    error = ""
+    result = None
+    console_script = None
+    try:
+        exit_code, output, display_cmd, js_text, js_name = generate_nc_discount_console_script()
+        result = {"exit_code": exit_code, "output": output, "command": display_cmd,
+                  "ok": exit_code == 0 and js_text is not None}
+        if exit_code == 0 and js_text is not None:
+            console_script = {"name": js_name, "text": js_text}
+        else:
+            error = "Console script was not generated. Check the run output below."
+    except Exception as exc:  # noqa: BLE001
+        error = str(exc)
+
+    ctx = _promotions_context(
+        user=user,
+        active_tab="nc_discount",
+        nc=_nc_ns(error=error, result=result, console_script=console_script),
     )
     return templates.TemplateResponse(request, "promotions.html", ctx)
 

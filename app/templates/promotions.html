@@ -11,6 +11,7 @@
   <button type="button" class="tab" data-tab="gow">GOW</button>
   <button type="button" class="tab" data-tab="journey_cloner">Journey Cloner</button>
   <button type="button" class="tab" data-tab="randomizers">Randomizers</button>
+  <button type="button" class="tab" data-tab="nc_discount">Discount NC</button>
   <button type="button" class="tab" data-tab="scripts">All scripts</button>
 </div>
 
@@ -263,6 +264,89 @@
           <div class="help" style="line-height:1.7">
             <p style="margin:0 0 8px">A randomizer is a weighted set of prize slices; each slice routes a winning player to a journey. This keeps the captured prizes, segment and visual, and only re-dates + re-names the promo for a new run.</p>
             <p style="margin:0">The two-step create flow (create draft → fill) is inferred from the captured bodies. If a call 404s, the draft is easy to delete — send me that request and I'll correct the endpoint.</p>
+          </div>
+        </section>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{# ── Discount NC (game-of-the-day notification journeys) ─────────────── #}
+<section data-panel="nc_discount" hidden>
+  {% if nc.error %}<div class="alert err">{{ nc.error }}</div>{% endif %}
+  {% if nc.result %}
+    <div class="alert {% if nc.result.ok %}ok{% else %}err{% endif %}">
+      {% if nc.result.ok %}Console script generated.{% else %}Generation exited with code {{ nc.result.exit_code }}.{% endif %}
+    </div>
+  {% endif %}
+
+  <div class="row-flex">
+    <form method="post" action="/admin/promotions/nc-discount" class="card card-pad col-rail" style="display:flex; flex-direction:column; gap:14px">
+      <div>
+        <h2 class="card-title">NC For Discount</h2>
+        <p class="card-sub">One notification journey per game/day (segment → notification → end), promoting the discounted games to active players. Monday 20:00 / Friday 21:00 Chile. Uses the July games calendar from the brief.</p>
+      </div>
+      <ul class="help" style="margin:0; padding-left:18px; line-height:1.7">
+        <li>10.07 Fri — The Racaroon</li>
+        <li>13.07 Mon — Gold Trio</li>
+        <li>17.07 Fri — Tornado</li>
+        <li>20.07 Mon — 1000 Olympus Rivals</li>
+        <li>24.07 Fri — Sweet Bonanza 1000</li>
+        <li>27.07 Mon — Egypt Fire</li>
+        <li>31.07 Fri — Coin Win 2</li>
+      </ul>
+      <button class="btn primary" style="justify-content:center">Generate console script</button>
+      <p class="help">The script reserves an id, pops a file picker for each game's 200×200 image, uploads it, then creates + saves each draft (left unpublished for review).</p>
+    </form>
+
+    <div class="col-main stack">
+      {% if nc.console_script %}
+        <section class="card" style="overflow:hidden">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Console Script Ready</h2>
+              <p class="card-sub">{{ nc.console_script.name }}</p>
+            </div>
+            <button type="button" id="nc-copy" class="btn primary">Copy script</button>
+          </div>
+          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+            <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
+              <li>Click <b>Copy script</b> above.</li>
+              <li>Open the backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
+              <li>Paste and press Enter. A file picker pops up per game — select that game's 200×200 image.</li>
+              <li>Watch for the green <b>DONE</b> with the created JRN ids. Drafts are unpublished — review + publish in the Journeys UI.</li>
+            </ol>
+            <textarea id="nc-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ nc.console_script.text }}</textarea>
+          </div>
+        </section>
+        <script>
+          (function () {
+            var btn = document.getElementById('nc-copy'), area = document.getElementById('nc-script-text');
+            if (!btn || !area) return;
+            btn.addEventListener('click', function () {
+              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
+              if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); }); }
+              else { area.select(); document.execCommand('copy'); done(); }
+            });
+          })();
+        </script>
+      {% endif %}
+      {% if nc.result %}
+        <section class="card" style="overflow:hidden">
+          <div class="card-head"><h2 class="card-title">Run Output</h2></div>
+          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+            <div><div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Command</div>
+              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0">{{ nc.result.command }}</pre></div>
+            <div><div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Output</div>
+              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:32rem; margin:0">{{ nc.result.output }}</pre></div>
+          </div>
+        </section>
+      {% else %}
+        <section class="card card-pad">
+          <h2 class="card-title" style="margin-bottom:8px">How it works</h2>
+          <div class="help" style="line-height:1.7">
+            <p style="margin:0 0 8px">Each game is a separate journey cloned from the captured NC template — same segment (active players) and notification template 1935, with the game name, message, CTA, deep link and send time swapped in.</p>
+            <p style="margin:0">The calendar is baked from the brief. To run a different month, tell me the dates/games and I'll add a form for it.</p>
           </div>
         </section>
       {% endif %}

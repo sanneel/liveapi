@@ -178,6 +178,7 @@ GOW_SCRIPT_PATH = CLONER_DIR / "gow_campaign.py"
 COMMS_SCRIPT_PATH = CLONER_DIR / "comms_campaign.py"
 COMBINED_SCRIPT_PATH = CLONER_DIR / "gow_combined.py"
 RANDOMIZER_SCRIPT_PATH = CLONER_DIR / "randomizer_campaign.py"
+NC_DISCOUNT_SCRIPT_PATH = CLONER_DIR / "nc_discount_campaign.py"
 
 # Randomizer promos (weighted prize wheels / scratch cards). Keys must match
 # randomizer_campaign.py --kind.
@@ -405,6 +406,17 @@ def generate_randomizer_console_script(
         cmd += ["--weights", *weights.split()]
     if journeys.strip():
         cmd += ["--journeys", *journeys.split()]
+    return _run_gow_cli(cmd, basename=basename)
+
+
+def generate_nc_discount_console_script() -> Tuple[int, str, str, str | None, str]:
+    """Generate the "NC For Discount" console script: one notification journey
+    per game/day from the baked July calendar (segment -> notification -> end).
+
+    Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
+    """
+    basename = _unique_basename("nc_discount", "")
+    cmd = [python_executable(), str(NC_DISCOUNT_SCRIPT_PATH), "--name", basename]
     return _run_gow_cli(cmd, basename=basename)
 
 
