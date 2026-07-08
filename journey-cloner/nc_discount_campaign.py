@@ -31,7 +31,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from create_journeys import BRAND, LOCAL_TZ, UTC
@@ -50,6 +50,7 @@ TPL_ICON = "https://static.contentin.cloud/c93ad623-44ae-40f6-9aa5-b1aef7fd931a/
 TPL_JOURNEY = "JBCL | CS | NC For Discount 29.06"
 TPL_COPY_JOURNEY = "Copy of " + TPL_JOURNEY
 TPL_STARTAT = "2026-06-30T00:00:00Z"
+TPL_STOPAT = "2026-06-30T01:00:00Z"   # journey window end (start + 1h)
 TPL_RESERVED = "JRN-0-609352"
 
 ICON_TOKEN = "%%ICON%%"
@@ -90,9 +91,13 @@ def _copy_for(day: datetime) -> dict:
     raise SystemExit(f"{day:%Y-%m-%d} is a {day:%A} — the brief only covers Monday/Friday.")
 
 
-def _start_at(day: datetime, hh: int, mm: int) -> str:
+def _window(day: datetime, hh: int, mm: int) -> tuple[str, str]:
+    """(startAt, stopAt) in UTC. The journey window is 1h, as in the template."""
     local = day.replace(hour=hh, minute=mm, second=0, microsecond=0, tzinfo=LOCAL_TZ)
-    return local.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    start = local.astimezone(UTC)
+    stop = (local + timedelta(hours=1)).astimezone(UTC)
+    fmt = "%Y-%m-%dT%H:%M:%SZ"
+    return start.strftime(fmt), stop.strftime(fmt)
 
 
 def prepare_game(date_str: str, slug: str, name: str) -> tuple[dict, list[str]]:
@@ -102,7 +107,7 @@ def prepare_game(date_str: str, slug: str, name: str) -> tuple[dict, list[str]]:
     des = cp["des"]
     caption = cp["caption"]
     hh, mm = cp["time"]
-    start_at = _start_at(day, hh, mm)
+    start_at, stop_at = _window(day, hh, mm)
     journey_name = f"JBCL | CS | NC For Discount {day:%d.%m}"
 
     s = TEMPLATE_PATH.read_text(encoding="utf-8")
@@ -113,7 +118,8 @@ def prepare_game(date_str: str, slug: str, name: str) -> tuple[dict, list[str]]:
     s = s.replace(TPL_DES, des)
     s = s.replace(TPL_CAPTION, " " + caption)       # keep the leading-space style
     s = s.replace(TPL_ICON, ICON_TOKEN)             # filled at paste time
-    s = s.replace(TPL_STARTAT, start_at)
+    s = s.replace(TPL_STOPAT, stop_at)              # replace stop BEFORE start
+    s = s.replace(TPL_STARTAT, start_at)            # (start is a prefix of stop's date)
     s = s.replace(TPL_RESERVED, RESERVED_TOKEN)     # reserved at paste time
 
     body = json.loads(s)
@@ -131,12 +137,19 @@ def prepare_game(date_str: str, slug: str, name: str) -> tuple[dict, list[str]]:
 
 def verify(body: dict, slug: str) -> list[tuple[bool, str]]:
     s = json.dumps(body, ensure_ascii=False)
+    iv = body.get("rawJourneyData", {}).get("infoValues", {})
+    start, stop = iv.get("startAt", ""), iv.get("stopAt", "")
+    # Only always-stale literals (the game may itself be the template game, so
+    # don't flag its slug/name). Old dates/ids and the "Copy of" prefix must go.
+    stale = [lit for lit in (TPL_TITLE, TPL_ICON, TPL_STARTAT, TPL_STOPAT, TPL_RESERVED,
+                             TPL_COPY_JOURNEY, "2026-06-30", "JRN-0-571678") if lit in s]
     return [
         (RESERVED_TOKEN in s, "reservedJourneyId placeholder present (filled at paste)"),
         (ICON_TOKEN in s, "icon placeholder present (uploaded at paste)"),
         (slug in s, f"game slug {slug} wired into the link"),
         (body.get("duplicatedFromId") is None, "no stale duplicatedFromId"),
-        (s.count(ICON_TOKEN) >= 1, "notification icon slot found"),
+        (bool(start and stop and start < stop), f"startAt {start} < stopAt {stop}"),
+        (not stale, "no leftover template literals" + (f" (LEAK: {stale})" if stale else "")),
     ]
 
 
