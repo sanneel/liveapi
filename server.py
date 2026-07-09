@@ -79,6 +79,7 @@ from app.routes.public_club import router as public_club_router
 from app.routes.public_cube import router as public_cube_router
 from app.routes.public_hot import router as public_hot_router
 from app.routes.public_render import router as public_render_router
+from app.routes.public_slot_gif import router as public_slot_gif_router
 from app.routes.telegram_webhook import router as telegram_webhook_router
 from app.auth.routes import router as auth_router
 from app.auth.dependencies import require_login, require_role
@@ -195,6 +196,7 @@ app.include_router(public_hot_router)        # /hot, /hot/{sport}, /hot/{sport}.
 app.include_router(public_club_router)       # /club/{slug}.png only — no HTML route
 app.include_router(public_cube_router)       # /cube, /cube/{theme}, /cube/{theme}.png
 app.include_router(public_render_router)     # /r/{slug}.png (deprecated, 90-day window)
+app.include_router(public_slot_gif_router)   # /gif/slot.gif (rendered slot card GIF)
 app.include_router(telegram_webhook_router)  # /telegram/webhook (inline-button actions)
 
 # Static files for the new admin (Tailwind config, custom CSS/JS)
