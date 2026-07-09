@@ -42,6 +42,21 @@ def flip_frames() -> list[tuple[float, int]]:
     return out
 
 
+def reveal_frames() -> list[tuple[float, int]]:
+    """The email 'click reveal' illusion: start on the JUGABET back, hold,
+    then one half-turn to the front — played ONCE (no loop), so the card
+    stays face-up like it was flipped by hand.
+
+    The 20 ms front flash first means static clients (Outlook desktop shows
+    only frame 1) display the offer instead of a card back."""
+    out: list[tuple[float, int]] = [(360.0, 20), (180.0, 1300)]
+    n = 11
+    for k in range(1, n + 1):
+        out.append((180 + 180 * _smooth(k / (n + 1)), 45))
+    out.append((360.0, 1500))
+    return out
+
+
 def render_face(html: str, scale: int = 2) -> Image.Image:
     # Same viewport as the PNG path so front and back come out identical in size
     # (the flip compositor requires it) and nothing is clipped.
@@ -80,13 +95,13 @@ def _content_bbox(*imgs: Image.Image):
             max(b[2] for b in boxes), max(b[3] for b in boxes))
 
 
-def _flip_rgba(front: Image.Image, back: Image.Image):
+def _flip_rgba(front: Image.Image, back: Image.Image, frames: list[tuple[float, int]] | None = None):
     """The front<->back Y-flip as a list of (RGBA canvas, duration_ms). Both
     faces must be the same size; the canvas is that size."""
     from PIL import ImageEnhance
     W, H = front.size
     out = []
-    for angle, dur in flip_frames():
+    for angle, dur in (frames or flip_frames()):
         c = math.cos(math.radians(angle))
         face = front if c >= 0 else back
         w = max(2, int(round(W * abs(c))))
@@ -100,7 +115,8 @@ def _flip_rgba(front: Image.Image, back: Image.Image):
     return out
 
 
-def _save_transparent_gif(rgba_frames, durs, out_path: Path, out_w: int, disposal: int = 2) -> None:
+def _save_transparent_gif(rgba_frames, durs, out_path: Path, out_w: int, disposal: int = 2,
+                          loop: int | None = 0) -> None:
     """Quantise RGBA frames to one shared palette (index 255 = transparent) and
     write a looping transparent GIF scaled to out_w.
 
@@ -125,8 +141,13 @@ def _save_transparent_gif(rgba_frames, durs, out_path: Path, out_w: int, disposa
         p.paste(TRANSP_IDX, (0, 0), transp)
         p.info["transparency"] = TRANSP_IDX
         out_frames.append(p)
-    out_frames[0].save(out_path, save_all=True, append_images=out_frames[1:],
-                       duration=durs, loop=0, transparency=TRANSP_IDX, disposal=disposal)
+    # loop=None omits the NETSCAPE loop extension entirely → the GIF plays
+    # exactly once and freezes on its last frame (the reveal behaviour).
+    kwargs = dict(save_all=True, append_images=out_frames[1:],
+                  duration=durs, transparency=TRANSP_IDX, disposal=disposal)
+    if loop is not None:
+        kwargs["loop"] = loop
+    out_frames[0].save(out_path, **kwargs)
 
 
 def _crossfade_rgba(front: Image.Image, back: Image.Image, fade: int = 5):
@@ -143,17 +164,22 @@ def _crossfade_rgba(front: Image.Image, back: Image.Image, fade: int = 5):
     return frames
 
 
-def make_one(idx: int, free_spins: str, width: int, out_dir: Path, game_uri: str = "", bet: str = "") -> Path:
+def make_one(idx: int, free_spins: str, width: int, out_dir: Path, game_uri: str = "",
+             bet: str = "", reveal: bool = False) -> Path:
+    """reveal=False: looping front<->back flip (the original email GIF).
+    reveal=True: starts on the JUGABET back, flips ONCE to the front and stays
+    — the 'click turned my card around' illusion for email."""
     front = render_face(R.single_html(idx, free_spins, game_uri, bet))
     back = render_face(R.single_back_html(idx))
     bbox = _content_bbox(front, back)
     if bbox:
         front, back = front.crop(bbox), back.crop(bbox)
-    frames = _flip_rgba(front, back)
+    frames = _flip_rgba(front, back, reveal_frames() if reveal else None)
     name, _, deposit, _ = R.SUITS[idx]
     dep = deposit.replace("$", "").replace(".", "")
     path = out_dir / f"card_{name}_{dep}_flip.gif"
-    _save_transparent_gif([f for f, _ in frames], [d for _, d in frames], path, width)
+    _save_transparent_gif([f for f, _ in frames], [d for _, d in frames], path, width,
+                          loop=None if reveal else 0)
     return path
 
 
@@ -209,6 +235,8 @@ def main() -> int:
     ap.add_argument("--width", type=int, default=300, help="GIF width in px (default 300)")
     ap.add_argument("--only", help="one suit only (hearts/diamonds/clubs/spades)")
     ap.add_argument("--game", default="", help="path to a slot-game image to drop into the card well")
+    ap.add_argument("--reveal", action="store_true",
+                    help="back-first, one flip to the front, no loop (email click illusion)")
     ap.add_argument("--out", default=str(R.HERE / "out"))
     a = ap.parse_args()
     out_dir = Path(a.out); out_dir.mkdir(parents=True, exist_ok=True)
@@ -218,8 +246,8 @@ def main() -> int:
     names = [s[0] for s in R.SUITS]
     todo = [names.index(a.only)] if a.only else range(len(R.SUITS))
     for idx in todo:
-        p = make_one(idx, a.free_spins, a.width, out_dir, game_uri)
-        print(f"  {p.name}  ({p.stat().st_size // 1024} KB, {len(flip_frames())} frames)")
+        p = make_one(idx, a.free_spins, a.width, out_dir, game_uri, reveal=a.reveal)
+        print(f"  {p.name}  ({p.stat().st_size // 1024} KB)")
     print(f"\nDone. Free spins = {a.free_spins!r}, width {a.width}px.")
     return 0
 

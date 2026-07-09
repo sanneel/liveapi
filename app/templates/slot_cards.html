@@ -175,12 +175,18 @@
         var fs = document.getElementById('sc-fs').value || '50';
         var w = document.getElementById('sc-w').value || '560';
         if (fs !== '50') params.push('free_spins=' + encodeURIComponent(fs));
+        var cardsParams = params.slice();       // same image + bets + spins, no width
         if (w !== '560') params.push('width=' + encodeURIComponent(w));
         var publicUrl = baseUrl + (params.length ? '?' + params.join('&') : '');
+        // Interactive landing page: cards face-down, each flips on its own click.
+        var cardsUrl = window.location.origin + '/r/cards' +
+          (cardsParams.length ? '?' + cardsParams.join('&') : '');
 
-        // Build email snippet (2x2 table, 4 separate GIF links)
-        // Using placeholder CDN URLs — user replaces them after uploading
+        // Build email snippet (2x2 table, 4 separate GIF links).
+        // GIF srcs are placeholder CDN URLs; hrefs default to the click-to-flip
+        // landing page so the email cards open the interactive version.
         var cardW = Math.round((document.getElementById('sc-w').value || 560) / 2);
+        var snippetHref = cardsUrl.replace(/&/g, '&amp;');
         var snippetRows = '';
         for (var ri = 0; ri < 2; ri++) {
           snippetRows += '  <tr>\n';
@@ -188,8 +194,8 @@
             var card = d.cards[ri * 2 + ci];
             snippetRows +=
               '    <td style="padding:6px;">\n' +
-              '      <a href="https://YOUR-CASINO-LINK/' + card.suit + '" target="_blank" style="display:block;">\n' +
-              '        <img src="https://YOUR-CDN/card_' + card.suit + '_flip.gif"' +
+              '      <a href="' + snippetHref + '" target="_blank" style="display:block;">\n' +
+              '        <img src="https://YOUR-CDN/' + card.gif_name + '"' +
               ' width="' + cardW + '" alt="' + card.label + ' — ' + card.bet + ' spin value"\n' +
               '             style="display:block;border:0;">\n' +
               '      </a>\n' +
@@ -203,9 +209,15 @@
           '</table>';
 
         var html =
-          // ── 4 individual flip GIFs ──
+          // ── interactive click-to-flip page ──
+          '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px">' +
+            '<a class="btn primary" href="' + cardsUrl + '" target="_blank">🃏 Open click-to-flip page</a>' +
+            '<span style="font-size:12px;color:var(--t-faint,#889)">Cards face-down; each flips on its own click. Add <code>&amp;link=https://…</code> for the Play Now target. Email GIF links below already point here.</span>' +
+          '</div>' +
+          '<div class="sc-public-url" style="margin:0 0 20px"><span class="label">Click-to-flip page URL:</span><code>' + cardsUrl + '</code></div>' +
+          // ── 4 individual reveal GIFs ──
           '<div style="font-size:12px;color:var(--t-faint,#889);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">' +
-            '4 individual flip GIFs — identical dimensions' +
+            '4 individual reveal GIFs — identical dimensions, start face-down, flip once to the front and stay' +
           '</div>' +
           '<div class="sc-grid">';
         d.cards.forEach(function (c) {

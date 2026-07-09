@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Query, Request, Response, HTTPException
+from fastapi.responses import HTMLResponse
 from PIL import Image
 
 from ..logging_config import get_logger
@@ -221,3 +222,50 @@ def slot_gif(
         "Cache-Control": "public, max-age=3600",
         "X-Cache": "MISS",
     })
+
+
+@router.get("/r/slot-img/{img_id}")
+@limiter.limit("120/minute")
+def slot_img(request: Request, img_id: str) -> Response:
+    """Serve a stored uploaded slot-game image (used by the /r/cards page's
+    artwork wells)."""
+    stored = _get_stored_image(img_id)
+    if not stored:
+        raise HTTPException(404, "Image not found or expired")
+    data, mime = stored
+    return Response(content=data, media_type=mime,
+                    headers={"Cache-Control": "public, max-age=3600"})
+
+
+@router.get("/r/cards", response_class=HTMLResponse)
+@limiter.limit("60/minute")
+def slot_cards_flip_page(
+    request: Request,
+    img_id: Optional[str] = Query(None, description="Stored image ID for the artwork well"),
+    image: Optional[str] = Query(None, description="HTTP(S) image URL for the artwork well"),
+    bet_hearts: Optional[str] = Query(None),
+    bet_diamonds: Optional[str] = Query(None),
+    bet_clubs: Optional[str] = Query(None),
+    bet_spades: Optional[str] = Query(None),
+    free_spins: Optional[str] = Query("50"),
+    link: Optional[str] = Query(None, description="Play Now target for all cards"),
+    link_hearts: Optional[str] = Query(None),
+    link_diamonds: Optional[str] = Query(None),
+    link_clubs: Optional[str] = Query(None),
+    link_spades: Optional[str] = Query(None),
+) -> HTMLResponse:
+    """Interactive click-to-flip landing page: 4 cards face-down on the JUGABET
+    back; clicking one turns THAT card around, each card independently. This is
+    what email can't do — email GIFs autoplay their reveal instead, and this
+    page is where their links should point."""
+    game_url = ""
+    if img_id and _get_stored_image(img_id):
+        game_url = f"/r/slot-img/{img_id}"
+    elif image and image.startswith(("http://", "https://")):
+        game_url = image
+
+    bets = [bet_hearts or "", bet_diamonds or "", bet_clubs or "", bet_spades or ""]
+    links = [link_hearts or link or "", link_diamonds or link or "",
+             link_clubs or link or "", link_spades or link or ""]
+    html = runner.build_flip_page(game_url, free_spins or "50", bets, links)
+    return HTMLResponse(html, headers={"Cache-Control": "public, max-age=300"})
