@@ -43,6 +43,16 @@ TEMPLATE_PATH = HERE / "templates" / "casino" / "nc_discount.json"
 
 # ── literals in the captured template we swap per game ──────────────────
 TPL_SLUG = "gamzix-coin-win-2-hold-the-spin"
+# The captured template links to the game via the in-app deeplink path
+# (/launch/slots/iframe/<slug>). The notification must point at the public
+# game page instead, so we swap the whole path — not just the slug — in every
+# link field (link-en, link-es, deeplink). The %$utm_tags% suffix is kept.
+TPL_LINK = f"/launch/slots/iframe/{TPL_SLUG}"
+
+
+def game_url(slug: str) -> str:
+    """Public game-page URL used in the notification links."""
+    return f"https://jugabet.cl/services/slots/game/{slug}"
 TPL_TITLE = "🔥El más jugado del día - Coin Win 2: Hold The Spin"
 TPL_DES = "No te lo pierdas. Sumérgete en la diversión."
 TPL_CAPTION = " ¡A jugar!"
@@ -113,7 +123,8 @@ def prepare_game(date_str: str, slug: str, name: str) -> tuple[dict, list[str]]:
     s = TEMPLATE_PATH.read_text(encoding="utf-8")
     s = s.replace(TPL_COPY_JOURNEY, journey_name)   # top-level name (had "Copy of")
     s = s.replace(TPL_JOURNEY, journey_name)        # metadata copies
-    s = s.replace(TPL_SLUG, slug)
+    s = s.replace(TPL_LINK, game_url(slug))         # deeplink path -> public game URL (all link fields)
+    s = s.replace(TPL_SLUG, slug)                   # any remaining bare slug (safety net)
     s = s.replace(TPL_TITLE, title)
     s = s.replace(TPL_DES, des)
     s = s.replace(TPL_CAPTION, " " + caption)       # keep the leading-space style
@@ -130,7 +141,7 @@ def prepare_game(date_str: str, slug: str, name: str) -> tuple[dict, list[str]]:
         f"{day:%a %d.%m} {hh:02d}:{mm:02d} Chile -> startAt {start_at}",
         f"journeyName = {journey_name!r}",
         f"title = {title!r}",
-        f"link = /launch/slots/iframe/{slug}",
+        f"link = {game_url(slug)}",
     ]
     return body, report
 
@@ -146,7 +157,8 @@ def verify(body: dict, slug: str) -> list[tuple[bool, str]]:
     return [
         (RESERVED_TOKEN in s, "reservedJourneyId placeholder present (filled at paste)"),
         (ICON_TOKEN in s, "icon placeholder present (uploaded at paste)"),
-        (slug in s, f"game slug {slug} wired into the link"),
+        (game_url(slug) in s, f"link points at public game URL {game_url(slug)}"),
+        ("/launch/slots/iframe/" not in s, "old deeplink path removed"),
         (body.get("duplicatedFromId") is None, "no stale duplicatedFromId"),
         (bool(start and stop and start < stop), f"startAt {start} < stopAt {stop}"),
         (not stale, "no leftover template literals" + (f" (LEAK: {stale})" if stale else "")),
