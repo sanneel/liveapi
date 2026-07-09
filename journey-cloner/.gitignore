@@ -8,5 +8,10 @@ raw_fetches/*
 out/*
 !out/.gitkeep
 
+# Generated, self-contained email preview (~3MB, embeds every card GIF as a
+# base64 data URI). Regenerate any time with `python email_cards/build_email.py`.
+# The hosted-URL version (email_jugabet.html) is the one that's tracked.
+email_cards/email_jugabet_preview.html
+
 __pycache__/
 *.py[cod]
