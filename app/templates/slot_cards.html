@@ -66,13 +66,13 @@
         <input class="input" type="number" id="sc-fs" value="50" min="1" max="999">
       </div>
       <div class="sc-field">
-        <span class="lbl">GIF width (px)</span>
-        <input class="input" type="number" id="sc-w" value="300" min="120" max="500">
+        <span class="lbl">Combined GIF width (px)</span>
+        <input class="input" type="number" id="sc-w" value="560" min="240" max="1000">
       </div>
     </div>
 
     <button class="btn primary" id="sc-go" style="justify-content:center; margin-top:16px; width:100%" disabled>
-      Generate 4 cards + GIFs
+      Generate combined GIF
     </button>
     <div class="sc-err" id="sc-err"></div>
   </form>
@@ -129,13 +129,13 @@
   go.addEventListener('click', function () {
     if (!picked) return;
     err.textContent = '';
-    var label = go.textContent; go.disabled = true; go.innerHTML = '<span class="sc-spin"></span>Rendering 4 cards…';
-    result.innerHTML = '<div class="sc-empty">Rendering all four cards (this takes ~15–20 seconds)…</div>';
+    var label = go.textContent; go.disabled = true; go.innerHTML = '<span class="sc-spin"></span>Rendering…';
+    result.innerHTML = '<div class="sc-empty">Rendering the combined 4-card GIF (this takes ~20–30 seconds)…</div>';
 
     var fd = new FormData();
     fd.append('image', picked);
     fd.append('free_spins', String(document.getElementById('sc-fs').value || '50'));
-    fd.append('gif_width', String(document.getElementById('sc-w').value || '300'));
+    fd.append('total_width', String(document.getElementById('sc-w').value || '560'));
     fd.append('bet_hearts', betFor('hearts'));
     fd.append('bet_diamonds', betFor('diamonds'));
     fd.append('bet_clubs', betFor('clubs'));
@@ -150,16 +150,22 @@
           result.innerHTML = '<div class="sc-empty">—</div>';
           return;
         }
-        var html = '<div class="sc-grid">';
-        res.j.cards.forEach(function (c) {
+        var d = res.j;
+        var html =
+          '<div style="text-align:center">' +
+            '<div style="font-size:12px;color:var(--t-faint,#889);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Combined GIF (transparent, for email)</div>' +
+            '<div style="background:repeating-conic-gradient(#e9edf3 0% 25%, #fff 0% 50%) 0/24px 24px;border:1px solid var(--border-in,#e6e6ee);border-radius:12px;padding:12px;display:inline-block;max-width:100%">' +
+              '<img src="' + d.gif + '" alt="slot cards" style="max-width:100%;display:block">' +
+            '</div>' +
+            '<div style="margin-top:12px"><a class="btn primary" download="' + d.gif_name + '" href="' + d.gif + '">⬇ Download combined GIF</a></div>' +
+          '</div>' +
+          '<div style="font-size:12px;color:var(--t-faint,#889);text-transform:uppercase;letter-spacing:.4px;margin:20px 0 8px">Individual transparent PNGs</div>' +
+          '<div class="sc-grid">';
+        d.cards.forEach(function (c) {
           html +=
             '<div class="sc-card">' +
               '<div class="cap">' + c.label + '<small>Deposit ' + c.deposit + ' · Spin ' + c.bet + '</small></div>' +
-              '<div class="sc-stage"><img src="' + c.gif + '" alt="' + c.suit + '"></div>' +
-              '<div class="dl">' +
-                '<a class="btn primary" download="' + c.gif_name + '" href="' + c.gif + '">⬇ GIF</a>' +
-                '<a class="btn" download="card_' + c.suit + '.png" href="' + c.png + '">⬇ PNG</a>' +
-              '</div>' +
+              '<div class="dl"><a class="btn" download="card_' + c.suit + '.png" href="' + c.png + '">⬇ PNG</a></div>' +
             '</div>';
         });
         html += '</div>';

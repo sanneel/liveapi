@@ -166,3 +166,49 @@ def render_all(
         _render_one(R, G, idx, fs, data_uri, gif_width, (bets[idx] or "").strip())
         for idx in range(len(SUITS))
     ]
+
+
+def render_grid(
+    image_bytes: bytes,
+    mime: str,
+    free_spins: str,
+    bets: Optional[List[str]] = None,
+    total_width: int = 560,
+    cols: int = 2,
+) -> Dict[str, object]:
+    """Render ONE transparent GIF with all four tiers in a grid (each flipping
+    front<->JUGABET back), plus the four transparent front PNGs for individual
+    use. `total_width` is the whole grid's pixel width."""
+    _validate(image_bytes, mime, 300)
+    total_width = max(240, min(1000, int(total_width or 560)))
+    cols = 2 if cols not in (1, 2, 4) else cols
+    fs = (free_spins or "50").strip() or "50"
+    bets = [(b or "").strip() for b in ((bets or []) + [""] * len(SUITS))]
+    R, G = _prep()
+    data_uri = _data_uri(image_bytes, mime)
+
+    import tempfile
+
+    cell_width = max(120, (total_width - 0) // cols)
+    grid_cards = [(idx, data_uri, _fmt_bet(bets[idx])) for idx in range(len(SUITS))]
+
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        try:
+            gif_path = G.make_grid(grid_cards, fs, cell_width, tmp / "grid.gif", cols=cols)
+            cards = []
+            for idx in range(len(SUITS)):
+                bet = _fmt_bet(bets[idx])
+                png_path = tmp / f"front_{idx}.png"
+                R.render_png(R.single_html(idx, fs, data_uri, bet), png_path, scale=2)
+                _, label, deposit, default_bet = SUITS[idx]
+                cards.append({
+                    "suit": SUIT_NAMES[idx],
+                    "label": label,
+                    "deposit": deposit,
+                    "bet": bet or default_bet,
+                    "png": png_path.read_bytes(),
+                })
+        except SystemExit as exc:
+            raise RuntimeError(str(exc) or "Chromium render failed") from exc
+        return {"gif": gif_path.read_bytes(), "gif_name": "slot_cards_gow.gif", "cards": cards}

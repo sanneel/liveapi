@@ -51,23 +51,11 @@ def _uri(raw: bytes, ct: str) -> str:
     return f"data:{ct};base64," + base64.b64encode(raw).decode("ascii")
 
 
-def _card_payload(c: dict) -> dict:
-    return {
-        "suit": c["suit"],
-        "label": c["label"],
-        "deposit": c["deposit"],
-        "bet": c["bet"],
-        "gif": _uri(c["gif"], "image/gif"),
-        "png": _uri(c["png"], "image/png"),
-        "gif_name": c["gif_name"],
-    }
-
-
 @router.post("/admin/slot-cards/generate")
 async def slot_cards_generate(
     image: UploadFile = File(...),
     free_spins: str = Form("50"),
-    gif_width: int = Form(300),
+    total_width: int = Form(560),
     # Per-tier spin values (index-aligned with the four suits). Blank -> default.
     bet_hearts: str = Form(""),
     bet_diamonds: str = Form(""),
@@ -75,16 +63,27 @@ async def slot_cards_generate(
     bet_spades: str = Form(""),
     user: User = Depends(require_role("editor")),
 ) -> JSONResponse:
-    """Render all four tiers (one per suit) from a single uploaded slot image."""
+    """Render ONE transparent GIF with all four tiers in a 2x2 grid, plus the
+    four transparent front PNGs, from a single uploaded slot image."""
     data = await image.read()
     mime = (image.content_type or "").lower().split(";")[0].strip()
     bets = [bet_hearts, bet_diamonds, bet_clubs, bet_spades]
     try:
-        cards = runner.render_all(data, mime, free_spins, bets, gif_width)
+        out = runner.render_grid(data, mime, free_spins, bets, total_width)
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
     except Exception as exc:  # surface the real reason (e.g. missing Chromium)
         logger.exception("slot-card render failed")
         return JSONResponse({"error": f"Render failed: {exc}"}, status_code=500)
 
-    return JSONResponse({"cards": [_card_payload(c) for c in cards]})
+    return JSONResponse({
+        "gif": _uri(out["gif"], "image/gif"),
+        "gif_name": out["gif_name"],
+        "cards": [
+            {
+                "suit": c["suit"], "label": c["label"], "deposit": c["deposit"],
+                "bet": c["bet"], "png": _uri(c["png"], "image/png"),
+            }
+            for c in out["cards"]
+        ],
+    })
