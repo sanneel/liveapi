@@ -262,36 +262,81 @@ def single_back_html(idx: int) -> str:
 </body></html>"""
 
 
+_CHROME_BIN_CACHE: str | None = None
+
+
+def _safe_glob(root: Path, pat: str) -> list[Path]:
+    """glob that never raises — inaccessible dirs (e.g. another user's
+    /root/.cache) return nothing instead of a PermissionError."""
+    try:
+        return sorted(root.glob(pat))
+    except OSError:
+        return []
+
+
+def _playwright_chromium() -> str | None:
+    """Ask Playwright where its Chromium is — the same lookup the parser uses,
+    so it works no matter which user the service runs as. Done in a subprocess
+    because the sync API can't run inside the request's asyncio loop."""
+    try:
+        r = subprocess.run(
+            [sys.executable, "-c",
+             "from playwright.sync_api import sync_playwright\n"
+             "p = sync_playwright().start()\n"
+             "print(p.chromium.executable_path)\n"
+             "p.stop()"],
+            capture_output=True, text=True, timeout=60,
+        )
+        for line in reversed((r.stdout or "").splitlines()):
+            line = line.strip()
+            if line and Path(line).exists():
+                return line
+    except Exception:
+        pass
+    return None
+
+
 def chrome_bin() -> str:
-    """Locate a Chromium executable. Works in the sandbox (/opt/pw-browsers),
-    on a production VPS where Playwright installed the browser under
-    ~/.cache/ms-playwright or PLAYWRIGHT_BROWSERS_PATH, and from a plain PATH
-    install. Falls back to the headless_shell build if the full chrome binary
-    isn't present."""
-    roots = []
+    """Locate a Chromium executable. Tries the sandbox path (/opt/pw-browsers),
+    the per-user Playwright caches (permission-safe), then asks Playwright
+    directly, then PATH. Result is cached for the process."""
+    global _CHROME_BIN_CACHE
+    if _CHROME_BIN_CACHE:
+        return _CHROME_BIN_CACHE
+
+    roots: list[Path] = []
     env_root = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
     if env_root and env_root not in ("0", "1"):
         roots.append(Path(env_root))
-    roots += [Path("/opt/pw-browsers"), Path.home() / ".cache" / "ms-playwright"]
-    # The systemd service may run as a different user than the one that ran
-    # `playwright install`, so scan the usual per-user cache locations too.
-    roots.append(Path("/root/.cache/ms-playwright"))
-    roots += sorted(Path("/home").glob("*/.cache/ms-playwright"))
+    roots += [
+        Path("/opt/pw-browsers"),
+        Path.home() / ".cache" / "ms-playwright",
+        Path("/root/.cache/ms-playwright"),
+    ]
+    roots += _safe_glob(Path("/home"), "*/.cache/ms-playwright")
     patterns = (
         "chromium-*/chrome-linux/chrome",
+        "chromium-*/chrome-linux64/chrome",
         "chromium_headless_shell-*/chrome-linux/headless_shell",
+        "chromium_headless_shell-*/chrome-linux64/headless_shell",
         "chromium-*/chrome-linux/headless_shell",
     )
     for root in roots:
         for pat in patterns:
-            hits = sorted(root.glob(pat))
-            if hits:
-                return str(hits[-1])
-    for name in ("chromium", "chromium-browser", "google-chrome", "chrome"):
-        found = shutil.which(name)
-        if found:
-            return found
-    sys.exit("No Chromium binary found (set PLAYWRIGHT_BROWSERS_PATH or run `playwright install chromium`).")
+            for hit in _safe_glob(root, pat):
+                _CHROME_BIN_CACHE = str(hit)
+                return _CHROME_BIN_CACHE
+
+    found = _playwright_chromium()
+    if not found:
+        for name in ("chromium", "chromium-browser", "google-chrome", "chrome"):
+            found = shutil.which(name)
+            if found:
+                break
+    if not found:
+        sys.exit("No Chromium binary found (set PLAYWRIGHT_BROWSERS_PATH or run `playwright install chromium`).")
+    _CHROME_BIN_CACHE = found
+    return found
 
 
 def render_png(html: str, out: Path, scale: int) -> None:
