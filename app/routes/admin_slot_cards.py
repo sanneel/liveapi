@@ -47,34 +47,44 @@ def slot_cards_page(
     )
 
 
+def _uri(raw: bytes, ct: str) -> str:
+    return f"data:{ct};base64," + base64.b64encode(raw).decode("ascii")
+
+
+def _card_payload(c: dict) -> dict:
+    return {
+        "suit": c["suit"],
+        "label": c["label"],
+        "deposit": c["deposit"],
+        "bet": c["bet"],
+        "gif": _uri(c["gif"], "image/gif"),
+        "png": _uri(c["png"], "image/png"),
+        "gif_name": c["gif_name"],
+    }
+
+
 @router.post("/admin/slot-cards/generate")
 async def slot_cards_generate(
     image: UploadFile = File(...),
-    suit: str = Form(...),
     free_spins: str = Form("50"),
     gif_width: int = Form(300),
+    # Per-tier spin values (index-aligned with the four suits). Blank -> default.
+    bet_hearts: str = Form(""),
+    bet_diamonds: str = Form(""),
+    bet_clubs: str = Form(""),
+    bet_spades: str = Form(""),
     user: User = Depends(require_role("editor")),
 ) -> JSONResponse:
+    """Render all four tiers (one per suit) from a single uploaded slot image."""
     data = await image.read()
     mime = (image.content_type or "").lower().split(";")[0].strip()
+    bets = [bet_hearts, bet_diamonds, bet_clubs, bet_spades]
     try:
-        out = runner.render_card(data, mime, suit.strip(), free_spins, gif_width)
+        cards = runner.render_all(data, mime, free_spins, bets, gif_width)
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
-    except Exception:
+    except Exception as exc:  # surface the real reason (e.g. missing Chromium)
         logger.exception("slot-card render failed")
-        return JSONResponse(
-            {"error": "Render failed. Check the server has Chromium installed."},
-            status_code=500,
-        )
+        return JSONResponse({"error": f"Render failed: {exc}"}, status_code=500)
 
-    def uri(raw: bytes, ct: str) -> str:
-        return f"data:{ct};base64," + base64.b64encode(raw).decode("ascii")
-
-    return JSONResponse(
-        {
-            "gif": uri(out["gif"], "image/gif"),
-            "png": uri(out["png"], "image/png"),
-            "gif_name": out["gif_name"],
-        }
-    )
+    return JSONResponse({"cards": [_card_payload(c) for c in cards]})

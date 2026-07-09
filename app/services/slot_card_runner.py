@@ -16,7 +16,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from ..config import BASE_DIR
 
@@ -63,49 +63,106 @@ def suit_choices() -> List[Dict[str, str]]:
     ]
 
 
-def render_card(
-    image_bytes: bytes,
-    mime: str,
-    suit: str,
-    free_spins: str,
-    gif_width: int = 300,
-) -> Dict[str, bytes]:
-    """Render one card's front PNG and flip GIF with `image_bytes` in the well.
-
-    Returns {'png': bytes, 'gif': bytes, 'gif_name': str}. Raises ValueError on
-    bad input so the route can turn it into a 400.
-    """
-    if suit not in SUIT_NAMES:
-        raise ValueError(f"Unknown suit: {suit!r}")
+def _validate(image_bytes: bytes, mime: str, gif_width: int) -> int:
     if not image_bytes:
         raise ValueError("No image supplied.")
     if len(image_bytes) > MAX_IMAGE_BYTES:
         raise ValueError("Image is too large (max 18 MB).")
     if mime not in ALLOWED_MIME:
         raise ValueError("Image must be PNG, JPG, WEBP or GIF.")
-    gif_width = max(120, min(500, int(gif_width or 300)))
-    fs = (free_spins or "50").strip() or "50"
+    return max(120, min(500, int(gif_width or 300)))
 
+
+def _fmt_bet(bet: str) -> str:
+    """Normalise a typed spin value ('800') to the card's '$800' style. Blank
+    stays blank so the tier default is used."""
+    bet = (bet or "").strip()
+    if bet and not bet.startswith("$"):
+        bet = "$" + bet
+    return bet
+
+
+def _render_one(R, G, idx: int, fs: str, data_uri: str, gif_width: int, bet: str) -> Dict[str, object]:
+    """Render one tier's front PNG + flip GIF into a temp dir and return bytes.
+
+    render_cards/make_gif call sys.exit() (SystemExit) when Chromium is missing
+    or a render fails — convert that to a RuntimeError so the route reports the
+    real reason instead of a bare 500 'Internal Server Error'."""
+    import tempfile
+
+    bet = _fmt_bet(bet)
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        png_path = tmp / "front.png"
+        try:
+            R.render_png(R.single_html(idx, fs, data_uri, bet), png_path, scale=2)
+            gif_path = G.make_one(idx, fs, gif_width, tmp, data_uri, bet)
+        except SystemExit as exc:  # sys.exit() from chrome_bin()/render_png()
+            raise RuntimeError(str(exc) or "Chromium render failed") from exc
+        _, label, deposit, default_bet = SUITS[idx]
+        return {
+            "suit": SUIT_NAMES[idx],
+            "label": label,
+            "deposit": deposit,
+            "bet": bet or default_bet,
+            "png": png_path.read_bytes(),
+            "gif": gif_path.read_bytes(),
+            "gif_name": gif_path.name,
+        }
+
+
+def _prep():
     R = _load("render_cards")
     G = _load("make_gif")
     # make_gif imported its own copy of render_cards; keep them in sync so both
     # share the exact same geometry/helpers.
     G.R = R
+    return R, G
 
+
+def _data_uri(image_bytes: bytes, mime: str) -> str:
     import base64
-    import tempfile
+    return f"data:{mime};base64," + base64.b64encode(image_bytes).decode("ascii")
 
-    ext = {"image/jpeg": "png", "image/jpg": "png"}.get(mime, mime.split("/")[-1])
-    data_uri = f"data:{mime};base64," + base64.b64encode(image_bytes).decode("ascii")
-    idx = SUIT_NAMES.index(suit)
 
-    with tempfile.TemporaryDirectory() as td:
-        tmp = Path(td)
-        png_path = tmp / "front.png"
-        R.render_png(R.single_html(idx, fs, data_uri), png_path, scale=2)
-        gif_path = G.make_one(idx, fs, gif_width, tmp, data_uri)
-        return {
-            "png": png_path.read_bytes(),
-            "gif": gif_path.read_bytes(),
-            "gif_name": gif_path.name,
-        }
+def render_card(
+    image_bytes: bytes,
+    mime: str,
+    suit: str,
+    free_spins: str,
+    gif_width: int = 300,
+    bet: str = "",
+) -> Dict[str, object]:
+    """Render one card's front PNG and flip GIF with `image_bytes` in the well.
+
+    Returns {'png', 'gif', 'gif_name', ...}. Raises ValueError on bad input so
+    the route can turn it into a 400.
+    """
+    if suit not in SUIT_NAMES:
+        raise ValueError(f"Unknown suit: {suit!r}")
+    gif_width = _validate(image_bytes, mime, gif_width)
+    fs = (free_spins or "50").strip() or "50"
+    R, G = _prep()
+    return _render_one(R, G, SUIT_NAMES.index(suit), fs, _data_uri(image_bytes, mime), gif_width, (bet or "").strip())
+
+
+def render_all(
+    image_bytes: bytes,
+    mime: str,
+    free_spins: str,
+    bets: Optional[List[str]] = None,
+    gif_width: int = 300,
+) -> List[Dict[str, object]]:
+    """Render all four tiers (hearts/diamonds/clubs/spades) from one image.
+
+    `bets` overrides the spin value per tier (index-aligned with SUITS); blank
+    entries fall back to the tier default. Returns one dict per tier."""
+    gif_width = _validate(image_bytes, mime, gif_width)
+    fs = (free_spins or "50").strip() or "50"
+    bets = (bets or []) + [""] * len(SUITS)
+    R, G = _prep()
+    data_uri = _data_uri(image_bytes, mime)
+    return [
+        _render_one(R, G, idx, fs, data_uri, gif_width, (bets[idx] or "").strip())
+        for idx in range(len(SUITS))
+    ]

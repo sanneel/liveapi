@@ -248,10 +248,10 @@ FLAT_CSS = f"""
 """
 
 
-def single_html(idx: int, free_spins: str, game_uri: str = "") -> str:
-    _, glyph, deposit, bet = SUITS[idx]
+def single_html(idx: int, free_spins: str, game_uri: str = "", bet: str = "") -> str:
+    _, glyph, deposit, default_bet = SUITS[idx]
     return f"""<!doctype html><html><head><meta charset="utf-8"><style>{CSS}{FLAT_CSS}</style></head><body>
-{card_html(idx + 1, glyph, deposit, bet, free_spins, game_uri)}
+{card_html(idx + 1, glyph, deposit, bet or default_bet, free_spins, game_uri)}
 </body></html>"""
 
 
@@ -273,6 +273,10 @@ def chrome_bin() -> str:
     if env_root and env_root not in ("0", "1"):
         roots.append(Path(env_root))
     roots += [Path("/opt/pw-browsers"), Path.home() / ".cache" / "ms-playwright"]
+    # The systemd service may run as a different user than the one that ran
+    # `playwright install`, so scan the usual per-user cache locations too.
+    roots.append(Path("/root/.cache/ms-playwright"))
+    roots += sorted(Path("/home").glob("*/.cache/ms-playwright"))
     patterns = (
         "chromium-*/chrome-linux/chrome",
         "chromium_headless_shell-*/chrome-linux/headless_shell",

@@ -70,9 +70,9 @@ def _quant(rgb: Image.Image, palette: Image.Image) -> Image.Image:
     return rgb.quantize(palette=palette, dither=Image.NONE)
 
 
-def make_one(idx: int, free_spins: str, width: int, out_dir: Path, game_uri: str = "") -> Path:
+def make_one(idx: int, free_spins: str, width: int, out_dir: Path, game_uri: str = "", bet: str = "") -> Path:
     from PIL import ImageEnhance
-    front = render_face(R.single_html(idx, free_spins, game_uri))
+    front = render_face(R.single_html(idx, free_spins, game_uri, bet))
     back = render_face(R.single_back_html(idx))
     W, H = front.size
     th = int(round(width * H / W))
