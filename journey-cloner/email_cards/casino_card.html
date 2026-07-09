@@ -1,0 +1,264 @@
+<style>
+  :root{--gold-hi:#fdf3c0;--gold:#e9c565;--gold-mid:#c9962f;--gold-lo:#7c561a;
+    --green-hi:#47e07d;--green:#2bb257;--green-lo:#14682f;
+    --white-hi:#fff;--white:#e6ebf3;--white-lo:#aab2be;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  .card{position:relative;width:360px;aspect-ratio:2/3;border-radius:26px;padding:9px;
+    container-type:inline-size;font-family:"Georgia","Times New Roman",serif;
+    background:linear-gradient(135deg,#7c561a 0%,#f7e79f 18%,#c9962f 34%,#8a5f16 50%,#f3d98a 66%,#b98529 82%,#6d4a15 100%);
+    box-shadow:0 0 0 1px rgba(0,0,0,.6),0 26px 60px -20px rgba(0,0,0,.8),0 0 54px -8px rgba(201,150,47,.4);}
+  .inner{position:relative;height:100%;border-radius:17px;overflow:hidden;display:flex;flex-direction:column;
+    padding:5.5cqw 6cqw 5cqw;background:radial-gradient(130% 80% at 50% 42%,#141416 0%,#0a0a0b 55%,#050506 100%);}
+  .inner::before{content:"";position:absolute;inset:0;opacity:.5;pointer-events:none;
+    background-image:repeating-linear-gradient(45deg,rgba(201,150,47,.05) 0 1px,transparent 1px 22px),
+      repeating-linear-gradient(-45deg,rgba(201,150,47,.05) 0 1px,transparent 1px 22px);}
+  .rule{position:absolute;inset:3cqw;border:1px solid rgba(233,197,101,.55);border-radius:12px;
+    box-shadow:inset 0 0 18px rgba(201,150,47,.14),0 0 8px rgba(201,150,47,.1);pointer-events:none;}
+  .gold-text{background:linear-gradient(180deg,var(--gold-hi) 0%,var(--gold) 44%,var(--gold-mid) 60%,#f2d98a 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 1px 0 rgba(0,0,0,.55)) drop-shadow(0 2px 4px rgba(0,0,0,.5));}
+  .white-text{background:linear-gradient(180deg,var(--white-hi) 0%,var(--white) 48%,var(--white-lo) 60%,#eef2f7 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 1px 0 rgba(0,0,0,.6)) drop-shadow(0 3px 5px rgba(0,0,0,.5));}
+  .corner{position:absolute;z-index:3;display:flex;flex-direction:column;align-items:center;line-height:.82;}
+  .corner.tl{top:5cqw;left:6cqw;} .corner.br{bottom:4.5cqw;right:6cqw;transform:rotate(180deg);}
+  .corner .a{font-size:11.5cqw;font-weight:700;letter-spacing:-.02em;} .corner .suit{font-size:6.4cqw;margin-top:.3cqw;}
+  .well{position:relative;flex:1 1 auto;min-height:34cqw;margin:10cqw 1.5cqw 0;border-radius:10px;
+    background:radial-gradient(90% 75% at 50% 45%,#000 42%,#040404 80%,#0a0a0a 100%);
+    box-shadow:inset 0 0 40px rgba(0,0,0,.9),inset 0 0 0 1px rgba(233,197,101,.16);}
+  .well::after{content:"";position:absolute;inset:0;border-radius:10px;
+    background:radial-gradient(120% 90% at 50% 40%,transparent 58%,rgba(0,0,0,.8) 100%);}
+  .divider{display:flex;align-items:center;gap:3cqw;margin:3.4cqw 1cqw 0;}
+  .divider .line{flex:1;height:2px;box-shadow:0 0 6px rgba(201,150,47,.35);
+    background:linear-gradient(90deg,transparent,rgba(233,197,101,.15),var(--gold-mid),rgba(233,197,101,.15),transparent);}
+  .divider .gem{font-size:3.2cqw;filter:drop-shadow(0 0 4px rgba(233,197,101,.5));}
+  .hero{display:flex;align-items:center;justify-content:center;gap:2.4cqw;margin-top:2.6cqw;}
+  .reel{width:16cqw;height:auto;flex:0 0 auto;filter:drop-shadow(0 3px 6px rgba(0,0,0,.55));}
+  .hero .fs{font-family:"Arial Black","Helvetica Neue",Arial,sans-serif;font-weight:900;font-size:13cqw;letter-spacing:-.01em;}
+  .hero .fsl{font-family:"Arial Black","Helvetica Neue",Arial,sans-serif;font-weight:800;font-size:7.4cqw;letter-spacing:.02em;margin-left:2.2cqw;}
+  .stats{display:grid;grid-template-columns:1.14fr 1px 0.86fr;align-items:center;column-gap:2cqw;margin-top:3.4cqw;}
+  .stats .cell{text-align:center;min-width:0;}
+  .stats .k{font-size:3.4cqw;font-weight:700;letter-spacing:.18em;text-transform:uppercase;}
+  .stats .v{font-family:"Arial Black","Helvetica Neue",Arial,sans-serif;font-weight:800;font-size:8.4cqw;
+    line-height:1.05;margin-top:1.2cqw;white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .stats .cur{font-size:.46em;letter-spacing:.01em;margin-left:.12em;}
+  .stats .vsep{width:1px;height:12cqw;align-self:center;box-shadow:0 0 6px rgba(201,150,47,.4);
+    background:linear-gradient(180deg,transparent,var(--gold-mid),transparent);}
+  .cta{position:relative;margin:3.6cqw auto 0;display:block;width:66%;border:none;cursor:pointer;border-radius:999px;padding:3cqw 3cqw;
+    background:linear-gradient(180deg,var(--green-hi) 0%,var(--green) 46%,var(--green-lo) 100%);
+    box-shadow:inset 0 2px 1px rgba(255,255,255,.5),inset 0 -3px 6px rgba(0,0,0,.45),0 0 0 2px var(--gold-mid),
+      0 0 0 3px rgba(0,0,0,.4),0 8px 22px -8px rgba(20,104,47,.8),0 0 22px -4px rgba(71,224,125,.5);overflow:hidden;}
+  .cta::before{content:"";position:absolute;left:0;right:0;top:0;height:50%;border-radius:999px 999px 40% 40%;
+    background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0));}
+  .cta .txt{position:relative;font-family:"Arial Black","Helvetica Neue",Arial,sans-serif;font-weight:900;font-size:5.8cqw;
+    letter-spacing:.08em;white-space:nowrap;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:2.2cqw;}
+  .cta .spark{font-family:Georgia,serif;color:var(--gold-hi);filter:drop-shadow(0 1px 2px rgba(0,0,0,.5));}
+
+  body{min-height:100vh;padding:6vmin 5vmin;background:radial-gradient(120% 90% at 50% 0%,#16161a 0%,#0b0b0d 55%,#050506 100%);}
+  .deck-scroll{overflow-x:auto;padding:26px 0 18px;}
+  .deck{display:flex;gap:6vmin;width:max-content;margin:0 auto;perspective:2000px;}
+  .scene{width:360px;aspect-ratio:2/3;flex:0 0 auto;}
+  .spinner{position:relative;width:100%;height:100%;transform-style:preserve-3d;animation:spin 12s cubic-bezier(.65,.03,.35,.97) infinite;}
+  .spinner .card{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;
+    -webkit-backface-visibility:hidden;backface-visibility:hidden;}
+  .spinner .card .inner{min-height:0;}
+  .spinner .card.back{transform:rotateY(180deg);}
+  @keyframes spin{0%{transform:rotateY(0deg)}45%{transform:rotateY(180deg)}55%{transform:rotateY(180deg)}100%{transform:rotateY(360deg)}}
+  /* ── JUGABET card back ── */
+  .backface{padding:10cqw 7cqw;align-items:center;justify-content:space-between;}
+  .backface::before{opacity:.9;background-image:
+    repeating-linear-gradient(45deg,rgba(233,197,101,.11) 0 1.5px,transparent 1.5px 15px),
+    repeating-linear-gradient(-45deg,rgba(233,197,101,.11) 0 1.5px,transparent 1.5px 15px);}
+  .bpips{display:flex;gap:5cqw;font-size:5cqw;justify-content:center;z-index:1;}
+  .bcore{position:relative;z-index:1;flex:1;width:100%;display:grid;place-items:center;}
+  .bglow{position:absolute;width:90%;height:42%;border-radius:50%;filter:blur(26px);
+    background:radial-gradient(closest-side,rgba(180,216,0,.22),transparent 72%);}
+  .blogo{position:relative;width:76%;height:auto;filter:drop-shadow(0 4px 12px rgba(0,0,0,.6));}
+
+  @media(prefers-reduced-motion:no-preference){.card{animation:glow 6s ease-in-out infinite;}
+    @keyframes glow{0%,100%{box-shadow:0 0 0 1px rgba(0,0,0,.6),0 26px 60px -20px rgba(0,0,0,.8),0 0 40px -10px rgba(201,150,47,.32);}
+      50%{box-shadow:0 0 0 1px rgba(0,0,0,.6),0 26px 60px -20px rgba(0,0,0,.8),0 0 66px -4px rgba(246,226,122,.55);}}}
+  @media(prefers-reduced-motion:reduce){.spinner{animation:none;}}
+</style>
+<div class="deck-scroll"><div class="deck">
+<div class="scene"><div class="spinner" style="animation-delay:-0.0s">
+  <div class="card">
+    <div class="inner">
+      <span class="rule"></span>
+      <div class="corner tl"><span class="a gold-text">A</span><span class="suit gold-text">&#9829;</span></div>
+      <div class="corner br"><span class="a gold-text">A</span><span class="suit gold-text">&#9829;</span></div>
+      <div class="well"></div>
+      <div class="divider"><span class="line"></span><span class="gem gold-text">&#9670;</span><span class="line"></span></div>
+      <div class="hero">
+        <svg class="reel" viewBox="0 0 72 62" aria-hidden="true">
+          <defs>
+            <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fdf3c0"/><stop offset=".45" stop-color="#e9c565"/><stop offset="1" stop-color="#a9781f"/></linearGradient>
+            <linearGradient id="g1s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff6a5a"/><stop offset="1" stop-color="#c31f1f"/></linearGradient>
+          </defs>
+          <rect x="12" y="50" width="34" height="6" rx="2.5" fill="url(#g1)" stroke="#7c561a" stroke-width="1"/>
+          <rect x="22" y="8" width="14" height="9" rx="2.5" fill="url(#g1)" stroke="#7c561a" stroke-width="1.5"/>
+          <rect x="4" y="15" width="50" height="36" rx="9" fill="url(#g1)" stroke="#7c561a" stroke-width="2"/>
+          <rect x="9" y="21" width="40" height="24" rx="4" fill="#0b0b0d" stroke="#5a3f12" stroke-width="1"/>
+          <line x1="22.3" y1="22" x2="22.3" y2="44" stroke="#33251a" stroke-width="1"/>
+          <line x1="35.6" y1="22" x2="35.6" y2="44" stroke="#33251a" stroke-width="1"/>
+          <g fill="url(#g1s)" font-family="Arial Black, Arial" font-weight="900" font-size="17" text-anchor="middle">
+            <text x="15.6" y="39.5">7</text><text x="29" y="39.5">7</text><text x="42.4" y="39.5">7</text>
+          </g>
+          <rect x="56.5" y="21" width="3" height="17" rx="1.5" fill="url(#g1)"/>
+          <circle cx="58" cy="17" r="4.4" fill="url(#g1s)" stroke="#7c561a" stroke-width="1.2"/>
+        </svg>
+        <span class="fs gold-text">{{FREE_SPINS}}</span><span class="fsl white-text">Free Spins</span>
+      </div>
+      <div class="stats">
+        <div class="cell"><div class="k gold-text">Deposit</div><div class="v gold-text">$10.000<span class="cur"> CLP</span></div></div>
+        <span class="vsep"></span>
+        <div class="cell"><div class="k gold-text">Spin Value</div><div class="v gold-text">$100<span class="cur"> CLP</span></div></div>
+      </div>
+      <button class="cta" type="button"><span class="txt"><span class="spark">&#9670;</span><span class="white-text">Play Now</span><span class="spark">&#9670;</span></span></button>
+    </div>
+  </div>
+  <div class="card back">
+    <div class="inner backface">
+      <span class="rule"></span>
+      <div class="bpips"><span class="gold-text">&#9824;</span><span class="gold-text">&#9829;</span><span class="gold-text">&#9830;</span><span class="gold-text">&#9827;</span></div>
+      <div class="bcore"><div class="bglow"></div><img class="blogo" src="data:image/png;base64,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" alt="JugaBet"/></div>
+      <div class="bpips"><span class="gold-text">&#9827;</span><span class="gold-text">&#9830;</span><span class="gold-text">&#9829;</span><span class="gold-text">&#9824;</span></div>
+    </div>
+  </div>
+</div></div>
+<div class="scene"><div class="spinner" style="animation-delay:-2.75s">
+  <div class="card">
+    <div class="inner">
+      <span class="rule"></span>
+      <div class="corner tl"><span class="a gold-text">A</span><span class="suit gold-text">&#9830;</span></div>
+      <div class="corner br"><span class="a gold-text">A</span><span class="suit gold-text">&#9830;</span></div>
+      <div class="well"></div>
+      <div class="divider"><span class="line"></span><span class="gem gold-text">&#9670;</span><span class="line"></span></div>
+      <div class="hero">
+        <svg class="reel" viewBox="0 0 72 62" aria-hidden="true">
+          <defs>
+            <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fdf3c0"/><stop offset=".45" stop-color="#e9c565"/><stop offset="1" stop-color="#a9781f"/></linearGradient>
+            <linearGradient id="g2s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff6a5a"/><stop offset="1" stop-color="#c31f1f"/></linearGradient>
+          </defs>
+          <rect x="12" y="50" width="34" height="6" rx="2.5" fill="url(#g2)" stroke="#7c561a" stroke-width="1"/>
+          <rect x="22" y="8" width="14" height="9" rx="2.5" fill="url(#g2)" stroke="#7c561a" stroke-width="1.5"/>
+          <rect x="4" y="15" width="50" height="36" rx="9" fill="url(#g2)" stroke="#7c561a" stroke-width="2"/>
+          <rect x="9" y="21" width="40" height="24" rx="4" fill="#0b0b0d" stroke="#5a3f12" stroke-width="1"/>
+          <line x1="22.3" y1="22" x2="22.3" y2="44" stroke="#33251a" stroke-width="1"/>
+          <line x1="35.6" y1="22" x2="35.6" y2="44" stroke="#33251a" stroke-width="1"/>
+          <g fill="url(#g2s)" font-family="Arial Black, Arial" font-weight="900" font-size="17" text-anchor="middle">
+            <text x="15.6" y="39.5">7</text><text x="29" y="39.5">7</text><text x="42.4" y="39.5">7</text>
+          </g>
+          <rect x="56.5" y="21" width="3" height="17" rx="1.5" fill="url(#g2)"/>
+          <circle cx="58" cy="17" r="4.4" fill="url(#g2s)" stroke="#7c561a" stroke-width="1.2"/>
+        </svg>
+        <span class="fs gold-text">{{FREE_SPINS}}</span><span class="fsl white-text">Free Spins</span>
+      </div>
+      <div class="stats">
+        <div class="cell"><div class="k gold-text">Deposit</div><div class="v gold-text">$20.000<span class="cur"> CLP</span></div></div>
+        <span class="vsep"></span>
+        <div class="cell"><div class="k gold-text">Spin Value</div><div class="v gold-text">$200<span class="cur"> CLP</span></div></div>
+      </div>
+      <button class="cta" type="button"><span class="txt"><span class="spark">&#9670;</span><span class="white-text">Play Now</span><span class="spark">&#9670;</span></span></button>
+    </div>
+  </div>
+  <div class="card back">
+    <div class="inner backface">
+      <span class="rule"></span>
+      <div class="bpips"><span class="gold-text">&#9824;</span><span class="gold-text">&#9829;</span><span class="gold-text">&#9830;</span><span class="gold-text">&#9827;</span></div>
+      <div class="bcore"><div class="bglow"></div><img class="blogo" src="data:image/png;base64,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" alt="JugaBet"/></div>
+      <div class="bpips"><span class="gold-text">&#9827;</span><span class="gold-text">&#9830;</span><span class="gold-text">&#9829;</span><span class="gold-text">&#9824;</span></div>
+    </div>
+  </div>
+</div></div>
+<div class="scene"><div class="spinner" style="animation-delay:-5.5s">
+  <div class="card">
+    <div class="inner">
+      <span class="rule"></span>
+      <div class="corner tl"><span class="a gold-text">A</span><span class="suit gold-text">&#9827;</span></div>
+      <div class="corner br"><span class="a gold-text">A</span><span class="suit gold-text">&#9827;</span></div>
+      <div class="well"></div>
+      <div class="divider"><span class="line"></span><span class="gem gold-text">&#9670;</span><span class="line"></span></div>
+      <div class="hero">
+        <svg class="reel" viewBox="0 0 72 62" aria-hidden="true">
+          <defs>
+            <linearGradient id="g3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fdf3c0"/><stop offset=".45" stop-color="#e9c565"/><stop offset="1" stop-color="#a9781f"/></linearGradient>
+            <linearGradient id="g3s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff6a5a"/><stop offset="1" stop-color="#c31f1f"/></linearGradient>
+          </defs>
+          <rect x="12" y="50" width="34" height="6" rx="2.5" fill="url(#g3)" stroke="#7c561a" stroke-width="1"/>
+          <rect x="22" y="8" width="14" height="9" rx="2.5" fill="url(#g3)" stroke="#7c561a" stroke-width="1.5"/>
+          <rect x="4" y="15" width="50" height="36" rx="9" fill="url(#g3)" stroke="#7c561a" stroke-width="2"/>
+          <rect x="9" y="21" width="40" height="24" rx="4" fill="#0b0b0d" stroke="#5a3f12" stroke-width="1"/>
+          <line x1="22.3" y1="22" x2="22.3" y2="44" stroke="#33251a" stroke-width="1"/>
+          <line x1="35.6" y1="22" x2="35.6" y2="44" stroke="#33251a" stroke-width="1"/>
+          <g fill="url(#g3s)" font-family="Arial Black, Arial" font-weight="900" font-size="17" text-anchor="middle">
+            <text x="15.6" y="39.5">7</text><text x="29" y="39.5">7</text><text x="42.4" y="39.5">7</text>
+          </g>
+          <rect x="56.5" y="21" width="3" height="17" rx="1.5" fill="url(#g3)"/>
+          <circle cx="58" cy="17" r="4.4" fill="url(#g3s)" stroke="#7c561a" stroke-width="1.2"/>
+        </svg>
+        <span class="fs gold-text">{{FREE_SPINS}}</span><span class="fsl white-text">Free Spins</span>
+      </div>
+      <div class="stats">
+        <div class="cell"><div class="k gold-text">Deposit</div><div class="v gold-text">$30.000<span class="cur"> CLP</span></div></div>
+        <span class="vsep"></span>
+        <div class="cell"><div class="k gold-text">Spin Value</div><div class="v gold-text">$500<span class="cur"> CLP</span></div></div>
+      </div>
+      <button class="cta" type="button"><span class="txt"><span class="spark">&#9670;</span><span class="white-text">Play Now</span><span class="spark">&#9670;</span></span></button>
+    </div>
+  </div>
+  <div class="card back">
+    <div class="inner backface">
+      <span class="rule"></span>
+      <div class="bpips"><span class="gold-text">&#9824;</span><span class="gold-text">&#9829;</span><span class="gold-text">&#9830;</span><span class="gold-text">&#9827;</span></div>
+      <div class="bcore"><div class="bglow"></div><img class="blogo" src="data:image/png;base64,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" alt="JugaBet"/></div>
+      <div class="bpips"><span class="gold-text">&#9827;</span><span class="gold-text">&#9830;</span><span class="gold-text">&#9829;</span><span class="gold-text">&#9824;</span></div>
+    </div>
+  </div>
+</div></div>
+<div class="scene"><div class="spinner" style="animation-delay:-8.25s">
+  <div class="card">
+    <div class="inner">
+      <span class="rule"></span>
+      <div class="corner tl"><span class="a gold-text">A</span><span class="suit gold-text">&#9824;</span></div>
+      <div class="corner br"><span class="a gold-text">A</span><span class="suit gold-text">&#9824;</span></div>
+      <div class="well"></div>
+      <div class="divider"><span class="line"></span><span class="gem gold-text">&#9670;</span><span class="line"></span></div>
+      <div class="hero">
+        <svg class="reel" viewBox="0 0 72 62" aria-hidden="true">
+          <defs>
+            <linearGradient id="g4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fdf3c0"/><stop offset=".45" stop-color="#e9c565"/><stop offset="1" stop-color="#a9781f"/></linearGradient>
+            <linearGradient id="g4s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff6a5a"/><stop offset="1" stop-color="#c31f1f"/></linearGradient>
+          </defs>
+          <rect x="12" y="50" width="34" height="6" rx="2.5" fill="url(#g4)" stroke="#7c561a" stroke-width="1"/>
+          <rect x="22" y="8" width="14" height="9" rx="2.5" fill="url(#g4)" stroke="#7c561a" stroke-width="1.5"/>
+          <rect x="4" y="15" width="50" height="36" rx="9" fill="url(#g4)" stroke="#7c561a" stroke-width="2"/>
+          <rect x="9" y="21" width="40" height="24" rx="4" fill="#0b0b0d" stroke="#5a3f12" stroke-width="1"/>
+          <line x1="22.3" y1="22" x2="22.3" y2="44" stroke="#33251a" stroke-width="1"/>
+          <line x1="35.6" y1="22" x2="35.6" y2="44" stroke="#33251a" stroke-width="1"/>
+          <g fill="url(#g4s)" font-family="Arial Black, Arial" font-weight="900" font-size="17" text-anchor="middle">
+            <text x="15.6" y="39.5">7</text><text x="29" y="39.5">7</text><text x="42.4" y="39.5">7</text>
+          </g>
+          <rect x="56.5" y="21" width="3" height="17" rx="1.5" fill="url(#g4)"/>
+          <circle cx="58" cy="17" r="4.4" fill="url(#g4s)" stroke="#7c561a" stroke-width="1.2"/>
+        </svg>
+        <span class="fs gold-text">{{FREE_SPINS}}</span><span class="fsl white-text">Free Spins</span>
+      </div>
+      <div class="stats">
+        <div class="cell"><div class="k gold-text">Deposit</div><div class="v gold-text">$50.000<span class="cur"> CLP</span></div></div>
+        <span class="vsep"></span>
+        <div class="cell"><div class="k gold-text">Spin Value</div><div class="v gold-text">$800<span class="cur"> CLP</span></div></div>
+      </div>
+      <button class="cta" type="button"><span class="txt"><span class="spark">&#9670;</span><span class="white-text">Play Now</span><span class="spark">&#9670;</span></span></button>
+    </div>
+  </div>
+  <div class="card back">
+    <div class="inner backface">
+      <span class="rule"></span>
+      <div class="bpips"><span class="gold-text">&#9824;</span><span class="gold-text">&#9829;</span><span class="gold-text">&#9830;</span><span class="gold-text">&#9827;</span></div>
+      <div class="bcore"><div class="bglow"></div><img class="blogo" src="data:image/png;base64,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" alt="JugaBet"/></div>
+      <div class="bpips"><span class="gold-text">&#9827;</span><span class="gold-text">&#9830;</span><span class="gold-text">&#9829;</span><span class="gold-text">&#9824;</span></div>
+    </div>
+  </div>
+</div></div>
+</div></div>

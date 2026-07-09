@@ -69,6 +69,7 @@ from app.routes.admin_api import router as admin_api_router
 from app.routes.admin_campaigns import router as admin_campaigns_router
 from app.routes.admin_clubs import router as admin_clubs_router
 from app.routes.admin_cube import router as admin_cube_router
+from app.routes.admin_slot_cards import router as admin_slot_cards_router
 from app.routes.admin_hot import router as admin_hot_router
 from app.routes.admin_hot_override import router as admin_hot_override_router
 from app.routes.admin_logs import router as admin_logs_router
@@ -78,6 +79,7 @@ from app.routes.public_club import router as public_club_router
 from app.routes.public_cube import router as public_cube_router
 from app.routes.public_hot import router as public_hot_router
 from app.routes.public_render import router as public_render_router
+from app.routes.public_slot_gif import router as public_slot_gif_router
 from app.routes.telegram_webhook import router as telegram_webhook_router
 from app.auth.routes import router as auth_router
 from app.auth.dependencies import require_login, require_role
@@ -186,6 +188,7 @@ app.include_router(admin_campaigns_router)   # /admin/campaigns/* + campaign bui
 app.include_router(admin_hot_router)         # /admin/hot + legacy hot override UI APIs
 app.include_router(admin_weights_router)     # /admin/weights + weights CRUD + leaderboard APIs
 app.include_router(admin_cube_router)        # /admin/cube + /api/admin/cube/* override APIs
+app.include_router(admin_slot_cards_router)  # /admin/slot-cards + generate (photo -> card GIF)
 app.include_router(admin_tutorials_router)   # /admin/tutorials + /api/tutorials (help library)
 app.include_router(admin_views_router)       # /admin (dashboard), /admin/matches
 app.include_router(admin_api_router)
@@ -193,6 +196,7 @@ app.include_router(public_hot_router)        # /hot, /hot/{sport}, /hot/{sport}.
 app.include_router(public_club_router)       # /club/{slug}.png only — no HTML route
 app.include_router(public_cube_router)       # /cube, /cube/{theme}, /cube/{theme}.png
 app.include_router(public_render_router)     # /r/{slug}.png (deprecated, 90-day window)
+app.include_router(public_slot_gif_router)   # /gif/slot.gif (rendered slot card GIF)
 app.include_router(telegram_webhook_router)  # /telegram/webhook (inline-button actions)
 
 # Static files for the new admin (Tailwind config, custom CSS/JS)

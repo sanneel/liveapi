@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}Slot Cards · Jugabet Admin{% endblock %}
+{% block content_theme %}content-light{% endblock %}
+{% block page_title %}Slot Cards{% endblock %}
+{% block page_subtitle %}Drop one slot-game photo and render all four Ace cards (PNG + email flip GIF) at once.{% endblock %}
+
+{% block content %}
+<style>
+  .sc-wrap{ display:grid; grid-template-columns:minmax(0,380px) minmax(0,1fr); gap:18px; align-items:start; }
+  @media(max-width:820px){ .sc-wrap{ grid-template-columns:1fr; } }
+  .sc-drop{ border:2px dashed var(--border-in,#d5d9e4); border-radius:12px; min-height:190px;
+    display:flex; align-items:center; justify-content:center; text-align:center; padding:16px;
+    cursor:pointer; color:var(--t-faint,#889); font-size:13px; position:relative; overflow:hidden;
+    transition:border-color .15s, background .15s; }
+  .sc-drop.hover{ border-color:#4a6cf7; background:rgba(74,108,247,.06); color:var(--t,#223); }
+  .sc-drop img{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#0b0d11; }
+  .sc-field{ margin-top:14px; }
+  .sc-field .lbl{ display:block; font-size:12px; color:var(--t-faint,#889); margin-bottom:6px;
+    text-transform:uppercase; letter-spacing:.4px; }
+  .sc-tier{ display:grid; grid-template-columns:1fr 120px; gap:10px; align-items:center; margin-top:8px; }
+  .sc-tier .name{ font-size:13px; font-weight:600; color:var(--t,#223); }
+  .sc-tier .name small{ display:block; font-weight:400; color:var(--t-faint,#889); font-size:11px; }
+  .sc-two{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .sc-hint{ font-size:11.5px; color:var(--t-faint,#889); margin-top:8px; line-height:1.5; }
+  .sc-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:16px; }
+  .sc-card{ border:1px solid var(--border-in,#e6e6ee); border-radius:12px; padding:12px; background:var(--panel,#fff);
+    display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .sc-card .cap{ font-size:12px; font-weight:600; color:var(--t,#223); text-align:center; }
+  .sc-card .cap small{ display:block; font-weight:400; color:var(--t-faint,#889); }
+  .sc-stage{ width:100%; aspect-ratio:360/650; background:#0b0d11; border-radius:10px; overflow:hidden;
+    display:flex; align-items:center; justify-content:center; }
+  .sc-stage img{ width:100%; height:100%; object-fit:contain; }
+  .sc-card .dl{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
+  .sc-card .dl a{ font-size:11.5px; padding:6px 10px; }
+  .sc-empty{ color:var(--t-faint,#889); font-size:13px; text-align:center; padding:40px 10px; }
+  .sc-spin{ display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,.4);
+    border-top-color:#fff; border-radius:50%; animation:sc-sp .7s linear infinite; vertical-align:-2px; margin-right:8px; }
+  @keyframes sc-sp{ to{ transform:rotate(360deg); } }
+  .sc-err{ color:var(--live-t,#d33); font-size:13px; margin-top:10px; min-height:16px; }
+  .sc-public-url{ margin-top:10px; padding:10px; background:var(--bg-faint,#f5f5f5); border-radius:8px; font-size:11px; word-break:break-all; color:var(--t-faint,#667); }
+  .sc-public-url code{ user-select:all; font-family:monospace; }
+  .sc-public-url .label{ font-weight:600; margin-bottom:4px; color:var(--t,#223); display:block; }
+</style>
+
+<div class="sc-wrap">
+  <form class="card card-pad" id="sc-form" onsubmit="return false">
+    <h2 class="card-title">Slot game image</h2>
+    <div class="sc-drop" id="sc-drop">
+      <span id="sc-drop-text">Drop a PNG/JPG here, or click to choose.<br>Used in all four cards' artwork well.</span>
+      <input type="file" id="sc-file" accept="image/*" hidden>
+    </div>
+    <p class="sc-hint">One photo fills the well of every tier (object-fit: cover), rendered on the server with headless Chromium.</p>
+
+    <div class="sc-field">
+      <span class="lbl">Spin value per tier (CLP)</span>
+      {% for s in suits %}
+        <div class="sc-tier">
+          <span class="name">{{ s.label }} <small>Deposit {{ s.deposit }} CLP</small></span>
+          <input class="input" type="text" inputmode="numeric" data-suit="{{ s.value }}"
+                 placeholder="{{ s.bet.lstrip('$') }}" aria-label="{{ s.label }} spin value">
+        </div>
+      {% endfor %}
+      <p class="sc-hint">Leave blank to use the default ({{ suits[0].bet }} / {{ suits[1].bet }} / {{ suits[2].bet }} / {{ suits[3].bet }}).</p>
+    </div>
+
+    <div class="sc-two">
+      <div class="sc-field">
+        <span class="lbl">Free spins</span>
+        <input class="input" type="number" id="sc-fs" value="50" min="1" max="999">
+      </div>
+      <div class="sc-field">
+        <span class="lbl">Combined GIF width (px)</span>
+        <input class="input" type="number" id="sc-w" value="560" min="240" max="1000">
+      </div>
+    </div>
+
+    <button class="btn primary" id="sc-go" style="justify-content:center; margin-top:16px; width:100%" disabled>
+      Generate combined GIF
+    </button>
+    <div class="sc-err" id="sc-err"></div>
+  </form>
+
+  <section class="card card-pad">
+    <div id="sc-result">
+      <div class="sc-empty">Your four generated flip GIFs will appear here.</div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  var drop = document.getElementById('sc-drop'),
+      file = document.getElementById('sc-file'),
+      dropText = document.getElementById('sc-drop-text'),
+      go = document.getElementById('sc-go'),
+      err = document.getElementById('sc-err'),
+      result = document.getElementById('sc-result');
+  var picked = null;
+
+  function setPreview(f) {
+    picked = f;
+    var old = drop.querySelector('img'); if (old) old.remove();
+    if (f) {
+      var r = new FileReader();
+      r.onload = function () {
+        var img = document.createElement('img'); img.src = r.result; drop.appendChild(img);
+        dropText.style.display = 'none'; go.disabled = false;
+      };
+      r.readAsDataURL(f);
+    } else { dropText.style.display = ''; go.disabled = true; }
+  }
+  function choose(f) {
+    if (!f || !/^image\//.test(f.type)) { err.textContent = 'Please choose an image file.'; return; }
+    err.textContent = ''; setPreview(f);
+  }
+
+  drop.addEventListener('click', function () { file.click(); });
+  file.addEventListener('change', function () { choose(file.files[0]); });
+  ['dragenter', 'dragover'].forEach(function (e) {
+    drop.addEventListener(e, function (ev) { ev.preventDefault(); drop.classList.add('hover'); });
+  });
+  ['dragleave', 'drop'].forEach(function (e) {
+    drop.addEventListener(e, function (ev) { ev.preventDefault(); drop.classList.remove('hover'); });
+  });
+  drop.addEventListener('drop', function (ev) { if (ev.dataTransfer.files[0]) choose(ev.dataTransfer.files[0]); });
+
+  function betFor(suit) {
+    var el = document.querySelector('input[data-suit="' + suit + '"]');
+    return el ? (el.value || '') : '';
+  }
+
+  go.addEventListener('click', function () {
+    if (!picked) return;
+    err.textContent = '';
+    var label = go.textContent; go.disabled = true; go.innerHTML = '<span class="sc-spin"></span>Rendering…';
+    result.innerHTML = '<div class="sc-empty">Rendering the combined 4-card GIF (this takes ~20–30 seconds)…</div>';
+
+    var fd = new FormData();
+    fd.append('image', picked);
+    fd.append('free_spins', String(document.getElementById('sc-fs').value || '50'));
+    fd.append('total_width', String(document.getElementById('sc-w').value || '560'));
+    fd.append('bet_hearts', betFor('hearts'));
+    fd.append('bet_diamonds', betFor('diamonds'));
+    fd.append('bet_clubs', betFor('clubs'));
+    fd.append('bet_spades', betFor('spades'));
+
+    fetch('/admin/slot-cards/generate', { method: 'POST', body: fd })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        go.disabled = false; go.textContent = label;
+        if (!res.ok || res.j.error) {
+          err.textContent = res.j.error || 'Render failed.';
+          result.innerHTML = '<div class="sc-empty">—</div>';
+          return;
+        }
+        var d = res.j;
+        // Build public URL with current parameters (bet values, free spins, width, image)
+        var baseUrl = window.location.origin + '/r/slot.gif';
+        var params = [];
+
+        // Add image ID if available
+        if (d.img_id) params.push('img_id=' + encodeURIComponent(d.img_id));
+
+        var bets = ['hearts', 'diamonds', 'clubs', 'spades'];
+        bets.forEach(function (suit) {
+          var val = betFor(suit);
+          if (val) params.push('bet_' + suit + '=' + encodeURIComponent(val));
+        });
+        var fs = document.getElementById('sc-fs').value || '50';
+        var w = document.getElementById('sc-w').value || '560';
+        if (fs !== '50') params.push('free_spins=' + encodeURIComponent(fs));
+        if (w !== '560') params.push('width=' + encodeURIComponent(w));
+        var publicUrl = baseUrl + (params.length ? '?' + params.join('&') : '');
+
+        var html =
+          '<div style="text-align:center">' +
+            '<div style="font-size:12px;color:var(--t-faint,#889);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Combined GIF (transparent, for email)</div>' +
+            '<div style="background:repeating-conic-gradient(#e9edf3 0% 25%, #fff 0% 50%) 0/24px 24px;border:1px solid var(--border-in,#e6e6ee);border-radius:12px;padding:12px;display:inline-block;max-width:100%">' +
+              '<img src="' + d.gif + '" alt="slot cards" style="max-width:100%;display:block">' +
+            '</div>' +
+            '<div style="margin-top:12px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap">' +
+              '<a class="btn primary" download="' + d.gif_name + '" href="' + d.gif + '">⬇ Download</a>' +
+              '<a class="btn" href="' + publicUrl + '" target="_blank">🔗 Open public URL</a>' +
+            '</div>' +
+            '<div class="sc-public-url">' +
+              '<span class="label">Public URL:</span>' +
+              '<code>' + publicUrl + '</code>' +
+            '</div>' +
+          '</div>' +
+          '<div style="font-size:12px;color:var(--t-faint,#889);text-transform:uppercase;letter-spacing:.4px;margin:20px 0 8px">Individual transparent PNGs</div>' +
+          '<div class="sc-grid">';
+        d.cards.forEach(function (c) {
+          html +=
+            '<div class="sc-card">' +
+              '<div class="cap">' + c.label + '<small>Deposit ' + c.deposit + ' · Spin ' + c.bet + '</small></div>' +
+              '<div class="dl"><a class="btn" download="card_' + c.suit + '.png" href="' + c.png + '">⬇ PNG</a></div>' +
+            '</div>';
+        });
+        html += '</div>';
+        result.innerHTML = html;
+      })
+      .catch(function (e) {
+        go.disabled = false; go.textContent = label;
+        err.textContent = 'Render failed: ' + e;
+        result.innerHTML = '<div class="sc-empty">—</div>';
+      });
+  });
+})();
+</script>
+{% endblock %}

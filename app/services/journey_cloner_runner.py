@@ -7,10 +7,11 @@ import json
 import re
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from ..config import BASE_DIR
+from ..config import BASE_DIR, get_settings
 
 
 CLONER_DIR = BASE_DIR / "journey-cloner"
@@ -171,6 +172,252 @@ def generate_console_script(
         else:
             output += f"\nERROR: expected script file not found: {js_path}"
     return proc.returncode, output, display_cmd, js_text, js_filename
+
+
+GOW_SCRIPT_PATH = CLONER_DIR / "gow_campaign.py"
+COMMS_SCRIPT_PATH = CLONER_DIR / "comms_campaign.py"
+COMBINED_SCRIPT_PATH = CLONER_DIR / "gow_combined.py"
+RANDOMIZER_SCRIPT_PATH = CLONER_DIR / "randomizer_campaign.py"
+NC_DISCOUNT_SCRIPT_PATH = CLONER_DIR / "nc_discount_campaign.py"
+
+# Randomizer promos (weighted prize wheels / scratch cards). Keys must match
+# randomizer_campaign.py --kind.
+RANDOMIZER_KINDS: Dict[str, str] = {
+    "sport_wof": "Sport Wheel of Fortune",
+    "casino_wof": "Casino Wheel of Fortune",
+    "casino_scratch": "Raspa y Gana (Scratch Card)",
+}
+
+
+def _date_slug(date: str) -> str:
+    return re.sub(r"[^0-9]", "", date) or "date"
+
+
+def _unique_basename(prefix: str, date: str) -> str:
+    # console_scripts/<basename>_console.js is a shared filesystem path, and
+    # _run_gow_cli writes then immediately reads it back. A date-only name
+    # let two concurrent requests for the same date (the sync route runs in
+    # FastAPI's threadpool, so this does happen) race: one request's read
+    # could pick up the other request's freshly-overwritten file instead of
+    # its own. The uuid suffix makes every generated script its own file.
+    return f"{prefix}_{_date_slug(date)}_{uuid.uuid4().hex[:8]}"
+
+
+def _run_gow_cli(
+    cmd: List[str], *, spec_text: str | None = None, basename: str
+) -> Tuple[int, str, str, str | None, str]:
+    """Run one of the generator CLIs. When spec_text is given it is piped via
+    stdin (the gow_*.py spec-driven flow); randomizer CLIs pass None.
+
+    Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
+    """
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    # Make the .env-configured Figma token visible to the subprocess so a
+    # --figma-game export can reach api.figma.com (same source figma_runner uses).
+    figma_token = (get_settings().figma_token or os.environ.get("FIGMA_TOKEN", "")).strip()
+    if figma_token:
+        env["FIGMA_TOKEN"] = figma_token
+
+    display_cmd = " ".join(
+        part if " " not in part else repr(part) for part in cmd
+    ) + ("  < (pasted spec piped via stdin)" if spec_text is not None else "")
+
+    proc = subprocess.run(
+        cmd,
+        cwd=CLONER_DIR,
+        env=env,
+        text=True,
+        encoding="utf-8",
+        capture_output=True,
+        timeout=300,
+        input=spec_text,
+    )
+    output = proc.stdout
+    if proc.stderr:
+        output += "\nSTDERR:\n" + proc.stderr
+
+    js_filename = f"{basename}_console.js"
+    js_text = None
+    if proc.returncode == 0:
+        js_path = CLONER_DIR / "console_scripts" / js_filename
+        if js_path.exists():
+            js_text = js_path.read_text(encoding="utf-8")
+        else:
+            output += f"\nERROR: expected script file not found: {js_path}"
+    return proc.returncode, output, display_cmd, js_text, js_filename
+
+
+def generate_gow_console_script(
+    *,
+    date: str,
+    spec_text: str,
+    spins: int | None = None,
+    figma_game: str = "",
+    figma_key: str = "",
+) -> Tuple[int, str, str, str | None, str]:
+    """Generate the paste-into-DevTools console script for a Game-of-the-Week
+    casino campaign (free-spin offer + 4 deposit tiers + promo page).
+
+    Game name, provider, and bet tiers are all parsed from the pasted spec
+    blob; the real game ids are resolved from the live games catalog at
+    paste time. When figma_game is given, the campaign photo is exported from
+    Figma and embedded (no file picker).
+
+    Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
+    """
+    basename = _unique_basename("gow_campaign", date)
+    cmd = [
+        python_executable(),
+        str(GOW_SCRIPT_PATH),
+        "--date",
+        date.strip(),
+        "--spec",
+        "-",
+        "--name",
+        basename,
+    ]
+    if spins is not None:
+        cmd += ["--spins", str(spins)]
+    if figma_game.strip():
+        cmd += ["--figma-game", figma_game.strip()]
+        if figma_key.strip():
+            cmd += ["--figma-key", figma_key.strip()]
+    return _run_gow_cli(cmd, spec_text=spec_text, basename=basename)
+
+
+def generate_comms_console_script(
+    *,
+    date: str,
+    spec_text: str,
+    promo_page_id: str,
+    public_domain: str = "",
+    journey_name: str = "",
+) -> Tuple[int, str, str, str | None, str]:
+    """Generate the paste-into-DevTools console script for the GOW
+    communications journey (Notification Center + Pop-up + SMS; Email is
+    left untouched and edited by hand). The window is always the same day,
+    12:00 -> 19:00 Chile time.
+
+    Notification/Pop-up/SMS copy is parsed from the pasted spec blob.
+
+    Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
+    """
+    basename = _unique_basename("gow_comms", date)
+    cmd = [
+        python_executable(),
+        str(COMMS_SCRIPT_PATH),
+        "--date",
+        date.strip(),
+        "--promo-page-id",
+        promo_page_id.strip(),
+        "--spec",
+        "-",
+        "--name",
+        basename,
+    ]
+    if public_domain.strip():
+        cmd += ["--public-domain", public_domain.strip()]
+    if journey_name.strip():
+        cmd += ["--journey-name", journey_name.strip()]
+    return _run_gow_cli(cmd, spec_text=spec_text, basename=basename)
+
+
+def generate_gow_combined_console_script(
+    *,
+    date: str,
+    spec_text: str,
+    days: int = 1,
+    spins: int | None = None,
+    public_domain: str = "",
+    journey_name: str = "",
+    figma_game: str = "",
+    figma_key: str = "",
+) -> Tuple[int, str, str, str | None, str]:
+    """Generate the paste-into-DevTools console script that creates the GOW
+    casino campaign (free-spin offer + promo page) AND the communications
+    journey (Notification Center + Pop-up + SMS) together in one paste, with
+    the comms links pointed at the promo page created in the same run.
+
+    When ``figma_game`` is given, the campaign/NC/Pop-up images are exported
+    from Figma and embedded into the script so no file pickers appear at paste
+    time. Requires FIGMA_TOKEN to be configured (read from settings/env).
+
+    Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
+    """
+    basename = _unique_basename("gow_combined", date)
+    cmd = [
+        python_executable(),
+        str(COMBINED_SCRIPT_PATH),
+        "--date",
+        date.strip(),
+        "--days",
+        str(days),
+        "--spec",
+        "-",
+        "--name",
+        basename,
+    ]
+    if spins is not None:
+        cmd += ["--spins", str(spins)]
+    if public_domain.strip():
+        cmd += ["--public-domain", public_domain.strip()]
+    if journey_name.strip():
+        cmd += ["--journey-name", journey_name.strip()]
+    if figma_game.strip():
+        cmd += ["--figma-game", figma_game.strip()]
+        if figma_key.strip():
+            cmd += ["--figma-key", figma_key.strip()]
+    return _run_gow_cli(cmd, spec_text=spec_text, basename=basename)
+
+
+def generate_randomizer_console_script(
+    *,
+    kind: str,
+    date: str,
+    days: str = "",
+    weights: str = "",
+    journeys: str = "",
+) -> Tuple[int, str, str, str | None, str]:
+    """Generate the console script for one or MORE Randomizer promos (Sport WOF,
+    Casino WOF, or Raspa y Gana scratch card). `date` may hold several dates
+    (space/comma/newline separated) -> one draft per date, created in one paste.
+    Prizes/segment/visual come from the captured template; only dates, name and
+    optional weights/journeys change.
+
+    Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
+    """
+    if kind not in RANDOMIZER_KINDS:
+        raise ValueError(f"Unknown randomizer kind: {kind}")
+    dates = [d for d in re.split(r"[\s,;]+", date.strip()) if d]
+    if not dates:
+        raise ValueError("At least one date is required.")
+    basename = _unique_basename(f"randomizer_{kind}", dates[0])
+    cmd = [
+        python_executable(),
+        str(RANDOMIZER_SCRIPT_PATH),
+        "--kind", kind,
+        "--dates", *dates,
+        "--name", basename,
+    ]
+    if days.strip():
+        cmd += ["--days", days.strip()]
+    if weights.strip():
+        cmd += ["--weights", *weights.split()]
+    if journeys.strip():
+        cmd += ["--journeys", *journeys.split()]
+    return _run_gow_cli(cmd, basename=basename)
+
+
+def generate_nc_discount_console_script() -> Tuple[int, str, str, str | None, str]:
+    """Generate the "NC For Discount" console script: one notification journey
+    per game/day from the baked July calendar (segment -> notification -> end).
+
+    Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
+    """
+    basename = _unique_basename("nc_discount", "")
+    cmd = [python_executable(), str(NC_DISCOUNT_SCRIPT_PATH), "--name", basename]
+    return _run_gow_cli(cmd, basename=basename)
 
 
 def run_journey_cloner(

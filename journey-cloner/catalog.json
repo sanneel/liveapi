@@ -1,0 +1,1156 @@
+{
+  "meta": {
+    "brand": "JBCL",
+    "operator": "PMI",
+    "currency": "CLP (minor units x100)",
+    "timezone": "Chile/Continental",
+    "note": "Auto-extracted from templates/casino/. activities/transitions/rewards/segments are read from real journeys; recipes and knobs are curated.",
+    "source_templates": [
+      "gow.json",
+      "gow_comms.json",
+      "gow_email.json",
+      "segment_cs_301.json",
+      "sport/sport_wof_randomizer.json"
+    ]
+  },
+  "automations": [
+    {
+      "key": "promo_page",
+      "label": "Promo Page (journey-cloner)",
+      "creates": "a /promo/offers/promoPage/<id> landing page draft",
+      "endpoint": "POST /promo/v2/promo-drafts/promo-page",
+      "knobs": [
+        "internal name",
+        "show/start/end dates",
+        "contentId/frontId visual bundle",
+        "reward items"
+      ],
+      "notes": "The page every channel links to. Built by gow_campaign.py's run alongside the campaign."
+    },
+    {
+      "key": "gow",
+      "label": "Game of the Week (GOW)",
+      "creates": "campaign journey + promo page + 2 comms journeys (CS&SP, CS) + email content",
+      "endpoint": "POST /journey-drafts (+ promo-page, + content-studio email)",
+      "knobs": [
+        "game/provider",
+        "4 bet tiers",
+        "spins",
+        "date",
+        "per-channel EN/ES copy",
+        "photos",
+        "segment (CS&SP/CS-301)"
+      ],
+      "compiler": "gow_combined.py / gow_campaign.py / comms_campaign.py",
+      "starts": "immediately after publish"
+    },
+    {
+      "key": "sport_wof",
+      "label": "Sport Wheel of Fortune (Randomizer)",
+      "creates": "a FortuneWheel randomizer promo whose weighted slices route winners to journeys",
+      "endpoint": "POST /promo/v2/randomizer?draftId=<draftId>",
+      "knobs": [
+        "draftId",
+        "show/start/hide/end dates (promoDay 04:00Z window)",
+        "urlShortName sport-dd-mm-yyyy",
+        "internalName JBCL|SP|WOF|dd.mm.yy",
+        "prizes[].weight",
+        "prizes[].journeyPrizeSettings.{journeyId,activityId}",
+        "segment filterConditions"
+      ],
+      "shot_policy": "Once",
+      "segment": "fairplay_sport_segment notIn [VIP*, risk/abuse statuses]",
+      "template": "templates/sport/sport_wof_randomizer.json",
+      "prizes": [
+        {
+          "weight": "0.1",
+          "routes_to_journey": "JRN-0-222277",
+          "description": "JBCL | SP | RB - Wheel of fortune | Free | Money"
+        },
+        {
+          "weight": "3",
+          "routes_to_journey": "JRN-0-253210",
+          "description": "JBCL | SP | RB - Wheel of fortune | Free | Bonuses"
+        },
+        {
+          "weight": "25",
+          "routes_to_journey": "JRN-0-253216",
+          "description": "JBCL | SP | RB - Wheel of fortune | Dep | Bonus"
+        },
+        {
+          "weight": "10",
+          "routes_to_journey": "JRN-0-253218",
+          "description": "JBCL | SP | RB - Wheel of fortune | Bet | Insurance"
+        },
+        {
+          "weight": "36.9",
+          "routes_to_journey": "JRN-0-222272",
+          "description": "JBCL | SP | RB - Wheel of fortune | Dep | Freebet"
+        },
+        {
+          "weight": "25",
+          "routes_to_journey": "JRN-0-222271",
+          "description": "JBCL | SP | RB - Wheel of fortune | Bet | Freebet"
+        }
+      ]
+    },
+    {
+      "key": "casino_scratch_card",
+      "label": "Casino Scratch Card (Raspa y Gana)",
+      "creates": "a ScratchCard randomizer; scratch slices route winners to journeys",
+      "endpoint": "POST /promo/v2/promo-drafts/randomizer  then  PUT .../randomizer/<id>",
+      "randomizationType": "ScratchCard",
+      "brand": "PMCL",
+      "shot_policy": "Once",
+      "segment": [
+        "fairplay_business_segment"
+      ],
+      "visual": {
+        "contentId": "1185f89f-eb30-4053-a3a9-11b7839ab782",
+        "frontId": "c02fbc11-d41b-4589-ba4d-cdcd40d352c5"
+      },
+      "template": "templates/casino/raspaygana_scratchcard.json",
+      "prizes": [
+        {
+          "weight": 3,
+          "routes_to_journey": "JRN-0-424485",
+          "description": "PMCL | CS | RB - Weekend Scratch Card - 100 No deposit FS"
+        },
+        {
+          "weight": 50,
+          "routes_to_journey": "JRN-0-426567",
+          "description": "PMCL | CS | RB - Weekend Scratch Card - 50 deposit FS"
+        },
+        {
+          "weight": 42,
+          "routes_to_journey": "JRN-0-426571",
+          "description": "PMCL | CS | RB - Weekend Scratch Card - 50% deposit bonus"
+        },
+        {
+          "weight": 5,
+          "routes_to_journey": "JRN-0-426582",
+          "description": "PMCL | CS | RB - Weekend Scratch Card - 100% deposit bonus"
+        },
+        {
+          "weight": 0,
+          "routes_to_journey": "JRN-0-426590",
+          "description": "PMCL | CS | RB - Weekend Scratch Card - empty prize"
+        }
+      ]
+    },
+    {
+      "key": "casino_wof",
+      "label": "Casino Wheel of Fortune",
+      "creates": "a FortuneWheel randomizer (casino, distinct from the sport WOF)",
+      "endpoint": "POST /promo/v2/promo-drafts/randomizer  then  PUT .../randomizer/<id>",
+      "randomizationType": "FortuneWheel",
+      "brand": "JBCL",
+      "shot_policy": "Once",
+      "segment": [
+        "fairplay_business_segment"
+      ],
+      "visual": {
+        "contentId": "7ba28ac6-a192-4e7c-90fd-3f76e3ffe8df",
+        "frontId": "83d4e58a-fbcd-4300-b20b-50482bcc6b36"
+      },
+      "template": "templates/casino/casino_wof_randomizer.json",
+      "prizes": [
+        {
+          "weight": 55,
+          "routes_to_journey": "JRN-0-572381",
+          "description": "Wheel of fortune | 50FS to dep"
+        },
+        {
+          "weight": 42,
+          "routes_to_journey": "JRN-0-572307",
+          "description": "JBCL | CS | RB - Wheel of fortune | dep bonuses"
+        },
+        {
+          "weight": 2.7,
+          "routes_to_journey": "JRN-0-423152",
+          "description": "JBCL | 50 FS no-dep Wheel of Fortune "
+        },
+        {
+          "weight": 0.3,
+          "routes_to_journey": "JRN-0-572386",
+          "description": "JBCL | 50 FS no-dep Wheel of Fortune "
+        }
+      ]
+    }
+  ],
+  "activities": [
+    {
+      "key": "ams_decision_split",
+      "activity": "ams_decision_split",
+      "contract": null,
+      "display_name": "Decision split",
+      "purpose": "Rules-based audience split.",
+      "emits_events": [
+        "DecisionSplitPassedPath01 (Completion)",
+        "DecisionSplitPassedPath02 (Completion)",
+        "DecisionSplitPassedPath03 (Completion)",
+        "DecisionSplitPassedPath04 (Completion)",
+        "DecisionSplitPassedPath05 (Completion)",
+        "DecisionSplitPassedPath06 (Completion)",
+        "DecisionSplitPassedPath07 (Completion)",
+        "DecisionSplitPassedPath08 (Completion)",
+        "DecisionSplitPassedPath09 (Completion)",
+        "DecisionSplitPassedPath10 (Completion)",
+        "DecisionSplitPassedPath11 (Completion)",
+        "DecisionSplitPassedPath12 (Completion)",
+        "DecisionSplitPassedPath13 (Completion)",
+        "DecisionSplitPassedPath14 (Completion)",
+        "DecisionSplitPassedPath15 (Completion)",
+        "DecisionSplitPassedPath16 (Completion)",
+        "DecisionSplitPassedPath17 (Completion)",
+        "DecisionSplitPassedPath18 (Completion)",
+        "DecisionSplitPassedPath19 (Completion)",
+        "DecisionSplitPassedPath20 (Completion)",
+        "DecisionSplitPassedRemainderPath (Completion)"
+      ],
+      "init_fields": [
+        "displayData",
+        "pathesConfig",
+        "remainder",
+        "rules",
+        "usedSourceVariables"
+      ],
+      "knobs": [],
+      "seen_in": [
+        "gow_comms"
+      ]
+    },
+    {
+      "key": "casino_bonus_v2",
+      "activity": "casino_bonus_v2",
+      "contract": null,
+      "display_name": "Casino bonus",
+      "purpose": "Wagering (deposit-match) bonus; wagers winnings from a prior mechanic.",
+      "emits_events": [
+        "WageringBonusAwardAborted (Completion)",
+        "WageringBonusAwardConfirmed (Boundary)",
+        "WageringBonusAwardFailed (Boundary)",
+        "WageringBonusAwarded (Boundary)",
+        "WageringBonusCancelConfirmed (Completion)",
+        "WageringBonusCancelFailed (Boundary)",
+        "WageringBonusCancelled (Boundary)",
+        "WageringBonusCancelledByWithdrawalConfirmed (Completion)",
+        "WageringBonusExpirationFailed (Boundary)",
+        "WageringBonusExpired (Completion)",
+        "WageringBonusFinishFailed (Boundary)",
+        "WageringBonusFinished (Completion)",
+        "WageringBonusForfeited (Completion)",
+        "WageringBonusLoseFailed (Boundary)",
+        "WageringBonusLost (Completion)",
+        "WageringBonusRejectConfirmed (Completion)",
+        "WageringBonusRejectFailed (Boundary)",
+        "WageringBonusRejected (Boundary)",
+        "WageringBonusStarted (Boundary)"
+      ],
+      "init_fields": [
+        "activitySubtype",
+        "allowReject",
+        "bonusExpirationTime",
+        "bonusPercent",
+        "currenciesConfig",
+        "displayData",
+        "limitType",
+        "placements",
+        "productType",
+        "releaseLimitMultiplier",
+        "wageringActivity",
+        "wageringRequirement",
+        "withoutLockBalance"
+      ],
+      "knobs": [],
+      "seen_in": [
+        "gow_campaign"
+      ]
+    },
+    {
+      "key": "deposit",
+      "activity": "deposit",
+      "contract": null,
+      "display_name": "Deposit",
+      "purpose": "Deposit-condition gate; emits Satisfied/Unsatisfied/Canceled, can split.",
+      "emits_events": [
+        "DepositConditionAccepted (Boundary)",
+        "DepositConditionCanceled (Completion)",
+        "DepositConditionSatisfied (Completion)",
+        "DepositConditionUnsatisfied (Completion)"
+      ],
+      "init_fields": [
+        "depositConditions",
+        "displayData",
+        "placements"
+      ],
+      "knobs": [
+        "depositConditions.minDepositAmounts[].amount",
+        "depositConditions.expirationTimeout"
+      ],
+      "seen_in": [
+        "gow_campaign"
+      ]
+    },
+    {
+      "key": "dextra_email",
+      "activity": "dextra_email",
+      "contract": null,
+      "display_name": "Email",
+      "purpose": "Email; references a content-studio content by CSE id.",
+      "emits_events": [
+        "FailedEmailSend (Completion)",
+        "SuccessEmailSend (Completion)"
+      ],
+      "init_fields": [
+        "dataDependencies",
+        "displayData",
+        "emailSettings"
+      ],
+      "knobs": [
+        "emailSettings.template.id (CSE)",
+        "displayData"
+      ],
+      "seen_in": [
+        "gow_comms"
+      ]
+    },
+    {
+      "key": "dextra_sms",
+      "activity": "dextra_sms",
+      "contract": null,
+      "display_name": "SMS",
+      "purpose": "SMS (inline copy in rawValues/smsSettings/displayData).",
+      "emits_events": [
+        "FailedSmsSend (Completion)",
+        "SuccessSmsSend (Completion)"
+      ],
+      "init_fields": [
+        "dataDependencies",
+        "displayData",
+        "listOfUsedVariables",
+        "rawValues",
+        "smsSettings",
+        "version"
+      ],
+      "knobs": [
+        "rawValues.messageText",
+        "rawValues.localizedMessageTexts",
+        "smsSettings.messageText",
+        "smsSettings.localizedMessageTexts",
+        "displayData",
+        "listOfUsedVariables(BrandDomain)"
+      ],
+      "seen_in": [
+        "gow_comms"
+      ]
+    },
+    {
+      "key": "dwh_source",
+      "activity": "dwh_source",
+      "contract": null,
+      "display_name": "Custom Segment",
+      "purpose": "Entry source: segment/DWH-targeted audience (filterDetails).",
+      "emits_events": [
+        "PlayerAdded (Activation)"
+      ],
+      "init_fields": [
+        "currentTemplate",
+        "dataSourceName",
+        "displayData",
+        "filterDetails"
+      ],
+      "knobs": [
+        "filterDetails",
+        "currentTemplate",
+        "dataSourceName"
+      ],
+      "seen_in": [
+        "gow_comms"
+      ]
+    },
+    {
+      "key": "email_engagement_split",
+      "activity": "email_engagement_split",
+      "contract": null,
+      "display_name": "Email engagement split",
+      "purpose": "Branch on open/click of a prior email.",
+      "emits_events": [
+        "Path1 (Completion)",
+        "Path2 (Completion)",
+        "Path3 (Completion)",
+        "Path4 (Completion)",
+        "Path5 (Completion)",
+        "Path6 (Completion)"
+      ],
+      "init_fields": [
+        "displayData",
+        "pathesConfig",
+        "properties"
+      ],
+      "knobs": [],
+      "seen_in": [
+        "gow_comms"
+      ]
+    },
+    {
+      "key": "end_of_journey",
+      "activity": "end_of_journey",
+      "contract": null,
+      "display_name": null,
+      "purpose": "Terminates the whole journey.",
+      "emits_events": [],
+      "init_fields": [
+        "placements"
+      ],
+      "knobs": [],
+      "seen_in": [
+        "gow_campaign",
+        "gow_comms"
+      ]
+    },
+    {
+      "key": "end_of_path",
+      "activity": "end_of_path",
+      "contract": null,
+      "display_name": null,
+      "purpose": "Terminates one parallel-flow branch.",
+      "emits_events": [],
+      "init_fields": [
+        "placements"
+      ],
+      "knobs": [],
+      "seen_in": [
+        "gow_campaign",
+        "gow_comms"
+      ]
+    },
+    {
+      "key": "event_detector",
+      "activity": "event_detector",
+      "contract": null,
+      "display_name": "Event Detector",
+      "purpose": "Waits for a server-side event before continuing.",
+      "emits_events": [
+        "DetectorFailed (Completion)",
+        "DetectorStarted (Boundary)",
+        "DetectorSuccess (Completion)",
+        "EventNotReceived (Boundary)",
+        "EventReceived (Boundary)"
+      ],
+      "init_fields": [
+        "displayData",
+        "placements",
+        "properties",
+        "usedVariables"
+      ],
+      "knobs": [],
+      "seen_in": [
+        "gow_campaign",
+        "gow_comms"
+      ]
+    },
+    {
+      "key": "external_system_source",
+      "activity": "external_system_source",
+      "contract": null,
+      "display_name": "API",
+      "purpose": "Entry source: API/external trigger (no audience filter).",
+      "emits_events": [
+        "PlayerAdded (Activation)"
+      ],
+      "init_fields": [
+        "description",
+        "displayData",
+        "isWebhookUrlHidden",
+        "placements",
+        "targetSystem"
+      ],
+      "knobs": [],
+      "seen_in": [
+        "gow_campaign"
+      ]
+    },
+    {
+      "key": "freespin_bonus",
+      "activity": "freespin_bonus",
+      "contract": null,
+      "display_name": "Jugabet Games | La gran copa",
+      "purpose": "Awards casino free spins on a specific game.",
+      "emits_events": [
+        "FreeSpinsBonusTermsNotComplied (Completion)",
+        "FreespinBonusAwardAborted (Completion)",
+        "FreespinBonusAwardConfirmed (Boundary)",
+        "FreespinBonusAwardFailed (Boundary)",
+        "FreespinBonusAwarded (Boundary)",
+        "FreespinBonusCancelConfirmed (Completion)",
+        "FreespinBonusCancelFailed (Boundary)",
+        "FreespinBonusCancelled (Boundary)",
+        "FreespinBonusCancelledByWithdrawalConfirmed (Completion)",
+        "FreespinBonusCollectingFinished (Completion)",
+        "FreespinBonusCollectingStarted (Boundary)",
+        "FreespinBonusNotUsed (Completion)",
+        "FreespinBonusRejectConfirmed (Completion)",
+        "FreespinBonusRejectFailed (Boundary)",
+        "FreespinBonusRejected (Boundary)",
+        "FreespinBonusStatusReverted (Boundary)"
+      ],
+      "init_fields": [
+        "allowReject",
+        "displayData",
+        "freespinActivity",
+        "pathesConfig",
+        "placements"
+      ],
+      "knobs": [
+        "freespinActivity.spins",
+        "freespinActivity.lobbyGameId",
+        "freespinActivity.walletGameId",
+        "freespinActivity.externalGameId",
+        "freespinActivity.gameTranslationKey",
+        "freespinActivity.currenciesConfig.<CCY>.betAmount",
+        "freespinActivity.startAt",
+        "freespinActivity.stopAt"
+      ],
+      "seen_in": [
+        "gow_campaign"
+      ]
+    },
+    {
+      "key": "multipurpose_promotion",
+      "activity": "multipurpose_promotion",
+      "contract": null,
+      "display_name": "Multipurpose Promotion",
+      "purpose": "Lobby/cashier 'flat drip' offer with a deposit ask.",
+      "emits_events": [
+        "PromotionAccepted (Completion)",
+        "PromotionExpired (Completion)",
+        "PromotionOffered (Boundary)",
+        "PromotionUpcoming (Boundary)"
+      ],
+      "init_fields": [
+        "autoAccept",
+        "channelsCondition",
+        "displayData",
+        "languages",
+        "placements",
+        "promotionDisplayId",
+        "promotionId",
+        "promotionLinkId",
+        "promotionStatus",
+        "timeToAccept"
+      ],
+      "knobs": [],
+      "seen_in": [
+        "gow_campaign"
+      ]
+    },
+    {
+      "key": "notification_center#contract1",
+      "activity": "notification_center",
+      "contract": 1,
+      "display_name": "On-site messaging",
+      "purpose": "On-site Notification (bell), template-based.",
+      "emits_events": [
+        "NotificationNotSent (Completion)",
+        "NotificationSent (Completion)"
+      ],
+      "init_fields": [
+        "accountId",
+        "category",
+        "channel",
+        "contract",
+        "dataDependencies",
+        "deliveryType",
+        "displayData",
+        "languages",
+        "listOfUsedVariables",
+        "objectForSend",
+        "singleChannel",
+        "templates",
+        "validityAmount",
+        "validityType"
+      ],
+      "knobs": [
+        "objectForSend.variables[title-en/es,des-en/es,caption-en/es,link-en/es,deeplink,icon]",
+        "singleChannel.localizedLanguagesTab"
+      ],
+      "seen_in": [
+        "gow_comms"
+      ]
+    },
+    {
+      "key": "notification_center#contract5",
+      "activity": "notification_center",
+      "contract": 5,
+      "display_name": "On-site messaging",
+      "purpose": "On-site Pop-up (Cat-fish), template-based.",
+      "emits_events": [
+        "NotificationNotSent (Completion)",
+        "NotificationSent (Completion)"
+      ],
+      "init_fields": [
+        "accountId",
+        "category",
+        "channel",
+        "contract",
+        "dataDependencies",
+        "deliveryType",
+        "displayData",
+        "languages",
+        "listOfUsedVariables",
+        "objectForSend",
+        "singleChannel",
+        "templates",
+        "validityAmount",
+        "validityType"
+      ],
+      "knobs": [
+        "objectForSend.variables[title_en/es,description_en/es,caption_en/es,link,deeplink,background_image_src]",
+        "singleChannel.localizedLanguagesTab"
+      ],
+      "seen_in": [
+        "gow_comms"
+      ]
+    },
+    {
+      "key": "notification_center_engagement_split",
+      "activity": "notification_center_engagement_split",
+      "contract": null,
+      "display_name": "Messaging engagement split",
+      "purpose": "Branch on Clicked/Read/Sent of a prior on-site message.",
+      "emits_events": [
+        "NCEngagementSplitPassedPath01 (Completion)",
+        "NCEngagementSplitPassedPath02 (Completion)",
+        "NCEngagementSplitPassedPath03 (Completion)",
+        "NCEngagementSplitPassedPath04 (Completion)",
+        "NCEngagementSplitPassedPath05 (Completion)"
+      ],
+      "init_fields": [
+        "displayData",
+        "pathesConfig",
+        "properties"
+      ],
+      "knobs": [],
+      "seen_in": [
+        "gow_comms"
+      ]
+    },
+    {
+      "key": "promotion",
+      "activity": "promotion",
+      "contract": null,
+      "display_name": "small dep",
+      "purpose": "Generic offer (Offered->Accepted->Expired) carrying a reward placement.",
+      "emits_events": [
+        "PromotionAccepted (Completion)",
+        "PromotionExpired (Completion)",
+        "PromotionOffered (Boundary)",
+        "PromotionUpcoming (Boundary)"
+      ],
+      "init_fields": [
+        "channelsCondition",
+        "displayData",
+        "languages",
+        "placements",
+        "promotionDisplayId",
+        "promotionId",
+        "promotionLinkId",
+        "promotionStatus"
+      ],
+      "knobs": [],
+      "seen_in": [
+        "gow_campaign"
+      ]
+    },
+    {
+      "key": "wait_interval",
+      "activity": "wait_interval",
+      "contract": null,
+      "display_name": "Wait",
+      "purpose": "Delay for a fixed ISO-8601 duration.",
+      "emits_events": [
+        "WaitTimeCompleted (Completion)",
+        "WaitTimeStarted (Boundary)"
+      ],
+      "init_fields": [
+        "displayData",
+        "exitCriteria",
+        "waitPeriod"
+      ],
+      "knobs": [],
+      "seen_in": [
+        "gow_comms"
+      ]
+    }
+  ],
+  "transitions_observed": [
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath01",
+      "to": "dextra_email"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath02",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath03",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath04",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath05",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath06",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath07",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath08",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath09",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath10",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath11",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath12",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath13",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath14",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath15",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath16",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath17",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath18",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath19",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath20",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedRemainderPath",
+      "to": "wait_interval"
+    },
+    {
+      "from": "casino_bonus_v2",
+      "on_event": "WageringBonusAwardAborted",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "casino_bonus_v2",
+      "on_event": "WageringBonusAwardAborted",
+      "to": "end_of_path"
+    },
+    {
+      "from": "casino_bonus_v2",
+      "on_event": "WageringBonusCancelConfirmed",
+      "to": "end_of_path"
+    },
+    {
+      "from": "casino_bonus_v2",
+      "on_event": "WageringBonusCancelledByWithdrawalConfirmed",
+      "to": "end_of_path"
+    },
+    {
+      "from": "casino_bonus_v2",
+      "on_event": "WageringBonusExpired",
+      "to": "end_of_path"
+    },
+    {
+      "from": "casino_bonus_v2",
+      "on_event": "WageringBonusFinished",
+      "to": "end_of_path"
+    },
+    {
+      "from": "casino_bonus_v2",
+      "on_event": "WageringBonusForfeited",
+      "to": "end_of_path"
+    },
+    {
+      "from": "casino_bonus_v2",
+      "on_event": "WageringBonusLost",
+      "to": "end_of_path"
+    },
+    {
+      "from": "casino_bonus_v2",
+      "on_event": "WageringBonusRejectConfirmed",
+      "to": "end_of_path"
+    },
+    {
+      "from": "deposit",
+      "on_event": "DepositConditionCanceled",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "deposit",
+      "on_event": "DepositConditionCanceled",
+      "to": "end_of_path"
+    },
+    {
+      "from": "deposit",
+      "on_event": "DepositConditionSatisfied",
+      "to": "freespin_bonus"
+    },
+    {
+      "from": "deposit",
+      "on_event": "DepositConditionUnsatisfied",
+      "to": "end_of_path"
+    },
+    {
+      "from": "dextra_email",
+      "on_event": "FailedEmailSend",
+      "to": "dextra_sms"
+    },
+    {
+      "from": "dextra_email",
+      "on_event": "SuccessEmailSend",
+      "to": "wait_interval"
+    },
+    {
+      "from": "dextra_sms",
+      "on_event": "FailedSmsSend",
+      "to": "end_of_path"
+    },
+    {
+      "from": "dextra_sms",
+      "on_event": "SuccessSmsSend",
+      "to": "end_of_path"
+    },
+    {
+      "from": "email_engagement_split",
+      "on_event": "Path1",
+      "to": "end_of_path"
+    },
+    {
+      "from": "email_engagement_split",
+      "on_event": "Path2",
+      "to": "dextra_sms"
+    },
+    {
+      "from": "email_engagement_split",
+      "on_event": "Path3",
+      "to": "dextra_sms"
+    },
+    {
+      "from": "email_engagement_split",
+      "on_event": "Path4",
+      "to": "dextra_sms"
+    },
+    {
+      "from": "email_engagement_split",
+      "on_event": "Path5",
+      "to": "dextra_sms"
+    },
+    {
+      "from": "email_engagement_split",
+      "on_event": "Path6",
+      "to": "dextra_sms"
+    },
+    {
+      "from": "event_detector",
+      "on_event": "DetectorFailed",
+      "to": "end_of_path"
+    },
+    {
+      "from": "event_detector",
+      "on_event": "DetectorSuccess",
+      "to": "end_of_path"
+    },
+    {
+      "from": "external_system_source",
+      "on_event": "PlayerAdded",
+      "to": "multipurpose_promotion"
+    },
+    {
+      "from": "freespin_bonus",
+      "on_event": "FreeSpinsBonusTermsNotComplied",
+      "to": "end_of_path"
+    },
+    {
+      "from": "freespin_bonus",
+      "on_event": "FreespinBonusAwardAborted",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "freespin_bonus",
+      "on_event": "FreespinBonusCancelConfirmed",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "freespin_bonus",
+      "on_event": "FreespinBonusCancelledByWithdrawalConfirmed",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "freespin_bonus",
+      "on_event": "FreespinBonusCollectingFinished",
+      "to": "casino_bonus_v2"
+    },
+    {
+      "from": "freespin_bonus",
+      "on_event": "FreespinBonusNotUsed",
+      "to": "end_of_path"
+    },
+    {
+      "from": "freespin_bonus",
+      "on_event": "FreespinBonusRejectConfirmed",
+      "to": "end_of_path"
+    },
+    {
+      "from": "notification_center#contract1",
+      "on_event": "NotificationNotSent",
+      "to": "notification_center#contract5"
+    },
+    {
+      "from": "notification_center#contract1",
+      "on_event": "NotificationSent",
+      "to": "wait_interval"
+    },
+    {
+      "from": "notification_center#contract5",
+      "on_event": "NotificationNotSent",
+      "to": "dextra_email"
+    },
+    {
+      "from": "notification_center#contract5",
+      "on_event": "NotificationSent",
+      "to": "wait_interval"
+    },
+    {
+      "from": "notification_center_engagement_split",
+      "on_event": "NCEngagementSplitPassedPath01",
+      "to": "end_of_path"
+    },
+    {
+      "from": "notification_center_engagement_split",
+      "on_event": "NCEngagementSplitPassedPath02",
+      "to": "ams_decision_split"
+    },
+    {
+      "from": "notification_center_engagement_split",
+      "on_event": "NCEngagementSplitPassedPath02",
+      "to": "notification_center#contract5"
+    },
+    {
+      "from": "notification_center_engagement_split",
+      "on_event": "NCEngagementSplitPassedPath03",
+      "to": "ams_decision_split"
+    },
+    {
+      "from": "notification_center_engagement_split",
+      "on_event": "NCEngagementSplitPassedPath03",
+      "to": "notification_center#contract5"
+    },
+    {
+      "from": "notification_center_engagement_split",
+      "on_event": "NCEngagementSplitPassedPath04",
+      "to": "ams_decision_split"
+    },
+    {
+      "from": "notification_center_engagement_split",
+      "on_event": "NCEngagementSplitPassedPath04",
+      "to": "notification_center#contract5"
+    },
+    {
+      "from": "notification_center_engagement_split",
+      "on_event": "NCEngagementSplitPassedPath05",
+      "to": "ams_decision_split"
+    },
+    {
+      "from": "notification_center_engagement_split",
+      "on_event": "NCEngagementSplitPassedPath05",
+      "to": "notification_center#contract5"
+    },
+    {
+      "from": "promotion",
+      "on_event": "PromotionAccepted",
+      "to": "deposit"
+    },
+    {
+      "from": "promotion",
+      "on_event": "PromotionExpired",
+      "to": "end_of_path"
+    },
+    {
+      "from": "wait_interval",
+      "on_event": "WaitTimeCompleted",
+      "to": "email_engagement_split"
+    },
+    {
+      "from": "wait_interval",
+      "on_event": "WaitTimeCompleted",
+      "to": "notification_center_engagement_split"
+    }
+  ],
+  "channels": {
+    "notification_center#contract1": {
+      "channel": "On-site Notification",
+      "copy_storage": "objectForSend.variables + singleChannel tabs + rawJourneyData mirror"
+    },
+    "notification_center#contract5": {
+      "channel": "On-site Pop-up (Cat-fish)",
+      "copy_storage": "same as contract1"
+    },
+    "dextra_sms": {
+      "channel": "SMS",
+      "copy_storage": "rawValues + smsSettings + displayData (x3)",
+      "link": "https://{{BrandDomain}}//services/promo/offers/promoPage/<id>",
+      "needs": "BrandDomain in listOfUsedVariables"
+    },
+    "dextra_email": {
+      "channel": "Email",
+      "copy_storage": "content-studio (CSE), referenced by emailSettings.template.id",
+      "flow": "create->save->publish, then swap CSE into activity"
+    },
+    "native_push": {
+      "channel": "Mobile push",
+      "copy_storage": "defaultNotification.{pushTitle,pushMessage} + imageUrl"
+    }
+  },
+  "reward_presets": [
+    {
+      "mechanic": "freespin_bonus",
+      "spins": 50,
+      "provider": "jugabet-games",
+      "lobbyGameId": "jugabet-games-la-gran-copa-jugabet",
+      "game": "La Gran Copa Jugabet",
+      "betAmount_minor": 12000,
+      "withWagering": true
+    },
+    {
+      "mechanic": "casino_bonus_v2",
+      "bonusPercent": 100,
+      "wageringRequirement": 30,
+      "releaseLimitMultiplier": 15,
+      "bonusExpirationTime_ms": 172800000
+    }
+  ],
+  "segments": [
+    {
+      "template_id": "44b54348-4f74-47f5-a380-70d2c4d0a62a",
+      "name": "JBCL /CS&SP/ Updated Sport Segment 06.26",
+      "columns": [
+        "highest_prob_pref_category",
+        "last_deposit",
+        "player_id",
+        "restriction_name",
+        "risk_casino_segment",
+        "risk_sport_segment"
+      ],
+      "has_player_id_seed": true,
+      "source": "gow_comms.json"
+    },
+    {
+      "template_id": "c59a22fc-4dcc-44d9-93ea-958e94532792",
+      "name": "301. JBCL |CS| Active / Dep <14d",
+      "columns": [
+        "cnt",
+        "highest_prob_pref_category",
+        "last_deposit",
+        "player_id",
+        "restriction_name",
+        "risk_casino_segment"
+      ],
+      "has_player_id_seed": true,
+      "source": "segment_cs_301.json"
+    }
+  ],
+  "recipes": [
+    {
+      "intent": "free spins after a deposit",
+      "pattern": [
+        "deposit",
+        "promotion",
+        "freespin_bonus",
+        "casino_bonus_v2"
+      ],
+      "notes": "deposit gate -> offer -> award spins -> wager winnings. The GOW campaign uses 3 such reward flows behind one deposit."
+    },
+    {
+      "intent": "on-site + SMS + email comms blast for a promo",
+      "pattern": [
+        "dwh_source",
+        "notification_center#contract1",
+        "notification_center#contract5",
+        "dextra_sms",
+        "dextra_email"
+      ],
+      "notes": "Segment entry -> Notification -> Pop-up -> SMS -> Email, all linking the same promo page. GOW comms window 12:00-19:00 Chile."
+    },
+    {
+      "intent": "lobby drip offer with deposit ask",
+      "pattern": [
+        "external_system_source",
+        "multipurpose_promotion",
+        "deposit"
+      ],
+      "notes": "API entry -> flat-drip lobby/cashier card -> deposit gate. GOW campaign head."
+    }
+  ],
+  "invariants": [
+    "compiled body.activities MUST equal the rawJourneyData editor mirror",
+    "every activity UUID regenerated consistently on clone; never reuse JRN/CSE ids",
+    "strip duplicatedFromId/Version and stale promotionDisplayId",
+    "every nextActivityId/journeyActivityId must resolve to an existing activity",
+    "channel copy must be present for every channel flagged TRUE in the spec"
+  ]
+}

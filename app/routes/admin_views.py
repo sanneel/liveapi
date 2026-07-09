@@ -18,8 +18,8 @@ from pathlib import Path
 from typing import List, Optional
 from urllib.parse import parse_qs, urlencode, urlparse
 
-from fastapi import APIRouter, Depends, Form, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from datetime import datetime, timedelta
@@ -34,7 +34,10 @@ from ..repositories.match_repo import MatchRepository
 from ..services.journey_cloner_runner import (
     DEFAULT_TEAM,
     TEAMS,
+    generate_comms_console_script,
     generate_console_script,
+    generate_gow_combined_console_script,
+    generate_gow_console_script,
     missing_templates,
     run_journey_cloner,
     save_template_from_fetch,
@@ -394,34 +397,20 @@ def live_parses_page(
     )
 
 
-@router.get("/admin/journey-cloner", response_class=HTMLResponse)
+@router.get("/admin/journey-cloner")
 def journey_cloner_page(
-    request: Request,
     template_saved: str = "",
     template_error: str = "",
     team: str = DEFAULT_TEAM,
     user: User = Depends(require_role("editor")),
-) -> HTMLResponse:
-    team = team if team in TEAMS else DEFAULT_TEAM
-    return templates.TemplateResponse(
-        request,
-        "journey_cloner.html",
-        {
-            "active_page": "journey_cloner",
-            "current_user": user,
-            "teams": TEAMS,
-            "team": team,
-            "template_status": template_status(team),
-            "team_inherits": team_inherits(team),
-            "selected_types": ["followup", "bfr", "two_hours", "aft"],
-            "dry_run": True,
-            "result": None,
-            "error": "",
-            "template_saved": template_saved,
-            "template_error": template_error,
-            "form": {},
-        },
-    )
+) -> RedirectResponse:
+    # Journey Cloner now lives as a tab inside the unified Promotions page.
+    params = {"tab": "journey_cloner", "team": team if team in TEAMS else DEFAULT_TEAM}
+    if template_saved:
+        params["template_saved"] = template_saved
+    if template_error:
+        params["template_error"] = template_error
+    return RedirectResponse(f"/admin/promotions?{urlencode(params)}", status_code=status.HTTP_302_FOUND)
 
 
 @router.post("/admin/journey-cloner", response_class=HTMLResponse)
@@ -484,25 +473,13 @@ def journey_cloner_run(
         except Exception as exc:
             error = str(exc)
 
-    return templates.TemplateResponse(
-        request,
-        "journey_cloner.html",
-        {
-            "active_page": "journey_cloner",
-            "current_user": user,
-            "teams": TEAMS,
-            "team": team,
-            "template_status": template_status(team),
-            "team_inherits": team_inherits(team),
-            "selected_types": selected_types,
-            "dry_run": is_dry_run,
-            "result": result,
-            "error": error,
-            "template_saved": "",
-            "template_error": "",
-            "form": form,
-        },
+    ctx = _promotions_context(
+        user=user,
+        active_tab="journey_cloner",
+        jc=_jc_ns(team=team, form=form, selected_types=selected_types,
+                  dry_run=is_dry_run, result=result, error=error),
     )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
 
 
 @router.post("/admin/journey-cloner/console-script", response_class=HTMLResponse)
@@ -563,26 +540,13 @@ def journey_cloner_console_script(
         except Exception as exc:
             error = str(exc)
 
-    return templates.TemplateResponse(
-        request,
-        "journey_cloner.html",
-        {
-            "active_page": "journey_cloner",
-            "current_user": user,
-            "teams": TEAMS,
-            "team": team,
-            "template_status": template_status(team),
-            "team_inherits": team_inherits(team),
-            "selected_types": selected_types,
-            "dry_run": True,
-            "result": result,
-            "error": error,
-            "template_saved": "",
-            "template_error": "",
-            "form": form,
-            "console_script": console_script,
-        },
+    ctx = _promotions_context(
+        user=user,
+        active_tab="journey_cloner",
+        jc=_jc_ns(team=team, form=form, selected_types=selected_types,
+                  result=result, error=error, console_script=console_script),
     )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
 
 
 @router.post("/admin/journey-cloner/templates", response_class=HTMLResponse)
@@ -605,25 +569,410 @@ def journey_cloner_save_template(
     except Exception as exc:
         template_error = str(exc)
 
-    return templates.TemplateResponse(
-        request,
-        "journey_cloner.html",
-        {
-            "active_page": "journey_cloner",
-            "current_user": user,
-            "teams": TEAMS,
-            "team": team,
-            "template_status": template_status(team),
-            "team_inherits": team_inherits(team),
-            "selected_types": ["followup", "bfr", "two_hours", "aft"],
-            "dry_run": True,
-            "result": None,
-            "error": "",
-            "template_saved": template_saved,
-            "template_error": template_error,
-            "form": {},
-        },
+    ctx = _promotions_context(
+        user=user,
+        active_tab="journey_cloner",
+        jc=_jc_ns(team=team, template_saved=template_saved, template_error=template_error),
     )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
+
+
+@router.get("/admin/gow")
+def gow_page(user: User = Depends(require_role("editor"))) -> RedirectResponse:
+    # GOW now lives as a tab inside the unified Promotions page.
+    return RedirectResponse("/admin/promotions?tab=gow", status_code=status.HTTP_302_FOUND)
+
+
+def _figma_context(*, form, result=None, error="", images=None):
+    from ..services import figma_runner
+    return {
+        "active_page": "figma",
+        "form": form,
+        "result": result,
+        "error": error,
+        "images": images or [],
+        "token_present": figma_runner.token_present(),
+    }
+
+
+@router.get("/admin/figma", response_class=HTMLResponse)
+def figma_page(request: Request, user: User = Depends(require_role("editor"))) -> HTMLResponse:
+    ctx = _figma_context(form={"file_key": "go1ZVyvYRnccMRGxzgiucv", "page": "GAME OF THE WEEK (JULY)"})
+    ctx["current_user"] = user
+    return templates.TemplateResponse(request, "figma.html", ctx)
+
+
+@router.post("/admin/figma/run", response_class=HTMLResponse)
+def figma_run(
+    request: Request,
+    file_key: str = Form(...),
+    page: str = Form(""),
+    game: str = Form(""),
+    ids: str = Form(""),
+    mode: str = Form("inspect"),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    from ..services import figma_runner
+    form = {"file_key": file_key, "page": page, "game": game, "ids": ids, "mode": mode}
+    error, result, images = "", None, []
+    try:
+        if not file_key.strip():
+            raise ValueError("File key is required.")
+        if mode == "export":
+            if not game.strip():
+                raise ValueError("Game name is required for export.")
+            rc, out, cmd, images = figma_runner.export(file_key, game, page)
+        elif mode == "seed":
+            if not game.strip():
+                raise ValueError("Game name is required to seed node ids.")
+            if not ids.strip():
+                raise ValueError("Paste the node ids, e.g. popup_bg=1078:2286,email_hero=1078:2810,campaign=1078:2911")
+            rc, out, cmd, images = figma_runner.seed(file_key, game, ids)
+        else:
+            rc, out, cmd = figma_runner.inspect(file_key, page)
+        result = {"exit_code": rc, "output": out, "command": cmd, "ok": rc == 0}
+        if rc != 0:
+            error = "figma_export returned a non-zero exit code (see output)."
+    except Exception as exc:  # noqa: BLE001
+        error = str(exc)
+    ctx = _figma_context(form=form, result=result, error=error, images=images)
+    ctx["current_user"] = user
+    return templates.TemplateResponse(request, "figma.html", ctx)
+
+
+_PROMO_TABS = {"overview", "gow", "journey_cloner", "randomizers", "nc_discount", "scripts"}
+_JC_TYPES = ["followup", "bfr", "two_hours", "aft"]
+
+
+def _gow_ns(*, form=None, error="", result=None, console_script=None, warn="") -> dict:
+    return {
+        "form": form if form is not None else {"create_campaign": "on", "create_communication": "on"},
+        "error": error,
+        "result": result,
+        "console_script": console_script,
+        "warn": warn,
+    }
+
+
+def _jc_ns(*, team=DEFAULT_TEAM, form=None, selected_types=None, dry_run=True,
+           result=None, error="", template_saved="", template_error="", console_script=None) -> dict:
+    team = team if team in TEAMS else DEFAULT_TEAM
+    return {
+        "teams": TEAMS,
+        "team": team,
+        "template_status": template_status(team),
+        "team_inherits": team_inherits(team),
+        "selected_types": selected_types if selected_types is not None else list(_JC_TYPES),
+        "dry_run": dry_run,
+        "result": result,
+        "error": error,
+        "template_saved": template_saved,
+        "template_error": template_error,
+        "form": form or {},
+        "console_script": console_script,
+    }
+
+
+def _rnd_ns(*, kind="sport_wof", date="", days="", weights="", journeys="",
+           error="", result=None, console_script=None) -> dict:
+    from ..services.journey_cloner_runner import RANDOMIZER_KINDS
+    return {
+        "kinds": RANDOMIZER_KINDS,
+        "kind": kind if kind in RANDOMIZER_KINDS else "sport_wof",
+        "date": date,
+        "days": days,
+        "weights": weights,
+        "journeys": journeys,
+        "error": error,
+        "result": result,
+        "console_script": console_script,
+    }
+
+
+def _nc_ns(*, error="", result=None, console_script=None) -> dict:
+    return {"error": error, "result": result, "console_script": console_script}
+
+
+def _promotions_context(*, user, active_tab="overview", gow=None, jc=None, rnd=None, nc=None) -> dict:
+    """Full context for the unified Promotions page: automation graph + the
+    embedded generators (GOW, Journey Cloner, Randomizers, Discount NC) +
+    all-scripts list."""
+    from ..services import promotions_catalog as pc
+    cat = pc.load_catalog()
+    tab = active_tab if active_tab in _PROMO_TABS else "overview"
+    # The Notification Cloner (Discount NC) also has its own sidebar entry, so
+    # highlight that nav item when its tab is active instead of "Promotions".
+    return {
+        "active_page": "nc_cloner" if tab == "nc_discount" else "promotions",
+        "current_user": user,
+        "active_tab": tab,
+        "meta": cat.get("meta", {}),
+        "automations": pc.automations(),
+        "all_scripts": pc.all_scripts(),
+        "gow": gow if gow is not None else _gow_ns(),
+        "jc": jc if jc is not None else _jc_ns(),
+        "rnd": rnd if rnd is not None else _rnd_ns(),
+        "nc": nc if nc is not None else _nc_ns(),
+    }
+
+
+@router.get("/admin/promotions", response_class=HTMLResponse)
+def promotions_page(
+    request: Request,
+    tab: str = "overview",
+    team: str = DEFAULT_TEAM,
+    template_saved: str = "",
+    template_error: str = "",
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """Promotions hub: automation graph + the GOW and Journey Cloner generators
+    (as tabs) + every generator script and captured template."""
+    ctx = _promotions_context(
+        user=user,
+        active_tab=tab,
+        jc=_jc_ns(team=team, template_saved=template_saved, template_error=template_error),
+    )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
+
+
+@router.get("/admin/promotions/download")
+def promotions_download(
+    path: str,
+    dl: str = "",
+    user: User = Depends(require_role("editor")),
+) -> FileResponse:
+    """Serve a single journey-cloner script/template. Inline for viewing in the
+    browser, or as an attachment when dl=1. Path-whitelisted to journey-cloner/."""
+    from ..services import promotions_catalog as pc
+    resolved = pc.resolve_script(path)
+    if resolved is None:
+        raise HTTPException(status_code=404, detail="Script not found.")
+    disposition = "attachment" if dl.strip() in ("1", "true", "yes") else "inline"
+    return FileResponse(
+        resolved,
+        media_type="text/plain; charset=utf-8",
+        filename=resolved.name,
+        content_disposition_type=disposition,
+    )
+
+
+@router.post("/admin/promotions/randomizer", response_class=HTMLResponse)
+def promotions_randomizer(
+    request: Request,
+    kind: str = Form(...),
+    date: str = Form(...),
+    days: str = Form(""),
+    weights: str = Form(""),
+    journeys: str = Form(""),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """Generate a Randomizer console script (Sport WOF / Casino WOF / Scratch
+    card) from the Promotions page's Randomizers tab."""
+    from ..services.journey_cloner_runner import (
+        RANDOMIZER_KINDS,
+        generate_randomizer_console_script,
+    )
+    error = ""
+    result = None
+    console_script = None
+    try:
+        if kind not in RANDOMIZER_KINDS:
+            raise ValueError("Pick a randomizer type.")
+        if not date.strip():
+            raise ValueError("Date is required.")
+        if days.strip():
+            int(days.strip())  # validate
+        exit_code, output, display_cmd, js_text, js_name = generate_randomizer_console_script(
+            kind=kind, date=date, days=days, weights=weights, journeys=journeys,
+        )
+        result = {"exit_code": exit_code, "output": output, "command": display_cmd,
+                  "ok": exit_code == 0 and js_text is not None}
+        if exit_code == 0 and js_text is not None:
+            console_script = {"name": js_name, "text": js_text}
+        else:
+            error = "Console script was not generated. Check the run output below."
+    except ValueError as exc:
+        error = str(exc) if "invalid literal" not in str(exc) else "Days must be a whole number."
+    except Exception as exc:  # noqa: BLE001
+        error = str(exc)
+
+    ctx = _promotions_context(
+        user=user,
+        active_tab="randomizers",
+        rnd=_rnd_ns(kind=kind, date=date, days=days, weights=weights, journeys=journeys,
+                    error=error, result=result, console_script=console_script),
+    )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
+
+
+@router.post("/admin/promotions/nc-discount", response_class=HTMLResponse)
+def promotions_nc_discount(
+    request: Request,
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """Generate the "NC For Discount" console script (one notification journey
+    per game/day from the baked July calendar)."""
+    from ..services.journey_cloner_runner import generate_nc_discount_console_script
+    error = ""
+    result = None
+    console_script = None
+    try:
+        exit_code, output, display_cmd, js_text, js_name = generate_nc_discount_console_script()
+        result = {"exit_code": exit_code, "output": output, "command": display_cmd,
+                  "ok": exit_code == 0 and js_text is not None}
+        if exit_code == 0 and js_text is not None:
+            console_script = {"name": js_name, "text": js_text}
+        else:
+            error = "Console script was not generated. Check the run output below."
+    except Exception as exc:  # noqa: BLE001
+        error = str(exc)
+
+    ctx = _promotions_context(
+        user=user,
+        active_tab="nc_discount",
+        nc=_nc_ns(error=error, result=result, console_script=console_script),
+    )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
+
+
+@router.post("/admin/gow/console-script", response_class=HTMLResponse)
+def gow_console_script(
+    request: Request,
+    date: str = Form(...),
+    spec: str = Form(...),
+    create_campaign: str = Form(""),
+    create_communication: str = Form(""),
+    days: str = Form("1"),
+    spins: str = Form(""),
+    promo_page_id: str = Form(""),
+    public_domain: str = Form(""),
+    journey_name: str = Form(""),
+    use_figma: str = Form(""),
+    figma_game: str = Form(""),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    do_campaign = create_campaign.strip().lower() in ("on", "true", "1", "yes")
+    do_comms = create_communication.strip().lower() in ("on", "true", "1", "yes")
+    do_figma = use_figma.strip().lower() in ("on", "true", "1", "yes")
+    # The toggle gates the Figma export: only pull from Figma when it's on AND a
+    # game is named. Off (or blank game) -> file pickers at paste time, as before.
+    effective_figma_game = figma_game.strip() if do_figma else ""
+    form = {
+        "date": date,
+        "spec": spec,
+        "create_campaign": "on" if do_campaign else "",
+        "create_communication": "on" if do_comms else "",
+        "days": days,
+        "spins": spins,
+        "promo_page_id": promo_page_id,
+        "public_domain": public_domain,
+        "journey_name": journey_name,
+        "use_figma": "on" if do_figma else "",
+        "figma_game": figma_game,
+    }
+    error = ""
+    result = None
+    console_script = None
+
+    parsed_days: Optional[int] = None
+    parsed_spins: Optional[int] = None
+    try:
+        if not date.strip():
+            raise ValueError("Date is required.")
+        if not spec.strip():
+            raise ValueError("Paste the spec blob (Product/Offer/Communication channels table).")
+        if not do_campaign and not do_comms:
+            raise ValueError("Tick at least one of Create Campaign / Create Communication.")
+        if do_comms and not do_campaign and not promo_page_id.strip():
+            raise ValueError(
+                "Promo-page id is required when creating Communication without Campaign "
+                "(from a previously created GOW promo page)."
+            )
+        if do_figma and not figma_game.strip():
+            raise ValueError("Enter the Figma game name, or turn off 'Pull images from Figma'.")
+        if do_figma and not do_campaign:
+            raise ValueError("Figma images apply to the Campaign — tick Create Campaign, or turn Figma off.")
+        if days.strip():
+            parsed_days = int(days.strip())
+        if spins.strip():
+            parsed_spins = int(spins.strip())
+    except ValueError as exc:
+        error = str(exc) if "invalid literal" not in str(exc) else "Days/Free spins must be whole numbers."
+
+    if not error:
+        try:
+            if do_campaign and do_comms:
+                exit_code, output, display_cmd, js_text, js_name = generate_gow_combined_console_script(
+                    date=date,
+                    spec_text=spec,
+                    days=parsed_days or 1,
+                    spins=parsed_spins,
+                    public_domain=public_domain,
+                    journey_name=journey_name,
+                    figma_game=effective_figma_game,
+                )
+            elif do_campaign:
+                exit_code, output, display_cmd, js_text, js_name = generate_gow_console_script(
+                    date=date,
+                    spec_text=spec,
+                    spins=parsed_spins,
+                    figma_game=effective_figma_game,
+                )
+            else:
+                exit_code, output, display_cmd, js_text, js_name = generate_comms_console_script(
+                    date=date,
+                    spec_text=spec,
+                    promo_page_id=promo_page_id,
+                    public_domain=public_domain,
+                    journey_name=journey_name,
+                )
+            result = {
+                "exit_code": exit_code,
+                "output": output,
+                "command": display_cmd,
+                "ok": exit_code == 0 and js_text is not None,
+            }
+            if exit_code == 0 and js_text is not None:
+                console_script = {"name": js_name, "text": js_text}
+            else:
+                error = "Console script was not generated. Check the run output below."
+        except Exception as exc:  # noqa: BLE001
+            error = str(exc)
+
+    # The Figma toggle was on but the export fell back to file pickers — say so
+    # loudly instead of showing a plain "ready", and surface the actual reason.
+    warn = ""
+    if effective_figma_game and result and console_script:
+        out_low = (result.get("output") or "").lower()
+        if "falling back to" in out_low or "figma export failed" in out_low or "figma export error" in out_low:
+            reason = _extract_figma_reason(result.get("output") or "")
+            warn = (
+                f"⚠️ Figma export did NOT run for “{effective_figma_game}”, so the script still uses "
+                f"file pickers. Reason: {reason} "
+                "Fix: set FIGMA_TOKEN in the server env, make sure the game name matches the Figma board exactly, "
+                "and (for a new game) seed its node ids once via the Figma tab / figma_export.py --ids."
+            )
+
+    ctx = _promotions_context(
+        user=user,
+        active_tab="gow",
+        gow=_gow_ns(form=form, error=error, result=result, console_script=console_script, warn=warn),
+    )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
+
+
+def _extract_figma_reason(output: str) -> str:
+    """Pull the human reason out of a gow_*.py Figma fallback WARN line."""
+    for line in output.splitlines():
+        low = line.lower()
+        if "falling back" in low or "figma export" in low:
+            # e.g. "  WARN  Figma export failed (Figma rate-limited (429)...); falling back..."
+            import re
+            m = re.search(r"\((.*)\)", line)
+            if m:
+                return m.group(1).strip()
+            return line.strip().lstrip("WARN").strip()
+    return "see the run output below."
 
 
 @router.post("/admin/parser-feeds")

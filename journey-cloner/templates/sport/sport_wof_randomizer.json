@@ -1,0 +1,80 @@
+{
+  "_meta": {
+    "automation": "sport_wheel_of_fortune",
+    "endpoint": "POST /api/ubo/api/v0/crm/promo/v2/randomizer?draftId=<draftId>",
+    "source": "captured from the Sport WOF console script (JBCL|SP|WOF)",
+    "visual": {
+      "current_contentId": "50691caf-4694-4a47-9ff2-bac498c3a8ee",
+      "current_frontId": "a3d54b7c-a8e2-4970-b6d3-7f6ef8e76480",
+      "previous_contentId": "0b3f17d3-d3e3-46c1-a12e-267eb749a190",
+      "previous_frontId": "1fb86b0b-0500-41a0-b717-c8c81aba53ea",
+      "bundle_capture": "templates/sport/wof_visual/ (content-en/es, settings, manifest from the new bundle)",
+      "change_flow": [
+        "the visual is the content bundle (contentId: mf/v1/<contentId>/{spa,widget}/content/content-<lang>.json + media) plus the front/theme (frontId: mf/v1/<frontId>/{spa,widget}/settings.json)",
+        "1. upload content+settings JSON: POST /promo/v2/s3/upload  body {path:'mf/v1/<id>/...json', data:{...}} -> {path}",
+        "2. upload media binaries: POST /promo/v2/s3/upload-content  (multipart, e.g. mf/v1/background/<uuid>.png)",
+        "3. repoint the randomizer: PUT /promo/v2/randomizer/<RND-id>  with new contentId/frontId, isExternalVisualSettings:false (keeps prizes/dates/segment)",
+        "To reuse an already-uploaded bundle (like this one), just set contentId/frontId to it and PUT — no re-upload needed."
+      ]
+    },
+    "knobs": {
+      "draftId": "query param, the randomizer draft being filled",
+      "showDate": "promoDay 04:00Z",
+      "startDate": "promoDay 04:01Z",
+      "hideDate": "promoDay+1 04:00Z",
+      "endDate": "promoDay+1 03:59Z",
+      "urlShortName": "sport-<dd>-<mm>-<yyyy>",
+      "internalName": "JBCL|SP|WOF|<dd>.<mm>.<yy>",
+      "prizes[].weight": "slice probability weight (need not sum to 100)",
+      "prizes[].journeyPrizeSettings.{journeyId,activityId,activityDescription}": "the journey a winning slice routes the player to"
+    }
+  },
+  "playerVisibility": "Authorized",
+  "showDate": "@SHOW_DATE@",
+  "hideDate": "@HIDE_DATE@",
+  "startDate": "@START_DATE@",
+  "endDate": "@END_DATE@",
+  "urlShortName": "@URL_SHORT_NAME@",
+  "internalName": "@INTERNAL_NAME@",
+  "randomizerShotPolicy": "Once",
+  "randomizationType": "FortuneWheel",
+  "isExternalVisualSettings": false,
+  "isUsedInJourney": false,
+  "daysToAccept": null,
+  "type": "Randomizer",
+  "subType": null,
+  "languages": ["en", "es"],
+  "hasCsv": false,
+  "promoCode": null,
+  "redirect": null,
+  "riskLevels": null,
+  "entrySourceRules": null,
+  "initialShowDate": "2026-05-12T04:00:00.0000000Z",
+  "initialEndDate": "2026-05-13T03:59:00.0000000Z",
+  "currencies": [{ "brand": "JBCL", "currency": "CLP" }],
+  "contentId": "50691caf-4694-4a47-9ff2-bac498c3a8ee",
+  "frontId": "a3d54b7c-a8e2-4970-b6d3-7f6ef8e76480",
+  "prizes": [
+    { "weight": "0.1", "type": "JourneyPrize", "isLimitedPrize": false, "prizeQuantity": null,
+      "journeyPrizeSettings": { "journeyId": "JRN-0-222277", "activityId": "73371e55-46e1-47c6-be64-0271db68583f", "isEmptyPrize": false, "activityDescription": "JBCL | SP | RB - Wheel of fortune | Free | Money" } },
+    { "weight": "3", "type": "JourneyPrize", "isLimitedPrize": false, "prizeQuantity": null,
+      "journeyPrizeSettings": { "journeyId": "JRN-0-253210", "activityId": "2db95ef0-2098-4eb6-a078-28e779620026", "isEmptyPrize": false, "activityDescription": "JBCL | SP | RB - Wheel of fortune | Free | Bonuses" } },
+    { "weight": "25", "type": "JourneyPrize", "isLimitedPrize": false, "prizeQuantity": null,
+      "journeyPrizeSettings": { "journeyId": "JRN-0-253216", "activityId": "1faa001a-f221-4f53-b184-75e564aa1a60", "isEmptyPrize": false, "activityDescription": "JBCL | SP | RB - Wheel of fortune | Dep | Bonus" } },
+    { "weight": "10", "type": "JourneyPrize", "isLimitedPrize": false, "prizeQuantity": null,
+      "journeyPrizeSettings": { "journeyId": "JRN-0-253218", "activityId": "b6148588-a5c8-4cf9-ace8-1af8574f7deb", "isEmptyPrize": false, "activityDescription": "JBCL | SP | RB - Wheel of fortune | Bet | Insurance" } },
+    { "weight": "36.9", "type": "JourneyPrize", "isLimitedPrize": false, "prizeQuantity": null,
+      "journeyPrizeSettings": { "journeyId": "JRN-0-222272", "activityId": "ff2e626c-7ec7-4c1c-859e-078ef18004be", "isEmptyPrize": false, "activityDescription": "JBCL | SP | RB - Wheel of fortune | Dep | Freebet" } },
+    { "weight": "25", "type": "JourneyPrize", "isLimitedPrize": false, "prizeQuantity": null,
+      "journeyPrizeSettings": { "journeyId": "JRN-0-222271", "activityId": "62b2f5c3-d12f-4a17-bbb0-a8d9a328cd41", "isEmptyPrize": false, "activityDescription": "JBCL | SP | RB - Wheel of fortune | Bet | Freebet" } }
+  ],
+  "filterConditions": [
+    { "conditionType": "MultiSelect", "key": "Sport", "filterType": "fairplay_sport_segment", "displayName": "fairplay_sport_segment", "operator": "notIn",
+      "values": [
+        { "id": 40, "name": "VIP-Platinum" }, { "id": 42, "name": "VIP-Silver" }, { "id": 41, "name": "VIP-Gold" },
+        { "id": 36, "name": "Suspicious" }, { "id": 51, "name": "Scammer" }, { "id": 39, "name": "No status" },
+        { "id": 48, "name": "Monitoring" }, { "id": 47, "name": "Dangerous" }, { "id": 49, "name": "Arbitrageur" },
+        { "id": 45, "name": "Good guys-X" }
+      ] }
+  ]
+}

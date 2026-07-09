@@ -83,3 +83,7 @@ app/static/_tut_work/
 # Uploaded tutorial videos (runtime user content; keep the dir, not the files)
 app/static/tutorials/*
 !app/static/tutorials/.gitkeep
+
+# Figma export cache + outputs (large file tree, rendered PNGs)
+journey-cloner/figma_cache/
+journey-cloner/figma_out/

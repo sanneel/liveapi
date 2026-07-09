@@ -1,0 +1,419 @@
+{% extends "base.html" %}
+{% block title %}Promotions · Jugabet Admin{% endblock %}
+{% block content_theme %}content-light{% endblock %}
+{% block page_title %}Promotions{% endblock %}
+{% block page_subtitle %}One place for every promo automation — the GOW generator, the Journey Cloner, the automation graph, and all the scripts.{% endblock %}
+
+{% block content %}
+
+<div class="tabs" id="promo-tabs" data-active="{{ active_tab or 'overview' }}">
+  <button type="button" class="tab" data-tab="overview">Overview</button>
+  <button type="button" class="tab" data-tab="gow">GOW</button>
+  <button type="button" class="tab" data-tab="journey_cloner">Journey Cloner</button>
+  <button type="button" class="tab" data-tab="randomizers">Randomizers</button>
+  <button type="button" class="tab" data-tab="nc_discount">Discount NC</button>
+  <button type="button" class="tab" data-tab="scripts">All scripts</button>
+</div>
+
+{# ── OVERVIEW: automation graph ──────────────────────────────────────── #}
+<section data-panel="overview">
+  {% if not automations %}
+    <div class="alert err">No catalog found. Run <span class="mono">journey-cloner/build_catalog.py</span> to generate <span class="mono">catalog.json</span>.</div>
+  {% endif %}
+  {% if meta %}
+    <p class="help" style="margin-bottom:14px">Catalog: brand <b>{{ meta.brand or 'JBCL' }}</b>{% if meta.operator %} · {{ meta.operator }}{% endif %}{% if meta.timezone %} · {{ meta.timezone }}{% endif %}.{% if meta.note %} {{ meta.note }}{% endif %}</p>
+  {% endif %}
+
+  <div style="display:grid; gap:16px">
+    {% for a in automations %}
+    <div class="card" style="padding:16px">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap">
+        <div>
+          <h3 style="margin:0">{{ a.label }}</h3>
+          {% if a.creates %}<div class="help" style="margin-top:2px">Creates {{ a.creates }}.</div>{% endif %}
+        </div>
+        <div style="display:flex; gap:8px">
+          {% if a.tab %}<button type="button" class="btn primary tab-jump" data-tab="{{ a.tab }}">Open generator →</button>
+          {% elif a.link %}<a href="{{ a.link }}" class="btn primary">Open generator →</a>
+          {% else %}<span class="badge">Template-only</span>{% endif %}
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:12px">
+        <div>
+          {% if a.endpoint %}<div style="margin-bottom:8px"><span class="lbl">Endpoint</span><div class="mono" style="font-size:12px">{{ a.endpoint }}</div></div>{% endif %}
+          {% if a.compiler %}<div style="margin-bottom:8px"><span class="lbl">Compiler</span><div class="mono" style="font-size:12px">{{ a.compiler }}</div></div>{% endif %}
+          {% if a.template %}<div style="margin-bottom:8px"><span class="lbl">Template</span><div class="mono" style="font-size:12px">{{ a.template }}</div></div>{% endif %}
+          {% if a.segment %}<div style="margin-bottom:8px"><span class="lbl">Segment</span><div class="mono" style="font-size:12px">{{ a.segment }}</div></div>{% endif %}
+          {% if a.starts %}<div style="margin-bottom:8px"><span class="lbl">Starts</span> <span class="mono" style="font-size:12px">{{ a.starts }}</span></div>{% endif %}
+          {% if a.shot_policy %}<div style="margin-bottom:8px"><span class="lbl">Shot policy</span> <span class="mono" style="font-size:12px">{{ a.shot_policy }}</span></div>{% endif %}
+          {% if a.knobs %}
+            <span class="lbl">Knobs</span>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px">
+              {% for k in a.knobs %}<span class="chip">{{ k }}</span>{% endfor %}
+            </div>
+          {% endif %}
+        </div>
+        <div>
+          {% if a.prizes %}
+            <span class="lbl">Prize slices → journeys</span>
+            <table class="mini-table" style="width:100%; margin-top:4px; font-size:12px">
+              <thead><tr><th style="text-align:left">weight</th><th style="text-align:left">routes to</th><th style="text-align:left">description</th></tr></thead>
+              <tbody>
+                {% for p in a.prizes %}
+                <tr><td class="mono">{{ p.weight }}</td><td class="mono">{{ p.routes_to_journey or '—' }}</td><td>{{ p.description or '' }}</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% endif %}
+          {% if a.notes %}<p class="help" style="margin-top:8px">{{ a.notes }}</p>{% endif %}
+        </div>
+      </div>
+
+      {% if a.scripts %}
+        <div style="margin-top:12px">
+          <span class="lbl">Scripts &amp; templates</span>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px">
+            {% for s in a.scripts %}
+              <span class="file-pill">
+                <a href="/admin/promotions/download?path={{ s.path | urlencode }}" target="_blank" class="mono" title="View {{ s.path }}">{{ s.name }}</a>
+                <a href="/admin/promotions/download?path={{ s.path | urlencode }}&amp;dl=1" title="Download {{ s.name }}" class="dl">↓</a>
+              </span>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+{# ── GOW generator ───────────────────────────────────────────────────── #}
+<section data-panel="gow" hidden>
+  {% with form=gow.form, error=gow.error, result=gow.result, console_script=gow.console_script, warn=gow.warn %}
+    {% include "partials/_gow_form.html" %}
+  {% endwith %}
+</section>
+
+{# ── Journey Cloner ──────────────────────────────────────────────────── #}
+<section data-panel="journey_cloner" hidden>
+  {% with form=jc.form, error=jc.error, result=jc.result, console_script=jc.console_script,
+          team=jc.team, teams=jc.teams, template_status=jc.template_status,
+          team_inherits=jc.team_inherits, selected_types=jc.selected_types, dry_run=jc.dry_run,
+          template_saved=jc.template_saved, template_error=jc.template_error %}
+    {% include "partials/_journey_cloner_form.html" %}
+  {% endwith %}
+</section>
+
+{# ── Randomizers (Sport WOF / Casino WOF / Scratch card) ─────────────── #}
+<section data-panel="randomizers" hidden>
+  {% if rnd.error %}<div class="alert err">{{ rnd.error }}</div>{% endif %}
+  {% if rnd.result %}
+    <div class="alert {% if rnd.result.ok %}ok{% else %}err{% endif %}">
+      {% if rnd.result.ok %}Console script generated.{% else %}Generation exited with code {{ rnd.result.exit_code }}.{% endif %}
+    </div>
+  {% endif %}
+
+  <div class="row-flex">
+    <form method="post" action="/admin/promotions/randomizer" class="card card-pad col-rail" style="display:flex; flex-direction:column; gap:14px">
+      <div>
+        <h2 class="card-title">Create randomizer</h2>
+        <p class="card-sub">Prize slices, routed journeys, segment and the visual bundle come from the captured template — only the dates &amp; name change. Optionally override the weights and the routed journeys.</p>
+      </div>
+
+      <div class="field">
+        <span class="lbl">Type</span>
+        <select class="input" name="kind">
+          {% for k, label in rnd.kinds.items() %}
+            <option value="{{ k }}" {% if k == rnd.kind %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <span class="lbl">Promo date(s)</span>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+          <input class="input" type="date" id="rnd-datepick" style="max-width:190px"/>
+          <button type="button" class="btn" id="rnd-adddate">Add date</button>
+        </div>
+        <div id="rnd-chips" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px"></div>
+        <input type="hidden" name="date" id="rnd-dates" value="{{ rnd.date or '' }}"/>
+        <p class="help" style="margin-top:6px">Pick a date from the calendar and click <b>Add</b> — repeat for as many promos as you want. Each date becomes one randomizer, all created in one paste.</p>
+      </div>
+
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:2px">
+        <input type="checkbox" id="rnd-adv" {% if rnd.days or rnd.weights or rnd.journeys %}checked{% endif %}/>
+        <span class="lbl" style="margin:0">Advanced options <span style="color:var(--t-faint)">(days, weights, journeys)</span></span>
+      </label>
+
+      <div id="rnd-adv-fields" style="display:{% if rnd.days or rnd.weights or rnd.journeys %}flex{% else %}none{% endif %}; flex-direction:column; gap:14px">
+        <div class="field">
+          <span class="lbl">Days</span>
+          <input class="input" name="days" type="number" min="1" value="{{ rnd.days or '' }}"/>
+          <p class="help" style="margin-top:6px">Window length (applied to every date). Defaults per type (Scratch = 2).</p>
+        </div>
+        <div class="field">
+          <span class="lbl">Weights</span>
+          <input class="input mono" name="weights" value="{{ rnd.weights or '' }}" placeholder="55 42 2.7 0.3"/>
+          <p class="help" style="margin-top:6px">Space-separated, in prize order. Must match the template's prize count.</p>
+        </div>
+        <div class="field">
+          <span class="lbl">Journeys</span>
+          <input class="input mono" name="journeys" value="{{ rnd.journeys or '' }}" placeholder="JRN-0-572381 JRN-0-572307 ..."/>
+          <p class="help" style="margin-top:6px">Space-separated routed journey ids, in prize order. Leave blank to keep the template's.</p>
+        </div>
+      </div>
+
+      <button class="btn primary" style="justify-content:center">Generate console script</button>
+      <p class="help">The script creates the randomizer draft then fills it. Set <span class="mono">PREVIEW=true</span> at the top to inspect the request bodies before sending.</p>
+    </form>
+    <script>
+      (function () {
+        var pick = document.getElementById('rnd-datepick'),
+            add = document.getElementById('rnd-adddate'),
+            chips = document.getElementById('rnd-chips'),
+            hidden = document.getElementById('rnd-dates'),
+            adv = document.getElementById('rnd-adv'),
+            advFields = document.getElementById('rnd-adv-fields');
+        if (!hidden) return;
+        var dates = (hidden.value.match(/\d{4}-\d{2}-\d{2}/g) || []);
+        function render() {
+          chips.innerHTML = '';
+          dates.forEach(function (d, i) {
+            var c = document.createElement('span');
+            c.className = 'chip';
+            c.style.cssText = 'display:inline-flex; align-items:center; gap:6px; padding:4px 10px; font-size:13px';
+            c.appendChild(document.createTextNode(d));
+            var x = document.createElement('a');
+            x.href = '#'; x.textContent = '✕'; x.title = 'remove';
+            x.style.cssText = 'text-decoration:none; color:#b91c1c; font-weight:700';
+            x.addEventListener('click', function (e) { e.preventDefault(); dates.splice(i, 1); render(); });
+            c.appendChild(x); chips.appendChild(c);
+          });
+          hidden.value = dates.join(' ');
+        }
+        function addDate() {
+          var v = pick.value; if (!v) return;
+          if (dates.indexOf(v) === -1) { dates.push(v); dates.sort(); }
+          pick.value = ''; render();
+        }
+        add.addEventListener('click', addDate);
+        pick.addEventListener('change', addDate);   // picking from the calendar adds it
+        if (adv && advFields) adv.addEventListener('change', function () { advFields.style.display = adv.checked ? 'flex' : 'none'; });
+        // block submit with no dates (hidden field can't use `required`)
+        var form = hidden.form;
+        if (form) form.addEventListener('submit', function (e) {
+          if (!hidden.value.trim()) { e.preventDefault(); pick.focus(); alert('Add at least one promo date.'); }
+        });
+        render();
+      })();
+    </script>
+
+    <div class="col-main stack">
+      {% if rnd.console_script %}
+        <section class="card" style="overflow:hidden">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Console Script Ready</h2>
+              <p class="card-sub">{{ rnd.console_script.name }}</p>
+            </div>
+            <button type="button" id="rnd-copy" class="btn primary">Copy script</button>
+          </div>
+          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+            <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
+              <li>Click <b>Copy script</b> above.</li>
+              <li>Open the backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
+              <li>Paste and press Enter. If it says "Waiting for a token", click anything in the UI.</li>
+              <li>Watch for the green <b>DONE</b> with the created randomizer draft id.</li>
+            </ol>
+            <textarea id="rnd-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ rnd.console_script.text }}</textarea>
+          </div>
+        </section>
+        <script>
+          (function () {
+            var btn = document.getElementById('rnd-copy');
+            var area = document.getElementById('rnd-script-text');
+            if (!btn || !area) return;
+            btn.addEventListener('click', function () {
+              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
+              if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); });
+              } else { area.select(); document.execCommand('copy'); done(); }
+            });
+          })();
+        </script>
+      {% endif %}
+
+      {% if rnd.result %}
+        <section class="card" style="overflow:hidden">
+          <div class="card-head"><h2 class="card-title">Run Output</h2></div>
+          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+            <div>
+              <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Command</div>
+              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0">{{ rnd.result.command }}</pre>
+            </div>
+            <div>
+              <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Output</div>
+              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:32rem; margin:0">{{ rnd.result.output }}</pre>
+            </div>
+          </div>
+        </section>
+      {% else %}
+        <section class="card card-pad">
+          <h2 class="card-title" style="margin-bottom:8px">How it works</h2>
+          <div class="help" style="line-height:1.7">
+            <p style="margin:0 0 8px">A randomizer is a weighted set of prize slices; each slice routes a winning player to a journey. This keeps the captured prizes, segment and visual, and only re-dates + re-names the promo for a new run.</p>
+            <p style="margin:0">The two-step create flow (create draft → fill) is inferred from the captured bodies. If a call 404s, the draft is easy to delete — send me that request and I'll correct the endpoint.</p>
+          </div>
+        </section>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{# ── Discount NC (game-of-the-day notification journeys) ─────────────── #}
+<section data-panel="nc_discount" hidden>
+  {% if nc.error %}<div class="alert err">{{ nc.error }}</div>{% endif %}
+  {% if nc.result %}
+    <div class="alert {% if nc.result.ok %}ok{% else %}err{% endif %}">
+      {% if nc.result.ok %}Console script generated.{% else %}Generation exited with code {{ nc.result.exit_code }}.{% endif %}
+    </div>
+  {% endif %}
+
+  <div class="row-flex">
+    <form method="post" action="/admin/promotions/nc-discount" class="card card-pad col-rail" style="display:flex; flex-direction:column; gap:14px">
+      <div>
+        <h2 class="card-title">NC For Discount</h2>
+        <p class="card-sub">One notification journey per game/day (segment → notification → end), promoting the discounted games to active players. Monday 20:00 / Friday 21:00 Chile. Uses the July games calendar from the brief.</p>
+      </div>
+      <ul class="help" style="margin:0; padding-left:18px; line-height:1.7">
+        <li>10.07 Fri — The Racaroon</li>
+        <li>13.07 Mon — Gold Trio</li>
+        <li>17.07 Fri — Tornado</li>
+        <li>20.07 Mon — 1000 Olympus Rivals</li>
+        <li>24.07 Fri — Sweet Bonanza 1000</li>
+        <li>27.07 Mon — Egypt Fire</li>
+        <li>31.07 Fri — Coin Win 2</li>
+      </ul>
+      <button class="btn primary" style="justify-content:center">Generate console script</button>
+      <p class="help">The script reserves an id, pops a file picker for each game's 200×200 image, uploads it, then creates + saves each draft (left unpublished for review).</p>
+    </form>
+
+    <div class="col-main stack">
+      {% if nc.console_script %}
+        <section class="card" style="overflow:hidden">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Console Script Ready</h2>
+              <p class="card-sub">{{ nc.console_script.name }}</p>
+            </div>
+            <button type="button" id="nc-copy" class="btn primary">Copy script</button>
+          </div>
+          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+            <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
+              <li>Click <b>Copy script</b> above.</li>
+              <li>Open the backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
+              <li>Paste and press Enter. A file picker pops up per game — select that game's 200×200 image.</li>
+              <li>Watch for the green <b>DONE</b> with the created JRN ids. Drafts are unpublished — review + publish in the Journeys UI.</li>
+            </ol>
+            <textarea id="nc-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ nc.console_script.text }}</textarea>
+          </div>
+        </section>
+        <script>
+          (function () {
+            var btn = document.getElementById('nc-copy'), area = document.getElementById('nc-script-text');
+            if (!btn || !area) return;
+            btn.addEventListener('click', function () {
+              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
+              if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); }); }
+              else { area.select(); document.execCommand('copy'); done(); }
+            });
+          })();
+        </script>
+      {% endif %}
+      {% if nc.result %}
+        <section class="card" style="overflow:hidden">
+          <div class="card-head"><h2 class="card-title">Run Output</h2></div>
+          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+            <div><div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Command</div>
+              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0">{{ nc.result.command }}</pre></div>
+            <div><div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Output</div>
+              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:32rem; margin:0">{{ nc.result.output }}</pre></div>
+          </div>
+        </section>
+      {% else %}
+        <section class="card card-pad">
+          <h2 class="card-title" style="margin-bottom:8px">How it works</h2>
+          <div class="help" style="line-height:1.7">
+            <p style="margin:0 0 8px">Each game is a separate journey cloned from the captured NC template — same segment (active players) and notification template 1935, with the game name, message, CTA, deep link and send time swapped in.</p>
+            <p style="margin:0">The calendar is baked from the brief. To run a different month, tell me the dates/games and I'll add a form for it.</p>
+          </div>
+        </section>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{# ── All scripts ─────────────────────────────────────────────────────── #}
+<section data-panel="scripts" hidden>
+  {% if all_scripts %}
+    <p class="help">Everything under <span class="mono">journey-cloner/</span> (generators, captured templates, catalog, docs). Click a name to view, ↓ to download.</p>
+    {% set groups = all_scripts | groupby('group') %}
+    <div style="display:grid; gap:14px; margin-top:8px">
+      {% for group, files in groups %}
+      <div class="card" style="padding:12px">
+        <div class="mono" style="font-weight:600; margin-bottom:8px">{{ group }}/</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          {% for s in files %}
+            <span class="file-pill">
+              <a href="/admin/promotions/download?path={{ s.path | urlencode }}" target="_blank" class="mono" title="{{ s.path }}">{{ s.name }}</a>
+              <span class="help" style="font-size:11px">{{ s.bytes }} b</span>
+              <a href="/admin/promotions/download?path={{ s.path | urlencode }}&amp;dl=1" title="Download {{ s.name }}" class="dl">↓</a>
+            </span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+</section>
+
+<style>
+  .tabs { display:flex; gap:4px; border-bottom:2px solid var(--border-in,#e6e6ee); margin-bottom:18px; flex-wrap:wrap; }
+  .tabs .tab { background:none; border:none; padding:10px 16px; font-size:14px; font-weight:600; color:var(--t-faint,#889); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; }
+  .tabs .tab:hover { color:var(--t,#223); }
+  .tabs .tab.active { color:var(--t,#223); border-bottom-color:#4a6cf7; }
+  .chip { display:inline-block; padding:2px 8px; border:1px solid var(--border,#dcdce4); border-radius:999px; font-size:11px; background:#f6f6fa; }
+  .badge { display:inline-block; padding:4px 10px; border-radius:6px; font-size:12px; background:#eef; color:#446; }
+  .file-pill { display:inline-flex; align-items:center; gap:8px; padding:4px 10px; border:1px solid var(--border,#dcdce4); border-radius:6px; background:#fafafe; }
+  .file-pill .dl { text-decoration:none; font-weight:700; color:#4a6; }
+  .file-pill a.mono { text-decoration:none; }
+  .file-pill a.mono:hover { text-decoration:underline; }
+  .mini-table th, .mini-table td { padding:2px 6px; border-bottom:1px solid #eee; vertical-align:top; }
+  .lbl { display:block; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--t-faint,#889); margin-bottom:2px; }
+</style>
+
+<script>
+  (function () {
+    var wrap = document.getElementById('promo-tabs');
+    if (!wrap) return;
+    var tabs = Array.prototype.slice.call(wrap.querySelectorAll('.tab'));
+    var panels = Array.prototype.slice.call(document.querySelectorAll('[data-panel]'));
+    function show(name) {
+      var found = false;
+      panels.forEach(function (p) { var on = p.getAttribute('data-panel') === name; p.hidden = !on; found = found || on; });
+      if (!found) { name = 'overview'; panels.forEach(function (p) { p.hidden = p.getAttribute('data-panel') !== 'overview'; }); }
+      tabs.forEach(function (t) { t.classList.toggle('active', t.getAttribute('data-tab') === name); });
+      if (history.replaceState) history.replaceState(null, '', '#' + name);
+    }
+    tabs.forEach(function (t) { t.addEventListener('click', function () { show(t.getAttribute('data-tab')); }); });
+    // "Open generator →" buttons on the overview cards jump to a tab.
+    document.querySelectorAll('.tab-jump').forEach(function (b) {
+      b.addEventListener('click', function () { show(b.getAttribute('data-tab')); window.scrollTo(0, 0); });
+    });
+    var initial = (location.hash || '').replace('#', '') || wrap.getAttribute('data-active') || 'overview';
+    show(initial);
+  })();
+</script>
+
+{% endblock %}

@@ -1,0 +1,127 @@
+{
+ "_meta": {
+  "automation": "casino_wheel_of_fortune",
+  "endpoint": "POST /promo/v2/promo-drafts/randomizer then PUT .../randomizer/<id>",
+  "source": "captured create-draft body",
+  "knobs": [
+   "showDate/startDate/hideDate/endDate",
+   "urlShortName",
+   "internalName",
+   "prizes[].weight",
+   "prizes[].journeyPrizeSettings.{journeyId,activityId}",
+   "contentId/frontId (visual)",
+   "filterConditions (segment)"
+  ],
+  "visual": {
+   "contentId": "7ba28ac6-a192-4e7c-90fd-3f76e3ffe8df",
+   "frontId": "83d4e58a-fbcd-4300-b20b-50482bcc6b36"
+  }
+ },
+ "randomizationType": "FortuneWheel",
+ "type": "Randomizer",
+ "isExternalVisualSettings": false,
+ "internalName": "JBCL|CS|WOF|26.06.26",
+ "promoCode": null,
+ "randomizerShotPolicy": "Once",
+ "showDate": "2026-06-26T04:01:00.0000000Z",
+ "startDate": "2026-06-26T04:02:00.0000000Z",
+ "endDate": "2026-06-27T03:58:00.0000000Z",
+ "hideDate": "2026-06-27T03:59:00.0000000Z",
+ "daysToAccept": null,
+ "currencies": [
+  {
+   "brand": "JBCL",
+   "currency": "CLP"
+  }
+ ],
+ "currencyMode": "single",
+ "urlShortName": "27-06-26",
+ "playerVisibility": "Authorized",
+ "filterConditions": [
+  {
+   "values": [
+    {
+     "id": 34,
+     "name": "Premium"
+    },
+    {
+     "id": 31,
+     "name": "Negative"
+    }
+   ],
+   "conditionType": "MultiSelect",
+   "key": "Business",
+   "filterType": "fairplay_business_segment",
+   "displayName": "fairplay_business_segment",
+   "operator": "notIn"
+  }
+ ],
+ "promotionDisplayId": null,
+ "languages": [
+  "en",
+  "es"
+ ],
+ "prizes": [
+  {
+   "id": "3b286e69-b355-420a-a960-4db936a874c4",
+   "weight": 55,
+   "type": "JourneyPrize",
+   "isEmptyPrize": false,
+   "isLimitedPrize": false,
+   "prizeQuantity": null,
+   "journeyPrizeSettings": {
+    "journeyId": "JRN-0-572381",
+    "activityId": "3b286e69-b355-420a-a960-4db936a874c4",
+    "activityDescription": "Wheel of fortune | 50FS to dep",
+    "isEmptyPrize": false
+   }
+  },
+  {
+   "id": "65ed8cee-45b8-48bc-9ef3-69149b78a6d3",
+   "weight": 42,
+   "type": "JourneyPrize",
+   "isEmptyPrize": false,
+   "isLimitedPrize": false,
+   "prizeQuantity": null,
+   "journeyPrizeSettings": {
+    "journeyId": "JRN-0-572307",
+    "activityId": "65ed8cee-45b8-48bc-9ef3-69149b78a6d3",
+    "activityDescription": "JBCL | CS | RB - Wheel of fortune | dep bonuses",
+    "isEmptyPrize": false
+   }
+  },
+  {
+   "id": "f1804fa5-a469-4493-9c9a-420c1f89dd86",
+   "weight": 2.7,
+   "type": "JourneyPrize",
+   "isEmptyPrize": false,
+   "isLimitedPrize": false,
+   "prizeQuantity": null,
+   "journeyPrizeSettings": {
+    "journeyId": "JRN-0-423152",
+    "activityId": "f1804fa5-a469-4493-9c9a-420c1f89dd86",
+    "activityDescription": "JBCL | 50 FS no-dep Wheel of Fortune ",
+    "isEmptyPrize": false
+   }
+  },
+  {
+   "id": "0feeaefe-08a0-4a85-bcff-b572b47e3d1b",
+   "weight": 0.3,
+   "type": "JourneyPrize",
+   "isEmptyPrize": false,
+   "isLimitedPrize": false,
+   "prizeQuantity": null,
+   "journeyPrizeSettings": {
+    "journeyId": "JRN-0-572386",
+    "activityId": "0feeaefe-08a0-4a85-bcff-b572b47e3d1b",
+    "activityDescription": "JBCL | 50 FS no-dep Wheel of Fortune ",
+    "isEmptyPrize": false
+   }
+  }
+ ],
+ "isUsedInJourney": false,
+ "completedBy": null,
+ "riskLevels": null,
+ "contentId": "7ba28ac6-a192-4e7c-90fd-3f76e3ffe8df",
+ "frontId": "83d4e58a-fbcd-4300-b20b-50482bcc6b36"
+}

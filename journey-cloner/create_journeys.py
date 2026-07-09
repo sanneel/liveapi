@@ -741,12 +741,19 @@ def verify_body(
         f"reservedJourneyId is {body.get('reservedJourneyId')!r}",
     ))
 
-    # A new value that equals one of the old values (e.g. reusing the same
-    # club or date) is not a leftover — skip those to avoid false positives.
+    # A new value that equals (or contains, e.g. VAMOSBULLA -> VAMOSBULLANGUEROS)
+    # one of the old values is not a leftover — strip every occurrence of the
+    # new values out of the serialized body before looking for old ones, so an
+    # old value that only survives as a substring of its own replacement isn't
+    # flagged as a false positive.
     new_values = {code, match_name, date_label}
+    scrubbed = serialized
+    for new in new_values:
+        if new:
+            scrubbed = scrubbed.replace(new, "")
     leftovers = [
         old for old in old_values.all_values()
-        if old not in new_values and old in serialized
+        if old not in new_values and old in scrubbed
     ]
     checks.append((
         not leftovers,
