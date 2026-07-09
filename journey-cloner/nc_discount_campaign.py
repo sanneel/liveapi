@@ -231,6 +231,25 @@ JS_TEMPLATE = r"""// NC For Discount — @COUNT@ notification journeys — gener
     });
   }
 
+  // Every journey is cloned from the same template, so its activity UUIDs are
+  // identical across all 7 journeys (and across re-runs / already-created
+  // drafts). The backoffice rejects that with "activities with the same
+  // identifier already exist in other journeys". Mirror regenerate_internal_ids
+  // from create_journeys.py: before each create, swap every activityId/id UUID
+  // for a fresh one, string-replaced throughout so handles, ports, edges and
+  // rawJourneyData config keys stay in sync. Not applied to JRN-* ids or the
+  // %%..%% placeholders (they aren't UUIDs).
+  const newUuid = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID()
+    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const r = Math.random()*16|0; return (c === 'x' ? r : (r&0x3)|0x8).toString(16); });
+  const UUID_RE = /"(?:activityId|id)"\s*:\s*"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"/g;
+  function regenIds(txt) {
+    const old = new Set(); let m; UUID_RE.lastIndex = 0;
+    while ((m = UUID_RE.exec(txt)) !== null) old.add(m[1]);
+    let t = txt;
+    for (const o of old) t = t.split(o).join(newUuid());
+    return t;
+  }
+
   const auth = await obtainAuth();
   const H = (ct) => { const h = { accept: 'application/json, text/plain, */*', authorization: auth, 'x-brand': BRAND }; if (ct) h['content-type'] = ct; return h; };
 
@@ -258,6 +277,7 @@ JS_TEMPLATE = r"""// NC For Discount — @COUNT@ notification journeys — gener
     const iconUrl = await uploadIcon(iconFile, G.name);
     console.log('    icon uploaded -> ' + iconUrl);
     let bodyStr = G.body.split('%%RESERVED%%').join(jid).split('%%ICON%%').join(iconUrl);
+    bodyStr = regenIds(bodyStr);   // fresh activity ids so nothing collides with other journeys
     const body = JSON.parse(bodyStr);
     let r = await fetch(BASE + '/journey-drafts', { method: 'POST', headers: H('application/json'), credentials: 'include', body: JSON.stringify(body) });
     let t = await r.text(); if (!r.ok) throw new Error('create HTTP ' + r.status + ' ' + t);
