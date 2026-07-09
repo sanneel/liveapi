@@ -40,6 +40,21 @@ def _logo_uri() -> str:
 
 LOGO_URI = _logo_uri()
 
+
+def img_data_uri(path: str | Path) -> str:
+    """Read an image file and return a base64 data URI for embedding in the
+    card well. Returns '' if the path is empty or unreadable."""
+    if not path:
+        return ""
+    p = Path(path)
+    try:
+        raw = p.read_bytes()
+    except OSError:
+        return ""
+    ext = p.suffix.lower().lstrip(".") or "png"
+    mime = {"jpg": "jpeg", "jpeg": "jpeg", "gif": "gif", "webp": "webp"}.get(ext, "png")
+    return f"data:image/{mime};base64," + base64.b64encode(raw).decode("ascii")
+
 # fixed per suit (Chilean format $10.000). deposit tier -> paired spin value.
 SUITS = [
     ("hearts",   "&#9829;", "$10.000", "$100"),
@@ -73,11 +88,13 @@ CSS = r"""
   .corner{position:absolute;z-index:3;display:flex;flex-direction:column;align-items:center;line-height:.82;}
   .corner.tl{top:5cqw;left:6cqw;} .corner.br{bottom:4.5cqw;right:6cqw;transform:rotate(180deg);}
   .corner .a{font-size:11.5cqw;font-weight:700;letter-spacing:-.02em;} .corner .suit{font-size:6.4cqw;margin-top:.3cqw;}
-  .well{position:relative;flex:1 1 auto;min-height:34cqw;margin:10cqw 1.5cqw 0;border-radius:10px;
+  .well{position:relative;flex:1 1 auto;min-height:34cqw;margin:10cqw 1.5cqw 0;border-radius:10px;overflow:hidden;
     background:radial-gradient(90% 75% at 50% 45%,#000 42%,#040404 80%,#0a0a0a 100%);
     box-shadow:inset 0 0 40px rgba(0,0,0,.9),inset 0 0 0 1px rgba(233,197,101,.16);}
-  .well::after{content:"";position:absolute;inset:0;border-radius:10px;
+  .well::after{content:"";position:absolute;inset:0;border-radius:10px;z-index:2;pointer-events:none;
     background:radial-gradient(120% 90% at 50% 40%,transparent 58%,rgba(0,0,0,.8) 100%);}
+  /* Dropped-in slot-game artwork fills the well. */
+  .well .game{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1;}
   .divider{display:flex;align-items:center;gap:3cqw;margin:3.4cqw 1cqw 0;}
   .divider .line{flex:1;height:2px;box-shadow:0 0 6px rgba(201,150,47,.35);
     background:linear-gradient(90deg,transparent,rgba(233,197,101,.15),var(--gold-mid),rgba(233,197,101,.15),transparent);}
@@ -119,14 +136,19 @@ BACK_CSS = r"""
 """
 
 
-def card_html(idx: int, suit_glyph: str, deposit: str, bet: str, free_spins: str) -> str:
+def card_html(idx: int, suit_glyph: str, deposit: str, bet: str, free_spins: str,
+              game_uri: str = "") -> str:
     gid = f"g{idx}"
+    well = (
+        f'<div class="well"><img class="game" src="{game_uri}" alt=""></div>'
+        if game_uri else '<div class="well"></div>'
+    )
     return f"""  <div class="card">
     <div class="inner">
       <span class="rule"></span>
       <div class="corner tl"><span class="a gold-text">A</span><span class="suit gold-text">{suit_glyph}</span></div>
       <div class="corner br"><span class="a gold-text">A</span><span class="suit gold-text">{suit_glyph}</span></div>
-      <div class="well"></div>
+      {well}
       <div class="divider"><span class="line"></span><span class="gem gold-text">&#9670;</span><span class="line"></span></div>
       <div class="hero">
         <svg class="reel" viewBox="0 0 72 62" aria-hidden="true">
@@ -226,10 +248,10 @@ FLAT_CSS = f"""
 """
 
 
-def single_html(idx: int, free_spins: str) -> str:
+def single_html(idx: int, free_spins: str, game_uri: str = "") -> str:
     _, glyph, deposit, bet = SUITS[idx]
     return f"""<!doctype html><html><head><meta charset="utf-8"><style>{CSS}{FLAT_CSS}</style></head><body>
-{card_html(idx + 1, glyph, deposit, bet, free_spins)}
+{card_html(idx + 1, glyph, deposit, bet, free_spins, game_uri)}
 </body></html>"""
 
 
@@ -274,7 +296,12 @@ def main() -> int:
     ap.add_argument("--scale", type=int, default=2, help="device pixel scale for crisp PNGs (default 2)")
     ap.add_argument("--html", action="store_true", help="only (re)write casino_card.html (keeps {{FREE_SPINS}} unless --free-spins given)")
     ap.add_argument("--out", default=str(HERE / "out"), help="PNG output dir")
+    ap.add_argument("--game", default="", help="path to a slot-game image to drop into the well of every card")
     args = ap.parse_args()
+
+    game_uri = img_data_uri(args.game) if args.game else ""
+    if args.game and not game_uri:
+        sys.exit(f"could not read --game image: {args.game}")
 
     # always keep the repo template with the {{FREE_SPINS}} variable unless overridden
     tpl_fs = args.free_spins if args.free_spins != "{{FREE_SPINS}}" else "{{FREE_SPINS}}"
@@ -288,7 +315,7 @@ def main() -> int:
     for i, (name, _, deposit, _bet) in enumerate(SUITS):
         dep = deposit.replace("$", "").replace(".", "")
         png = out / f"card_{name}_{dep}_fs{fs if fs.isdigit() else 'var'}.png"
-        render_png(single_html(i, fs), png, args.scale)
+        render_png(single_html(i, fs, game_uri), png, args.scale)
         print(f"  rendered {png.name}  ({png.stat().st_size} bytes)")
     print(f"\nDone — {len(SUITS)} PNGs in {out}. Free spins = {fs!r}.")
     return 0

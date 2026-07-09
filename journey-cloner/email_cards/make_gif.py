@@ -70,9 +70,9 @@ def _quant(rgb: Image.Image, palette: Image.Image) -> Image.Image:
     return rgb.quantize(palette=palette, dither=Image.NONE)
 
 
-def make_one(idx: int, free_spins: str, width: int, out_dir: Path) -> Path:
+def make_one(idx: int, free_spins: str, width: int, out_dir: Path, game_uri: str = "") -> Path:
     from PIL import ImageEnhance
-    front = render_face(R.single_html(idx, free_spins))
+    front = render_face(R.single_html(idx, free_spins, game_uri))
     back = render_face(R.single_back_html(idx))
     W, H = front.size
     th = int(round(width * H / W))
@@ -114,13 +114,17 @@ def main() -> int:
     ap.add_argument("--free-spins", default="{{FREE_SPINS}}")
     ap.add_argument("--width", type=int, default=300, help="GIF width in px (default 300)")
     ap.add_argument("--only", help="one suit only (hearts/diamonds/clubs/spades)")
+    ap.add_argument("--game", default="", help="path to a slot-game image to drop into the card well")
     ap.add_argument("--out", default=str(R.HERE / "out"))
     a = ap.parse_args()
     out_dir = Path(a.out); out_dir.mkdir(parents=True, exist_ok=True)
+    game_uri = R.img_data_uri(a.game) if a.game else ""
+    if a.game and not game_uri:
+        sys.exit(f"could not read --game image: {a.game}")
     names = [s[0] for s in R.SUITS]
     todo = [names.index(a.only)] if a.only else range(len(R.SUITS))
     for idx in todo:
-        p = make_one(idx, a.free_spins, a.width, out_dir)
+        p = make_one(idx, a.free_spins, a.width, out_dir, game_uri)
         print(f"  {p.name}  ({p.stat().st_size // 1024} KB, {len(flip_frames())} frames)")
     print(f"\nDone. Free spins = {a.free_spins!r}, width {a.width}px.")
     return 0
