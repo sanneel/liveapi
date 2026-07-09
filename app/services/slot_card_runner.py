@@ -201,6 +201,8 @@ def render_grid(
                 bet = _fmt_bet(bets[idx])
                 png_path = tmp / f"front_{idx}.png"
                 R.render_png(R.single_html(idx, fs, data_uri, bet), png_path, scale=2)
+                # Individual flip GIF at cell_width so all 4 are identical dimensions
+                ind_gif_path = G.make_one(idx, fs, cell_width, tmp, data_uri, bet)
                 _, label, deposit, default_bet = SUITS[idx]
                 cards.append({
                     "suit": SUIT_NAMES[idx],
@@ -208,6 +210,8 @@ def render_grid(
                     "deposit": deposit,
                     "bet": bet or default_bet,
                     "png": png_path.read_bytes(),
+                    "gif": ind_gif_path.read_bytes(),
+                    "gif_name": ind_gif_path.name,
                 })
         except SystemExit as exc:
             raise RuntimeError(str(exc) or "Chromium render failed") from exc

@@ -87,7 +87,10 @@ async def slot_cards_generate(
         "cards": [
             {
                 "suit": c["suit"], "label": c["label"], "deposit": c["deposit"],
-                "bet": c["bet"], "png": _uri(c["png"], "image/png"),
+                "bet": c["bet"],
+                "png": _uri(c["png"], "image/png"),
+                "gif": _uri(c["gif"], "image/gif"),
+                "gif_name": c["gif_name"],
             }
             for c in out["cards"]
         ],
