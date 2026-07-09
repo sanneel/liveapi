@@ -263,12 +263,31 @@ def single_back_html(idx: int) -> str:
 
 
 def chrome_bin() -> str:
-    for p in Path("/opt/pw-browsers").glob("chromium-*/chrome-linux/chrome"):
-        return str(p)
-    for name in ("chromium", "chromium-browser", "google-chrome"):
-        if shutil.which(name):
-            return name
-    sys.exit("No Chromium binary found (set PLAYWRIGHT_BROWSERS_PATH or install chromium).")
+    """Locate a Chromium executable. Works in the sandbox (/opt/pw-browsers),
+    on a production VPS where Playwright installed the browser under
+    ~/.cache/ms-playwright or PLAYWRIGHT_BROWSERS_PATH, and from a plain PATH
+    install. Falls back to the headless_shell build if the full chrome binary
+    isn't present."""
+    roots = []
+    env_root = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+    if env_root and env_root not in ("0", "1"):
+        roots.append(Path(env_root))
+    roots += [Path("/opt/pw-browsers"), Path.home() / ".cache" / "ms-playwright"]
+    patterns = (
+        "chromium-*/chrome-linux/chrome",
+        "chromium_headless_shell-*/chrome-linux/headless_shell",
+        "chromium-*/chrome-linux/headless_shell",
+    )
+    for root in roots:
+        for pat in patterns:
+            hits = sorted(root.glob(pat))
+            if hits:
+                return str(hits[-1])
+    for name in ("chromium", "chromium-browser", "google-chrome", "chrome"):
+        found = shutil.which(name)
+        if found:
+            return found
+    sys.exit("No Chromium binary found (set PLAYWRIGHT_BROWSERS_PATH or run `playwright install chromium`).")
 
 
 def render_png(html: str, out: Path, scale: int) -> None:

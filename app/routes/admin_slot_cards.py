@@ -1,0 +1,80 @@
+"""Slot-card configurator admin page.
+
+  GET  /admin/slot-cards            → drop-a-photo UI
+  POST /admin/slot-cards/generate   → multipart image + suit + free-spins,
+                                       returns the rendered flip GIF + front PNG
+                                       (base64 data URIs) with the photo in the
+                                       card's artwork well.
+
+The heavy lifting (headless Chromium render of the card + flip GIF) lives in
+app/services/slot_card_runner.py, which reuses the email_cards/ code.
+"""
+
+from __future__ import annotations
+
+import base64
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.templating import Jinja2Templates
+
+from ..auth.dependencies import require_role
+from ..logging_config import get_logger
+from ..models import User
+from ..services import slot_card_runner as runner
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+logger = get_logger("app.routes.admin_slot_cards")
+
+router = APIRouter()
+
+
+@router.get("/admin/slot-cards", response_class=HTMLResponse)
+def slot_cards_page(
+    request: Request,
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request,
+        "slot_cards.html",
+        {
+            "active_page": "slot_cards",
+            "current_user": user,
+            "suits": runner.suit_choices(),
+        },
+    )
+
+
+@router.post("/admin/slot-cards/generate")
+async def slot_cards_generate(
+    image: UploadFile = File(...),
+    suit: str = Form(...),
+    free_spins: str = Form("50"),
+    gif_width: int = Form(300),
+    user: User = Depends(require_role("editor")),
+) -> JSONResponse:
+    data = await image.read()
+    mime = (image.content_type or "").lower().split(";")[0].strip()
+    try:
+        out = runner.render_card(data, mime, suit.strip(), free_spins, gif_width)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    except Exception:
+        logger.exception("slot-card render failed")
+        return JSONResponse(
+            {"error": "Render failed. Check the server has Chromium installed."},
+            status_code=500,
+        )
+
+    def uri(raw: bytes, ct: str) -> str:
+        return f"data:{ct};base64," + base64.b64encode(raw).decode("ascii")
+
+    return JSONResponse(
+        {
+            "gif": uri(out["gif"], "image/gif"),
+            "png": uri(out["png"], "image/png"),
+            "gif_name": out["gif_name"],
+        }
+    )
