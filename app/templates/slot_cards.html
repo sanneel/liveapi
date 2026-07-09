@@ -154,9 +154,13 @@
           return;
         }
         var d = res.j;
-        // Build public URL with current parameters (bet values, free spins, width)
+        // Build public URL with current parameters (bet values, free spins, width, image)
         var baseUrl = window.location.origin + '/r/slot.gif';
         var params = [];
+
+        // Add image ID if available
+        if (d.img_id) params.push('img_id=' + encodeURIComponent(d.img_id));
+
         var bets = ['hearts', 'diamonds', 'clubs', 'spades'];
         bets.forEach(function (suit) {
           var val = betFor(suit);

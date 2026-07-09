@@ -23,6 +23,7 @@ from ..auth.dependencies import require_role
 from ..logging_config import get_logger
 from ..models import User
 from ..services import slot_card_runner as runner
+from .public_slot_gif import _store_image
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -76,9 +77,13 @@ async def slot_cards_generate(
         logger.exception("slot-card render failed")
         return JSONResponse({"error": f"Render failed: {exc}"}, status_code=500)
 
+    # Store image temporarily so public URL can use it
+    img_id = _store_image(data, mime)
+
     return JSONResponse({
         "gif": _uri(out["gif"], "image/gif"),
         "gif_name": out["gif_name"],
+        "img_id": img_id,
         "cards": [
             {
                 "suit": c["suit"], "label": c["label"], "deposit": c["deposit"],

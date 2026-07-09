@@ -32,8 +32,14 @@ router = APIRouter()
 _gif_cache_lock = threading.Lock()
 _gif_cache: Dict[str, Tuple[float, bytes]] = {}
 
+# Image storage: temp_id -> (ts, image_bytes, mime)
+_image_store_lock = threading.Lock()
+_image_store: Dict[str, Tuple[float, bytes, str]] = {}
+
 GIF_CACHE_TTL_SECONDS = 3600  # 1 hour
 GIF_CACHE_MAX_ENTRIES = 100
+IMAGE_STORE_TTL_SECONDS = 3600  # 1 hour
+IMAGE_STORE_MAX_ENTRIES = 100
 
 
 def _cache_key(image_hash: str, bets: List[str], free_spins: str, width: int) -> str:
@@ -66,6 +72,29 @@ def _hash_bytes(data: bytes) -> str:
     """Simple hash of image bytes."""
     import hashlib
     return hashlib.sha256(data).hexdigest()[:16]
+
+
+def _store_image(image_bytes: bytes, mime: str) -> str:
+    """Store image temporarily and return a key."""
+    import uuid
+    key = str(uuid.uuid4())[:8]
+    with _image_store_lock:
+        if len(_image_store) >= IMAGE_STORE_MAX_ENTRIES:
+            oldest_key = min(_image_store, key=lambda k: _image_store[k][0])
+            _image_store.pop(oldest_key, None)
+        _image_store[key] = (time.time(), image_bytes, mime)
+    return key
+
+
+def _get_stored_image(key: str) -> Optional[Tuple[bytes, str]]:
+    """Retrieve stored image if not expired."""
+    with _image_store_lock:
+        entry = _image_store.get(key)
+        if entry and (time.time() - entry[0]) < IMAGE_STORE_TTL_SECONDS:
+            return entry[1], entry[2]
+        elif entry:
+            _image_store.pop(key, None)
+    return None
 
 
 def _load_image(image_param: Optional[str]) -> Optional[bytes]:
@@ -103,6 +132,7 @@ def _load_image(image_param: Optional[str]) -> Optional[bytes]:
 def slot_gif(
     request: Request,
     image: Optional[str] = Query(None, description="Image as data URI or URL"),
+    img_id: Optional[str] = Query(None, description="Stored image ID"),
     bet_hearts: Optional[str] = Query(None),
     bet_diamonds: Optional[str] = Query(None),
     bet_clubs: Optional[str] = Query(None),
@@ -112,10 +142,22 @@ def slot_gif(
 ) -> Response:
     """Render a transparent GIF with all four slot cards in a 2x2 grid."""
 
-    # Load image if provided
+    # Load image from storage, parameter, or use empty
     image_bytes = None
+    mime = "image/png"
     image_hash = "empty"
-    if image:
+
+    if img_id:
+        # Retrieve from temporary storage
+        stored = _get_stored_image(img_id)
+        if stored:
+            image_bytes, mime = stored
+            image_hash = img_id
+        else:
+            logger.warning(f"Stored image not found or expired: {img_id}")
+            # Fall through to empty
+    elif image:
+        # Load from data URI or URL
         try:
             image_bytes = _load_image(image)
             image_hash = _hash_bytes(image_bytes)
