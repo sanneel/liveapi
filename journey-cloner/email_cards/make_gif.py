@@ -43,7 +43,9 @@ def flip_frames() -> list[tuple[float, int]]:
 
 
 def render_face(html: str, scale: int = 2) -> Image.Image:
-    W, H = 400, 584
+    # Same viewport as the PNG path so front and back come out identical in size
+    # (the flip compositor requires it) and nothing is clipped.
+    W, H = R.CARD_W + R.CARD_MARGIN * 2, R.CARD_H + R.CARD_MARGIN * 2
     with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False, encoding="utf-8") as f:
         f.write(html)
         tmp = f.name

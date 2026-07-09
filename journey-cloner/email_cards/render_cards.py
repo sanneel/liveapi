@@ -200,12 +200,29 @@ def deck_html(free_spins: str) -> str:
 """
 
 
-# flat, tight, transparent card for email assets (no gold glow, no animation)
-FLAT_CSS = r"""
-  body{background:transparent;display:grid;place-items:center;min-height:100vh;padding:0;}
-  .card{width:360px;height:540px;aspect-ratio:auto;animation:none !important;
-    box-shadow:0 8px 18px rgba(0,0,0,.55) !important;}
-  .inner{min-height:0;}
+# flat, tight, transparent card for email assets (no gold glow, no animation).
+#
+# Geometry, shared by the PNG path (render_png) and the flip-GIF path
+# (make_gif.render_face) so a front and its back always come out the same size.
+#   * The 2/3 playing-card box (360x540) the animated deck uses is too short for
+#     the full front layout — the "Play Now" button and the bottom gold border
+#     spilled past it and got clipped. CARD_H is sized to fit the whole front
+#     with the artwork well at WELL_H.
+#   * The card is pinned at a fixed (CARD_MARGIN, CARD_MARGIN) offset via body
+#     padding instead of grid centering: headless Chrome's grid centering
+#     drifted the card right and clipped its right edge.
+#   * The artwork well gets a fixed height (not flex) so the layout is
+#     deterministic and there is a large, predictable black area to drop a
+#     ~360xWELL_H game PNG into.
+CARD_W, CARD_H, WELL_H, CARD_MARGIN = 360, 650, 300, 24
+
+FLAT_CSS = f"""
+  html,body{{margin:0;padding:0;background:transparent;}}
+  body{{padding:{CARD_MARGIN}px;width:{CARD_W + CARD_MARGIN * 2}px;height:{CARD_H + CARD_MARGIN * 2}px;overflow:hidden;}}
+  .card{{position:relative;width:{CARD_W}px;height:{CARD_H}px;aspect-ratio:auto;margin:0;
+    animation:none !important;box-shadow:0 8px 18px rgba(0,0,0,.55) !important;}}
+  .inner{{min-height:0;}}
+  .well{{flex:0 0 auto;height:{WELL_H}px;min-height:0;margin-top:8cqw;}}
 """
 
 
@@ -233,8 +250,9 @@ def chrome_bin() -> str:
 
 
 def render_png(html: str, out: Path, scale: int) -> None:
-    # card 360x540 centered, tight margin for the soft shadow -> 400 x 584
-    W, H = 400, 584
+    # Viewport = card + shadow margin on every side (matches FLAT_CSS), so the
+    # card sits at a fixed offset and is never clipped on any edge.
+    W, H = CARD_W + CARD_MARGIN * 2, CARD_H + CARD_MARGIN * 2
     with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False, encoding="utf-8") as f:
         f.write(html)
         tmp = f.name
