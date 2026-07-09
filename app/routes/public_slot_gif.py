@@ -1,6 +1,6 @@
 """Public slot card GIF endpoint.
 
-  GET /gif/slot.gif[?image=<data-uri|url>&bet_hearts=100&bet_diamonds=200&bet_clubs=500&bet_spades=800&free_spins=50&width=560]
+  GET /r/slot.gif[?image=<data-uri|url>&bet_hearts=100&bet_diamonds=200&bet_clubs=500&bet_spades=800&free_spins=50&width=560]
 
 Serves a transparent GIF with all four Ace cards (hearts/diamonds/clubs/spades)
 flipping front<->JUGABET back in sync. Spin values default to tier defaults if not
@@ -98,7 +98,7 @@ def _load_image(image_param: Optional[str]) -> Optional[bytes]:
     raise HTTPException(400, "image must be a data URI or HTTP(S) URL")
 
 
-@router.get("/gif/slot.gif")
+@router.get("/r/slot.gif")
 @limiter.limit("60/minute")
 def slot_gif(
     request: Request,
