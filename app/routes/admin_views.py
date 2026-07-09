@@ -699,10 +699,13 @@ def _promotions_context(*, user, active_tab="overview", gow=None, jc=None, rnd=N
     all-scripts list."""
     from ..services import promotions_catalog as pc
     cat = pc.load_catalog()
+    tab = active_tab if active_tab in _PROMO_TABS else "overview"
+    # The Notification Cloner (Discount NC) also has its own sidebar entry, so
+    # highlight that nav item when its tab is active instead of "Promotions".
     return {
-        "active_page": "promotions",
+        "active_page": "nc_cloner" if tab == "nc_discount" else "promotions",
         "current_user": user,
-        "active_tab": active_tab if active_tab in _PROMO_TABS else "overview",
+        "active_tab": tab,
         "meta": cat.get("meta", {}),
         "automations": pc.automations(),
         "all_scripts": pc.all_scripts(),
