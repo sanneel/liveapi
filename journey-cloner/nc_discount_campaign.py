@@ -34,7 +34,7 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from create_journeys import BRAND, LOCAL_TZ, UTC
+from create_journeys import BRAND, LOCAL_TZ, UTC, utc_api
 from casino_journey import DEFAULT_BASE_URL
 from comms_campaign import DEFAULT_FOLDER_ID
 
@@ -101,13 +101,16 @@ def _copy_for(day: datetime) -> dict:
     raise SystemExit(f"{day:%Y-%m-%d} is a {day:%A} — the brief only covers Monday/Friday.")
 
 
-def _window(day: datetime, hh: int, mm: int) -> tuple[str, str]:
-    """(startAt, stopAt) in UTC. The journey window is 1h, as in the template."""
+def _window(day: datetime, hh: int, mm: int) -> tuple[str, str, datetime, datetime]:
+    """Journey window (1h). Returns the plain-UTC strings used in
+    rawJourneyData.infoValues (via string replacement) plus the UTC datetimes,
+    which the caller also formats in .NET style for the TOP-LEVEL startAt/stopAt
+    the draft's schedule field reads."""
     local = day.replace(hour=hh, minute=mm, second=0, microsecond=0, tzinfo=LOCAL_TZ)
     start = local.astimezone(UTC)
     stop = (local + timedelta(hours=1)).astimezone(UTC)
     fmt = "%Y-%m-%dT%H:%M:%SZ"
-    return start.strftime(fmt), stop.strftime(fmt)
+    return start.strftime(fmt), stop.strftime(fmt), start, stop
 
 
 def prepare_game(date_str: str, slug: str, name: str) -> tuple[dict, list[str]]:
@@ -117,7 +120,7 @@ def prepare_game(date_str: str, slug: str, name: str) -> tuple[dict, list[str]]:
     des = cp["des"]
     caption = cp["caption"]
     hh, mm = cp["time"]
-    start_at, stop_at = _window(day, hh, mm)
+    start_at, stop_at, start_dt, stop_dt = _window(day, hh, mm)
     journey_name = f"JBCL | CS | NC For Discount {day:%d.%m}"
 
     s = TEMPLATE_PATH.read_text(encoding="utf-8")
@@ -136,6 +139,14 @@ def prepare_game(date_str: str, slug: str, name: str) -> tuple[dict, list[str]]:
     body = json.loads(s)
     body["duplicatedFromId"] = None
     body["duplicatedFromVersion"] = None
+    # The captured template only carried the schedule inside
+    # rawJourneyData.infoValues, so created drafts showed no start date. The
+    # draft's schedule field reads the TOP-LEVEL startAt/stopAt (.NET fractional
+    # format), exactly like create_journeys.py / casino_journey.py set them.
+    body["startAt"] = utc_api(start_dt, dotnet_fraction=True)
+    body["stopAt"] = utc_api(stop_dt, dotnet_fraction=True)
+    body["isImmediatelyAfterPublish"] = False
+    body["timeZoneId"] = "Chile/Continental"
 
     report = [
         f"{day:%a %d.%m} {hh:02d}:{mm:02d} Chile -> startAt {start_at}",
@@ -150,6 +161,7 @@ def verify(body: dict, slug: str) -> list[tuple[bool, str]]:
     s = json.dumps(body, ensure_ascii=False)
     iv = body.get("rawJourneyData", {}).get("infoValues", {})
     start, stop = iv.get("startAt", ""), iv.get("stopAt", "")
+    top_start, top_stop = body.get("startAt", ""), body.get("stopAt", "")
     # Only always-stale literals (the game may itself be the template game, so
     # don't flag its slug/name). Old dates/ids and the "Copy of" prefix must go.
     stale = [lit for lit in (TPL_TITLE, TPL_ICON, TPL_STARTAT, TPL_STOPAT, TPL_RESERVED,
@@ -160,7 +172,9 @@ def verify(body: dict, slug: str) -> list[tuple[bool, str]]:
         (game_url(slug) in s, f"link points at public game URL {game_url(slug)}"),
         ("/launch/slots/iframe/" not in s, "old deeplink path removed"),
         (body.get("duplicatedFromId") is None, "no stale duplicatedFromId"),
-        (bool(start and stop and start < stop), f"startAt {start} < stopAt {stop}"),
+        (bool(start and stop and start < stop), f"infoValues startAt {start} < stopAt {stop}"),
+        (bool(top_start and top_stop and top_start.endswith("Z") and "." in top_start),
+         f"top-level schedule set ({top_start})"),
         (not stale, "no leftover template literals" + (f" (LEAK: {stale})" if stale else "")),
     ]
 
