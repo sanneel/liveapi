@@ -81,6 +81,12 @@ class CubeTheme:
     template_image_path: Optional[str] = None
     # URL of the static promo photo shown on the non-odds faces of the 3D cube.
     promo_image_url: str = ""
+    # Optional animated slot-game GIF shown as an extra rotating face on the
+    # 3D widget (browser animates the GIF natively inside the <img>). When set,
+    # the widget rotation becomes promo -> odds -> slot -> odds. Leave blank to
+    # keep the classic promo -> odds -> promo -> odds loop. Any /static/*.gif
+    # sized ~420x380 drops in cleanly.
+    slot_gif_url: str = ""
     # Rotating widget configuration. Each entry is a face on the cube; the
     # widget cycles through them on a Y-axis rotation. 4 faces fit a cube
     # (the front-rotating presentation in the reference video) — extra faces
@@ -142,6 +148,7 @@ CUBE_THEMES: Dict[str, CubeTheme] = {
         ),
         required_teams=("arsenal",),
         promo_image_url="/static/cube-ucl.jpg",
+        slot_gif_url="/static/slot-game.gif",
         notes="Locked to the PSG vs Arsenal final fixture.",
     ),
     "worldcup": CubeTheme(
@@ -183,6 +190,7 @@ CUBE_THEMES: Dict[str, CubeTheme] = {
             CubeFace(kind="match", match_index=2),
         ),
         promo_image_url="/static/cube-worldcup.jpg",
+        slot_gif_url="/static/slot-game.gif",
         prefer_live=True,
         notes=(
             "Filters football matches whose tournament_slug starts with any "

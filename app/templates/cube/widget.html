@@ -77,7 +77,11 @@
         <img id="odds-a" src="/cube/{{ theme.slug }}/odds.png?slot=0" alt="" />
       </div>
       <div class="face" id="f2">
+        {% if theme.slot_gif_url %}
+        <img class="slot-face" src="{{ theme.slot_gif_url }}" alt="Slot game" />
+        {% else %}
         <img src="{{ theme.promo_image_url }}" alt="" />
+        {% endif %}
       </div>
       <div class="face" id="f3">
         <img id="odds-b" src="/cube/{{ theme.slug }}/odds.png?slot=0" alt="" />

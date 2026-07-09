@@ -59,6 +59,32 @@
       background: transparent;
       object-fit: contain;
     }
+    .gif-preview {
+      margin-top: 14px;
+    }
+    .gif-preview__label {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: #8a93a3;
+      margin-bottom: 6px;
+    }
+    .gif-preview__frame {
+      width: 100%;
+      max-width: 220px;
+      aspect-ratio: 420 / 380;
+      background: #0b0d11;
+      border: 1px solid #232833;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .gif-preview__frame img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
     .links {
       margin-top: 14px;
       display: flex;
@@ -117,6 +143,14 @@
                   loading="lazy"
                   allowtransparency="true"></iframe>
         </div>
+        {% if t.slot_gif_url %}
+        <div class="gif-preview">
+          <span class="gif-preview__label">Slot game (rotating face)</span>
+          <div class="gif-preview__frame">
+            <img src="{{ t.slot_gif_url }}" alt="{{ t.display_name }} slot game" loading="lazy" />
+          </div>
+        </div>
+        {% endif %}
         <div class="links">
           <a href="/cube/{{ t.slug }}/widget" target="_blank">Widget: <code>/cube/{{ t.slug }}/widget</code></a>
           <a href="/cube/{{ t.slug }}.png" target="_blank">PNG: <code>/cube/{{ t.slug }}.png</code></a>
