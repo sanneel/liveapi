@@ -37,6 +37,13 @@ LIME, GOLD, NAVY = (182,222,19), (244,196,48), (10,20,45)
 GOLD_LIGHT, GOLD_DARK = (255,232,150), (120,88,8)
 WHITE = (250,249,248)
 
+# --- bottom control bar (drawn by the script over the frame's own bar) ------
+BET_TEXT = "$200 CLP"
+WIN_TEXT = "$0"
+BAR_X0, BAR_Y0, BAR_X1, BAR_Y1 = 84, 946, 1364, 1054
+BAR_CY  = (BAR_Y0+BAR_Y1)//2                 # common centre line for controls
+TURBO_C = (723, 988)                          # matches the turbo_pulse ring
+
 # ---------------------------------------------------------------- fonts ----
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -80,6 +87,106 @@ def tracked_text(draw, xy, text, f, fill, tracking=0, anchor="mm",
         draw.text((x + w/2, xy[1]), ch, font=f, fill=fill, anchor="mm",
                   stroke_width=stroke_width, stroke_fill=stroke_fill)
         x += w + tracking
+
+# ------------------------------------------------------- bottom bar --------
+
+def _round_grad(size, radius, top, bottom):
+    """Rounded rectangle filled with a vertical gradient, as an RGBA image."""
+    w,h = size
+    grad = Image.new("RGBA",(w,h))
+    gd = ImageDraw.Draw(grad)
+    for y in range(h):
+        t = y/max(1,h-1)
+        c = tuple(int(top[i]+(bottom[i]-top[i])*t) for i in range(3))+(255,)
+        gd.line([(0,y),(w,y)],fill=c)
+    mask = Image.new("L",(w,h),0)
+    ImageDraw.Draw(mask).rounded_rectangle([0,0,w-1,h-1],radius,fill=255)
+    grad.putalpha(mask)
+    return grad
+
+
+def _orb(ov, d, cx, cy, r):
+    """Glossy lime orb with gold rim."""
+    d.ellipse([cx-r,cy-r,cx+r,cy+r],fill=(120,160,10,255),outline=GOLD+(255,),width=4)
+    d.ellipse([cx-r+6,cy-r+6,cx+r-6,cy+r-6],fill=LIME+(255,))
+    hl = Image.new("RGBA",ov.size,(0,0,0,0))
+    ImageDraw.Draw(hl).ellipse([cx-r*0.5,cy-r*0.75,cx+r*0.5,cy-r*0.2],
+                               fill=(255,255,255,80))
+    ov.alpha_composite(hl.filter(ImageFilter.GaussianBlur(4)))
+
+
+def _square_btn(ov, d, cx, cy, s=72, r=14):
+    ov.alpha_composite(_round_grad((s,s),r,(26,48,102),(10,22,54)),
+                       (int(cx-s/2),int(cy-s/2)))
+    d.rounded_rectangle([cx-s/2,cy-s/2,cx+s/2,cy+s/2],r,
+                        outline=GOLD+(255,),width=4)
+
+
+def _value_pill(ov, d, x0, x1, cy, label, value):
+    """Navy pill with a small tracked label on top and a gold value below,
+    both centred — replaces the frame's baked-in APUESTA/GANANCIA pills."""
+    h = 92
+    ov.alpha_composite(_round_grad((x1-x0,h),h//2,(22,42,92),(8,18,46)),
+                       (x0,cy-h//2))
+    d.rounded_rectangle([x0,cy-h//2,x1,cy+h//2],h//2,outline=GOLD+(255,),width=5)
+    cx = (x0+x1)//2
+    tracked_text(d,(cx,cy-21),label,font(FONT_HEAVY,30),WHITE+(255,),tracking=5)
+    fV = fit_font(d,value,FONT_HEAVY,50,(x1-x0)-70)
+    d.text((cx,cy+19),value,font=fV,fill=GOLD+(255,),anchor="mm",
+           stroke_width=2,stroke_fill=(60,44,4,255))
+
+
+def draw_bottom_bar(cv):
+    """Repaint the control bar: -/+ | orb | APUESTA pill | TURBO | GANANCIA
+    pill | orb | menu buttons — everything centred on one line."""
+    ov = Image.new("RGBA",cv.size,(0,0,0,0))
+    d  = ImageDraw.Draw(ov)
+    cy = BAR_CY
+
+    # bar background (covers the frame's baked-in texts)
+    ov.alpha_composite(_round_grad((BAR_X1-BAR_X0,BAR_Y1-BAR_Y0),26,
+                                   (18,34,76),(6,14,38)),(BAR_X0,BAR_Y0))
+    d.rounded_rectangle([BAR_X0,BAR_Y0,BAR_X1,BAR_Y1],26,
+                        outline=GOLD+(255,),width=5)
+    d.rounded_rectangle([BAR_X0+9,BAR_Y0+9,BAR_X1-9,BAR_Y1-9],20,
+                        outline=GOLD_LIGHT+(90,),width=2)
+
+    # left: bet - / +
+    fG = font(FONT_HEAVY,46)
+    for cx,gl in ((138,"−"),(224,"+")):
+        _square_btn(ov,d,cx,cy)
+        d.text((cx,cy-2),gl,font=fG,fill=WHITE+(255,),anchor="mm")
+
+    _orb(ov,d,302,cy,34)
+    _value_pill(ov,d,352,660,cy,"APUESTA",BET_TEXT)
+    _value_pill(ov,d,788,1096,cy,"GANANCIA",WIN_TEXT)
+    _orb(ov,d,1146,cy,34)
+
+    # right: autoplay + menu squares
+    _square_btn(ov,d,1230,cy)
+    d.arc([1230-20,cy-20,1230+20,cy+20],start=300,end=210,
+          fill=WHITE+(255,),width=5)
+    d.polygon([(1230+22,cy-16),(1230+8,cy-16),(1230+17,cy-1)],fill=WHITE+(255,))
+    _square_btn(ov,d,1316,cy)
+    for k in (-14,0,14):
+        d.line([(1316-18,cy+k),(1316+18,cy+k)],fill=WHITE+(255,),width=5)
+
+    # centre: TURBO button (drawn last so it sits on top of the bar)
+    tx,ty = TURBO_C
+    d.ellipse([tx-86,ty-86,tx+86,ty+86],fill=GOLD+(255,))
+    d.ellipse([tx-78,ty-78,tx+78,ty+78],fill=(150,190,14,255))
+    d.ellipse([tx-70,ty-70,tx+70,ty+70],fill=LIME+(255,))
+    hl = Image.new("RGBA",cv.size,(0,0,0,0))
+    ImageDraw.Draw(hl).ellipse([tx-40,ty-60,tx+40,ty-30],fill=(255,255,255,60))
+    ov.alpha_composite(hl.filter(ImageFilter.GaussianBlur(6)))
+    d = ImageDraw.Draw(ov)
+    for ox in (-26,6):                       # fast-forward icon, above centre
+        d.polygon([(tx+ox,ty-36),(tx+ox,ty+4),(tx+ox+26,ty-16)],
+                  fill=NAVY+(255,))
+    tracked_text(d,(tx,ty+32),"TURBO",font(FONT_HEAVY,27),NAVY+(255,),tracking=3)
+
+    cv.alpha_composite(ov)
+    return cv
 
 # ---------------------------------------------------------------------------
 
@@ -293,7 +400,7 @@ def win_frames(base):
 
 
 def main():
-    frame=Image.open(FRAME_PATH).convert("RGBA")
+    frame=draw_bottom_bar(Image.open(FRAME_PATH).convert("RGBA"))
     overlays=[(Image.open(p).convert("RGBA"),x,y) for p,x,y in OVERLAYS]
     cells=load_cells()
 
