@@ -193,10 +193,15 @@
           snippetRows += '  <tr>\n';
           for (var ci = 0; ci < 2; ci++) {
             var card = d.cards[ri * 2 + ci];
+            // No gif_url ⇒ the backend is running code older than the template
+            // (pulled but not restarted). Say so instead of emitting "undefined".
+            var gifSrc = card.gif_url
+              ? window.location.origin + card.gif_url
+              : 'MISSING-GIF-URL--RESTART-THE-SERVER-AND-REGENERATE';
             snippetRows +=
               '    <td style="padding:6px;">\n' +
               '      <a href="' + snippetHref + '" target="_blank" style="display:block;">\n' +
-              '        <img src="' + window.location.origin + card.gif_url + '"' +
+              '        <img src="' + gifSrc + '"' +
               ' width="' + cardW + '" alt="' + card.label + ' — ' + card.bet + ' spin value"\n' +
               '             style="display:block;border:0;">\n' +
               '      </a>\n' +
@@ -232,9 +237,13 @@
                 '<a class="btn primary" download="' + c.gif_name + '" href="' + c.gif + '">⬇ GIF</a>' +
                 '<a class="btn" download="card_' + c.suit + '.png" href="' + c.png + '">⬇ PNG</a>' +
               '</div>' +
-              '<div style="font-size:10.5px;word-break:break-all;padding:0 10px 10px;color:var(--t-faint,#889)">' +
-                'Hosted: <code>' + window.location.origin + c.gif_url + '</code>' +
-              '</div>' +
+              (c.gif_url
+                ? '<div style="font-size:10.5px;word-break:break-all;padding:0 10px 10px;color:var(--t-faint,#889)">' +
+                    'Hosted: <code>' + window.location.origin + c.gif_url + '</code>' +
+                  '</div>'
+                : '<div style="font-size:10.5px;padding:0 10px 10px;color:#c0392b">' +
+                    'Not hosted — restart the server (old backend code) and regenerate.' +
+                  '</div>') +
             '</div>';
         });
         html += '</div>';
