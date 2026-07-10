@@ -38,6 +38,7 @@ GOLD_LIGHT, GOLD_DARK = (255,232,150), (120,88,8)
 WHITE = (250,249,248)
 
 # --- bottom control bar (drawn by the script over the frame's own bar) ------
+DRAW_BOTTOM_BAR = True   # set False to keep the frame's baked-in bottom bar
 BET_TEXT = "$200 CLP"
 WIN_TEXT = "$0"
 BAR_X0, BAR_Y0, BAR_X1, BAR_Y1 = 84, 946, 1364, 1054
@@ -400,7 +401,9 @@ def win_frames(base):
 
 
 def main():
-    frame=draw_bottom_bar(Image.open(FRAME_PATH).convert("RGBA"))
+    frame=Image.open(FRAME_PATH).convert("RGBA")
+    if DRAW_BOTTOM_BAR:
+        frame=draw_bottom_bar(frame)
     overlays=[(Image.open(p).convert("RGBA"),x,y) for p,x,y in OVERLAYS]
     cells=load_cells()
 
