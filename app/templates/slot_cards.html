@@ -183,8 +183,9 @@
           (cardsParams.length ? '?' + cardsParams.join('&') : '');
 
         // Build email snippet (2x2 table, 4 separate GIF links).
-        // GIF srcs are placeholder CDN URLs; hrefs default to the click-to-flip
-        // landing page so the email cards open the interactive version.
+        // GIF srcs are hosted by this server (/r/card/<id>.gif — stored on
+        // disk at generate time); hrefs go to the click-to-flip landing page
+        // so clicking an email card opens the interactive version.
         var cardW = Math.round((document.getElementById('sc-w').value || 560) / 2);
         var snippetHref = cardsUrl.replace(/&/g, '&amp;');
         var snippetRows = '';
@@ -195,7 +196,7 @@
             snippetRows +=
               '    <td style="padding:6px;">\n' +
               '      <a href="' + snippetHref + '" target="_blank" style="display:block;">\n' +
-              '        <img src="https://YOUR-CDN/' + card.gif_name + '"' +
+              '        <img src="' + window.location.origin + card.gif_url + '"' +
               ' width="' + cardW + '" alt="' + card.label + ' — ' + card.bet + ' spin value"\n' +
               '             style="display:block;border:0;">\n' +
               '      </a>\n' +
@@ -231,6 +232,9 @@
                 '<a class="btn primary" download="' + c.gif_name + '" href="' + c.gif + '">⬇ GIF</a>' +
                 '<a class="btn" download="card_' + c.suit + '.png" href="' + c.png + '">⬇ PNG</a>' +
               '</div>' +
+              '<div style="font-size:10.5px;word-break:break-all;padding:0 10px 10px;color:var(--t-faint,#889)">' +
+                'Hosted: <code>' + window.location.origin + c.gif_url + '</code>' +
+              '</div>' +
             '</div>';
         });
         html += '</div>';
@@ -238,7 +242,7 @@
         // ── email HTML snippet ──
         html +=
           '<div class="sc-snippet">' +
-            '<label>Email HTML — 4 separate linked GIFs (paste into your email tool, replace URLs)</label>' +
+            '<label>Email HTML — 4 separate linked GIFs, hosted on this server (paste into your email tool as-is)</label>' +
             '<textarea readonly onclick="this.select()">' + emailSnippet.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</textarea>' +
           '</div>';
 

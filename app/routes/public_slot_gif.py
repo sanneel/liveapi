@@ -21,6 +21,7 @@ from fastapi import APIRouter, Query, Request, Response, HTTPException
 from fastapi.responses import HTMLResponse
 from PIL import Image
 
+from ..config import BASE_DIR
 from ..logging_config import get_logger
 from ..middleware import limiter
 from ..services import slot_card_runner as runner
@@ -28,6 +29,15 @@ from ..services import slot_card_runner as runner
 logger = get_logger("app.routes.public_slot_gif")
 
 router = APIRouter()
+
+# Disk storage for generated card GIFs + uploaded artwork, so the URLs pasted
+# into an email keep working long after the in-memory caches (and the process)
+# are gone.
+SLOT_ASSET_DIR = BASE_DIR / "data" / "slot_assets"
+_EXT_BY_MIME = {"image/png": ".png", "image/jpeg": ".jpg", "image/jpg": ".jpg",
+                "image/webp": ".webp", "image/gif": ".gif"}
+_MIME_BY_EXT = {".png": "image/png", ".jpg": "image/jpeg",
+                ".webp": "image/webp", ".gif": "image/gif"}
 
 # GIF cache: (image_data_hash, bet_hearts, bet_diamonds, bet_clubs, bet_spades, free_spins, width) -> (ts, gif_bytes)
 _gif_cache_lock = threading.Lock()
@@ -75,10 +85,20 @@ def _hash_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()[:16]
 
 
+def _safe_key(key: str) -> bool:
+    """Only ids we minted (hex uuid fragments) — no path tricks."""
+    return bool(key) and len(key) <= 32 and key.replace("-", "").isalnum()
+
+
 def _store_image(image_bytes: bytes, mime: str) -> str:
-    """Store image temporarily and return a key."""
+    """Store the uploaded artwork on disk and return its id. Kept forever (the
+    /r/cards page and /r/slot-img URLs go into emails, so they must not expire
+    with an in-memory TTL or a restart)."""
     import uuid
     key = str(uuid.uuid4())[:8]
+    ext = _EXT_BY_MIME.get(mime, ".png")
+    SLOT_ASSET_DIR.mkdir(parents=True, exist_ok=True)
+    (SLOT_ASSET_DIR / f"img_{key}{ext}").write_bytes(image_bytes)
     with _image_store_lock:
         if len(_image_store) >= IMAGE_STORE_MAX_ENTRIES:
             oldest_key = min(_image_store, key=lambda k: _image_store[k][0])
@@ -88,14 +108,28 @@ def _store_image(image_bytes: bytes, mime: str) -> str:
 
 
 def _get_stored_image(key: str) -> Optional[Tuple[bytes, str]]:
-    """Retrieve stored image if not expired."""
+    """Retrieve stored image — memory first, then disk (survives restarts)."""
     with _image_store_lock:
         entry = _image_store.get(key)
-        if entry and (time.time() - entry[0]) < IMAGE_STORE_TTL_SECONDS:
+        if entry:
             return entry[1], entry[2]
-        elif entry:
-            _image_store.pop(key, None)
+    if not _safe_key(key):
+        return None
+    for ext, mime in _MIME_BY_EXT.items():
+        p = SLOT_ASSET_DIR / f"img_{key}{ext}"
+        if p.exists():
+            return p.read_bytes(), mime
     return None
+
+
+def _store_card_gif(gif_bytes: bytes) -> str:
+    """Persist one generated reveal GIF to disk; returns the id used by the
+    public /r/card/{gif_id}.gif URL that goes into the email snippet."""
+    import uuid
+    key = str(uuid.uuid4())[:8]
+    SLOT_ASSET_DIR.mkdir(parents=True, exist_ok=True)
+    (SLOT_ASSET_DIR / f"gif_{key}.gif").write_bytes(gif_bytes)
+    return key
 
 
 def _load_image(image_param: Optional[str]) -> Optional[bytes]:
@@ -222,6 +256,20 @@ def slot_gif(
         "Cache-Control": "public, max-age=3600",
         "X-Cache": "MISS",
     })
+
+
+@router.get("/r/card/{gif_id}.gif")
+@limiter.limit("300/minute")
+def slot_card_gif(request: Request, gif_id: str) -> Response:
+    """Serve one stored reveal GIF (the <img src> the email snippet uses).
+    Stored on disk at generate time, so these URLs are permanent."""
+    if not _safe_key(gif_id):
+        raise HTTPException(404, "GIF not found")
+    p = SLOT_ASSET_DIR / f"gif_{gif_id}.gif"
+    if not p.exists():
+        raise HTTPException(404, "GIF not found")
+    return Response(content=p.read_bytes(), media_type="image/gif",
+                    headers={"Cache-Control": "public, max-age=31536000, immutable"})
 
 
 @router.get("/r/slot-img/{img_id}")
