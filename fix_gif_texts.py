@@ -53,8 +53,13 @@ SPEED = 1.4                              # >1 = slower
 FINAL_HOLD_MS = 2000
 FELIZ_DARKEN = 0.63                      # tone the neon FELICIDADES lime down
 FELIZ_BOX = (116, 100, 384, 182)         # its region on the full-size plaque
-OUT_W = 600                              # output width; upscaling the 500px
-OUT_COLORS = 255                         # source de-speckles the 96-colour art
+# Play the full story once and FREEZE on the FELICIDADES win (no looping).
+PLAY_ONCE = True
+# Email-friendly output: smaller + fewer colours + harder gifsicle so it
+# loads fast in a message. (Was 600px / 255 colours for the standalone GIF.)
+OUT_W = 480
+OUT_COLORS = 128
+GIFSICLE_LOSSY = 140
 
 
 def fit_font(draw, text, size, max_w, min_size=12):
@@ -295,15 +300,20 @@ def main():
         g.putpalette(base_pal)
         opt.append(g)
         prev = cur
-    opt[0].save(OUT_GIF, save_all=True, append_images=opt[1:],
-                duration=new_durs, loop=1, optimize=False, disposal=1,
-                transparency=TR)
+    # PLAY_ONCE: omit the Netscape loop extension so the GIF plays through
+    # exactly once and freezes on the last frame (FELICIDADES). Otherwise loop.
+    save_kw = dict(save_all=True, append_images=opt[1:], duration=new_durs,
+                   optimize=False, disposal=1, transparency=TR)
+    if not PLAY_ONCE:
+        save_kw["loop"] = 0
+    opt[0].save(OUT_GIF, **save_kw)
     # shrink with gifsicle if available (lossy LZW re-pack, big size win, no
-    # visible quality loss at this level)
+    # visible quality loss at this level); force single-play to be safe.
     import shutil, subprocess, os
     if shutil.which("gifsicle"):
-        subprocess.run(["gifsicle", "-O3", "--lossy=80", OUT_GIF,
-                        "-o", OUT_GIF], check=True)
+        cmd = ["gifsicle", "-O3", f"--lossy={GIFSICLE_LOSSY}"]
+        cmd += ["--no-loopcount"] if PLAY_ONCE else ["--loopcount=forever"]
+        subprocess.run(cmd + [OUT_GIF, "-o", OUT_GIF], check=True)
     print("saved", OUT_GIF, len(opt), "frames", (ow, oh), "total",
           sum(new_durs), "ms,", round(os.path.getsize(OUT_GIF)/1e6, 2), "MB")
 
