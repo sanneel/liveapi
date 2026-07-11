@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Query, Request, Response, HTTPException
+from fastapi.responses import FileResponse
 from PIL import Image
 
 from ..logging_config import get_logger
@@ -27,6 +28,24 @@ from ..services import slot_card_runner as runner
 logger = get_logger("app.routes.public_slot_gif")
 
 router = APIRouter()
+
+# Pre-rendered JugaBet slot-machine story GIF (spin -> boom -> 777 -> win),
+# served as a static asset at /r/slotmachine.gif. Regenerate with
+# fix_gif_texts.py and copy the result to app/static/slotmachine.gif.
+# __file__ is app/routes/public_slot_gif.py, so parents[1] is the app dir.
+SLOTMACHINE_GIF = Path(__file__).resolve().parents[1] / "static" / "slotmachine.gif"
+
+
+@router.get("/r/slotmachine.gif")
+def slotmachine_gif() -> Response:
+    """Serve the pre-rendered slot-machine story GIF."""
+    if not SLOTMACHINE_GIF.is_file():
+        raise HTTPException(404, "slotmachine.gif not found")
+    return FileResponse(
+        SLOTMACHINE_GIF,
+        media_type="image/gif",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
 
 # GIF cache: (image_data_hash, bet_hearts, bet_diamonds, bet_clubs, bet_spades, free_spins, width) -> (ts, gif_bytes)
 _gif_cache_lock = threading.Lock()

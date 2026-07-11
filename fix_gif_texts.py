@@ -137,16 +137,16 @@ def fix_turbo(img):
                 px[x, y] = med
 
     d = ImageDraw.Draw(img)
-    # arrows: two right-pointing triangles, centred, just above face centre
-    acy = cy - 22
-    w, gap, h = 40, 8, 52
+    # arrows: two smaller right-pointing triangles, centred, just above centre
+    acy = cy - 18
+    w, gap, h = 27, 6, 38
     lb = cx - (2 * w + gap) / 2
     for k in range(2):
         b = lb + k * (w + gap)
         d.polygon([(b, acy - h/2), (b, acy + h/2), (b + w, acy)], fill=NAVY)
     # TURBO label just below centre
-    fT = ImageFont.truetype(DEJAVU, 40)
-    d.text((cx, cy + 28), "TURBO", font=fT, fill=NAVY, anchor="mm")
+    fT = ImageFont.truetype(DEJAVU, 38)
+    d.text((cx, cy + 24), "TURBO", font=fT, fill=NAVY, anchor="mm")
 
 
 def shift_premio(img):
