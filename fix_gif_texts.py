@@ -51,6 +51,10 @@ POP_SCALES = {40: 223/310, 41: 331/310}  # plaque pop-in scales
 DIM_A = 0.529                            # win-screen dark-overlay factor
 SPEED = 1.4                              # >1 = slower
 FINAL_HOLD_MS = 2000
+FELIZ_DARKEN = 0.63                      # tone the neon FELICIDADES lime down
+FELIZ_BOX = (116, 100, 384, 182)         # its region on the full-size plaque
+OUT_W = 600                              # output width; upscaling the 500px
+OUT_COLORS = 255                         # source de-speckles the 96-colour art
 
 
 def fit_font(draw, text, size, max_w, min_size=12):
@@ -206,6 +210,23 @@ def _apply_region(cur, R, win):
               box)
 
 
+def darken_feliz(cur, i):
+    """Tone down the too-bright neon-lime FELICIDADES on the win plaque."""
+    px = cur.load()
+    lime = lambda p: 120 < p[0] < 225 and p[1] > 175 and p[2] < 120
+    x0, y0, x1, y1 = FELIZ_BOX
+    if i in POP_SCALES:                  # scale the box with the pop-in plaque
+        sc = POP_SCALES[i]; pcx, pcy = 250, 186
+        x0, y0 = int(pcx+(x0-pcx)*sc), int(pcy+(y0-pcy)*sc)
+        x1, y1 = int(pcx+(x1-pcx)*sc), int(pcy+(y1-pcy)*sc)
+    for y in range(y0, y1):
+        for x in range(x0, x1):
+            p = px[x, y]
+            if lime(p):
+                px[x, y] = (int(p[0]*FELIZ_DARKEN), int(p[1]*FELIZ_DARKEN),
+                            int(p[2]*FELIZ_DARKEN))
+
+
 def main():
     fixed_full = build_fixed_frame()
     orig_full = Image.open(SRC_FRAME).convert("RGB")
@@ -241,32 +262,30 @@ def main():
             sp = plaque_patch.resize((w, h), Image.LANCZOS)
             cur.paste(sp, (int(round(pcx + (pbox[0]-pcx)*sc)),
                            int(round(pcy + (pbox[1]-pcy)*sc))))
+        if win:
+            darken_feliz(cur, i)
         out.append(cur)
 
     # retime: slow ~SPEED, long final hold
     new_durs = [FINAL_HOLD_MS if i == len(durs)-1 else int(round(d*SPEED))
                 for i, d in enumerate(durs)]
 
-    # exact re-index into the original global palette (lossless off-patch)
-    gif.seek(0)
-    pal_colors = list(gif.palette.colors)
-    ncol = len(pal_colors)
-    cmap = {c: i for i, c in enumerate(pal_colors)}
-    def nearest(c):
-        if c not in cmap:
-            cmap[c] = min(range(ncol), key=lambda i: (pal_colors[i][0]-c[0])**2
-                          + (pal_colors[i][1]-c[1])**2 + (pal_colors[i][2]-c[2])**2)
-        return cmap[c]
-    flat = [v for c in pal_colors for v in c]
-    qs = []
-    for f in out:
-        q = Image.frombytes("P", f.size,
-                            bytes(nearest(c) for c in f.get_flattened_data()))
-        q.putpalette(flat)
-        qs.append(q)
-    # frame-diff transparency to keep the file small
-    TR = ncol
-    base_pal = flat + [0, 0, 0]
+    # quality pass: upscale (LANCZOS blends the baked 96-colour dither into
+    # smooth intermediate tones -> far less speckle) then re-quantize to a
+    # fresh OUT_COLORS-colour adaptive palette with NO new dithering
+    ow = OUT_W
+    oh = int(round(out[0].height * ow / out[0].width))
+    up = [f.resize((ow, oh), Image.LANCZOS) for f in out]
+
+    mosaic = Image.new("RGB", (ow, oh * 4))
+    for k, idx in enumerate((5, 22, 45, 51)):
+        mosaic.paste(up[idx], (0, oh * k))
+    pal = mosaic.quantize(colors=OUT_COLORS, method=Image.MEDIANCUT)
+    qs = [f.quantize(palette=pal, dither=Image.Dither.NONE) for f in up]
+
+    # frame-diff transparency (index OUT_COLORS) keeps the file small
+    TR = OUT_COLORS
+    base_pal = qs[0].getpalette()[:TR*3] + [0, 0, 0]
     opt = [qs[0]]
     prev = qs[0].tobytes()
     for q in qs[1:]:
@@ -279,8 +298,14 @@ def main():
     opt[0].save(OUT_GIF, save_all=True, append_images=opt[1:],
                 duration=new_durs, loop=1, optimize=False, disposal=1,
                 transparency=TR)
-    print("saved", OUT_GIF, len(opt), "frames, total",
-          sum(new_durs), "ms")
+    # shrink with gifsicle if available (lossy LZW re-pack, big size win, no
+    # visible quality loss at this level)
+    import shutil, subprocess, os
+    if shutil.which("gifsicle"):
+        subprocess.run(["gifsicle", "-O3", "--lossy=80", OUT_GIF,
+                        "-o", OUT_GIF], check=True)
+    print("saved", OUT_GIF, len(opt), "frames", (ow, oh), "total",
+          sum(new_durs), "ms,", round(os.path.getsize(OUT_GIF)/1e6, 2), "MB")
 
 
 def fix_plaque(f51):
