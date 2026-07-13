@@ -55,6 +55,10 @@ FELIZ_DARKEN = 0.63                      # tone the neon FELICIDADES lime down
 FELIZ_BOX = (116, 100, 384, 182)         # its region on the full-size plaque
 # Play the full story once and FREEZE on the FELICIDADES win (no looping).
 PLAY_ONCE = True
+# Use the FELICIDADES win as the first (poster) frame so clients that don't
+# animate GIFs (e.g. Outlook desktop) still show the win, not a spin blur.
+POSTER_FIRST = True
+POSTER_MS = 500
 # Email-friendly output: smaller + fewer colours + harder gifsicle so it
 # loads fast in a message. (Was 600px / 255 colours for the standalone GIF.)
 OUT_W = 480
@@ -274,6 +278,12 @@ def main():
     # retime: slow ~SPEED, long final hold
     new_durs = [FINAL_HOLD_MS if i == len(durs)-1 else int(round(d*SPEED))
                 for i, d in enumerate(durs)]
+
+    # poster frame: prepend the final FELICIDADES win so non-animating clients
+    # show the win as the static preview
+    if POSTER_FIRST:
+        out = [out[-1].copy()] + out
+        new_durs = [POSTER_MS] + new_durs
 
     # quality pass: upscale (LANCZOS blends the baked 96-colour dither into
     # smooth intermediate tones -> far less speckle) then re-quantize to a
