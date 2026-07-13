@@ -34,6 +34,7 @@ router = APIRouter()
 # fix_gif_texts.py and copy the result to app/static/slotmachine.gif.
 # __file__ is app/routes/public_slot_gif.py, so parents[1] is the app dir.
 SLOTMACHINE_GIF = Path(__file__).resolve().parents[1] / "static" / "slotmachine.gif"
+SLOTMACHINE1_GIF = Path(__file__).resolve().parents[1] / "static" / "slotmachine1.gif"
 
 
 @router.get("/r/slotmachine.gif")
@@ -43,6 +44,18 @@ def slotmachine_gif() -> Response:
         raise HTTPException(404, "slotmachine.gif not found")
     return FileResponse(
         SLOTMACHINE_GIF,
+        media_type="image/gif",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+
+@router.get("/r/slotmachine1.gif")
+def slotmachine1_gif() -> Response:
+    """Serve the alternative slot-machine story GIF variant."""
+    if not SLOTMACHINE1_GIF.is_file():
+        raise HTTPException(404, "slotmachine1.gif not found")
+    return FileResponse(
+        SLOTMACHINE1_GIF,
         media_type="image/gif",
         headers={"Cache-Control": "public, max-age=86400"},
     )
