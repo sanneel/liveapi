@@ -1,0 +1,2148 @@
+{
+  "brand": "PMCL",
+  "currencyCodes": [
+    "CLP"
+  ],
+  "startAt": "2026-07-18T16:00:00Z",
+  "stopAt": "2026-07-18T17:00:00Z",
+  "isUnlimited": false,
+  "isImmediatelyAfterPublish": false,
+  "reEntryRule": {
+    "reEntryMode": "Prohibited",
+    "reEntryPeriod": null
+  },
+  "metadata": {
+    "productType": "Sport",
+    "purpose": "Retention",
+    "category": "Marketing",
+    "priority": 2
+  },
+  "testControlGroupParameters": {
+    "playersAddingStrategy": "IncludeAll",
+    "isEnabled": false,
+    "daysToKeepInControlGroup": null,
+    "controlGroupPercent": null
+  },
+  "journeyName": "PMCL | CS | NC For Discount 18.07",
+  "timeZoneId": "Chile/Continental",
+  "activities": [
+    {
+      "activityId": "44a106e4-5367-4cbd-a565-96dfbe532797",
+      "activityName": "dwh_source",
+      "events": [
+        {
+          "eventName": "PlayerAdded",
+          "eventType": "Activation",
+          "eventDisplayName": "Players added to journey",
+          "nextActivityId": "7b5bb5b2-08d7-4718-8525-6fb39f8623e6",
+          "isUsedInChoosableFlow": false
+        }
+      ],
+      "initializationData": {
+        "dataSourceName": "default",
+        "filterDetails": {
+          "filtersTree": [
+            {
+              "parentNodeId": null,
+              "nodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+              "nodeType": "Operator",
+              "groupOperator": "Exclude",
+              "children": [
+                "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                "c533abd1-3f64-4d58-9743-c0836bf21833"
+              ],
+              "filterConditionId": null,
+              "isDeprecated": true
+            },
+            {
+              "parentNodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+              "nodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+              "nodeType": "Operator",
+              "groupOperator": "And",
+              "children": [
+                "4c860762-e916-449d-a5af-30a3ff632aeb",
+                "872cc8f5-0db8-4f22-84f4-4b2f3ad0ad74"
+              ],
+              "filterConditionId": null,
+              "isDeprecated": true
+            },
+            {
+              "parentNodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+              "nodeId": "4c860762-e916-449d-a5af-30a3ff632aeb",
+              "nodeType": "Filter",
+              "groupOperator": null,
+              "children": [],
+              "filterConditionId": "c93400f7-9d2b-404c-9815-ccaa9ed34bf6",
+              "name": "risk_business_segment",
+              "column": {
+                "name": "risk_business_segment",
+                "tableName": "agg_player_summary",
+                "filterName": "Multiple select",
+                "isRequired": false,
+                "description": "Risk segment related to business.",
+                "displayName": "risk_business_segment",
+                "valuesSource": null,
+                "filterConditions": [
+                  {
+                    "operator": "in",
+                    "conditionType": "MultiSelect"
+                  },
+                  {
+                    "operator": "notIn",
+                    "conditionType": "MultiSelect"
+                  }
+                ],
+                "isPredefinedValuesAvailable": true
+              },
+              "height": 41.66666793823242,
+              "operator": "notIn",
+              "settings": {
+                "value": "",
+                "values": [
+                  "Negative",
+                  "Premium"
+                ],
+                "dateType": "days",
+                "hasEmptyState": false
+              },
+              "showForm": false,
+              "tableName": "agg_player_summary",
+              "filterName": "Multiple select",
+              "isRequired": false,
+              "description": "Risk segment related to business.",
+              "displayName": "risk_business_segment",
+              "databaseName": "dv_marts",
+              "isDeprecated": false,
+              "valuesSource": null,
+              "conditionType": "MultiSelect",
+              "filterConditions": [
+                {
+                  "operator": "in",
+                  "conditionType": "MultiSelect"
+                },
+                {
+                  "operator": "notIn",
+                  "conditionType": "MultiSelect"
+                }
+              ],
+              "isPredefinedValuesAvailable": true
+            },
+            {
+              "parentNodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+              "nodeId": "872cc8f5-0db8-4f22-84f4-4b2f3ad0ad74",
+              "nodeType": "Filter",
+              "groupOperator": null,
+              "children": [],
+              "filterConditionId": "4fdbdc55-81bb-4d7a-92e9-fa743f071e5f",
+              "name": "last_deposit",
+              "column": {
+                "name": "last_deposit",
+                "tableName": "agg_player_summary",
+                "filterName": "Date&time",
+                "isRequired": false,
+                "description": "Timestamp of the player's last deposit.",
+                "displayName": "last_deposit",
+                "valuesSource": null,
+                "filterConditions": [
+                  {
+                    "operator": "equal",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "notEqual",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "gte",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "lte",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "between",
+                    "conditionType": "DateTimeBetween"
+                  },
+                  {
+                    "operator": "equal",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "notEqual",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "gte",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "lte",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "between",
+                    "conditionType": "DateTimeRelativeBetween"
+                  }
+                ],
+                "isPredefinedValuesAvailable": false
+              },
+              "height": 166.20660400390625,
+              "operator": "lte",
+              "settings": {
+                "amount": "60",
+                "values": [],
+                "dateType": "days",
+                "hasEmptyState": false
+              },
+              "showForm": true,
+              "tableName": "agg_player_summary",
+              "filterName": "Date&time",
+              "isRequired": false,
+              "description": "Timestamp of the player's last deposit.",
+              "displayName": "last_deposit",
+              "databaseName": "dv_marts",
+              "dateTimeMode": "Relative",
+              "isDeprecated": false,
+              "valuesSource": null,
+              "conditionType": "DateTimeRelative",
+              "filterConditions": [
+                {
+                  "operator": "equal",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "notEqual",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "gte",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "lte",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "between",
+                  "conditionType": "DateTimeBetween"
+                },
+                {
+                  "operator": "equal",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "notEqual",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "gte",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "lte",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "between",
+                  "conditionType": "DateTimeRelativeBetween"
+                }
+              ],
+              "isPredefinedValuesAvailable": false
+            },
+            {
+              "parentNodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+              "nodeId": "c533abd1-3f64-4d58-9743-c0836bf21833",
+              "nodeType": "Filter",
+              "groupOperator": null,
+              "children": [],
+              "filterConditionId": "16c4ecdc-92b9-4c38-8b22-cf789288f24a",
+              "name": "restriction_name",
+              "column": {
+                "name": "restriction_name",
+                "tableName": "d_player_restriction",
+                "filterName": "Multiple select",
+                "isRequired": false,
+                "description": "The name of restriction",
+                "displayName": "restriction_name",
+                "valuesSource": null,
+                "filterConditions": [
+                  {
+                    "operator": "in",
+                    "conditionType": "MultiSelect"
+                  },
+                  {
+                    "operator": "notIn",
+                    "conditionType": "MultiSelect"
+                  }
+                ],
+                "isPredefinedValuesAvailable": true
+              },
+              "height": 41.66666793823242,
+              "operator": "in",
+              "settings": {
+                "values": [
+                  "login",
+                  "deposit"
+                ],
+                "dateType": "days",
+                "hasEmptyState": false
+              },
+              "showForm": false,
+              "tableName": "d_player_restriction",
+              "filterName": "Multiple select",
+              "isRequired": false,
+              "description": "The name of restriction",
+              "displayName": "restriction_name",
+              "databaseName": "dv_marts",
+              "isDeprecated": false,
+              "valuesSource": null,
+              "conditionType": "MultiSelect",
+              "filterConditions": [
+                {
+                  "operator": "in",
+                  "conditionType": "MultiSelect"
+                },
+                {
+                  "operator": "notIn",
+                  "conditionType": "MultiSelect"
+                }
+              ],
+              "isPredefinedValuesAvailable": true
+            }
+          ],
+          "filterConditions": [
+            {
+              "id": "c93400f7-9d2b-404c-9815-ccaa9ed34bf6",
+              "databaseName": "dv_marts",
+              "tableName": "agg_player_summary",
+              "fieldName": "risk_business_segment",
+              "operator": "notIn",
+              "columnName": "risk_business_segment",
+              "conditionType": "MultiSelect",
+              "nodeType": "Filter",
+              "values": [
+                "Negative",
+                "Premium"
+              ],
+              "hasEmptyState": false
+            },
+            {
+              "id": "4fdbdc55-81bb-4d7a-92e9-fa743f071e5f",
+              "databaseName": "dv_marts",
+              "tableName": "agg_player_summary",
+              "fieldName": "last_deposit",
+              "operator": "lte",
+              "columnName": "last_deposit",
+              "conditionType": "DateTimeRelative",
+              "nodeType": "Filter",
+              "value": "P0Y0M60DT0H0M0S",
+              "hasEmptyState": false
+            },
+            {
+              "id": "16c4ecdc-92b9-4c38-8b22-cf789288f24a",
+              "databaseName": "dv_marts",
+              "tableName": "d_player_restriction",
+              "fieldName": "restriction_name",
+              "operator": "in",
+              "columnName": "restriction_name",
+              "conditionType": "MultiSelect",
+              "nodeType": "Filter",
+              "values": [
+                "login",
+                "deposit"
+              ],
+              "hasEmptyState": false
+            }
+          ]
+        },
+        "currentTemplate": {
+          "id": "d76840be-3916-4e4b-951b-4fbf540e0cea",
+          "name": "Fortunazo players last dep <=30d",
+          "brand": "PMCL",
+          "currencyCodes": [
+            "CLP"
+          ],
+          "filterDetails": {
+            "filterConditions": [
+              {
+                "conditionType": "MultiSelect",
+                "values": [
+                  "Negative",
+                  "Premium"
+                ],
+                "hasEmptyState": false,
+                "id": "c93400f7-9d2b-404c-9815-ccaa9ed34bf6",
+                "databaseName": "dv_marts",
+                "tableName": "agg_player_summary",
+                "fieldName": "risk_business_segment",
+                "operator": "notIn"
+              },
+              {
+                "conditionType": "DateTimeRelative",
+                "value": "P30D",
+                "hasEmptyState": null,
+                "id": "4fdbdc55-81bb-4d7a-92e9-fa743f071e5f",
+                "databaseName": "dv_marts",
+                "tableName": "agg_player_summary",
+                "fieldName": "last_deposit",
+                "operator": "lte"
+              },
+              {
+                "conditionType": "MultiSelect",
+                "values": [
+                  "login",
+                  "deposit"
+                ],
+                "hasEmptyState": false,
+                "id": "16c4ecdc-92b9-4c38-8b22-cf789288f24a",
+                "databaseName": "dv_marts",
+                "tableName": "d_player_restriction",
+                "fieldName": "restriction_name",
+                "operator": "in"
+              }
+            ],
+            "filtersTree": [
+              {
+                "parentNodeId": null,
+                "nodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+                "nodeType": "Operator",
+                "groupOperator": "Exclude",
+                "children": [
+                  "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                  "c533abd1-3f64-4d58-9743-c0836bf21833"
+                ],
+                "filterConditionId": null,
+                "isDeprecated": true
+              },
+              {
+                "parentNodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+                "nodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                "nodeType": "Operator",
+                "groupOperator": "And",
+                "children": [
+                  "4c860762-e916-449d-a5af-30a3ff632aeb",
+                  "872cc8f5-0db8-4f22-84f4-4b2f3ad0ad74"
+                ],
+                "filterConditionId": null,
+                "isDeprecated": true
+              },
+              {
+                "parentNodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                "nodeId": "4c860762-e916-449d-a5af-30a3ff632aeb",
+                "nodeType": "Filter",
+                "groupOperator": null,
+                "children": [],
+                "filterConditionId": "c93400f7-9d2b-404c-9815-ccaa9ed34bf6",
+                "name": "risk_business_segment",
+                "column": {
+                  "name": "risk_business_segment",
+                  "tableName": "agg_player_summary",
+                  "filterName": "Multiple select",
+                  "isRequired": false,
+                  "description": "Risk segment related to business.",
+                  "displayName": "risk_business_segment",
+                  "valuesSource": null,
+                  "filterConditions": [
+                    {
+                      "operator": "in",
+                      "conditionType": "MultiSelect"
+                    },
+                    {
+                      "operator": "notIn",
+                      "conditionType": "MultiSelect"
+                    }
+                  ],
+                  "isPredefinedValuesAvailable": true
+                },
+                "height": 41.66666793823242,
+                "operator": "notIn",
+                "settings": {
+                  "value": "",
+                  "values": [
+                    "Negative",
+                    "Premium"
+                  ],
+                  "dateType": "days",
+                  "hasEmptyState": false
+                },
+                "showForm": false,
+                "tableName": "agg_player_summary",
+                "filterName": "Multiple select",
+                "isRequired": false,
+                "description": "Risk segment related to business.",
+                "displayName": "risk_business_segment",
+                "databaseName": "dv_marts",
+                "isDeprecated": false,
+                "valuesSource": null,
+                "conditionType": "MultiSelect",
+                "filterConditions": [
+                  {
+                    "operator": "in",
+                    "conditionType": "MultiSelect"
+                  },
+                  {
+                    "operator": "notIn",
+                    "conditionType": "MultiSelect"
+                  }
+                ],
+                "isPredefinedValuesAvailable": true
+              },
+              {
+                "parentNodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                "nodeId": "872cc8f5-0db8-4f22-84f4-4b2f3ad0ad74",
+                "nodeType": "Filter",
+                "groupOperator": null,
+                "children": [],
+                "filterConditionId": "4fdbdc55-81bb-4d7a-92e9-fa743f071e5f",
+                "name": "last_deposit",
+                "column": {
+                  "name": "last_deposit",
+                  "tableName": "agg_player_summary",
+                  "filterName": "Date&time",
+                  "isRequired": false,
+                  "description": "Timestamp of the player's last deposit.",
+                  "displayName": "last_deposit",
+                  "valuesSource": null,
+                  "filterConditions": [
+                    {
+                      "operator": "equal",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "notEqual",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "gte",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "lte",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "between",
+                      "conditionType": "DateTimeBetween"
+                    },
+                    {
+                      "operator": "equal",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "notEqual",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "gte",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "lte",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "between",
+                      "conditionType": "DateTimeRelativeBetween"
+                    }
+                  ],
+                  "isPredefinedValuesAvailable": false
+                },
+                "height": 41.66666793823242,
+                "operator": "lte",
+                "settings": {
+                  "amount": "30",
+                  "values": [],
+                  "dateType": "days",
+                  "hasEmptyState": false
+                },
+                "showForm": false,
+                "tableName": "agg_player_summary",
+                "filterName": "Date&time",
+                "isRequired": false,
+                "description": "Timestamp of the player's last deposit.",
+                "displayName": "last_deposit",
+                "databaseName": "dv_marts",
+                "dateTimeMode": "Relative",
+                "isDeprecated": false,
+                "valuesSource": null,
+                "conditionType": "DateTimeRelative",
+                "filterConditions": [
+                  {
+                    "operator": "equal",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "notEqual",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "gte",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "lte",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "between",
+                    "conditionType": "DateTimeBetween"
+                  },
+                  {
+                    "operator": "equal",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "notEqual",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "gte",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "lte",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "between",
+                    "conditionType": "DateTimeRelativeBetween"
+                  }
+                ],
+                "isPredefinedValuesAvailable": false
+              },
+              {
+                "parentNodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+                "nodeId": "c533abd1-3f64-4d58-9743-c0836bf21833",
+                "nodeType": "Filter",
+                "groupOperator": null,
+                "children": [],
+                "filterConditionId": "16c4ecdc-92b9-4c38-8b22-cf789288f24a",
+                "name": "restriction_name",
+                "column": {
+                  "name": "restriction_name",
+                  "tableName": "d_player_restriction",
+                  "filterName": "Multiple select",
+                  "isRequired": false,
+                  "description": "The name of restriction",
+                  "displayName": "restriction_name",
+                  "valuesSource": null,
+                  "filterConditions": [
+                    {
+                      "operator": "in",
+                      "conditionType": "MultiSelect"
+                    },
+                    {
+                      "operator": "notIn",
+                      "conditionType": "MultiSelect"
+                    }
+                  ],
+                  "isPredefinedValuesAvailable": true
+                },
+                "height": 41.66666793823242,
+                "operator": "in",
+                "settings": {
+                  "values": [
+                    "login",
+                    "deposit"
+                  ],
+                  "dateType": "days",
+                  "hasEmptyState": false
+                },
+                "showForm": false,
+                "tableName": "d_player_restriction",
+                "filterName": "Multiple select",
+                "isRequired": false,
+                "description": "The name of restriction",
+                "displayName": "restriction_name",
+                "databaseName": "dv_marts",
+                "isDeprecated": false,
+                "valuesSource": null,
+                "conditionType": "MultiSelect",
+                "filterConditions": [
+                  {
+                    "operator": "in",
+                    "conditionType": "MultiSelect"
+                  },
+                  {
+                    "operator": "notIn",
+                    "conditionType": "MultiSelect"
+                  }
+                ],
+                "isPredefinedValuesAvailable": true
+              }
+            ]
+          },
+          "createdBy": "e2d2d631-946c-4edc-96ed-2b243e32bc8b",
+          "group": "myTeamFilterTemplates"
+        },
+        "displayData": [
+          "Activity customized"
+        ]
+      },
+      "activityDisplayName": "Custom Segment",
+      "dataDependencies": [],
+      "dependencies": []
+    },
+    {
+      "activityId": "7b5bb5b2-08d7-4718-8525-6fb39f8623e6",
+      "activityName": "notification_center",
+      "events": [
+        {
+          "eventName": "NotificationSent",
+          "eventType": "Completion",
+          "nextActivityId": "412efc6c-69cf-4396-8e00-73488e0e92b8",
+          "isUsedInChoosableFlow": false
+        },
+        {
+          "eventName": "NotificationNotSent",
+          "eventType": "Completion",
+          "nextActivityId": "a5810c11-9e28-432d-b5d8-fd47a3c86d7d",
+          "isUsedInChoosableFlow": false
+        }
+      ],
+      "initializationData": {
+        "deliveryType": "singleChannel",
+        "validityType": "days",
+        "validityAmount": "2",
+        "languages": [
+          {
+            "languageCode": "es"
+          },
+          {
+            "languageCode": "en"
+          }
+        ],
+        "accountId": "",
+        "channel": 1,
+        "category": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "contract": 1,
+        "templates": 16001,
+        "objectForSend": {
+          "variables": [
+            {
+              "name": "group",
+              "value": "regular"
+            },
+            {
+              "name": "title",
+              "value": "%title-en%"
+            },
+            {
+              "name": "des-en",
+              "value": "El favorito de miles de jugadores."
+            },
+            {
+              "name": "layout",
+              "value": "1"
+            },
+            {
+              "name": "link-en",
+              "value": "https://jugabet.cl/services/slots/game/gamzix-coin-win-2-hold-the-spin?%$utm_tags%"
+            },
+            {
+              "name": "icon-src",
+              "value": "%icon-src%"
+            },
+            {
+              "name": "title-en",
+              "value": "🔥 ¡[game name] está rompiendo récords! 🔥"
+            },
+            {
+              "name": "caption-en",
+              "value": " ¡Juega ahora!"
+            },
+            {
+              "name": "description",
+              "value": "%description-en%"
+            },
+            {
+              "name": "buttons_1_link",
+              "value": "%link%?%$utm_tags%"
+            },
+            {
+              "name": "buttons_1_caption",
+              "value": "%caption-en%"
+            },
+            {
+              "name": "buttons_1_deeplink",
+              "value": "%deeplink%?%$utm_tags%"
+            },
+            {
+              "name": "buttons_1_highlighted",
+              "value": "True"
+            },
+            {
+              "name": "description-en",
+              "value": "Cada vez más jugadores la eligen. ¿Ya la probaste?"
+            },
+            {
+              "name": "group",
+              "value": "regular"
+            },
+            {
+              "name": "title",
+              "value": "%title-es%"
+            },
+            {
+              "name": "des-es",
+              "value": "El favorito de miles de jugadores."
+            },
+            {
+              "name": "layout",
+              "value": "1"
+            },
+            {
+              "name": "link-es",
+              "value": "https://jugabet.cl/services/slots/game/gamzix-coin-win-2-hold-the-spin?%$utm_tags%"
+            },
+            {
+              "name": "icon-src",
+              "value": "%icon-src%"
+            },
+            {
+              "name": "title-es",
+              "value": "🔥 ¡[game name] está rompiendo récords! 🔥"
+            },
+            {
+              "name": "caption-es",
+              "value": " ¡Juega ahora!"
+            },
+            {
+              "name": "description",
+              "value": "%description-es%"
+            },
+            {
+              "name": "buttons_1_link",
+              "value": "%link%?%$utm_tags%"
+            },
+            {
+              "name": "buttons_1_caption",
+              "value": "%caption-es%"
+            },
+            {
+              "name": "buttons_1_deeplink",
+              "value": "%deeplink%?%$utm_tags%"
+            },
+            {
+              "name": "buttons_1_highlighted",
+              "value": "True"
+            },
+            {
+              "name": "description-es",
+              "value": "Cada vez más jugadores la eligen. ¿Ya la probaste?"
+            },
+            {
+              "name": "icon",
+              "value": "https://static.contentin.cloud/c93ad623-44ae-40f6-9aa5-b1aef7fd931a/51462ea7-4a2c-449a-b8bd-885a0702ba0c.png"
+            },
+            {
+              "name": "deeplink",
+              "value": "/services/slots/game/tada-jackpot-joker?%$utm_tags%"
+            },
+            {
+              "name": "icon-src",
+              "value": "https://static.contentin.cloud/73b22051-b16d-46e3-90cb-eeb045f59eea/4900707b-109a-4c20-85fc-012c09913c4b.jpg"
+            },
+            {
+              "name": "link",
+              "value": "/services/slots/game/tada-jackpot-joker?%$utm_tags%"
+            },
+            {
+              "name": "group",
+              "value": "regular"
+            }
+          ],
+          "template_id": 16001,
+          "expire_after": "2.00:00:00.000",
+          "metadata": {
+            "journeyName": "PMCL | CS | NC For Discount 18.07",
+            "utm_source": "boris"
+          },
+          "defaultVariables": [],
+          "localizedVariables": []
+        },
+        "singleChannel": {
+          "accordion": {
+            "validList": {
+              "template1312": {
+                "en": true,
+                "es": true
+              },
+              "template1935": {
+                "en": true,
+                "es": true
+              },
+              "template16001": {
+                "es": true,
+                "en": false
+              }
+            }
+          },
+          "activityName": "PMCL Notification Center",
+          "localizedLanguagesTab": {
+            "en": {
+              "group": "regular",
+              "title": "%title-en%",
+              "des-en": "El favorito de miles de jugadores.",
+              "layout": "1",
+              "link-en": "https://jugabet.cl/services/slots/game/gamzix-coin-win-2-hold-the-spin?%$utm_tags%",
+              "icon-src": "%icon-src%",
+              "title-en": "🔥 ¡[game name] está rompiendo récords! 🔥",
+              "caption-en": " ¡Juega ahora!",
+              "description": "%description-en%",
+              "buttons_1_link": "%link%?%$utm_tags%",
+              "buttons_1_caption": "%caption-en%",
+              "buttons_1_deeplink": "%deeplink%?%$utm_tags%",
+              "buttons_1_highlighted": "True",
+              "description-en": "Cada vez más jugadores la eligen. ¿Ya la probaste?"
+            },
+            "es": {
+              "group": "regular",
+              "title": "%title-es%",
+              "des-es": "El favorito de miles de jugadores.",
+              "layout": "1",
+              "link-es": "https://jugabet.cl/services/slots/game/gamzix-coin-win-2-hold-the-spin?%$utm_tags%",
+              "icon-src": "%icon-src%",
+              "title-es": "🔥 ¡[game name] está rompiendo récords! 🔥",
+              "caption-es": " ¡Juega ahora!",
+              "description": "%description-es%",
+              "buttons_1_link": "%link%?%$utm_tags%",
+              "buttons_1_caption": "%caption-es%",
+              "buttons_1_deeplink": "%deeplink%?%$utm_tags%",
+              "buttons_1_highlighted": "True",
+              "description-es": "Cada vez más jugadores la eligen. ¿Ya la probaste?"
+            },
+            "common": {
+              "icon": "https://static.contentin.cloud/c93ad623-44ae-40f6-9aa5-b1aef7fd931a/51462ea7-4a2c-449a-b8bd-885a0702ba0c.png",
+              "deeplink": "/services/slots/game/tada-jackpot-joker?%$utm_tags%",
+              "icon-src": "https://static.contentin.cloud/73b22051-b16d-46e3-90cb-eeb045f59eea/4900707b-109a-4c20-85fc-012c09913c4b.jpg",
+              "link": "/services/slots/game/tada-jackpot-joker?%$utm_tags%"
+            },
+            "dwhVariables": {
+              "en": [],
+              "es": [],
+              "common": []
+            }
+          }
+        },
+        "dataDependencies": [],
+        "listOfUsedVariables": [],
+        "displayData": [
+          "16001. PMCL Notification Center"
+        ]
+      },
+      "activityDisplayName": "Notification Center",
+      "dataDependencies": [],
+      "dependencies": []
+    },
+    {
+      "activityId": "412efc6c-69cf-4396-8e00-73488e0e92b8",
+      "activityName": "end_of_journey",
+      "events": [],
+      "initializationData": {},
+      "dataDependencies": [],
+      "dependencies": []
+    },
+    {
+      "activityId": "a5810c11-9e28-432d-b5d8-fd47a3c86d7d",
+      "activityName": "end_of_journey",
+      "events": [],
+      "initializationData": {},
+      "dataDependencies": [],
+      "dependencies": []
+    }
+  ],
+  "rawJourneyData": {
+    "elements": [
+      {
+        "id": "44a106e4-5367-4cbd-a565-96dfbe532797",
+        "data": {
+          "name": "dwh_source",
+          "type": "source",
+          "order": 0,
+          "ports": [
+            {
+              "id": "PlayerAdded-44a106e4-5367-4cbd-a565-96dfbe532797"
+            }
+          ],
+          "events": [
+            {
+              "isHidden": false,
+              "eventName": "PlayerAdded",
+              "eventType": "Activation",
+              "eventDisplayName": "Players added to journey"
+            }
+          ],
+          "nodeType": "source",
+          "boundaryDefinition": false
+        },
+        "type": "source",
+        "style": {
+          "cursor": "pointer"
+        },
+        "width": 267,
+        "height": 64,
+        "zIndex": 5,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false,
+        "positionAbsolute": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "7b5bb5b2-08d7-4718-8525-6fb39f8623e6",
+        "data": {
+          "name": "notification_center",
+          "type": "communication",
+          "order": 21,
+          "ports": [
+            {
+              "id": "input-7b5bb5b2-08d7-4718-8525-6fb39f8623e6"
+            },
+            {
+              "id": "NotificationSent-7b5bb5b2-08d7-4718-8525-6fb39f8623e6"
+            },
+            {
+              "id": "NotificationNotSent-7b5bb5b2-08d7-4718-8525-6fb39f8623e6"
+            }
+          ],
+          "events": [
+            {
+              "isHidden": false,
+              "eventName": "NotificationSent",
+              "eventType": "Completion",
+              "eventDisplayName": "Sent"
+            },
+            {
+              "isHidden": false,
+              "eventName": "NotificationNotSent",
+              "eventType": "Completion",
+              "eventDisplayName": "Not Sent"
+            }
+          ],
+          "nodeType": "action",
+          "boundaryDefinition": false
+        },
+        "type": "action",
+        "style": {
+          "cursor": "pointer"
+        },
+        "width": 267,
+        "height": 64,
+        "hidden": false,
+        "zIndex": 5,
+        "position": {
+          "x": 0,
+          "y": 199
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false,
+        "positionAbsolute": {
+          "x": 0,
+          "y": 199
+        }
+      },
+      {
+        "id": "159ead83-23b1-4f98-9c0d-931ffe9c3be1",
+        "data": {
+          "isHidden": false,
+          "eventName": "PlayerAdded",
+          "eventType": "Activation",
+          "activityName": "dwh_source",
+          "isLabelHidden": true,
+          "isReconnectable": false,
+          "eventDisplayName": "Players added to journey",
+          "isDisconnectable": true
+        },
+        "type": "default",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "44a106e4-5367-4cbd-a565-96dfbe532797",
+        "target": "7b5bb5b2-08d7-4718-8525-6fb39f8623e6",
+        "zIndex": 6,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "PlayerAdded-44a106e4-5367-4cbd-a565-96dfbe532797",
+        "targetHandle": "input-7b5bb5b2-08d7-4718-8525-6fb39f8623e6",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      },
+      {
+        "id": "412efc6c-69cf-4396-8e00-73488e0e92b8",
+        "data": {
+          "name": "end_of_journey",
+          "ports": [
+            {
+              "id": "input-412efc6c-69cf-4396-8e00-73488e0e92b8"
+            }
+          ],
+          "width": 40,
+          "height": 40
+        },
+        "type": "exit",
+        "style": {
+          "cursor": "default"
+        },
+        "width": 40,
+        "height": 40,
+        "hidden": false,
+        "zIndex": 5,
+        "position": {
+          "x": -6.5,
+          "y": 463
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false
+      },
+      {
+        "id": "91d40155-d4bf-45a7-b31c-60ccbc9a2f73",
+        "data": {
+          "eventName": "NotificationSent",
+          "eventType": "Completion",
+          "activityName": "notification_center",
+          "isReconnectable": false,
+          "isDisconnectable": false
+        },
+        "type": "dropEdge",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "7b5bb5b2-08d7-4718-8525-6fb39f8623e6",
+        "target": "412efc6c-69cf-4396-8e00-73488e0e92b8",
+        "zIndex": 1,
+        "selected": false,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "NotificationSent-7b5bb5b2-08d7-4718-8525-6fb39f8623e6",
+        "targetHandle": "input-412efc6c-69cf-4396-8e00-73488e0e92b8",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      },
+      {
+        "id": "a5810c11-9e28-432d-b5d8-fd47a3c86d7d",
+        "data": {
+          "name": "end_of_journey",
+          "ports": [
+            {
+              "id": "input-a5810c11-9e28-432d-b5d8-fd47a3c86d7d"
+            }
+          ],
+          "width": 40,
+          "height": 40
+        },
+        "type": "exit",
+        "style": {
+          "cursor": "default"
+        },
+        "width": 40,
+        "height": 40,
+        "hidden": false,
+        "zIndex": 5,
+        "position": {
+          "x": 233.5,
+          "y": 463
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false
+      },
+      {
+        "id": "24c70ec9-c2cc-40a9-8797-ca3042d4089b",
+        "data": {
+          "eventName": "NotificationNotSent",
+          "eventType": "Completion",
+          "activityName": "notification_center",
+          "isReconnectable": false,
+          "isDisconnectable": false
+        },
+        "type": "dropEdge",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "7b5bb5b2-08d7-4718-8525-6fb39f8623e6",
+        "target": "a5810c11-9e28-432d-b5d8-fd47a3c86d7d",
+        "zIndex": 1,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "NotificationNotSent-7b5bb5b2-08d7-4718-8525-6fb39f8623e6",
+        "targetHandle": "input-a5810c11-9e28-432d-b5d8-fd47a3c86d7d",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      }
+    ],
+    "activitiesConfiguration": {
+      "44a106e4-5367-4cbd-a565-96dfbe532797": {
+        "displayData": [
+          "Activity customized"
+        ],
+        "data": {
+          "dataSourceName": "default",
+          "filterDetails": {
+            "filtersTree": [
+              {
+                "parentNodeId": null,
+                "nodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+                "nodeType": "Operator",
+                "groupOperator": "Exclude",
+                "children": [
+                  "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                  "c533abd1-3f64-4d58-9743-c0836bf21833"
+                ],
+                "filterConditionId": null,
+                "isDeprecated": true
+              },
+              {
+                "parentNodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+                "nodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                "nodeType": "Operator",
+                "groupOperator": "And",
+                "children": [
+                  "4c860762-e916-449d-a5af-30a3ff632aeb",
+                  "872cc8f5-0db8-4f22-84f4-4b2f3ad0ad74"
+                ],
+                "filterConditionId": null,
+                "isDeprecated": true
+              },
+              {
+                "parentNodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                "nodeId": "4c860762-e916-449d-a5af-30a3ff632aeb",
+                "nodeType": "Filter",
+                "groupOperator": null,
+                "children": [],
+                "filterConditionId": "c93400f7-9d2b-404c-9815-ccaa9ed34bf6",
+                "name": "risk_business_segment",
+                "column": {
+                  "name": "risk_business_segment",
+                  "tableName": "agg_player_summary",
+                  "filterName": "Multiple select",
+                  "isRequired": false,
+                  "description": "Risk segment related to business.",
+                  "displayName": "risk_business_segment",
+                  "valuesSource": null,
+                  "filterConditions": [
+                    {
+                      "operator": "in",
+                      "conditionType": "MultiSelect"
+                    },
+                    {
+                      "operator": "notIn",
+                      "conditionType": "MultiSelect"
+                    }
+                  ],
+                  "isPredefinedValuesAvailable": true
+                },
+                "height": 41.66666793823242,
+                "operator": "notIn",
+                "settings": {
+                  "value": "",
+                  "values": [
+                    "Negative",
+                    "Premium"
+                  ],
+                  "dateType": "days",
+                  "hasEmptyState": false
+                },
+                "showForm": false,
+                "tableName": "agg_player_summary",
+                "filterName": "Multiple select",
+                "isRequired": false,
+                "description": "Risk segment related to business.",
+                "displayName": "risk_business_segment",
+                "databaseName": "dv_marts",
+                "isDeprecated": false,
+                "valuesSource": null,
+                "conditionType": "MultiSelect",
+                "filterConditions": [
+                  {
+                    "operator": "in",
+                    "conditionType": "MultiSelect"
+                  },
+                  {
+                    "operator": "notIn",
+                    "conditionType": "MultiSelect"
+                  }
+                ],
+                "isPredefinedValuesAvailable": true
+              },
+              {
+                "parentNodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                "nodeId": "872cc8f5-0db8-4f22-84f4-4b2f3ad0ad74",
+                "nodeType": "Filter",
+                "groupOperator": null,
+                "children": [],
+                "filterConditionId": "4fdbdc55-81bb-4d7a-92e9-fa743f071e5f",
+                "name": "last_deposit",
+                "column": {
+                  "name": "last_deposit",
+                  "tableName": "agg_player_summary",
+                  "filterName": "Date&time",
+                  "isRequired": false,
+                  "description": "Timestamp of the player's last deposit.",
+                  "displayName": "last_deposit",
+                  "valuesSource": null,
+                  "filterConditions": [
+                    {
+                      "operator": "equal",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "notEqual",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "gte",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "lte",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "between",
+                      "conditionType": "DateTimeBetween"
+                    },
+                    {
+                      "operator": "equal",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "notEqual",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "gte",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "lte",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "between",
+                      "conditionType": "DateTimeRelativeBetween"
+                    }
+                  ],
+                  "isPredefinedValuesAvailable": false
+                },
+                "height": 166.20660400390625,
+                "operator": "lte",
+                "settings": {
+                  "amount": "60",
+                  "values": [],
+                  "dateType": "days",
+                  "hasEmptyState": false
+                },
+                "showForm": true,
+                "tableName": "agg_player_summary",
+                "filterName": "Date&time",
+                "isRequired": false,
+                "description": "Timestamp of the player's last deposit.",
+                "displayName": "last_deposit",
+                "databaseName": "dv_marts",
+                "dateTimeMode": "Relative",
+                "isDeprecated": false,
+                "valuesSource": null,
+                "conditionType": "DateTimeRelative",
+                "filterConditions": [
+                  {
+                    "operator": "equal",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "notEqual",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "gte",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "lte",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "between",
+                    "conditionType": "DateTimeBetween"
+                  },
+                  {
+                    "operator": "equal",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "notEqual",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "gte",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "lte",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "between",
+                    "conditionType": "DateTimeRelativeBetween"
+                  }
+                ],
+                "isPredefinedValuesAvailable": false
+              },
+              {
+                "parentNodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+                "nodeId": "c533abd1-3f64-4d58-9743-c0836bf21833",
+                "nodeType": "Filter",
+                "groupOperator": null,
+                "children": [],
+                "filterConditionId": "16c4ecdc-92b9-4c38-8b22-cf789288f24a",
+                "name": "restriction_name",
+                "column": {
+                  "name": "restriction_name",
+                  "tableName": "d_player_restriction",
+                  "filterName": "Multiple select",
+                  "isRequired": false,
+                  "description": "The name of restriction",
+                  "displayName": "restriction_name",
+                  "valuesSource": null,
+                  "filterConditions": [
+                    {
+                      "operator": "in",
+                      "conditionType": "MultiSelect"
+                    },
+                    {
+                      "operator": "notIn",
+                      "conditionType": "MultiSelect"
+                    }
+                  ],
+                  "isPredefinedValuesAvailable": true
+                },
+                "height": 41.66666793823242,
+                "operator": "in",
+                "settings": {
+                  "values": [
+                    "login",
+                    "deposit"
+                  ],
+                  "dateType": "days",
+                  "hasEmptyState": false
+                },
+                "showForm": false,
+                "tableName": "d_player_restriction",
+                "filterName": "Multiple select",
+                "isRequired": false,
+                "description": "The name of restriction",
+                "displayName": "restriction_name",
+                "databaseName": "dv_marts",
+                "isDeprecated": false,
+                "valuesSource": null,
+                "conditionType": "MultiSelect",
+                "filterConditions": [
+                  {
+                    "operator": "in",
+                    "conditionType": "MultiSelect"
+                  },
+                  {
+                    "operator": "notIn",
+                    "conditionType": "MultiSelect"
+                  }
+                ],
+                "isPredefinedValuesAvailable": true
+              }
+            ],
+            "filterConditions": [
+              {
+                "id": "c93400f7-9d2b-404c-9815-ccaa9ed34bf6",
+                "databaseName": "dv_marts",
+                "tableName": "agg_player_summary",
+                "fieldName": "risk_business_segment",
+                "operator": "notIn",
+                "columnName": "risk_business_segment",
+                "conditionType": "MultiSelect",
+                "nodeType": "Filter",
+                "values": [
+                  "Negative",
+                  "Premium"
+                ],
+                "hasEmptyState": false
+              },
+              {
+                "id": "4fdbdc55-81bb-4d7a-92e9-fa743f071e5f",
+                "databaseName": "dv_marts",
+                "tableName": "agg_player_summary",
+                "fieldName": "last_deposit",
+                "operator": "lte",
+                "columnName": "last_deposit",
+                "conditionType": "DateTimeRelative",
+                "nodeType": "Filter",
+                "value": "P0Y0M60DT0H0M0S",
+                "hasEmptyState": false
+              },
+              {
+                "id": "16c4ecdc-92b9-4c38-8b22-cf789288f24a",
+                "databaseName": "dv_marts",
+                "tableName": "d_player_restriction",
+                "fieldName": "restriction_name",
+                "operator": "in",
+                "columnName": "restriction_name",
+                "conditionType": "MultiSelect",
+                "nodeType": "Filter",
+                "values": [
+                  "login",
+                  "deposit"
+                ],
+                "hasEmptyState": false
+              }
+            ]
+          },
+          "currentTemplate": {
+            "id": "d76840be-3916-4e4b-951b-4fbf540e0cea",
+            "name": "Fortunazo players last dep <=30d",
+            "brand": "PMCL",
+            "currencyCodes": [
+              "CLP"
+            ],
+            "filterDetails": {
+              "filterConditions": [
+                {
+                  "conditionType": "MultiSelect",
+                  "values": [
+                    "Negative",
+                    "Premium"
+                  ],
+                  "hasEmptyState": false,
+                  "id": "c93400f7-9d2b-404c-9815-ccaa9ed34bf6",
+                  "databaseName": "dv_marts",
+                  "tableName": "agg_player_summary",
+                  "fieldName": "risk_business_segment",
+                  "operator": "notIn"
+                },
+                {
+                  "conditionType": "DateTimeRelative",
+                  "value": "P30D",
+                  "hasEmptyState": null,
+                  "id": "4fdbdc55-81bb-4d7a-92e9-fa743f071e5f",
+                  "databaseName": "dv_marts",
+                  "tableName": "agg_player_summary",
+                  "fieldName": "last_deposit",
+                  "operator": "lte"
+                },
+                {
+                  "conditionType": "MultiSelect",
+                  "values": [
+                    "login",
+                    "deposit"
+                  ],
+                  "hasEmptyState": false,
+                  "id": "16c4ecdc-92b9-4c38-8b22-cf789288f24a",
+                  "databaseName": "dv_marts",
+                  "tableName": "d_player_restriction",
+                  "fieldName": "restriction_name",
+                  "operator": "in"
+                }
+              ],
+              "filtersTree": [
+                {
+                  "parentNodeId": null,
+                  "nodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+                  "nodeType": "Operator",
+                  "groupOperator": "Exclude",
+                  "children": [
+                    "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                    "c533abd1-3f64-4d58-9743-c0836bf21833"
+                  ],
+                  "filterConditionId": null,
+                  "isDeprecated": true
+                },
+                {
+                  "parentNodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+                  "nodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                  "nodeType": "Operator",
+                  "groupOperator": "And",
+                  "children": [
+                    "4c860762-e916-449d-a5af-30a3ff632aeb",
+                    "872cc8f5-0db8-4f22-84f4-4b2f3ad0ad74"
+                  ],
+                  "filterConditionId": null,
+                  "isDeprecated": true
+                },
+                {
+                  "parentNodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                  "nodeId": "4c860762-e916-449d-a5af-30a3ff632aeb",
+                  "nodeType": "Filter",
+                  "groupOperator": null,
+                  "children": [],
+                  "filterConditionId": "c93400f7-9d2b-404c-9815-ccaa9ed34bf6",
+                  "name": "risk_business_segment",
+                  "column": {
+                    "name": "risk_business_segment",
+                    "tableName": "agg_player_summary",
+                    "filterName": "Multiple select",
+                    "isRequired": false,
+                    "description": "Risk segment related to business.",
+                    "displayName": "risk_business_segment",
+                    "valuesSource": null,
+                    "filterConditions": [
+                      {
+                        "operator": "in",
+                        "conditionType": "MultiSelect"
+                      },
+                      {
+                        "operator": "notIn",
+                        "conditionType": "MultiSelect"
+                      }
+                    ],
+                    "isPredefinedValuesAvailable": true
+                  },
+                  "height": 41.66666793823242,
+                  "operator": "notIn",
+                  "settings": {
+                    "value": "",
+                    "values": [
+                      "Negative",
+                      "Premium"
+                    ],
+                    "dateType": "days",
+                    "hasEmptyState": false
+                  },
+                  "showForm": false,
+                  "tableName": "agg_player_summary",
+                  "filterName": "Multiple select",
+                  "isRequired": false,
+                  "description": "Risk segment related to business.",
+                  "displayName": "risk_business_segment",
+                  "databaseName": "dv_marts",
+                  "isDeprecated": false,
+                  "valuesSource": null,
+                  "conditionType": "MultiSelect",
+                  "filterConditions": [
+                    {
+                      "operator": "in",
+                      "conditionType": "MultiSelect"
+                    },
+                    {
+                      "operator": "notIn",
+                      "conditionType": "MultiSelect"
+                    }
+                  ],
+                  "isPredefinedValuesAvailable": true
+                },
+                {
+                  "parentNodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                  "nodeId": "872cc8f5-0db8-4f22-84f4-4b2f3ad0ad74",
+                  "nodeType": "Filter",
+                  "groupOperator": null,
+                  "children": [],
+                  "filterConditionId": "4fdbdc55-81bb-4d7a-92e9-fa743f071e5f",
+                  "name": "last_deposit",
+                  "column": {
+                    "name": "last_deposit",
+                    "tableName": "agg_player_summary",
+                    "filterName": "Date&time",
+                    "isRequired": false,
+                    "description": "Timestamp of the player's last deposit.",
+                    "displayName": "last_deposit",
+                    "valuesSource": null,
+                    "filterConditions": [
+                      {
+                        "operator": "equal",
+                        "conditionType": "DateTime"
+                      },
+                      {
+                        "operator": "notEqual",
+                        "conditionType": "DateTime"
+                      },
+                      {
+                        "operator": "gte",
+                        "conditionType": "DateTime"
+                      },
+                      {
+                        "operator": "lte",
+                        "conditionType": "DateTime"
+                      },
+                      {
+                        "operator": "between",
+                        "conditionType": "DateTimeBetween"
+                      },
+                      {
+                        "operator": "equal",
+                        "conditionType": "DateTimeRelative"
+                      },
+                      {
+                        "operator": "notEqual",
+                        "conditionType": "DateTimeRelative"
+                      },
+                      {
+                        "operator": "gte",
+                        "conditionType": "DateTimeRelative"
+                      },
+                      {
+                        "operator": "lte",
+                        "conditionType": "DateTimeRelative"
+                      },
+                      {
+                        "operator": "between",
+                        "conditionType": "DateTimeRelativeBetween"
+                      }
+                    ],
+                    "isPredefinedValuesAvailable": false
+                  },
+                  "height": 41.66666793823242,
+                  "operator": "lte",
+                  "settings": {
+                    "amount": "30",
+                    "values": [],
+                    "dateType": "days",
+                    "hasEmptyState": false
+                  },
+                  "showForm": false,
+                  "tableName": "agg_player_summary",
+                  "filterName": "Date&time",
+                  "isRequired": false,
+                  "description": "Timestamp of the player's last deposit.",
+                  "displayName": "last_deposit",
+                  "databaseName": "dv_marts",
+                  "dateTimeMode": "Relative",
+                  "isDeprecated": false,
+                  "valuesSource": null,
+                  "conditionType": "DateTimeRelative",
+                  "filterConditions": [
+                    {
+                      "operator": "equal",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "notEqual",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "gte",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "lte",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "between",
+                      "conditionType": "DateTimeBetween"
+                    },
+                    {
+                      "operator": "equal",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "notEqual",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "gte",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "lte",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "between",
+                      "conditionType": "DateTimeRelativeBetween"
+                    }
+                  ],
+                  "isPredefinedValuesAvailable": false
+                },
+                {
+                  "parentNodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+                  "nodeId": "c533abd1-3f64-4d58-9743-c0836bf21833",
+                  "nodeType": "Filter",
+                  "groupOperator": null,
+                  "children": [],
+                  "filterConditionId": "16c4ecdc-92b9-4c38-8b22-cf789288f24a",
+                  "name": "restriction_name",
+                  "column": {
+                    "name": "restriction_name",
+                    "tableName": "d_player_restriction",
+                    "filterName": "Multiple select",
+                    "isRequired": false,
+                    "description": "The name of restriction",
+                    "displayName": "restriction_name",
+                    "valuesSource": null,
+                    "filterConditions": [
+                      {
+                        "operator": "in",
+                        "conditionType": "MultiSelect"
+                      },
+                      {
+                        "operator": "notIn",
+                        "conditionType": "MultiSelect"
+                      }
+                    ],
+                    "isPredefinedValuesAvailable": true
+                  },
+                  "height": 41.66666793823242,
+                  "operator": "in",
+                  "settings": {
+                    "values": [
+                      "login",
+                      "deposit"
+                    ],
+                    "dateType": "days",
+                    "hasEmptyState": false
+                  },
+                  "showForm": false,
+                  "tableName": "d_player_restriction",
+                  "filterName": "Multiple select",
+                  "isRequired": false,
+                  "description": "The name of restriction",
+                  "displayName": "restriction_name",
+                  "databaseName": "dv_marts",
+                  "isDeprecated": false,
+                  "valuesSource": null,
+                  "conditionType": "MultiSelect",
+                  "filterConditions": [
+                    {
+                      "operator": "in",
+                      "conditionType": "MultiSelect"
+                    },
+                    {
+                      "operator": "notIn",
+                      "conditionType": "MultiSelect"
+                    }
+                  ],
+                  "isPredefinedValuesAvailable": true
+                }
+              ]
+            },
+            "createdBy": "e2d2d631-946c-4edc-96ed-2b243e32bc8b",
+            "group": "myTeamFilterTemplates"
+          }
+        },
+        "error": false,
+        "displayName": "Custom Segment"
+      },
+      "7b5bb5b2-08d7-4718-8525-6fb39f8623e6": {
+        "data": {
+          "deliveryType": "singleChannel",
+          "validityType": "days",
+          "validityAmount": "2",
+          "languages": [
+            {
+              "languageCode": "es"
+            },
+            {
+              "languageCode": "en"
+            }
+          ],
+          "accountId": "",
+          "channel": 1,
+          "category": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "contract": 1,
+          "templates": 16001,
+          "objectForSend": {
+            "variables": [
+              {
+                "name": "group",
+                "value": "regular"
+              },
+              {
+                "name": "title",
+                "value": "%title-en%"
+              },
+              {
+                "name": "des-en",
+                "value": "El favorito de miles de jugadores."
+              },
+              {
+                "name": "layout",
+                "value": "1"
+              },
+              {
+                "name": "link-en",
+                "value": "https://jugabet.cl/services/slots/game/gamzix-coin-win-2-hold-the-spin?%$utm_tags%"
+              },
+              {
+                "name": "icon-src",
+                "value": "%icon-src%"
+              },
+              {
+                "name": "title-en",
+                "value": "🔥 ¡[game name] está rompiendo récords! 🔥"
+              },
+              {
+                "name": "caption-en",
+                "value": " ¡Juega ahora!"
+              },
+              {
+                "name": "description",
+                "value": "%description-en%"
+              },
+              {
+                "name": "buttons_1_link",
+                "value": "%link%?%$utm_tags%"
+              },
+              {
+                "name": "buttons_1_caption",
+                "value": "%caption-en%"
+              },
+              {
+                "name": "buttons_1_deeplink",
+                "value": "%deeplink%?%$utm_tags%"
+              },
+              {
+                "name": "buttons_1_highlighted",
+                "value": "True"
+              },
+              {
+                "name": "description-en",
+                "value": "Cada vez más jugadores la eligen. ¿Ya la probaste?"
+              },
+              {
+                "name": "group",
+                "value": "regular"
+              },
+              {
+                "name": "title",
+                "value": "%title-es%"
+              },
+              {
+                "name": "des-es",
+                "value": "El favorito de miles de jugadores."
+              },
+              {
+                "name": "layout",
+                "value": "1"
+              },
+              {
+                "name": "link-es",
+                "value": "https://jugabet.cl/services/slots/game/gamzix-coin-win-2-hold-the-spin?%$utm_tags%"
+              },
+              {
+                "name": "icon-src",
+                "value": "%icon-src%"
+              },
+              {
+                "name": "title-es",
+                "value": "🔥 ¡[game name] está rompiendo récords! 🔥"
+              },
+              {
+                "name": "caption-es",
+                "value": " ¡Juega ahora!"
+              },
+              {
+                "name": "description",
+                "value": "%description-es%"
+              },
+              {
+                "name": "buttons_1_link",
+                "value": "%link%?%$utm_tags%"
+              },
+              {
+                "name": "buttons_1_caption",
+                "value": "%caption-es%"
+              },
+              {
+                "name": "buttons_1_deeplink",
+                "value": "%deeplink%?%$utm_tags%"
+              },
+              {
+                "name": "buttons_1_highlighted",
+                "value": "True"
+              },
+              {
+                "name": "description-es",
+                "value": "Cada vez más jugadores la eligen. ¿Ya la probaste?"
+              },
+              {
+                "name": "icon",
+                "value": "https://static.contentin.cloud/c93ad623-44ae-40f6-9aa5-b1aef7fd931a/51462ea7-4a2c-449a-b8bd-885a0702ba0c.png"
+              },
+              {
+                "name": "deeplink",
+                "value": "/services/slots/game/tada-jackpot-joker?%$utm_tags%"
+              },
+              {
+                "name": "icon-src",
+                "value": "https://static.contentin.cloud/73b22051-b16d-46e3-90cb-eeb045f59eea/4900707b-109a-4c20-85fc-012c09913c4b.jpg"
+              },
+              {
+                "name": "link",
+                "value": "/services/slots/game/tada-jackpot-joker?%$utm_tags%"
+              },
+              {
+                "name": "group",
+                "value": "regular"
+              }
+            ],
+            "template_id": 16001,
+            "expire_after": "2.00:00:00.000",
+            "metadata": {
+              "journeyName": "PMCL | CS | NC For Discount 18.07",
+              "utm_source": "boris"
+            },
+            "defaultVariables": [],
+            "localizedVariables": []
+          },
+          "singleChannel": {
+            "accordion": {
+              "validList": {
+                "template1312": {
+                  "en": true,
+                  "es": true
+                },
+                "template1935": {
+                  "en": true,
+                  "es": true
+                },
+                "template16001": {
+                  "es": true,
+                  "en": false
+                }
+              }
+            },
+            "activityName": "PMCL Notification Center",
+            "localizedLanguagesTab": {
+              "en": {
+                "group": "regular",
+                "title": "%title-en%",
+                "des-en": "El favorito de miles de jugadores.",
+                "layout": "1",
+                "link-en": "https://jugabet.cl/services/slots/game/gamzix-coin-win-2-hold-the-spin?%$utm_tags%",
+                "icon-src": "%icon-src%",
+                "title-en": "🔥 ¡[game name] está rompiendo récords! 🔥",
+                "caption-en": " ¡Juega ahora!",
+                "description": "%description-en%",
+                "buttons_1_link": "%link%?%$utm_tags%",
+                "buttons_1_caption": "%caption-en%",
+                "buttons_1_deeplink": "%deeplink%?%$utm_tags%",
+                "buttons_1_highlighted": "True",
+                "description-en": "Cada vez más jugadores la eligen. ¿Ya la probaste?"
+              },
+              "es": {
+                "group": "regular",
+                "title": "%title-es%",
+                "des-es": "El favorito de miles de jugadores.",
+                "layout": "1",
+                "link-es": "https://jugabet.cl/services/slots/game/gamzix-coin-win-2-hold-the-spin?%$utm_tags%",
+                "icon-src": "%icon-src%",
+                "title-es": "🔥 ¡[game name] está rompiendo récords! 🔥",
+                "caption-es": " ¡Juega ahora!",
+                "description": "%description-es%",
+                "buttons_1_link": "%link%?%$utm_tags%",
+                "buttons_1_caption": "%caption-es%",
+                "buttons_1_deeplink": "%deeplink%?%$utm_tags%",
+                "buttons_1_highlighted": "True",
+                "description-es": "Cada vez más jugadores la eligen. ¿Ya la probaste?"
+              },
+              "common": {
+                "icon": "https://static.contentin.cloud/c93ad623-44ae-40f6-9aa5-b1aef7fd931a/51462ea7-4a2c-449a-b8bd-885a0702ba0c.png",
+                "deeplink": "/services/slots/game/tada-jackpot-joker?%$utm_tags%",
+                "icon-src": "https://static.contentin.cloud/73b22051-b16d-46e3-90cb-eeb045f59eea/4900707b-109a-4c20-85fc-012c09913c4b.jpg",
+                "link": "/services/slots/game/tada-jackpot-joker?%$utm_tags%"
+              },
+              "dwhVariables": {
+                "en": [],
+                "es": [],
+                "common": []
+              }
+            }
+          },
+          "dataDependencies": [],
+          "listOfUsedVariables": []
+        },
+        "error": false,
+        "isTouched": true,
+        "displayData": [
+          "16001. PMCL Notification Center"
+        ],
+        "displayName": "Notification Center"
+      }
+    },
+    "pathesConfiguration": {},
+    "boundaryConfiguration": {},
+    "infoValues": {
+      "brand": "PMCL",
+      "currencyCodes": [
+        "CLP"
+      ],
+      "startAt": "2026-07-18T16:00:00Z",
+      "stopAt": "2026-07-18T17:00:00Z",
+      "isUnlimited": false,
+      "isImmediatelyAfterPublish": false,
+      "reEntryRule": {
+        "reEntryMode": "Prohibited",
+        "reEntryPeriod": null
+      },
+      "metadata": {
+        "productType": "Sport",
+        "purpose": "Retention",
+        "category": "Marketing",
+        "priority": 2
+      },
+      "testControlGroupParameters": {
+        "playersAddingStrategy": "IncludeAll",
+        "isEnabled": false,
+        "daysToKeepInControlGroup": null,
+        "controlGroupPercent": null
+      },
+      "journeyName": "PMCL | CS | NC For Discount 18.07",
+      "timeZoneId": "Chile/Continental"
+    },
+    "exitCriteriaSettings": null
+  },
+  "exitCriteriaId": null,
+  "activityEventConversionMetrics": [],
+  "duplicatedFromVersion": 3,
+  "duplicatedFromId": "JRN-0-611586",
+  "reservedJourneyId": "JRN-0-617221"
+}
