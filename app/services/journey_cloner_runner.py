@@ -179,6 +179,7 @@ COMMS_SCRIPT_PATH = CLONER_DIR / "comms_campaign.py"
 COMBINED_SCRIPT_PATH = CLONER_DIR / "gow_combined.py"
 RANDOMIZER_SCRIPT_PATH = CLONER_DIR / "randomizer_campaign.py"
 NC_DISCOUNT_SCRIPT_PATH = CLONER_DIR / "nc_discount_campaign.py"
+NC_DISCOUNT_PMCL_SCRIPT_PATH = CLONER_DIR / "nc_discount_pmcl_campaign.py"
 
 # Randomizer promos (weighted prize wheels / scratch cards). Keys must match
 # randomizer_campaign.py --kind.
@@ -407,6 +408,27 @@ def generate_randomizer_console_script(
     if journeys.strip():
         cmd += ["--journeys", *journeys.split()]
     return _run_gow_cli(cmd, basename=basename)
+
+
+def generate_nc_discount_pmcl_console_script() -> Tuple[int, str, str, str | None, str]:
+    """Generate the "NC For Discount PMCL" console script for fortunazo.cl."""
+    basename = _unique_basename("nc_discount_pmcl", "")
+    cmd = [python_executable(), str(NC_DISCOUNT_PMCL_SCRIPT_PATH), "--name", basename]
+    return _run_gow_cli(cmd, basename=basename)
+
+
+def git_pull() -> Tuple[int, str]:
+    """Run git pull in the repo root. Returns (returncode, combined output)."""
+    import subprocess
+    repo_root = str(CLONER_DIR.parent)
+    result = subprocess.run(
+        ["git", "pull"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    return result.returncode, (result.stdout + result.stderr).strip()
 
 
 def generate_nc_discount_console_script() -> Tuple[int, str, str, str | None, str]:
