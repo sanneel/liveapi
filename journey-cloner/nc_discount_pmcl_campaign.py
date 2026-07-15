@@ -31,10 +31,9 @@ TEMPLATE_PATH = HERE / "templates" / "casino" / "nc_discount_pmcl.json"
 BASE_URL = "https://pmi.rea-backoffice.gr8.tech/api/ubo/api/v0/crm/journey-builder/v0"
 BRAND = "PMCL"
 
-# Media-library folder for PMCL image uploads. Find it in the backoffice URL
-# when you open the Media Library for the PMCL brand, e.g.:
-#   /media-library/folders/<this-uuid>
-PMCL_FOLDER_ID = ""  # ← fill in before first run
+# Media-library folder for PMCL image uploads. Passed via --folder-id at
+# runtime (or set here to avoid passing it every time).
+PMCL_FOLDER_ID = ""
 
 # ── template literals from the captured body (nc_discount_pmcl.json) ────
 # Replace stop BEFORE start in every s.replace() call — stop contains the
@@ -321,11 +320,10 @@ JS_TEMPLATE = r"""// NC For Discount — PMCL — @COUNT@ notification journeys 
 """
 
 
-def build_js(games: list[dict]) -> str:
-    if not PMCL_FOLDER_ID:
+def build_js(games: list[dict], folder_id: str) -> str:
+    if not folder_id:
         raise SystemExit(
-            "PMCL_FOLDER_ID is not set. Open Media Library in the PMCL backoffice, "
-            "copy the folder UUID from the URL, and paste it into PMCL_FOLDER_ID "
+            "PMCL_FOLDER_ID is not set. Pass --folder-id <uuid> or set PMCL_FOLDER_ID "
             "at the top of this script."
         )
     payload = [
@@ -338,7 +336,7 @@ def build_js(games: list[dict]) -> str:
     js = js.replace("@GENERATED_AT@", datetime.now(LOCAL_TZ).strftime("%Y-%m-%d %H:%M %Z"))
     js = js.replace("@BASE_URL@", json.dumps(BASE_URL))
     js = js.replace("@BRAND@", json.dumps(BRAND))
-    js = js.replace("@FOLDER_ID@", json.dumps(PMCL_FOLDER_ID))
+    js = js.replace("@FOLDER_ID@", json.dumps(folder_id))
     js = js.replace("@GAMES@", json.dumps(payload, ensure_ascii=False))
     return js
 
@@ -350,6 +348,8 @@ def main() -> int:
     )
     p.add_argument("--name", default="nc_discount_pmcl",
                    help="output basename (default: nc_discount_pmcl)")
+    p.add_argument("--folder-id", default=PMCL_FOLDER_ID,
+                   help="PMCL media-library folder UUID (from backoffice URL)")
     p.add_argument("--dry-run", action="store_true",
                    help="write prepared bodies to out/ instead of a console script")
     args = p.parse_args()
@@ -383,7 +383,7 @@ def main() -> int:
         print(f"\nDry run — {len(games)} body(ies) written: {path}")
         return 0
 
-    js = build_js(games)
+    js = build_js(games, args.folder_id)
     out = Path("console_scripts")
     out.mkdir(exist_ok=True)
     path = out / f"{args.name}_console.js"

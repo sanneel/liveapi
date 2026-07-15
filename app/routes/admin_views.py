@@ -845,6 +845,7 @@ def promotions_nc_discount(
 @router.post("/admin/promotions/nc-discount-pmcl", response_class=HTMLResponse)
 def promotions_nc_discount_pmcl(
     request: Request,
+    folder_id: str = Form(""),
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
     """Generate the "NC For Discount PMCL" console script for fortunazo.cl."""
@@ -852,8 +853,16 @@ def promotions_nc_discount_pmcl(
     pmcl_error = ""
     pmcl_result = None
     pmcl_console_script = None
+    if not folder_id.strip():
+        pmcl_error = "Media Library Folder ID is required. Find it in the PMCL backoffice URL: /media-library/folders/<uuid>."
+        ctx = _promotions_context(
+            user=user,
+            active_tab="nc_discount",
+            nc=_nc_ns(pmcl_error=pmcl_error),
+        )
+        return templates.TemplateResponse(request, "promotions.html", ctx)
     try:
-        exit_code, output, display_cmd, js_text, js_name = generate_nc_discount_pmcl_console_script()
+        exit_code, output, display_cmd, js_text, js_name = generate_nc_discount_pmcl_console_script(folder_id.strip())
         pmcl_result = {"exit_code": exit_code, "output": output, "command": display_cmd,
                        "ok": exit_code == 0 and js_text is not None}
         if exit_code == 0 and js_text is not None:

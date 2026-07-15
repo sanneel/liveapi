@@ -343,8 +343,15 @@
           <li>25.07 Sat — Fortune Garuda 500</li>
           <li>26.07 Sun — Fortune Gems 500</li>
         </ul>
+        <div>
+          <label class="lbl" for="pmcl-folder-id">Media Library Folder ID</label>
+          <input id="pmcl-folder-id" name="folder_id" class="input" type="text"
+                 placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                 style="margin-top:4px; font-family:monospace; font-size:13px">
+          <p class="help" style="margin-top:4px">Open Media Library in the PMCL backoffice → copy the UUID from the URL <span class="mono">/media-library/folders/&lt;uuid&gt;</span></p>
+        </div>
         <button class="btn primary" style="justify-content:center">Generate console script</button>
-        <p class="help">Same flow as JBCL — pops file picker per game image, creates + saves each draft unpublished.</p>
+        <p class="help">Pops a file picker per game image, creates + saves each draft unpublished.</p>
       </form>
 
     </div>
