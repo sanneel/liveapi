@@ -410,10 +410,11 @@ def generate_randomizer_console_script(
     return _run_gow_cli(cmd, basename=basename)
 
 
-def generate_nc_discount_pmcl_console_script() -> Tuple[int, str, str, str | None, str]:
+def generate_nc_discount_pmcl_console_script(folder_id: str) -> Tuple[int, str, str, str | None, str]:
     """Generate the "NC For Discount PMCL" console script for fortunazo.cl."""
     basename = _unique_basename("nc_discount_pmcl", "")
-    cmd = [python_executable(), str(NC_DISCOUNT_PMCL_SCRIPT_PATH), "--name", basename]
+    cmd = [python_executable(), str(NC_DISCOUNT_PMCL_SCRIPT_PATH),
+           "--name", basename, "--folder-id", folder_id]
     return _run_gow_cli(cmd, basename=basename)
 
 
