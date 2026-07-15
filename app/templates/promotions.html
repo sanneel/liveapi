@@ -273,38 +273,89 @@
 
 {# ── Discount NC (game-of-the-day notification journeys) ─────────────── #}
 <section data-panel="nc_discount" hidden>
-  {% if nc.error %}<div class="alert err">{{ nc.error }}</div>{% endif %}
-  {% if nc.result %}
-    <div class="alert {% if nc.result.ok %}ok{% else %}err{% endif %}">
-      {% if nc.result.ok %}Console script generated.{% else %}Generation exited with code {{ nc.result.exit_code }}.{% endif %}
+
+  {# Git pull banner #}
+  {% if nc.git_result %}
+    <div class="alert {% if nc.git_result.ok %}ok{% else %}err{% endif %}" style="margin-bottom:12px">
+      <b>git pull</b> exited {{ nc.git_result.exit_code }}: <span class="mono" style="font-size:12px">{{ nc.git_result.output }}</span>
     </div>
   {% endif %}
 
-  <div class="row-flex">
-    <form method="post" action="/admin/promotions/nc-discount" class="card card-pad col-rail" style="display:flex; flex-direction:column; gap:14px">
-      <div>
-        <h2 class="card-title">NC For Discount</h2>
-        <p class="card-sub">One notification journey per game/day (segment → notification → end), promoting the discounted games to active players. Monday 20:00 / Friday 21:00 Chile. Uses the July games calendar from the brief.</p>
+  {# JBCL alerts #}
+  {% if nc.error %}<div class="alert err">{{ nc.error }}</div>{% endif %}
+  {% if nc.result %}
+    <div class="alert {% if nc.result.ok %}ok{% else %}err{% endif %}">
+      {% if nc.result.ok %}JBCL console script generated.{% else %}JBCL generation exited with code {{ nc.result.exit_code }}.{% endif %}
+    </div>
+  {% endif %}
+
+  {# PMCL alerts #}
+  {% if nc.pmcl_error %}<div class="alert err">{{ nc.pmcl_error }}</div>{% endif %}
+  {% if nc.pmcl_result %}
+    <div class="alert {% if nc.pmcl_result.ok %}ok{% else %}err{% endif %}">
+      {% if nc.pmcl_result.ok %}PMCL console script generated.{% else %}PMCL generation exited with code {{ nc.pmcl_result.exit_code }}.{% endif %}
+    </div>
+  {% endif %}
+
+  {# Git pull card #}
+  <div style="margin-bottom:18px">
+    <form method="post" action="/admin/promotions/git-pull" class="card card-pad" style="display:flex; align-items:center; gap:18px; flex-wrap:wrap">
+      <div style="flex:1; min-width:180px">
+        <h2 class="card-title" style="margin-bottom:2px">Git Pull</h2>
+        <p class="card-sub" style="margin:0">Pull the latest scripts from the remote repo. Run this before generating scripts after a code update.</p>
       </div>
-      <ul class="help" style="margin:0; padding-left:18px; line-height:1.7">
-        <li>10.07 Fri — The Racaroon</li>
-        <li>13.07 Mon — Gold Trio</li>
-        <li>17.07 Fri — Tornado</li>
-        <li>20.07 Mon — 1000 Olympus Rivals</li>
-        <li>24.07 Fri — Sweet Bonanza 1000</li>
-        <li>27.07 Mon — Egypt Fire</li>
-        <li>31.07 Fri — Coin Win 2</li>
-      </ul>
-      <button class="btn primary" style="justify-content:center">Generate console script</button>
-      <p class="help">The script reserves an id, pops a file picker for each game's 200×200 image, uploads it, then creates + saves each draft (left unpublished for review).</p>
+      <button class="btn secondary" style="white-space:nowrap">git pull</button>
     </form>
+  </div>
+
+  <div class="row-flex">
+    {# Left rail: two generate forms #}
+    <div class="col-rail stack">
+
+      {# JBCL form #}
+      <form method="post" action="/admin/promotions/nc-discount" class="card card-pad" style="display:flex; flex-direction:column; gap:14px">
+        <div>
+          <h2 class="card-title">NC For Discount — JBCL</h2>
+          <p class="card-sub">jugabet.cl · Mon 20:00 / Fri 21:00 Chile. July calendar baked in.</p>
+        </div>
+        <ul class="help" style="margin:0; padding-left:18px; line-height:1.7">
+          <li>10.07 Fri — The Racaroon</li>
+          <li>13.07 Mon — Gold Trio</li>
+          <li>17.07 Fri — Tornado</li>
+          <li>20.07 Mon — 1000 Olympus Rivals</li>
+          <li>24.07 Fri — Sweet Bonanza 1000</li>
+          <li>27.07 Mon — Egypt Fire</li>
+          <li>31.07 Fri — Coin Win 2</li>
+        </ul>
+        <button class="btn primary" style="justify-content:center">Generate console script</button>
+        <p class="help">Reserves an id, pops a file picker per game image, uploads it, then creates + saves each draft (unpublished for review).</p>
+      </form>
+
+      {# PMCL form #}
+      <form method="post" action="/admin/promotions/nc-discount-pmcl" class="card card-pad" style="display:flex; flex-direction:column; gap:14px">
+        <div>
+          <h2 class="card-title">NC For Discount — PMCL</h2>
+          <p class="card-sub">fortunazo.cl · Sat 12:00 / Sun 13:00 Chile. July calendar baked in.</p>
+        </div>
+        <ul class="help" style="margin:0; padding-left:18px; line-height:1.7">
+          <li>18.07 Sat — Jackpot Joker</li>
+          <li>19.07 Sun — 3 Coin Golden Ox</li>
+          <li>25.07 Sat — Fortune Garuda 500</li>
+          <li>26.07 Sun — Fortune Gems 500</li>
+        </ul>
+        <button class="btn primary" style="justify-content:center">Generate console script</button>
+        <p class="help">Same flow as JBCL — pops file picker per game image, creates + saves each draft unpublished.</p>
+      </form>
+
+    </div>
 
     <div class="col-main stack">
+      {# JBCL script output #}
       {% if nc.console_script %}
         <section class="card" style="overflow:hidden">
           <div class="card-head">
             <div>
-              <h2 class="card-title">Console Script Ready</h2>
+              <h2 class="card-title">JBCL Console Script Ready</h2>
               <p class="card-sub">{{ nc.console_script.name }}</p>
             </div>
             <button type="button" id="nc-copy" class="btn primary">Copy script</button>
@@ -312,7 +363,7 @@
           <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
             <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
               <li>Click <b>Copy script</b> above.</li>
-              <li>Open the backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
+              <li>Open the JBCL backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
               <li>Paste and press Enter. A file picker pops up per game — select that game's 200×200 image.</li>
               <li>Watch for the green <b>DONE</b> with the created JRN ids. Drafts are unpublished — review + publish in the Journeys UI.</li>
             </ol>
@@ -331,9 +382,44 @@
           })();
         </script>
       {% endif %}
+
+      {# PMCL script output #}
+      {% if nc.pmcl_console_script %}
+        <section class="card" style="overflow:hidden">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">PMCL Console Script Ready</h2>
+              <p class="card-sub">{{ nc.pmcl_console_script.name }}</p>
+            </div>
+            <button type="button" id="nc-pmcl-copy" class="btn primary">Copy script</button>
+          </div>
+          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+            <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
+              <li>Click <b>Copy script</b> above.</li>
+              <li>Open the PMCL backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
+              <li>Paste and press Enter. A file picker pops up per game — select that game's 200×200 image.</li>
+              <li>Watch for the green <b>DONE</b> with the created JRN ids. Drafts are unpublished — review + publish in the Journeys UI.</li>
+            </ol>
+            <textarea id="nc-pmcl-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ nc.pmcl_console_script.text }}</textarea>
+          </div>
+        </section>
+        <script>
+          (function () {
+            var btn = document.getElementById('nc-pmcl-copy'), area = document.getElementById('nc-pmcl-script-text');
+            if (!btn || !area) return;
+            btn.addEventListener('click', function () {
+              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
+              if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); }); }
+              else { area.select(); document.execCommand('copy'); done(); }
+            });
+          })();
+        </script>
+      {% endif %}
+
+      {# JBCL run output #}
       {% if nc.result %}
         <section class="card" style="overflow:hidden">
-          <div class="card-head"><h2 class="card-title">Run Output</h2></div>
+          <div class="card-head"><h2 class="card-title">JBCL Run Output</h2></div>
           <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
             <div><div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Command</div>
               <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0">{{ nc.result.command }}</pre></div>
@@ -341,11 +427,26 @@
               <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:32rem; margin:0">{{ nc.result.output }}</pre></div>
           </div>
         </section>
-      {% else %}
+      {% endif %}
+
+      {# PMCL run output #}
+      {% if nc.pmcl_result %}
+        <section class="card" style="overflow:hidden">
+          <div class="card-head"><h2 class="card-title">PMCL Run Output</h2></div>
+          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+            <div><div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Command</div>
+              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0">{{ nc.pmcl_result.command }}</pre></div>
+            <div><div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Output</div>
+              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:32rem; margin:0">{{ nc.pmcl_result.output }}</pre></div>
+          </div>
+        </section>
+      {% endif %}
+
+      {% if not nc.result and not nc.pmcl_result %}
         <section class="card card-pad">
           <h2 class="card-title" style="margin-bottom:8px">How it works</h2>
           <div class="help" style="line-height:1.7">
-            <p style="margin:0 0 8px">Each game is a separate journey cloned from the captured NC template — same segment (active players) and notification template 1935, with the game name, message, CTA, deep link and send time swapped in.</p>
+            <p style="margin:0 0 8px">Each game is a separate journey cloned from the captured NC template — same segment (active players), with the game name, message, CTA, deep link and send time swapped in.</p>
             <p style="margin:0">The calendar is baked from the brief. To run a different month, tell me the dates/games and I'll add a form for it.</p>
           </div>
         </section>

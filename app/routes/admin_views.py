@@ -689,8 +689,15 @@ def _rnd_ns(*, kind="sport_wof", date="", days="", weights="", journeys="",
     }
 
 
-def _nc_ns(*, error="", result=None, console_script=None) -> dict:
-    return {"error": error, "result": result, "console_script": console_script}
+def _nc_ns(*, error="", result=None, console_script=None,
+           pmcl_error="", pmcl_result=None, pmcl_console_script=None,
+           git_result=None) -> dict:
+    return {
+        "error": error, "result": result, "console_script": console_script,
+        "pmcl_error": pmcl_error, "pmcl_result": pmcl_result,
+        "pmcl_console_script": pmcl_console_script,
+        "git_result": git_result,
+    }
 
 
 def _promotions_context(*, user, active_tab="overview", gow=None, jc=None, rnd=None, nc=None) -> dict:
@@ -831,6 +838,57 @@ def promotions_nc_discount(
         user=user,
         active_tab="nc_discount",
         nc=_nc_ns(error=error, result=result, console_script=console_script),
+    )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
+
+
+@router.post("/admin/promotions/nc-discount-pmcl", response_class=HTMLResponse)
+def promotions_nc_discount_pmcl(
+    request: Request,
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """Generate the "NC For Discount PMCL" console script for fortunazo.cl."""
+    from ..services.journey_cloner_runner import generate_nc_discount_pmcl_console_script
+    pmcl_error = ""
+    pmcl_result = None
+    pmcl_console_script = None
+    try:
+        exit_code, output, display_cmd, js_text, js_name = generate_nc_discount_pmcl_console_script()
+        pmcl_result = {"exit_code": exit_code, "output": output, "command": display_cmd,
+                       "ok": exit_code == 0 and js_text is not None}
+        if exit_code == 0 and js_text is not None:
+            pmcl_console_script = {"name": js_name, "text": js_text}
+        else:
+            pmcl_error = "Console script was not generated. Check the run output below."
+    except Exception as exc:  # noqa: BLE001
+        pmcl_error = str(exc)
+
+    ctx = _promotions_context(
+        user=user,
+        active_tab="nc_discount",
+        nc=_nc_ns(pmcl_error=pmcl_error, pmcl_result=pmcl_result,
+                  pmcl_console_script=pmcl_console_script),
+    )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
+
+
+@router.post("/admin/promotions/git-pull", response_class=HTMLResponse)
+def promotions_git_pull(
+    request: Request,
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """Run git pull in the repo root and display output on the Discount NC tab."""
+    from ..services.journey_cloner_runner import git_pull
+    try:
+        exit_code, output = git_pull()
+        git_result = {"exit_code": exit_code, "output": output, "ok": exit_code == 0}
+    except Exception as exc:  # noqa: BLE001
+        git_result = {"exit_code": 1, "output": str(exc), "ok": False}
+
+    ctx = _promotions_context(
+        user=user,
+        active_tab="nc_discount",
+        nc=_nc_ns(git_result=git_result),
     )
     return templates.TemplateResponse(request, "promotions.html", ctx)
 
