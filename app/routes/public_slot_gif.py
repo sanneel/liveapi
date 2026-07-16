@@ -37,6 +37,7 @@ SLOTMACHINE_GIF = Path(__file__).resolve().parents[1] / "static" / "slotmachine.
 SLOTMACHINE1_GIF = Path(__file__).resolve().parents[1] / "static" / "slotmachine1.gif"
 SLOTMACHINE_FINAL_PLAYONCE_GIF = Path(__file__).resolve().parents[1] / "static" / "slotmachine_final_playonce.gif"
 SLOTMACHINE_3SPINS_SMOOTH_GIF = Path(__file__).resolve().parents[1] / "static" / "slotmachine_3spins_smooth.gif"
+SLOTGIF2_GIF = Path(__file__).resolve().parents[1] / "static" / "slotgif2.gif"
 
 
 @router.get("/r/slotmachine.gif")
@@ -82,6 +83,18 @@ def slotmachine_3spins_smooth_gif() -> Response:
         raise HTTPException(404, "slotmachine_3spins_smooth.gif not found")
     return FileResponse(
         SLOTMACHINE_3SPINS_SMOOTH_GIF,
+        media_type="image/gif",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+
+@router.get("/r/slotgif2.gif")
+def slotgif2_gif() -> Response:
+    """Serve the JugaBet scene HQ GIF variant."""
+    if not SLOTGIF2_GIF.is_file():
+        raise HTTPException(404, "slotgif2.gif not found")
+    return FileResponse(
+        SLOTGIF2_GIF,
         media_type="image/gif",
         headers={"Cache-Control": "public, max-age=86400"},
     )
