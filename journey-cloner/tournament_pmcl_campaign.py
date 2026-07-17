@@ -269,10 +269,13 @@ _SMS_PREFIX_RE = re.compile(r"^\s*[^|\n]{1,20}\|")
 
 
 def sms_text(body_text: str) -> str:
-    """Keep whatever "Brand |" prefix the sheet already supplies (the copy is
-    inputted verbatim); only prepend the default when there is none."""
+    """Always prepend 'Fortunazo |' to the SMS text, stripping any existing
+    'Brand |' prefix first (the copy from the sheet is used verbatim after
+    applying the required prefix)."""
     body_text = (body_text or "").strip()
-    if not _SMS_PREFIX_RE.match(body_text):
+    # Remove any existing "Brand |" prefix
+    body_text = _SMS_PREFIX_RE.sub("", body_text).lstrip()
+    if not body_text.lower().startswith(SMS_PREFIX.lower()):
         body_text = SMS_PREFIX + body_text
     return body_text
 
@@ -478,7 +481,7 @@ def verify(body: dict, tournament_id: str, upload_photos: bool) -> list[tuple[bo
                        "no photo placeholders (template image URLs kept)"))
     sms_act = next((a for a in body.get("activities", []) if a.get("activityName") == "dextra_sms"), None)
     sms_body = ((sms_act or {}).get("initializationData") or {}).get("smsSettings", {}).get("messageText", "")
-    checks.append((bool(_SMS_PREFIX_RE.match(sms_body)), f"SMS text carries a 'Brand |' prefix ({sms_body[:22]!r}...)"))
+    checks.append((sms_body.lower().startswith(SMS_PREFIX.lower()), f"SMS text starts with 'Fortunazo |' ({sms_body[:22]!r}...)"))
     checks.append(("duplicatedFromId" not in body, "no stale duplicatedFromId"))
     checks.append(("duplicatedFromVersion" not in body, "no stale duplicatedFromVersion"))
 
