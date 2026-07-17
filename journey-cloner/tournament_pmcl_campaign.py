@@ -58,6 +58,7 @@ from create_journeys import (
 )
 from casino_journey import chile_same_day_window, set_dates
 from spec_parser import ChannelCopy, SmsCopy, parse_spec
+from tournament_pmcl_email import EMAIL_CONTENT_ID_TOKEN, email_name, prepare_email_content
 
 TEMPLATE_PATH = Path(__file__).resolve().parent / "templates" / "casino" / "tournament_pmcl_comms.json"
 
@@ -102,6 +103,23 @@ def sms_dict_from_spec(sms: SmsCopy) -> dict[str, str]:
     return {"text_en": sms.text_en, "text_es": sms.text_es}
 
 
+def email_dict_from_spec(spec) -> dict[str, str] | None:
+    """Email content inputs, or None when the spec has no email copy — in which
+    case the journey's email activity is left untouched.
+
+    Unlike GOW's sheet, the tournament sheet's channel rows carry no TRUE/FALSE
+    flag (every channel is always sent), so the presence of the Email subject +
+    pre-header is what drives building the email — not an enabled flag."""
+    email = spec.email
+    if not (email.subject_es and email.preheader_es):
+        return None
+    return {
+        "subject_es": email.subject_es,
+        "preheader_es": email.preheader_es,
+        "desc_es": email.desc_es,
+    }
+
+
 def find_notification(body: dict, contract: int) -> dict:
     for a in body.get("activities", []):
         init = a.get("initializationData") or {}
@@ -115,6 +133,26 @@ def find_sms(body: dict) -> dict:
         if a.get("activityName") == "dextra_sms":
             return a
     raise ValueError("dextra_sms activity not found in template")
+
+
+def find_email(body: dict) -> dict:
+    for a in body.get("activities", []):
+        if a.get("activityName") == "dextra_email":
+            return a
+    raise ValueError("dextra_email activity not found in template")
+
+
+def update_email_activity(activity: dict, content_name: str) -> None:
+    """Point the journey's email activity at the about-to-be-created content.
+
+    The real content id is only known once the console script creates it at
+    paste time, so leave EMAIL_CONTENT_ID_TOKEN here and let the script swap
+    it in (same mechanic as the reserved journey id)."""
+    init = activity["initializationData"]
+    settings = init["emailSettings"]
+    settings["template"] = {"id": EMAIL_CONTENT_ID_TOKEN}
+    settings["emailSource"] = "Template"
+    init["displayData"] = [f"{EMAIL_CONTENT_ID_TOKEN} {content_name}"]
 
 
 def template_link(body: dict) -> tuple[str, str]:
@@ -227,9 +265,14 @@ def update_popup(
         tabs["common"]["background_image_src"] = bg
 
 
+_SMS_PREFIX_RE = re.compile(r"^\s*[^|\n]{1,20}\|")
+
+
 def sms_text(body_text: str) -> str:
+    """Keep whatever "Brand |" prefix the sheet already supplies (the copy is
+    inputted verbatim); only prepend the default when there is none."""
     body_text = (body_text or "").strip()
-    if not body_text.lower().startswith("fortunazo |"):
+    if not _SMS_PREFIX_RE.match(body_text):
         body_text = SMS_PREFIX + body_text
     return body_text
 
@@ -320,7 +363,8 @@ def prepare_comms(
     popup: dict[str, str],
     sms: dict[str, str],
     upload_photos: bool,
-) -> tuple[dict, list[str], datetime, datetime]:
+    email: dict[str, str] | None = None,
+) -> tuple[dict, list[str], datetime, datetime, dict | None]:
     body = json.loads(TEMPLATE_PATH.read_text(encoding="utf-8-sig"))
     report: list[str] = []
 
@@ -384,11 +428,29 @@ def prepare_comms(
     mirror_into_raw_journey_data(body, sms_act)
     report.append("SMS: body + tournament link set for EN/ES")
 
-    report.append("Email left untouched (edit it by hand in the backoffice)")
+    email_content = None
+    if email:
+        content_name = email_name(date_str)
+        email_content = prepare_email_content(
+            date_str=date_str,
+            subject_es=email["subject_es"],
+            preheader_es=email["preheader_es"],
+            desc_es=email.get("desc_es", ""),
+            tournament_id=tid,
+        )
+        email_act = find_email(body)
+        update_email_activity(email_act, content_name)
+        mirror_into_raw_journey_data(body, email_act)
+        report.append(
+            f"Email: content {content_name!r} prepared (subject/pre-header/body/link set); "
+            "journey email activity repointed to the new content"
+        )
+    else:
+        report.append("Email left untouched (edit it by hand in the backoffice)")
 
     body["reservedJourneyId"] = RESERVED_ID_TOKEN
     report.append(f"reservedJourneyId = {RESERVED_ID_TOKEN}")
-    return body, report, start_local, stop_local
+    return body, report, start_local, stop_local, email_content
 
 
 def verify(body: dict, tournament_id: str, upload_photos: bool) -> list[tuple[bool, str]]:
@@ -414,12 +476,22 @@ def verify(body: dict, tournament_id: str, upload_photos: bool) -> list[tuple[bo
     else:
         checks.append((NC_ICON_TOKEN not in serialized and POPUP_BG_TOKEN not in serialized,
                        "no photo placeholders (template image URLs kept)"))
-    checks.append(("Fortunazo |" in serialized, "SMS text carries the required 'Fortunazo |' prefix"))
+    sms_act = next((a for a in body.get("activities", []) if a.get("activityName") == "dextra_sms"), None)
+    sms_body = ((sms_act or {}).get("initializationData") or {}).get("smsSettings", {}).get("messageText", "")
+    checks.append((bool(_SMS_PREFIX_RE.match(sms_body)), f"SMS text carries a 'Brand |' prefix ({sms_body[:22]!r}...)"))
     checks.append(("duplicatedFromId" not in body, "no stale duplicatedFromId"))
     checks.append(("duplicatedFromVersion" not in body, "no stale duplicatedFromVersion"))
 
     promo_display_ids = [d["promotionDisplayId"] for d in _walk_dicts(body) if "promotionDisplayId" in d]
     checks.append((not promo_display_ids, "no stale promotionDisplayId in payload" if not promo_display_ids else f"stale promotionDisplayId(s): {promo_display_ids}"))
+
+    # When the email is driven by the spec, the email activity must point at the
+    # to-be-created content (token), not the stale captured CSE id.
+    email_act = next((a for a in body.get("activities", []) if a.get("activityName") == "dextra_email"), None)
+    if email_act is not None:
+        tmpl_id = ((email_act.get("initializationData") or {}).get("emailSettings") or {}).get("template", {}).get("id")
+        if tmpl_id == EMAIL_CONTENT_ID_TOKEN:
+            checks.append((EMAIL_CONTENT_ID_TOKEN in raw_serialized, "email activity repoint mirrored into editor copy"))
     return checks
 
 
@@ -433,6 +505,12 @@ def _editor_copies_in_sync(body: dict) -> bool:
         if name == "notification_center" and init.get("contract") in (1, 5):
             pass
         elif name == "dextra_sms":
+            pass
+        elif name == "dextra_email" and (
+            (init.get("emailSettings") or {}).get("template", {}).get("id") == EMAIL_CONTENT_ID_TOKEN
+        ):
+            # Only the email we actually repointed needs mirroring; an untouched
+            # captured email activity is left exactly as it was.
             pass
         else:
             continue
@@ -479,8 +557,11 @@ JS_TEMPLATE = r"""// PMCL Tournament Communications console script — generated
   const NC_ICON_TOKEN = @NC_ICON_TOKEN@;
   const POPUP_BG_TOKEN = @POPUP_BG_TOKEN@;
   const RESERVED_ID_TOKEN = @RESERVED_ID_TOKEN@;
+  const EMAIL_CONTENT = @EMAIL_CONTENT@;            // null when email is left untouched
+  const EMAIL_CONTENT_ID_TOKEN = @EMAIL_CONTENT_ID_TOKEN@;
 
   const CRM_BASE = BASE.replace(/\/journey-builder\/v0$/, '');
+  const CONTENT_BASE = CRM_BASE + '/content-studio/v0/eb-backoffice/email/contents';
 
   const decodeJwt = (t) => { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); } catch (e) { return null; } };
   const usableAuth = (v) => {
@@ -552,6 +633,28 @@ JS_TEMPLATE = r"""// PMCL Tournament Communications console script — generated
     return asset;
   }
 
+  // Creates the marketing-email content (create -> save -> publish), pointing
+  // the journey's email activity at the new content id. The copy + link are
+  // already baked into EMAIL_CONTENT server-side; the images are kept from the
+  // template, so there is no photo upload here.
+  async function buildAndPublishEmail() {
+    const content = EMAIL_CONTENT;
+    let r = await fetch(CONTENT_BASE, { method: 'POST', headers: { ...headers(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(content) });
+    let resp = await r.text();
+    if (!r.ok) throw new Error('Email content create failed: HTTP ' + r.status + ' ' + resp);
+    const cseId = JSON.parse(resp).id;
+    console.log('  created email content', cseId);
+
+    r = await fetch(CONTENT_BASE + '/' + cseId, { method: 'POST', headers: { ...headers(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(content) });
+    resp = await r.text();
+    if (!r.ok) throw new Error('Email content save failed: HTTP ' + r.status + ' ' + resp);
+
+    r = await fetch(CONTENT_BASE + '/' + cseId + '/publish', { method: 'PATCH', headers: { ...headers(), 'content-type': 'application/json' }, credentials: 'include', body: '{}' });
+    if (!r.ok) throw new Error('Email content publish failed: HTTP ' + r.status + ' ' + await r.text());
+    console.log('  published email content', cseId);
+    return cseId;
+  }
+
   async function reserveId() {
     const r = await fetch(BASE + '/journeys/identifier', { method: 'POST', headers: { ...headers(), 'content-type': 'application/x-www-form-urlencoded' }, credentials: 'include' });
     const raw = (await r.text()).trim(); let id = raw.replace(/^"+|"+$/g, '');
@@ -582,6 +685,12 @@ JS_TEMPLATE = r"""// PMCL Tournament Communications console script — generated
     console.log('%cNo FOLDER_ID — keeping the template image URLs (no file pickers).', 'color:#eab308');
   }
 
+  let emailContentId = null;
+  if (EMAIL_CONTENT) {
+    console.log('Creating + publishing email content...');
+    emailContentId = await buildAndPublishEmail();
+  }
+
   console.log('Reserving journey id...');
   const realId = await reserveId();
   console.log('  reserved', realId);
@@ -590,6 +699,7 @@ JS_TEMPLATE = r"""// PMCL Tournament Communications console script — generated
   text = text.split(RESERVED_ID_TOKEN).join(realId);
   if (ncIconUrl) text = text.split(NC_ICON_TOKEN).join(ncIconUrl);
   if (popupBgUrl) text = text.split(POPUP_BG_TOKEN).join(popupBgUrl);
+  if (emailContentId) text = text.split(EMAIL_CONTENT_ID_TOKEN).join(emailContentId);
   text = regen(text);
   const body = JSON.parse(text);
 
@@ -600,12 +710,13 @@ JS_TEMPLATE = r"""// PMCL Tournament Communications console script — generated
 
   console.log('%cDONE.', 'color:#22c55e;font-weight:bold;font-size:14px');
   console.log('  Tournament comms journey draft: ' + realId);
-  console.log('  Email activity left untouched — edit it by hand in the backoffice.');
+  if (emailContentId) console.log('  Email content created + published: ' + emailContentId);
+  else console.log('  Email activity left untouched — edit it by hand in the backoffice.');
 })();
 """
 
 
-def build_js(body: dict, folder_id: str = "") -> str:
+def build_js(body: dict, folder_id: str = "", email_content: dict | None = None) -> str:
     js = JS_TEMPLATE
     js = js.replace("@GENERATED_AT@", datetime.now(LOCAL_TZ).strftime("%Y-%m-%d %H:%M %Z"))
     js = js.replace("@JOURNEY_NAME@", str(body.get("journeyName", "")))
@@ -616,6 +727,8 @@ def build_js(body: dict, folder_id: str = "") -> str:
     js = js.replace("@NC_ICON_TOKEN@", json.dumps(NC_ICON_TOKEN))
     js = js.replace("@POPUP_BG_TOKEN@", json.dumps(POPUP_BG_TOKEN))
     js = js.replace("@RESERVED_ID_TOKEN@", json.dumps(RESERVED_ID_TOKEN))
+    js = js.replace("@EMAIL_CONTENT@", json.dumps(email_content, ensure_ascii=False))
+    js = js.replace("@EMAIL_CONTENT_ID_TOKEN@", json.dumps(EMAIL_CONTENT_ID_TOKEN))
     return js
 
 
@@ -639,7 +752,7 @@ def main() -> int:
         return 1
 
     upload_photos = bool(args.folder_id.strip())
-    body, report, start_local, stop_local = prepare_comms(
+    body, report, start_local, stop_local, email_content = prepare_comms(
         date_str=args.date,
         journey_name=args.journey_name,
         tournament_id=args.tournament_id,
@@ -647,6 +760,7 @@ def main() -> int:
         popup=popup_dict_from_spec(spec.popup),
         sms=sms_dict_from_spec(spec.sms),
         upload_photos=upload_photos,
+        email=email_dict_from_spec(spec),
     )
 
     print("Applied:")
@@ -668,9 +782,13 @@ def main() -> int:
         path = out / f"{args.name}_journey.json"
         path.write_text(json.dumps(body, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"\nDry run — journey payload written: {path}")
+        if email_content is not None:
+            epath = out / f"{args.name}_email.json"
+            epath.write_text(json.dumps(email_content, ensure_ascii=False, indent=2), encoding="utf-8")
+            print(f"Dry run — email content written: {epath}")
         return 0
 
-    js = build_js(body, folder_id=args.folder_id.strip())
+    js = build_js(body, folder_id=args.folder_id.strip(), email_content=email_content)
     out = Path("console_scripts")
     out.mkdir(exist_ok=True)
     path = out / f"{args.name}_console.js"
@@ -681,6 +799,8 @@ def main() -> int:
         print("Two file pickers will pop up in turn — NC icon first, then the Pop-up background.")
     else:
         print("No folder id given — the template's existing images are kept (no file pickers).")
+    if email_content is not None:
+        print("Email content will be created + published from the spec, and the journey's email activity repointed to it.")
     return 0
 
 

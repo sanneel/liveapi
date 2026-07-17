@@ -9,7 +9,7 @@
   <form method="post" action="/admin/promotions/tournament-pmcl" class="card card-pad col-rail" style="display:flex; flex-direction:column; gap:14px">
     <div>
       <h2 class="card-title">Create Tournament Comms</h2>
-      <p class="card-sub">PMCL (Fortunazo) tournament promo. Paste the full sheet content below — every Notification / Pop-up (Cat-fish) / SMS copy field (EN/ES) comes from the paste. Works exactly like GOW Comms, but wired to the Smartico tournament deeplink instead of a promo page. Email is left untouched.</p>
+      <p class="card-sub">PMCL (Fortunazo) tournament promo. Paste the full sheet content below — every Notification / Pop-up (Cat-fish) / SMS / Email copy field (EN/ES) comes from the paste. Works exactly like GOW Comms, but wired to the Smartico tournament deeplink instead of a promo page.</p>
     </div>
 
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
@@ -40,7 +40,7 @@
     <div class="field">
       <span class="lbl">Spec (sheet content)</span>
       <textarea class="input mono" name="spec" required rows="16" spellcheck="false" style="font-size:12px" placeholder="Paste the Communication channels table here (tab-separated, as copied from the sheet): Notification, Notification pop-up (Cat-fish), Sms — each with a TRUE/FALSE flag and EN/ES copy (Title / Description / Button).">{{ form.spec or '' }}</textarea>
-      <p class="help" style="margin-top:6px">Paste the Communication channels section: <b>Notification</b>, <b>Notification pop-up (Cat-fish)</b> and <b>Sms</b> rows with their EN/ES copy. Email is not scripted — edit it by hand in the backoffice.</p>
+      <p class="help" style="margin-top:6px">Paste the Communication channels section: <b>Notification</b>, <b>Notification pop-up (Cat-fish)</b>, <b>Email</b> and <b>Sms</b> rows with their EN/ES copy. When the paste includes an Email (Title + Pre-header + Description), the email content is created + published and the journey's email activity is repointed to it; otherwise the email is left untouched.</p>
     </div>
 
     <button class="btn primary" style="justify-content:center">Generate console script</button>
@@ -100,7 +100,7 @@
       <section class="card card-pad">
         <h2 class="card-title" style="margin-bottom:8px">How it works</h2>
         <div class="help" style="line-height:1.7">
-          <p style="margin:0 0 8px">This clones the captured PMCL tournament comms journey and swaps in the copy from your pasted sheet: the <b>Notification</b> (contract 1), the <b>Pop-up</b> (Cat-fish, contract 5) and the <b>SMS</b> — EN &amp; ES — all pointed at the Smartico tournament deeplink.</p>
+          <p style="margin:0 0 8px">This clones the captured PMCL tournament comms journey and swaps in the copy from your pasted sheet: the <b>Notification</b> (contract 1), the <b>Pop-up</b> (Cat-fish, contract 5), the <b>SMS</b> and, when present, the <b>Email</b> — EN &amp; ES — all pointed at the Smartico tournament deeplink.</p>
           <p style="margin:0 0 8px">The send window is fixed to the chosen day, 12:00 → 19:00 Chile. The SMS carries the required <span class="mono">Fortunazo |</span> prefix.</p>
           <p style="margin:0">If a required Notification/Pop-up/SMS field is missing from the spec, the script stops with a clear error — nothing is created.</p>
         </div>

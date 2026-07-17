@@ -69,6 +69,10 @@ class EmailCopy:
     subject_es: str = ""
     preheader_en: str = ""
     preheader_es: str = ""
+    desc_en: str = ""
+    desc_es: str = ""
+    button_en: str = ""
+    button_es: str = ""
 
 
 @dataclass
@@ -219,6 +223,11 @@ def parse_spec(text: str) -> ParsedSpec:
         elif "header" in label:
             # "Pre-header" row.
             spec.email.preheader_en, spec.email.preheader_es = en, es
+        elif "desc" in label:
+            # "Description" row = the email body copy (may be multi-line).
+            spec.email.desc_en, spec.email.desc_es = en, es
+        elif "button" in label or "caption" in label:
+            spec.email.button_en, spec.email.button_es = en, es
 
     if spec.nc.enabled and not (spec.nc.title_en and spec.nc.desc_en and spec.nc.caption_en):
         spec.warnings.append("Notification is ticked TRUE but some Notification fields are missing.")
