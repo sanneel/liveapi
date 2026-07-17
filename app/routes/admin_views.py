@@ -38,6 +38,7 @@ from ..services.journey_cloner_runner import (
     generate_console_script,
     generate_gow_combined_console_script,
     generate_gow_console_script,
+    generate_tournament_pmcl_console_script,
     missing_templates,
     run_journey_cloner,
     save_template_from_fetch,
@@ -640,7 +641,7 @@ def figma_run(
     return templates.TemplateResponse(request, "figma.html", ctx)
 
 
-_PROMO_TABS = {"overview", "gow", "journey_cloner", "randomizers", "nc_discount", "scripts"}
+_PROMO_TABS = {"overview", "gow", "tournament_pmcl", "journey_cloner", "randomizers", "nc_discount", "scripts"}
 _JC_TYPES = ["followup", "bfr", "two_hours", "aft"]
 
 
@@ -651,6 +652,15 @@ def _gow_ns(*, form=None, error="", result=None, console_script=None, warn="") -
         "result": result,
         "console_script": console_script,
         "warn": warn,
+    }
+
+
+def _tournament_ns(*, form=None, error="", result=None, console_script=None) -> dict:
+    return {
+        "form": form if form is not None else {},
+        "error": error,
+        "result": result,
+        "console_script": console_script,
     }
 
 
@@ -700,7 +710,7 @@ def _nc_ns(*, error="", result=None, console_script=None,
     }
 
 
-def _promotions_context(*, user, active_tab="overview", gow=None, jc=None, rnd=None, nc=None) -> dict:
+def _promotions_context(*, user, active_tab="overview", gow=None, tournament=None, jc=None, rnd=None, nc=None) -> dict:
     """Full context for the unified Promotions page: automation graph + the
     embedded generators (GOW, Journey Cloner, Randomizers, Discount NC) +
     all-scripts list."""
@@ -717,6 +727,7 @@ def _promotions_context(*, user, active_tab="overview", gow=None, jc=None, rnd=N
         "automations": pc.automations(),
         "all_scripts": pc.all_scripts(),
         "gow": gow if gow is not None else _gow_ns(),
+        "tournament": tournament if tournament is not None else _tournament_ns(),
         "jc": jc if jc is not None else _jc_ns(),
         "rnd": rnd if rnd is not None else _rnd_ns(),
         "nc": nc if nc is not None else _nc_ns(),
@@ -1024,6 +1035,62 @@ def gow_console_script(
         user=user,
         active_tab="gow",
         gow=_gow_ns(form=form, error=error, result=result, console_script=console_script, warn=warn),
+    )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
+
+
+@router.post("/admin/promotions/tournament-pmcl", response_class=HTMLResponse)
+def promotions_tournament_pmcl(
+    request: Request,
+    date: str = Form(...),
+    spec: str = Form(...),
+    tournament_id: str = Form(""),
+    folder_id: str = Form(""),
+    journey_name: str = Form(""),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """Generate the PMCL (Fortunazo) Tournament comms console script — the same
+    paste-a-sheet → console-script flow as GOW comms, wired to the Smartico
+    tournament deeplink instead of a promo page."""
+    form = {
+        "date": date,
+        "spec": spec,
+        "tournament_id": tournament_id,
+        "folder_id": folder_id,
+        "journey_name": journey_name,
+    }
+    error = ""
+    result = None
+    console_script = None
+    try:
+        if not date.strip():
+            raise ValueError("Date is required.")
+        if not spec.strip():
+            raise ValueError("Paste the spec blob (Communication channels table from the sheet).")
+        exit_code, output, display_cmd, js_text, js_name = generate_tournament_pmcl_console_script(
+            date=date,
+            spec_text=spec,
+            tournament_id=tournament_id,
+            folder_id=folder_id,
+            journey_name=journey_name,
+        )
+        result = {
+            "exit_code": exit_code,
+            "output": output,
+            "command": display_cmd,
+            "ok": exit_code == 0 and js_text is not None,
+        }
+        if exit_code == 0 and js_text is not None:
+            console_script = {"name": js_name, "text": js_text}
+        else:
+            error = "Console script was not generated. Check the run output below."
+    except Exception as exc:  # noqa: BLE001
+        error = str(exc)
+
+    ctx = _promotions_context(
+        user=user,
+        active_tab="tournament_pmcl",
+        tournament=_tournament_ns(form=form, error=error, result=result, console_script=console_script),
     )
     return templates.TemplateResponse(request, "promotions.html", ctx)
 

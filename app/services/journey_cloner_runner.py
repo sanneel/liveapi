@@ -180,6 +180,7 @@ COMBINED_SCRIPT_PATH = CLONER_DIR / "gow_combined.py"
 RANDOMIZER_SCRIPT_PATH = CLONER_DIR / "randomizer_campaign.py"
 NC_DISCOUNT_SCRIPT_PATH = CLONER_DIR / "nc_discount_campaign.py"
 NC_DISCOUNT_PMCL_SCRIPT_PATH = CLONER_DIR / "nc_discount_pmcl_campaign.py"
+TOURNAMENT_PMCL_SCRIPT_PATH = CLONER_DIR / "tournament_pmcl_campaign.py"
 
 # Randomizer promos (weighted prize wheels / scratch cards). Keys must match
 # randomizer_campaign.py --kind.
@@ -408,6 +409,43 @@ def generate_randomizer_console_script(
     if journeys.strip():
         cmd += ["--journeys", *journeys.split()]
     return _run_gow_cli(cmd, basename=basename)
+
+
+def generate_tournament_pmcl_console_script(
+    *,
+    date: str,
+    spec_text: str,
+    tournament_id: str = "",
+    folder_id: str = "",
+    journey_name: str = "",
+) -> Tuple[int, str, str, str | None, str]:
+    """Generate the paste-into-DevTools console script for the PMCL (Fortunazo)
+    tournament communications journey (Notification Center + Pop-up + SMS; email
+    left untouched). Copy comes from the pasted spec blob; every channel's link
+    is pointed at the Smartico tournament deeplink. When a media-library
+    ``folder_id`` is given the script uploads a fresh NC icon + Pop-up
+    background, otherwise the template's existing images are kept.
+
+    Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
+    """
+    basename = _unique_basename("tournament_pmcl", date)
+    cmd = [
+        python_executable(),
+        str(TOURNAMENT_PMCL_SCRIPT_PATH),
+        "--date",
+        date.strip(),
+        "--spec",
+        "-",
+        "--name",
+        basename,
+    ]
+    if tournament_id.strip():
+        cmd += ["--tournament-id", tournament_id.strip()]
+    if folder_id.strip():
+        cmd += ["--folder-id", folder_id.strip()]
+    if journey_name.strip():
+        cmd += ["--journey-name", journey_name.strip()]
+    return _run_gow_cli(cmd, spec_text=spec_text, basename=basename)
 
 
 def generate_nc_discount_pmcl_console_script(folder_id: str) -> Tuple[int, str, str, str | None, str]:

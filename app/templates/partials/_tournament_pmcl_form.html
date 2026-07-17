@@ -1,0 +1,110 @@
+{% if error %}<div class="alert err">{{ error }}</div>{% endif %}
+{% if result %}
+  <div class="alert {% if result.ok %}ok{% else %}err{% endif %}">
+    {% if result.ok %}Console script generated.{% else %}Generation exited with code {{ result.exit_code }}.{% endif %}
+  </div>
+{% endif %}
+
+<div class="row-flex">
+  <form method="post" action="/admin/promotions/tournament-pmcl" class="card card-pad col-rail" style="display:flex; flex-direction:column; gap:14px">
+    <div>
+      <h2 class="card-title">Create Tournament Comms</h2>
+      <p class="card-sub">PMCL (Fortunazo) tournament promo. Paste the full sheet content below — every Notification / Pop-up (Cat-fish) / SMS copy field (EN/ES) comes from the paste. Works exactly like GOW Comms, but wired to the Smartico tournament deeplink instead of a promo page. Email is left untouched.</p>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+      <div class="field">
+        <span class="lbl">Date</span>
+        <input class="input" name="date" type="date" required value="{{ form.date or '' }}"/>
+        <p class="help" style="margin-top:6px">Comms runs this day, 12:00 → 19:00 Chile.</p>
+      </div>
+      <div class="field">
+        <span class="lbl">Tournament ID <span style="color:var(--t-faint)">(optional)</span></span>
+        <input class="input mono" name="tournament_id" value="{{ form.tournament_id or '' }}" placeholder="5431"/>
+        <p class="help" style="margin-top:6px">Smartico tournament id for the deeplink (<span class="mono">#_smartico_dp=dp:gf_tournaments&amp;id=…</span>). Leave blank to keep the template's.</p>
+      </div>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Journey name <span style="color:var(--t-faint)">(optional)</span></span>
+      <input class="input" name="journey_name" value="{{ form.journey_name or '' }}" placeholder="FTCL | CS | Torneo ..."/>
+      <p class="help" style="margin-top:6px">Defaults to the template name (with any “Copy of ” prefix stripped).</p>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Media Library Folder ID <span style="color:var(--t-faint)">(optional)</span></span>
+      <input class="input mono" name="folder_id" value="{{ form.folder_id or '' }}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"/>
+      <p class="help" style="margin-top:6px">When set, the script pops file pickers to upload a fresh NC icon + Pop-up background into this PMCL folder (open Media Library in the PMCL backoffice → copy the UUID from <span class="mono">/media-library/folders/&lt;uuid&gt;</span>). Leave blank to keep the template's existing images.</p>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Spec (sheet content)</span>
+      <textarea class="input mono" name="spec" required rows="16" spellcheck="false" style="font-size:12px" placeholder="Paste the Communication channels table here (tab-separated, as copied from the sheet): Notification, Notification pop-up (Cat-fish), Sms — each with a TRUE/FALSE flag and EN/ES copy (Title / Description / Button).">{{ form.spec or '' }}</textarea>
+      <p class="help" style="margin-top:6px">Paste the Communication channels section: <b>Notification</b>, <b>Notification pop-up (Cat-fish)</b> and <b>Sms</b> rows with their EN/ES copy. Email is not scripted — edit it by hand in the backoffice.</p>
+    </div>
+
+    <button class="btn primary" style="justify-content:center">Generate console script</button>
+    <p class="help">No token needed — the script grabs it from the PMCL backoffice tab on paste, then creates the tournament comms journey draft (Notification + Pop-up + SMS).</p>
+  </form>
+
+  <div class="col-main stack">
+    {% if console_script %}
+      <section class="card" style="overflow:hidden">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">Console Script Ready</h2>
+            <p class="card-sub">{{ console_script.name }}</p>
+          </div>
+          <button type="button" id="copy-tournament-script" class="btn primary">Copy script</button>
+        </div>
+        <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+          <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
+            <li>Click <b>Copy script</b> above.</li>
+            <li>Open the <b>PMCL</b> backoffice in Chrome (logged in). Press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
+            <li>Paste the script and press Enter. If a Folder ID was set, pick the NC icon then the Pop-up background when the pickers pop up.</li>
+            <li>Watch for the green <b>DONE</b> with the created JRN id. Email is left untouched — edit it by hand.</li>
+          </ol>
+          <textarea id="tournament-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ console_script.text }}</textarea>
+        </div>
+      </section>
+      <script>
+        (function () {
+          var btn = document.getElementById('copy-tournament-script');
+          var area = document.getElementById('tournament-script-text');
+          if (!btn || !area) return;
+          btn.addEventListener('click', function () {
+            var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); });
+            } else { area.select(); document.execCommand('copy'); done(); }
+          });
+        })();
+      </script>
+    {% endif %}
+
+    {% if result %}
+      <section class="card" style="overflow:hidden">
+        <div class="card-head"><h2 class="card-title">Run Output</h2></div>
+        <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+          <div>
+            <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Command</div>
+            <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0">{{ result.command }}</pre>
+          </div>
+          <div>
+            <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Output</div>
+            <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:32rem; margin:0">{{ result.output }}</pre>
+          </div>
+        </div>
+      </section>
+    {% else %}
+      <section class="card card-pad">
+        <h2 class="card-title" style="margin-bottom:8px">How it works</h2>
+        <div class="help" style="line-height:1.7">
+          <p style="margin:0 0 8px">This clones the captured PMCL tournament comms journey and swaps in the copy from your pasted sheet: the <b>Notification</b> (contract 1), the <b>Pop-up</b> (Cat-fish, contract 5) and the <b>SMS</b> — EN &amp; ES — all pointed at the Smartico tournament deeplink.</p>
+          <p style="margin:0 0 8px">The send window is fixed to the chosen day, 12:00 → 19:00 Chile. The SMS carries the required <span class="mono">Fortunazo |</span> prefix.</p>
+          <p style="margin:0">If a required Notification/Pop-up/SMS field is missing from the spec, the script stops with a clear error — nothing is created.</p>
+        </div>
+      </section>
+    {% endif %}
+  </div>
+</div>

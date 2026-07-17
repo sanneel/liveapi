@@ -9,6 +9,7 @@
 <div class="tabs" id="promo-tabs" data-active="{{ active_tab or 'overview' }}">
   <button type="button" class="tab" data-tab="overview">Overview</button>
   <button type="button" class="tab" data-tab="gow">GOW</button>
+  <button type="button" class="tab" data-tab="tournament_pmcl">PMCL Tournament</button>
   <button type="button" class="tab" data-tab="journey_cloner">Journey Cloner</button>
   <button type="button" class="tab" data-tab="randomizers">Randomizers</button>
   <button type="button" class="tab" data-tab="nc_discount">Discount NC</button>
@@ -92,6 +93,13 @@
 <section data-panel="gow" hidden>
   {% with form=gow.form, error=gow.error, result=gow.result, console_script=gow.console_script, warn=gow.warn %}
     {% include "partials/_gow_form.html" %}
+  {% endwith %}
+</section>
+
+{# ── PMCL Tournament comms generator ─────────────────────────────────── #}
+<section data-panel="tournament_pmcl" hidden>
+  {% with form=tournament.form, error=tournament.error, result=tournament.result, console_script=tournament.console_script %}
+    {% include "partials/_tournament_pmcl_form.html" %}
   {% endwith %}
 </section>
 
