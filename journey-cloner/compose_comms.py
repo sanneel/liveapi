@@ -90,7 +90,9 @@ def build_body() -> tuple[dict, str, list]:
 
         node_el = _swap(frag["node"], old, aid)
         node_el["id"] = aid
-        node_el["position"] = {"x": 0, "y": i * 170}
+        pos = {"x": 0, "y": i * 170}
+        node_el["position"] = dict(pos)
+        node_el["positionAbsolute"] = dict(pos)   # editor reads positionAbsolute.x
         elements.append(node_el)
 
     # terminal
@@ -102,7 +104,9 @@ def build_body() -> tuple[dict, str, list]:
         "data": {"name": "end_of_journey",
                  "ports": [{"id": f"input-{end_aid}"}], "width": 40, "height": 40},
         "type": "exit", "style": {"cursor": "default"}, "width": 40, "height": 40,
-        "hidden": False, "zIndex": 5, "position": {"x": 0, "y": len(nodes) * 170},
+        "hidden": False, "zIndex": 5,
+        "position": {"x": 0, "y": len(nodes) * 170},
+        "positionAbsolute": {"x": 0, "y": len(nodes) * 170},   # editor reads .x on every node
         "selected": False, "draggable": False, "connectable": False,
     })
 
@@ -187,6 +191,15 @@ def verify(body: dict) -> list[tuple[bool, str]]:
     checks.append((not bad_edge, f"every edge connects real nodes ({len(bad_edge)} bad)"))
     # chain reaches the terminal
     checks.append((any(a["activityName"] == "end_of_journey" for a in acts), "has an end_of_journey terminal"))
+    # every node has position AND positionAbsolute with x/y (editor reads .x on both)
+    bad_pos = []
+    for e in rjd["elements"]:
+        if e.get("type") in ("source", "action", "exit"):
+            for key in ("position", "positionAbsolute"):
+                p = e.get(key)
+                if not isinstance(p, dict) or "x" not in p or "y" not in p:
+                    bad_pos.append(f"{(e.get('data') or {}).get('name')}::{key}")
+    checks.append((not bad_pos, f"every node has position + positionAbsolute ({bad_pos or 'none'})"))
     return checks
 
 
