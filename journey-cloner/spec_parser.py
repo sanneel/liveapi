@@ -188,6 +188,17 @@ def parse_spec(text: str) -> ParsedSpec:
                 spec.sms.enabled = _row_bool(row)
             elif channel == _EMAIL:
                 spec.email.enabled = _row_bool(row)
+
+            # Extract field name if label is "Channel FieldName" (e.g., "Notification Title")
+            # or "Channel (descriptor) FieldName" (e.g., "Notification Pop-up (Cat-fish) Title")
+            field_name = label[len(next(prefix for prefix in _KNOWN_CHANNEL_PREFIXES if label.lower().startswith(prefix))):].strip()
+            # Remove descriptor in parentheses (e.g., "(Cat-fish)")
+            field_name = re.sub(r'\s*\([^)]*\)\s*', ' ', field_name).strip()
+            if field_name:
+                values = _row_values(row)
+                en = values[0] if len(values) >= 1 else ""
+                es = values[1] if len(values) >= 2 else en
+                field_rows[channel].append((field_name.lower(), en, es))
             continue
 
         if not current_channel:
