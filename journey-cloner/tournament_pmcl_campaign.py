@@ -58,7 +58,7 @@ from create_journeys import (
 )
 from casino_journey import chile_same_day_window, set_dates
 from spec_parser import ChannelCopy, SmsCopy, parse_spec
-from tournament_pmcl_email import EMAIL_CONTENT_ID_TOKEN, email_name, prepare_email_content
+from tournament_pmcl_email import EMAIL_CONTENT_ID_TOKEN, EMAIL_HERO_TOKEN, email_name, prepare_email_content
 
 TEMPLATE_PATH = Path(__file__).resolve().parent / "templates" / "casino" / "tournament_pmcl_comms.json"
 
@@ -496,6 +496,7 @@ def prepare_comms(
             preheader_es=email["preheader_es"],
             desc_es=email.get("desc_es", ""),
             tournament_id=tid,
+            upload_hero_image=upload_photos,
         )
         email_act = find_email(body)
         update_email_activity(email_act, content_name)
@@ -532,8 +533,9 @@ def verify(body: dict, tournament_id: str, upload_photos: bool) -> list[tuple[bo
     if upload_photos:
         checks.append((NC_ICON_TOKEN in serialized, "NC icon placeholder present (filled at paste time)"))
         checks.append((POPUP_BG_TOKEN in serialized, "Pop-up background placeholder present (filled at paste time)"))
+        checks.append((EMAIL_HERO_TOKEN in serialized, "Email hero image placeholder present (filled at paste time)"))
     else:
-        checks.append((NC_ICON_TOKEN not in serialized and POPUP_BG_TOKEN not in serialized,
+        checks.append((NC_ICON_TOKEN not in serialized and POPUP_BG_TOKEN not in serialized and EMAIL_HERO_TOKEN not in serialized,
                        "no photo placeholders (template image URLs kept)"))
     sms_act = next((a for a in body.get("activities", []) if a.get("activityName") == "dextra_sms"), None)
     sms_body = ((sms_act or {}).get("initializationData") or {}).get("smsSettings", {}).get("messageText", "")

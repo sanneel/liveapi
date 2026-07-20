@@ -14,12 +14,12 @@ change run to run:
   * body copy -> the spec's Email "Description" (ES) — the single editable
                  paragraph block in the captured template
   * link      -> the Smartico tournament deeplink id (swapped in both places)
+  * hero img  -> the uploaded photo (the @@EMAIL_HERO_URL@@ token, filled at
+                 paste time after the upload, like NC icon / Pop-up bg)
 
-The hero/footer images are kept from the template (the sheet supplies copy,
-not new artwork). This module only builds the substituted content body; the
-live create -> save -> publish calls happen in the console script at paste
-time, which swaps the resulting content id into the journey payload via
-EMAIL_CONTENT_ID_TOKEN.
+This module only builds the substituted content body; the live create -> save ->
+publish calls happen in the console script at paste time, which swaps the
+resulting content id into the journey payload via EMAIL_CONTENT_ID_TOKEN.
 """
 from __future__ import annotations
 
@@ -34,12 +34,18 @@ from email_content import EMAIL_CONTENT_ID_TOKEN  # noqa: F401  (re-exported)
 
 EMAIL_TEMPLATE_PATH = Path(__file__).resolve().parent / "templates" / "casino" / "tournament_pmcl_email.json"
 
+# Paste-time placeholder for the uploaded hero photo (swapped in by the
+# console script after the upload, like the NC icon / Pop-up background)
+EMAIL_HERO_TOKEN = "@@EMAIL_HERO_URL@@"
+
 # The single editable body paragraph in the captured template. Its inner HTML
 # (emoji lines joined by <br><br>) is what the sheet's Email "Description"
 # replaces. Verified unique in the captured source.
 _DESC_OPEN = '<p style="margin:0 0 20px 0; font-size:16px;">'
 _DESC_RE = re.compile(re.escape(_DESC_OPEN) + r".*?</p>", re.DOTALL)
 _LINK_ID_RE = re.compile(r"(_smartico_dp=dp:[A-Za-z0-9_]+&id=)\d+")
+# Hero image URL in the topimg section (the main banner image)
+_HERO_IMG_RE = re.compile(r'<img src="https://\{\{cdn_hostname\}\}/73b22051-b16d-46e3-90cb-eeb045f59eea/9278b1e0-8f37-42b2-b988-95cf08112a7c\.png"[^>]*>')
 
 
 def email_name(date_str: str) -> str:
@@ -68,8 +74,13 @@ def prepare_email_content(
     preheader_es: str,
     desc_es: str,
     tournament_id: str = "",
+    upload_hero_image: bool = False,
 ) -> dict:
-    """Return the email-content payload for POST .../email/contents."""
+    """Return the email-content payload for POST .../email/contents.
+
+    When upload_hero_image is True, the hero image URL is replaced with
+    EMAIL_HERO_TOKEN for the console script to fill in after upload.
+    """
     content = json.loads(EMAIL_TEMPLATE_PATH.read_text(encoding="utf-8"))
     content["name"] = email_name(date_str)
 
@@ -82,5 +93,8 @@ def prepare_email_content(
         src = _DESC_RE.sub(lambda _m: _desc_to_html(desc_es), src, count=1)
     if tournament_id.strip():
         src = _LINK_ID_RE.sub(r"\g<1>" + tournament_id.strip(), src)
+    if upload_hero_image:
+        # Replace the hero image with a placeholder token
+        src = _HERO_IMG_RE.sub(f'<img src="{EMAIL_HERO_TOKEN}" alt="" style="border-radius: 10px; border: none; width: 100%; max-width: 100%; height: auto;  outline: none; text-decoration: none;display:block;" width="100%">', src)
     comp["body"]["source"] = src
     return content
