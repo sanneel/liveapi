@@ -114,6 +114,43 @@ RECIPES: dict[str, Recipe] = {
                 "raw", "entry promocode players redeem"),
         },
     ),
+    # A casino reward chain — deposit-match freespins + wagering bonus. Its reward
+    # nodes live nested inside gow.json's multipurpose_promotion choosable flow,
+    # so this is the de-nesting path (place() strips parentNode/extent).
+    "casino_deposit_freespins": Recipe(
+        key="casino_deposit_freespins",
+        reference="casino/gow.json",
+        chain=[
+            Node("external_system_source", "PlayerAdded", "Entry"),
+            Node("deposit", "DepositConditionSatisfied", "Deposit gate"),
+            Node("promotion", "PromotionAccepted", "Offer"),
+            Node("freespin_bonus", "FreespinBonusCollectingFinished", "Free spins"),
+            Node("casino_bonus_v2", "WageringBonusFinished", "Wagering bonus"),
+        ],
+        knobs={
+            "deposit_min_clp": Knob(
+                "deposit", "initializationData.depositConditions.minDepositAmounts.0.amount",
+                "minor", "minimum deposit to unlock, in CLP"),
+            "spins": Knob(
+                "freespin_bonus", "initializationData.freespinActivity.spins",
+                "raw", "number of free spins granted"),
+            "spin_bet_clp": Knob(
+                "freespin_bonus", "initializationData.freespinActivity.currenciesConfig.CLP.betAmount",
+                "minor", "bet value per spin, in CLP"),
+            "bonus_percent": Knob(
+                "casino_bonus_v2", "initializationData.bonusPercent",
+                "raw", "deposit-match percent (100 = 100%)"),
+            "wagering_x": Knob(
+                "casino_bonus_v2", "initializationData.wageringRequirement",
+                "raw", "wagering multiplier (e.g. 30 = x30)"),
+            "bonus_expiry_ms": Knob(
+                "casino_bonus_v2", "initializationData.bonusExpirationTime",
+                "raw", "bonus validity in milliseconds (172800000 = 48h)"),
+            "release_limit_x": Knob(
+                "casino_bonus_v2", "initializationData.releaseLimitMultiplier",
+                "raw", "max cashout as a multiple of the bonus"),
+        },
+    ),
 }
 
 
@@ -197,9 +234,13 @@ def compose(recipe: Recipe, values: dict | None = None) -> tuple[dict, str, list
         el["id"] = new
         pos = {"x": 0, "y": i * 170}
         el["position"], el["positionAbsolute"] = dict(pos), dict(pos)
-        el.pop("parentNode", None)
+        el.pop("parentNode", None)          # de-nest from any container...
         el.pop("extent", None)
-        return el
+        d = el.get("data")
+        if isinstance(d, dict):             # ...and drop choosable-flow/branch
+            for k in ("pathes", "pathId", "pathName", "joinedPathes"):
+                d.pop(k, None)              # artifacts that don't exist in a
+        return el                           # linear journey
 
     for i, inst in enumerate(insts):
         n, old, aid = inst["node"], inst["old"], inst["aid"]

@@ -43,6 +43,47 @@
           "desc": "entry promocode players redeem"
         }
       }
+    },
+    "casino_deposit_freespins": {
+      "reference": "casino/gow.json",
+      "chain": [
+        "external_system_source",
+        "deposit",
+        "promotion",
+        "freespin_bonus",
+        "casino_bonus_v2",
+        "end_of_journey"
+      ],
+      "knobs": {
+        "deposit_min_clp": {
+          "unit": "minor",
+          "desc": "minimum deposit to unlock, in CLP"
+        },
+        "spins": {
+          "unit": "raw",
+          "desc": "number of free spins granted"
+        },
+        "spin_bet_clp": {
+          "unit": "minor",
+          "desc": "bet value per spin, in CLP"
+        },
+        "bonus_percent": {
+          "unit": "raw",
+          "desc": "deposit-match percent (100 = 100%)"
+        },
+        "wagering_x": {
+          "unit": "raw",
+          "desc": "wagering multiplier (e.g. 30 = x30)"
+        },
+        "bonus_expiry_ms": {
+          "unit": "raw",
+          "desc": "bonus validity in milliseconds (172800000 = 48h)"
+        },
+        "release_limit_x": {
+          "unit": "raw",
+          "desc": "max cashout as a multiple of the bonus"
+        }
+      }
     }
   }
 }
