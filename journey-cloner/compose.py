@@ -330,6 +330,7 @@ def compose(recipe: Recipe, values: dict | None = None) -> tuple[dict, str, list
         "activitiesConfiguration": acts_cfg,
     }
     apply_values(shell, values)
+    fix_dates(shell)
     return shell, name, chain_ids
 
 
@@ -376,6 +377,61 @@ def catalog() -> dict:
             } for k, r in RECIPES.items()
         }
     }
+
+
+def fix_dates(body: dict) -> list[str]:
+    """Find and correct invalid ISO-8601 dates in the journey (stopAt, startAt, etc.).
+    Dates in the past or invalid sequences are corrected to sensible defaults.
+    Returns a log of corrections made."""
+    log = []
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    def check_date(path, val):
+        if not isinstance(val, str) or 'T' not in val:
+            return None, None
+        try:
+            if val.endswith('Z'):
+                dt = datetime.datetime.fromisoformat(val[:-1] + '+00:00')
+            else:
+                dt = datetime.datetime.fromisoformat(val)
+            return dt, dt.astimezone(datetime.timezone.utc) if dt.tzinfo else dt.replace(tzinfo=datetime.timezone.utc)
+        except (ValueError, TypeError):
+            return None, None
+
+    def to_iso_z(dt):
+        """Convert timezone-aware datetime to ISO-8601Z format (no +HH:MM)."""
+        utc = dt.astimezone(datetime.timezone.utc) if dt.tzinfo else dt.replace(tzinfo=datetime.timezone.utc)
+        return utc.replace(tzinfo=None).isoformat() + "Z"
+
+    def walk(obj, prefix=""):
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                new_prefix = f"{prefix}.{k}" if prefix else k
+                # Check date fields
+                if k in ("stopAt", "startAt") and isinstance(v, str):
+                    orig_dt, utc_dt = check_date(new_prefix, v)
+                    if utc_dt and utc_dt < now and k == "stopAt":
+                        # stopAt in the past — set to 7 days from now
+                        new_dt = (now + datetime.timedelta(days=7)).replace(microsecond=0)
+                        new_val = to_iso_z(new_dt)
+                        obj[k] = new_val
+                        log.append(f"fix {new_prefix}: past date -> {new_val}")
+                    elif utc_dt and utc_dt < now and k == "startAt":
+                        # startAt in the past — set to now
+                        new_dt = now.replace(microsecond=0)
+                        new_val = to_iso_z(new_dt)
+                        obj[k] = new_val
+                        log.append(f"fix {new_prefix}: past date -> {new_val}")
+                elif k in ("stopAt", "startAt"):
+                    walk(v, new_prefix)
+                elif isinstance(v, (dict, list)):
+                    walk(v, new_prefix)
+        elif isinstance(obj, list):
+            for i, item in enumerate(obj):
+                walk(item, f"{prefix}[{i}]")
+
+    walk(body)
+    return log
 
 
 def apply_values(body: dict, values: dict) -> list[str]:
