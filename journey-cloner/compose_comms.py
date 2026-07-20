@@ -1,22 +1,19 @@
 #!/usr/bin/env python3
-"""COMPOSE (not clone) a comms journey from the fragment library — the canvas
-experiment.
+"""COMPOSE (not clone) a comms journey — proven to render + save in REA.
 
 Chain:  dwh_source -> notification_center -> notification_center
         -> dextra_sms -> dextra_email -> end_of_journey
 
-Everything is assembled from library/fragments/*: distinct activityIds per node,
-events rewired to the new chain, the mirrored canvas (node elements with
-regenerated ports + edge elements with source/target handles), and both storage
-copies (activities[] + rawJourneyData.activitiesConfiguration). Non-graph
-scaffolding (top-level fields, empty pathes/boundary config) is taken from the
-smallest real comms journey (nc_discount) so only the SYNTHESIZED CANVAS is
-under test.
+Every node, config, edge and the shell are taken from ONE real comms journey
+that renders (gow_comms), then rewired into this chain with fresh ids and an
+auto-layout. Sourcing from a single rendering journey avoids node-schema mixing
+(the blank-canvas trap). See COMPOSER_RULES.md for the full rule set learned
+here (position+positionAbsolute on every node, de-nest parentNode, keep edge
+eventDisplayName/payloadKeys, set a start trigger).
 
 Emits console_scripts/comms_composed_console.js — paste into a logged-in
 backoffice tab. It captures the token, reserves a JRN id, freshens ids, and
-POSTs one draft.  Purpose: does the platform accept a composed/auto-laid-out
-canvas?
+POSTs one draft.
 """
 from __future__ import annotations
 

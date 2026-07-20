@@ -125,7 +125,12 @@ async def planner_api(
     body = {
         "system_instruction": {"parts": [{"text": system_prompt}]},
         "contents": contents,
-        "generationConfig": {"temperature": temperature, "maxOutputTokens": 8192},
+        "generationConfig": {
+            "temperature": temperature,
+            "maxOutputTokens": 8192,
+            # Disable (or cap) 2.5-flash "thinking" — biggest cost lever.
+            "thinkingConfig": {"thinkingBudget": settings.gemini_thinking_budget},
+        },
     }
     url = GEMINI_URL.format(model=settings.gemini_model)
 

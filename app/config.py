@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     # never shipped to the browser; used by app/routes/admin_planner.py.
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.0-flash"
+    # 2.5-flash runs "thinking" by default — those tokens bill at the output
+    # rate and dominate cost. 0 disables it (planner needs no chain-of-thought);
+    # raise it only if answer quality needs it.
+    gemini_thinking_budget: int = 0
 
     # ── Database ──────────────────────────────────────────────────────
     database_url: str = f"sqlite:///{BASE_DIR / 'data' / 'jugabet.db'}"
