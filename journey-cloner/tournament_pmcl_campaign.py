@@ -72,6 +72,7 @@ BRAND = "PMCL"
 # --folder-id is given; otherwise the template's existing URLs are kept).
 NC_ICON_TOKEN = "@@NC_ICON_URL@@"
 POPUP_BG_TOKEN = "@@POPUP_BG_URL@@"
+EMAIL_HERO_TOKEN = "@@EMAIL_HERO_URL@@"
 RESERVED_ID_TOKEN = "DRY-RUN-TOURNAMENT-PMCL"
 
 # The tournament comms entry window is always same-day 12:00 -> 19:00 Chile
@@ -153,6 +154,44 @@ def update_email_activity(activity: dict, content_name: str) -> None:
     settings["template"] = {"id": EMAIL_CONTENT_ID_TOKEN}
     settings["emailSource"] = "Template"
     init["displayData"] = [f"{EMAIL_CONTENT_ID_TOKEN} {content_name}"]
+
+
+def find_wait_date_activities(body: dict) -> list[dict]:
+    """Find all wait_date activities in the journey."""
+    return [a for a in body.get("activities", []) if a.get("activityName") == "wait_date"]
+
+
+def calc_tournament_days(start_date: str, end_date: str) -> int:
+    """Calculate days between start and end dates (YYYY-MM-DD format).
+    Includes both start and end dates (e.g., July 20-26 = 7 days)."""
+    from datetime import datetime
+    start = datetime.strptime(start_date, "%Y-%m-%d")
+    end = datetime.strptime(end_date, "%Y-%m-%d")
+    delta = (end - start).days
+    return delta + 1  # Include both endpoints
+
+
+def update_wait_date(activity: dict, wait_until_iso: str) -> None:
+    """Update a wait_date activity to wait until a specific date (ISO 8601).
+    Assumes wait until start of day (00:00 UTC)."""
+    init = activity["initializationData"]
+    # Parse the ISO date and set waitTo to that date at 16:00 UTC (12:00 Chile)
+    date_part = wait_until_iso.split("T")[0]
+    init["waitTo"] = f"{date_part}T16:00:00Z"
+    # Update display data (DD.MM.YY format)
+    parts = date_part.split("-")
+    if len(parts) == 3:
+        year = parts[0][2:]  # Last 2 digits of year
+        init["displayData"] = [f"{parts[2]}.{parts[1]}.{year}"]
+
+
+def update_notification_revoke(activity: dict, days: int) -> None:
+    """Update notification revoke period (expire_after) based on tournament days."""
+    init = activity["initializationData"]
+    obj = init.get("objectForSend", {})
+    if obj:
+        # Format: "D.HH:MM:SS.mmm"
+        obj["expire_after"] = f"{days}.00:00:00.000"
 
 
 def template_link(body: dict) -> tuple[str, str]:
@@ -366,6 +405,8 @@ def prepare_comms(
     popup: dict[str, str],
     sms: dict[str, str],
     upload_photos: bool,
+    tournament_start_date: str = "",
+    tournament_end_date: str = "",
     email: dict[str, str] | None = None,
 ) -> tuple[dict, list[str], datetime, datetime, dict | None]:
     body = json.loads(TEMPLATE_PATH.read_text(encoding="utf-8-sig"))
@@ -430,6 +471,21 @@ def prepare_comms(
     update_sms(sms_act, text_en=sms["text_en"], text_es=sms["text_es"], link=sms_url)
     mirror_into_raw_journey_data(body, sms_act)
     report.append("SMS: body + tournament link set for EN/ES")
+
+    # Update wait_date activities and notification revoke period if tournament dates provided
+    if tournament_start_date and tournament_end_date:
+        wait_acts = find_wait_date_activities(body)
+        if len(wait_acts) >= 2:
+            update_wait_date(wait_acts[0], tournament_start_date)
+            update_wait_date(wait_acts[1], tournament_end_date)
+            report.append(f"Wait/Date activities: updated to tournament window {tournament_start_date} → {tournament_end_date}")
+
+        # Update notification revoke period based on tournament duration
+        tournament_days = calc_tournament_days(tournament_start_date, tournament_end_date)
+        update_notification_revoke(notif_act, tournament_days)
+        report.append(f"Notification revoke: set to {tournament_days} days (tournament duration)")
+    else:
+        report.append("⚠ Tournament start/end dates not provided — Wait/Date activities and notification revoke use template defaults")
 
     email_content = None
     if email:
@@ -763,6 +819,8 @@ def main() -> int:
         popup=popup_dict_from_spec(spec.popup),
         sms=sms_dict_from_spec(spec.sms),
         upload_photos=upload_photos,
+        tournament_start_date=spec.tournament_start_date,
+        tournament_end_date=spec.tournament_end_date,
         email=email_dict_from_spec(spec),
     )
 
