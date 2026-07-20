@@ -93,6 +93,15 @@ def build_body() -> tuple[dict, str, list]:
         pos = {"x": 0, "y": i * 170}
         node_el["position"] = dict(pos)
         node_el["positionAbsolute"] = dict(pos)   # editor reads positionAbsolute.x
+        # Normalize to the MODERN node schema. Fragments pulled from older
+        # journeys (gow_comms) lack nodeType/order/type/boundaryDefinition, and
+        # the editor's layout pass then can't place them (reads .x of undefined).
+        d = node_el.setdefault("data", {})
+        d["nodeType"] = "source" if node_el.get("type") == "source" else "action"
+        d["order"] = i
+        d.setdefault("boundaryDefinition", False)
+        if not d.get("type"):
+            d["type"] = d.get("activityType") or "communication"
         elements.append(node_el)
 
     # terminal
@@ -200,6 +209,14 @@ def verify(body: dict) -> list[tuple[bool, str]]:
                 if not isinstance(p, dict) or "x" not in p or "y" not in p:
                     bad_pos.append(f"{(e.get('data') or {}).get('name')}::{key}")
     checks.append((not bad_pos, f"every node has position + positionAbsolute ({bad_pos or 'none'})"))
+    # every source/action node has the modern schema fields the editor lays out by
+    bad_schema = []
+    for e in rjd["elements"]:
+        if e.get("type") in ("source", "action"):
+            d = e.get("data") or {}
+            if d.get("nodeType") is None or d.get("order") is None or not d.get("type"):
+                bad_schema.append((d.get("name"), sorted(d.keys())))
+    checks.append((not bad_schema, f"every node has nodeType+order+type ({bad_schema or 'none'})"))
     return checks
 
 
