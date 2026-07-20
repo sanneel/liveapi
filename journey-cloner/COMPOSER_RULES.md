@@ -77,3 +77,19 @@ Every journey is stored twice and both must agree (`activities[]` runtime +
 The remaining unknown is only ever discovered from a HAR of the created draft —
 open it, export HAR, diff the stored node/edge shapes against a journey that
 renders. That workflow found rules 1–3 above.
+
+## Knobs (values you change per campaign)
+
+`extract_knobs.py` → `library/knobs.json`: per activity, the tunable leaf paths
+(dotted, relative to the activity object) with example value + type, plus the
+`external_refs` to KEEP and the `source_template` each path came from.
+
+- Feed a path to `compose.py`'s `apply_values` via `values["set"][activityName]
+  [dotted.path] = value` — see the deposit example in the test loop.
+- **Knob paths are per-reference-journey.** The same activity can be shaped
+  differently in different journeys (e.g. freebet is `properties.freeBetMaxAmount
+  .CLP` in colocolo but `properties.freeBetAmount.CLP` in two_hours). Extract
+  knobs from — or validate them against — the SAME reference a recipe uses.
+- `apply_values` logs `MISS` for a path that doesn't exist and moves on; it
+  never crashes the build. Check the log before trusting an override landed.
+- CLP amounts are minor units (×100): `10000` = $100.
