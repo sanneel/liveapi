@@ -62,66 +62,81 @@ def _swap(obj, old: str, new: str):
     return json.loads(json.dumps(obj, ensure_ascii=False).replace(old, new))
 
 
+REF = HERE / "templates" / "casino" / "gow_comms.json"   # a comms journey that RENDERS
+
+
+def _ref_body() -> dict:
+    b = json.load(open(REF, encoding="utf-8"))
+    return b.get("body", b)
+
+
 def build_body() -> tuple[dict, str, list]:
-    nodes = []
+    """Reproduce a rendering journey's exact node/edge shapes. Every node,
+    config, edge and the shell come from ONE real comms journey (gow_comms) so
+    there is zero schema mixing — we only rewire the chain and regenerate ids."""
+    ref = _ref_body()
+    by_name: dict = {}
+    for a in ref["activities"]:
+        by_name.setdefault(a.get("activityName"), a)          # first of each type
+    ref_cfg = ref["rawJourneyData"].get("activitiesConfiguration", {}) or {}
+    ref_els = ref["rawJourneyData"]["elements"]
+    node_by_id = {e["id"]: e for e in ref_els
+                  if e.get("type") in ("source", "action", "exit")}
+    edge_tpl = next(e for e in ref_els if e.get("type") == "default")
+
+    insts = []
     for name, primary, ptype in CHAIN:
-        frag = _load(name)
-        nodes.append({
-            "name": name, "primary": primary, "ptype": ptype,
-            "old": frag["activity"]["activityId"], "aid": _nid(), "frag": frag,
-        })
-    end_frag = _load("end_of_journey")
-    end_aid = _nid()
-    chain_ids = [n["aid"] for n in nodes] + [end_aid]
+        a = by_name[name]
+        insts.append({"name": name, "primary": primary, "ptype": ptype,
+                      "old": a["activityId"], "aid": _nid()})
+    end_a = by_name["end_of_journey"]
+    end_old, end_aid = end_a["activityId"], _nid()
+    chain_ids = [x["aid"] for x in insts] + [end_aid]
 
     activities, acts_cfg, elements = [], {}, []
 
-    for i, nd in enumerate(nodes):
-        old, aid, frag = nd["old"], nd["aid"], nd["frag"]
-        act = _swap(frag["activity"], old, aid)
+    def place(node_el, old, new, i):
+        el = _swap(node_el, old, new)
+        el["id"] = new
+        pos = {"x": 0, "y": i * 170}
+        el["position"] = dict(pos)
+        el["positionAbsolute"] = dict(pos)     # editor reads positionAbsolute.x
+        el.pop("parentNode", None)             # de-nest (gow_comms NC sits in a
+        el.pop("extent", None)                 # boundary container we don't have)
+        return el
+
+    for i, nd in enumerate(insts):
+        old, aid = nd["old"], nd["aid"]
+        act = _swap(by_name[nd["name"]], old, aid)
         nxt = chain_ids[i + 1]
         for ev in act.get("events", []) or []:
             ev["nextActivityId"] = nxt if ev.get("eventName") == nd["primary"] else None
-        act["activityDisplayName"] = LABELS.get(nd["name"], nd["name"])
         activities.append(act)
+        if old in ref_cfg:
+            acts_cfg[aid] = _swap(ref_cfg[old], old, aid)
+        elements.append(place(node_by_id[old], old, aid, i))
 
-        if frag.get("config") is not None:
-            acts_cfg[aid] = _swap(frag["config"], old, aid)
-
-        node_el = _swap(frag["node"], old, aid)
-        node_el["id"] = aid
-        pos = {"x": 0, "y": i * 170}
-        node_el["position"] = dict(pos)
-        node_el["positionAbsolute"] = dict(pos)   # editor reads positionAbsolute.x
-        # Normalize to the MODERN node schema. Fragments pulled from older
-        # journeys (gow_comms) lack nodeType/order/type/boundaryDefinition, and
-        # the editor's layout pass then can't place them (reads .x of undefined).
-        d = node_el.setdefault("data", {})
-        d["nodeType"] = "source" if node_el.get("type") == "source" else "action"
-        d["order"] = i
-        d.setdefault("boundaryDefinition", False)
-        if not d.get("type"):
-            d["type"] = d.get("activityType") or "communication"
-        elements.append(node_el)
-
-    # terminal
-    end_act = _swap(end_frag["activity"], end_frag["activity"]["activityId"], end_aid)
+    # terminal — reuse gow_comms' own end_of_journey node + activity
+    end_act = _swap(end_a, end_old, end_aid)
     end_act["events"] = []
     activities.append(end_act)
-    elements.append({
-        "id": end_aid,
-        "data": {"name": "end_of_journey",
-                 "ports": [{"id": f"input-{end_aid}"}], "width": 40, "height": 40},
-        "type": "exit", "style": {"cursor": "default"}, "width": 40, "height": 40,
-        "hidden": False, "zIndex": 5,
-        "position": {"x": 0, "y": len(nodes) * 170},
-        "positionAbsolute": {"x": 0, "y": len(nodes) * 170},   # editor reads .x on every node
-        "selected": False, "draggable": False, "connectable": False,
-    })
+    if end_old in node_by_id:
+        elements.append(place(node_by_id[end_old], end_old, end_aid, len(insts)))
+    else:
+        elements.append({
+            "id": end_aid,
+            "data": {"name": "end_of_journey",
+                     "ports": [{"id": f"input-{end_aid}"}], "width": 40, "height": 40},
+            "type": "exit", "style": {"cursor": "default"}, "width": 40, "height": 40,
+            "hidden": False, "zIndex": 5,
+            "position": {"x": 0, "y": len(insts) * 170},
+            "positionAbsolute": {"x": 0, "y": len(insts) * 170},
+            "selected": False, "draggable": False, "connectable": False,
+        })
 
-    # forward edges (primary chain)
-    edge_tpl = _load("_edge")
-    for i, nd in enumerate(nodes):
+    # forward edges (primary chain) — stamped from a real gow_comms edge so they
+    # keep eventDisplayName/payloadKeys the renderer expects
+    for i, nd in enumerate(insts):
         frm, to = nd["aid"], chain_ids[i + 1]
         e = copy.deepcopy(edge_tpl)
         e["id"] = _nid()
@@ -130,12 +145,10 @@ def build_body() -> tuple[dict, str, list]:
         e["targetHandle"] = f"input-{to}"
         d = e.setdefault("data", {})
         d["eventName"], d["eventType"], d["activityName"] = nd["primary"], nd["ptype"], nd["name"]
-        d.pop("eventDisplayName", None)
         elements.append(e)
 
-    # scaffolding shell from the smallest real comms journey
-    shell = json.load(open(SHELL, encoding="utf-8"))
-    shell = shell.get("body", shell)
+    # shell = gow_comms itself (a rendering comms journey)
+    shell = _ref_body()
     for k in ("duplicatedFromId", "duplicatedFromVersion", "changeHistory"):
         shell.pop(k, None)
 
@@ -166,7 +179,7 @@ def build_body() -> tuple[dict, str, list]:
         "exitCriteriaSettings": None,
         "activitiesConfiguration": acts_cfg,
     }
-    return shell, name, [n["aid"] for n in nodes] + [end_aid]
+    return shell, name, chain_ids
 
 
 def verify(body: dict) -> list[tuple[bool, str]]:
@@ -209,14 +222,6 @@ def verify(body: dict) -> list[tuple[bool, str]]:
                 if not isinstance(p, dict) or "x" not in p or "y" not in p:
                     bad_pos.append(f"{(e.get('data') or {}).get('name')}::{key}")
     checks.append((not bad_pos, f"every node has position + positionAbsolute ({bad_pos or 'none'})"))
-    # every source/action node has the modern schema fields the editor lays out by
-    bad_schema = []
-    for e in rjd["elements"]:
-        if e.get("type") in ("source", "action"):
-            d = e.get("data") or {}
-            if d.get("nodeType") is None or d.get("order") is None or not d.get("type"):
-                bad_schema.append((d.get("name"), sorted(d.keys())))
-    checks.append((not bad_schema, f"every node has nodeType+order+type ({bad_schema or 'none'})"))
     return checks
 
 
