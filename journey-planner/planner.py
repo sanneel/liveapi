@@ -1,0 +1,147 @@
+#!/usr/bin/env python3
+"""
+REA Journey Planner MVP — reads a campaign brief and outputs a setup plan.
+
+Usage:
+    python planner.py brief.txt              # read brief from file
+    python planner.py                        # paste brief, Ctrl+D to submit
+    python planner.py --provider gemini brief.txt   # use Gemini instead of Groq
+
+Providers (all have free tiers):
+    groq     — Llama 3.1 70B on Groq (default, fastest)
+    gemini   — Gemini 1.5 Flash (largest context window)
+    ollama   — local model via Ollama (no API key needed)
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+
+# The system prompt template has placeholders for the knowledge base docs.
+SYSTEM_PROMPT_TEMPLATE = (SCRIPT_DIR / "system_prompt.txt").read_text(encoding="utf-8")
+KNOWLEDGE_BASE = (SCRIPT_DIR / "REA_KNOWLEDGE_BASE.md").read_text(encoding="utf-8")
+CAPTURE_BACKLOG = (SCRIPT_DIR / "REA_CAPTURE_BACKLOG_CHECKLIST.md").read_text(encoding="utf-8")
+
+SYSTEM_PROMPT = (
+    SYSTEM_PROMPT_TEMPLATE
+    .replace("<KNOWLEDGE_BASE>\n</KNOWLEDGE_BASE>", KNOWLEDGE_BASE)
+    .replace("<CAPTURE_BACKLOG>\n</CAPTURE_BACKLOG>", CAPTURE_BACKLOG)
+)
+
+
+def plan_groq(brief: str) -> str:
+    """Groq free tier — Llama 3.1 70B. Get key at console.groq.com"""
+    import os
+
+    try:
+        from groq import Groq
+    except ImportError:
+        sys.exit("pip install groq")
+
+    key = os.environ.get("GROQ_API_KEY", "")
+    if not key:
+        sys.exit("Set GROQ_API_KEY env var (free at console.groq.com)")
+
+    client = Groq(api_key=key)
+    r = client.chat.completions.create(
+        model="llama-3.1-70b-versatile",
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": brief},
+        ],
+        max_tokens=4000,
+        temperature=0.2,
+    )
+    return r.choices[0].message.content
+
+
+def plan_gemini(brief: str) -> str:
+    """Google Gemini free tier — Flash. Get key at aistudio.google.com"""
+    import os
+
+    try:
+        import google.generativeai as genai
+    except ImportError:
+        sys.exit("pip install google-generativeai")
+
+    key = os.environ.get("GEMINI_API_KEY", "")
+    if not key:
+        sys.exit("Set GEMINI_API_KEY env var (free at aistudio.google.com)")
+
+    genai.configure(api_key=key)
+    model = genai.GenerativeModel(
+        "gemini-1.5-flash",
+        system_instruction=SYSTEM_PROMPT,
+    )
+    r = model.generate_content(brief)
+    return r.text
+
+
+def plan_ollama(brief: str) -> str:
+    """Local Ollama — no API key needed. Run: ollama serve"""
+    import os
+
+    try:
+        import requests
+    except ImportError:
+        sys.exit("pip install requests")
+
+    host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+    model = os.environ.get("OLLAMA_MODEL", "llama3.1:8b")
+    r = requests.post(
+        f"{host}/api/generate",
+        json={"model": model, "system": SYSTEM_PROMPT, "prompt": brief, "stream": False},
+        timeout=300,
+    )
+    r.raise_for_status()
+    return r.json()["response"]
+
+
+PROVIDERS = {
+    "groq": plan_groq,
+    "gemini": plan_gemini,
+    "ollama": plan_ollama,
+}
+
+
+def main():
+    parser = argparse.ArgumentParser(description="REA Journey Planner MVP")
+    parser.add_argument("brief", nargs="?", help="Path to brief text file")
+    parser.add_argument(
+        "--provider",
+        choices=list(PROVIDERS),
+        default="groq",
+        help="LLM provider (default: groq)",
+    )
+    parser.add_argument(
+        "--show-prompt",
+        action="store_true",
+        help="Print the full system prompt and exit (for debugging)",
+    )
+    args = parser.parse_args()
+
+    if args.show_prompt:
+        print(SYSTEM_PROMPT)
+        return
+
+    if args.brief:
+        brief = Path(args.brief).read_text(encoding="utf-8")
+    else:
+        print("Paste the campaign brief, then Ctrl+D:", file=sys.stderr)
+        brief = sys.stdin.read()
+
+    if not brief.strip():
+        sys.exit("Empty brief.")
+
+    print(f"Using {args.provider}...\n", file=sys.stderr)
+    result = PROVIDERS[args.provider](brief)
+    print(result)
+
+
+if __name__ == "__main__":
+    main()
