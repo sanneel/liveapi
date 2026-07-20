@@ -46,10 +46,13 @@ def _build_system_prompt() -> str:
     tpl = (PLANNER_DIR / "system_prompt.txt").read_text(encoding="utf-8")
     kb = (PLANNER_DIR / "REA_KNOWLEDGE_BASE.md").read_text(encoding="utf-8")
     backlog = (PLANNER_DIR / "REA_CAPTURE_BACKLOG_CHECKLIST.md").read_text(encoding="utf-8")
+    corr_file = PLANNER_DIR / "corrections.md"
+    corrections = corr_file.read_text(encoding="utf-8") if corr_file.exists() else ""
     return (
         tpl
         .replace("<KNOWLEDGE_BASE>\n</KNOWLEDGE_BASE>", kb)
         .replace("<CAPTURE_BACKLOG>\n</CAPTURE_BACKLOG>", backlog)
+        .replace("<CORRECTIONS>\n</CORRECTIONS>", corrections)
     )
 
 

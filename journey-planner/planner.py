@@ -27,10 +27,17 @@ SYSTEM_PROMPT_TEMPLATE = (SCRIPT_DIR / "system_prompt.txt").read_text(encoding="
 KNOWLEDGE_BASE = (SCRIPT_DIR / "REA_KNOWLEDGE_BASE.md").read_text(encoding="utf-8")
 CAPTURE_BACKLOG = (SCRIPT_DIR / "REA_CAPTURE_BACKLOG_CHECKLIST.md").read_text(encoding="utf-8")
 
+# Optional running list of operator-taught fixes. Missing file = no corrections.
+_CORRECTIONS_FILE = SCRIPT_DIR / "corrections.md"
+CORRECTIONS = (
+    _CORRECTIONS_FILE.read_text(encoding="utf-8") if _CORRECTIONS_FILE.exists() else ""
+)
+
 SYSTEM_PROMPT = (
     SYSTEM_PROMPT_TEMPLATE
     .replace("<KNOWLEDGE_BASE>\n</KNOWLEDGE_BASE>", KNOWLEDGE_BASE)
     .replace("<CAPTURE_BACKLOG>\n</CAPTURE_BACKLOG>", CAPTURE_BACKLOG)
+    .replace("<CORRECTIONS>\n</CORRECTIONS>", CORRECTIONS)
 )
 
 

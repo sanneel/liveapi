@@ -153,9 +153,12 @@ async function loadPrompt(){
       fetch("./REA_KNOWLEDGE_BASE.md").then(r => r.ok ? r.text() : Promise.reject(r.status)),
       fetch("./REA_CAPTURE_BACKLOG_CHECKLIST.md").then(r => r.ok ? r.text() : Promise.reject(r.status)),
     ]);
+    // corrections.md is optional — missing file just means no corrections.
+    const corrections = await fetch("./corrections.md").then(r => r.ok ? r.text() : "").catch(() => "");
     SYSTEM_PROMPT = tpl
       .replace("<KNOWLEDGE_BASE>\n</KNOWLEDGE_BASE>", kb)
-      .replace("<CAPTURE_BACKLOG>\n</CAPTURE_BACKLOG>", backlog);
+      .replace("<CAPTURE_BACKLOG>\n</CAPTURE_BACKLOG>", backlog)
+      .replace("<CORRECTIONS>\n</CORRECTIONS>", corrections);
     const kchars = Math.round(SYSTEM_PROMPT.length/1000);
     promptStatus.innerHTML = `knowledge base <b>loaded</b> · ${kchars}k chars`;
     promptStatus.classList.remove("err");
