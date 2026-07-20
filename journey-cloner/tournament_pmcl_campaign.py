@@ -602,11 +602,11 @@ JS_TEMPLATE = r"""// PMCL Tournament Communications console script — generated
 //
 // Paste into the DevTools console on a logged-in PMCL backoffice tab. It will:
 //   1. capture the auth token from the page's own requests,
-//   2. (only when a media-library FOLDER_ID is baked in) pop a file picker for
-//      the NC icon, then another for the Pop-up background — each photo is
-//      uploaded to the media library and its URL written into the right slot,
+//   2. (only when a media-library FOLDER_ID is baked in) pop file pickers for:
+//      the NC icon, the Pop-up background, and the Email hero image — each photo
+//      is uploaded to the media library and its URL written into the right slot,
 //   3. reserve a journey id and create the comms journey draft
-//      (Notification + Pop-up + SMS — email is untouched, fill it by hand).
+//      (Notification + Pop-up + SMS + Email content when applicable).
 // Heavy logging throughout; it stops at the first error.
 (async () => {
   'use strict';
@@ -617,6 +617,7 @@ JS_TEMPLATE = r"""// PMCL Tournament Communications console script — generated
   const FOLDER_ID = @FOLDER_ID@;              // '' -> no photo upload, keep template images
   const NC_ICON_TOKEN = @NC_ICON_TOKEN@;
   const POPUP_BG_TOKEN = @POPUP_BG_TOKEN@;
+  const EMAIL_HERO_TOKEN = @EMAIL_HERO_TOKEN@;
   const RESERVED_ID_TOKEN = @RESERVED_ID_TOKEN@;
   const EMAIL_CONTENT = @EMAIL_CONTENT@;            // null when email is left untouched
   const EMAIL_CONTENT_ID_TOKEN = @EMAIL_CONTENT_ID_TOKEN@;
@@ -742,6 +743,10 @@ JS_TEMPLATE = r"""// PMCL Tournament Communications console script — generated
     ncIconUrl = (await uploadAsset(ncIconFile, 'NC ICON')).absolute_link;
     const popupBgFile = await pickFile('POP-UP BACKGROUND');
     popupBgUrl = (await uploadAsset(popupBgFile, 'POP-UP BACKGROUND')).absolute_link;
+    if (EMAIL_CONTENT && EMAIL_HERO_TOKEN) {
+      const emailHeroFile = await pickFile('EMAIL HERO IMAGE');
+      emailHeroUrl = (await uploadAsset(emailHeroFile, 'EMAIL HERO IMAGE')).absolute_link;
+    }
   } else {
     console.log('%cNo FOLDER_ID — keeping the template image URLs (no file pickers).', 'color:#eab308');
   }
@@ -760,6 +765,7 @@ JS_TEMPLATE = r"""// PMCL Tournament Communications console script — generated
   text = text.split(RESERVED_ID_TOKEN).join(realId);
   if (ncIconUrl) text = text.split(NC_ICON_TOKEN).join(ncIconUrl);
   if (popupBgUrl) text = text.split(POPUP_BG_TOKEN).join(popupBgUrl);
+  if (emailHeroUrl) text = text.split(EMAIL_HERO_TOKEN).join(emailHeroUrl);
   if (emailContentId) text = text.split(EMAIL_CONTENT_ID_TOKEN).join(emailContentId);
   text = regen(text);
   const body = JSON.parse(text);
@@ -787,6 +793,7 @@ def build_js(body: dict, folder_id: str = "", email_content: dict | None = None)
     js = js.replace("@FOLDER_ID@", json.dumps(folder_id or ""))
     js = js.replace("@NC_ICON_TOKEN@", json.dumps(NC_ICON_TOKEN))
     js = js.replace("@POPUP_BG_TOKEN@", json.dumps(POPUP_BG_TOKEN))
+    js = js.replace("@EMAIL_HERO_TOKEN@", json.dumps(EMAIL_HERO_TOKEN))
     js = js.replace("@RESERVED_ID_TOKEN@", json.dumps(RESERVED_ID_TOKEN))
     js = js.replace("@EMAIL_CONTENT@", json.dumps(email_content, ensure_ascii=False))
     js = js.replace("@EMAIL_CONTENT_ID_TOKEN@", json.dumps(EMAIL_CONTENT_ID_TOKEN))
@@ -859,7 +866,10 @@ def main() -> int:
     print(f"\nConsole script written: {path}")
     print("Paste it into the DevTools console on a logged-in PMCL backoffice tab.")
     if upload_photos:
-        print("Two file pickers will pop up in turn — NC icon first, then the Pop-up background.")
+        if email_content is not None:
+            print("Three file pickers will pop up in turn — NC icon, Pop-up background, then Email hero image.")
+        else:
+            print("Two file pickers will pop up in turn — NC icon first, then the Pop-up background.")
     else:
         print("No folder id given — the template's existing images are kept (no file pickers).")
     if email_content is not None:
