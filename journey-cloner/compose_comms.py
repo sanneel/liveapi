@@ -157,7 +157,7 @@ def build_body() -> tuple[dict, str, list]:
     shell["activities"] = activities
     shell["reservedJourneyId"] = "DRY-RUN-COMMS"
     shell["isUnlimited"] = True             # comms journeys are unlimited (no dates)
-    shell["isImmediatelyAfterPublish"] = False
+    shell["isImmediatelyAfterPublish"] = True   # start on publish (no warning)
     shell["startAt"] = None
     shell["stopAt"] = None
     shell["isArchived"] = False
@@ -172,7 +172,7 @@ def build_body() -> tuple[dict, str, list]:
             "journeyName": name,
             "reEntryRule": shell.get("reEntryRule"),
             "currencyCodes": shell.get("currencyCodes", ["CLP"]),
-            "isImmediatelyAfterPublish": False,
+            "isImmediatelyAfterPublish": True,
         },
         "pathesConfiguration": {},
         "boundaryConfiguration": {},
