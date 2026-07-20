@@ -48,10 +48,13 @@ def _build_system_prompt() -> str:
     backlog = (PLANNER_DIR / "REA_CAPTURE_BACKLOG_CHECKLIST.md").read_text(encoding="utf-8")
     corr_file = PLANNER_DIR / "corrections.md"
     corrections = corr_file.read_text(encoding="utf-8") if corr_file.exists() else ""
+    cat_file = REPO_ROOT / "journey-cloner" / "recipes_catalog.json"
+    catalog = cat_file.read_text(encoding="utf-8") if cat_file.exists() else "{}"
     return (
         tpl
         .replace("<KNOWLEDGE_BASE>\n</KNOWLEDGE_BASE>", kb)
         .replace("<CAPTURE_BACKLOG>\n</CAPTURE_BACKLOG>", backlog)
+        .replace("<RECIPES_CATALOG>\n</RECIPES_CATALOG>", catalog)
         .replace("<CORRECTIONS>\n</CORRECTIONS>", corrections)
     )
 

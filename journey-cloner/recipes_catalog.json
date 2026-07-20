@@ -1,0 +1,48 @@
+{
+  "recipes": {
+    "comms": {
+      "reference": "casino/gow_comms.json",
+      "chain": [
+        "dwh_source",
+        "notification_center",
+        "notification_center",
+        "dextra_sms",
+        "dextra_email",
+        "end_of_journey"
+      ],
+      "knobs": {}
+    },
+    "sport_deposit_freebet": {
+      "reference": "udch/two_hours.json",
+      "chain": [
+        "registration",
+        "deposit",
+        "promotion",
+        "freebet",
+        "end_of_journey"
+      ],
+      "knobs": {
+        "deposit_min_clp": {
+          "unit": "minor",
+          "desc": "minimum deposit to unlock the offer, in CLP"
+        },
+        "freebet_amount_clp": {
+          "unit": "minor",
+          "desc": "free-bet value in CLP"
+        },
+        "freebet_expire_days": {
+          "unit": "raw",
+          "desc": "days the free bet stays valid"
+        },
+        "freebet_max_odd": {
+          "unit": "raw",
+          "desc": "maximum odds the free bet can be used at"
+        },
+        "promocode": {
+          "unit": "raw",
+          "desc": "entry promocode players redeem"
+        }
+      }
+    }
+  }
+}

@@ -46,6 +46,16 @@ class Node:
 
 
 @dataclass
+class Knob:
+    """A named, LLM-facing value → a real dotted path on one activity. Paths are
+    validated against the recipe's OWN reference journey (they vary per journey)."""
+    activity: str
+    path: str
+    unit: str = "raw"                 # raw | minor  (minor: major CLP × 100)
+    desc: str = ""
+
+
+@dataclass
 class Recipe:
     key: str
     reference: str                    # template path under templates/, must RENDER
@@ -54,6 +64,7 @@ class Recipe:
     unlimited: bool = True
     immediate: bool = True
     terminal: str = "end_of_journey"
+    knobs: dict[str, Knob] = field(default_factory=dict)   # named -> path
 
 
 RECIPES: dict[str, Recipe] = {
@@ -84,6 +95,24 @@ RECIPES: dict[str, Recipe] = {
             Node("promotion", "PromotionAccepted", "Offer"),
             Node("freebet", "PlayerFreebetUsed", "Free bet"),
         ],
+        # Named knobs → real paths in THIS recipe's reference (udch/two_hours).
+        knobs={
+            "deposit_min_clp": Knob(
+                "deposit", "initializationData.depositConditions.minDepositAmounts.0.amount",
+                "minor", "minimum deposit to unlock the offer, in CLP"),
+            "freebet_amount_clp": Knob(
+                "freebet", "initializationData.properties.freeBetAmount.CLP",
+                "minor", "free-bet value in CLP"),
+            "freebet_expire_days": Knob(
+                "freebet", "initializationData.properties.expireInDays",
+                "raw", "days the free bet stays valid"),
+            "freebet_max_odd": Knob(
+                "freebet", "initializationData.properties.maxOdd",
+                "raw", "maximum odds the free bet can be used at"),
+            "promocode": Knob(
+                "registration", "initializationData.promocodeSettings.values.0",
+                "raw", "entry promocode players redeem"),
+        },
     ),
 }
 
@@ -263,6 +292,51 @@ def compose(recipe: Recipe, values: dict | None = None) -> tuple[dict, str, list
     return shell, name, chain_ids
 
 
+def spec_to_values(recipe: Recipe, spec: dict) -> tuple[dict, list[str]]:
+    """Translate an LLM spec {recipe, journey_name, knobs:{name:value}} into the
+    generic values dict compose() takes. Returns (values, unknown_knob_names).
+    Unit-converts CLP majors to minor units. Unknown knobs are refused, not
+    guessed (assembler discipline)."""
+    values: dict = {}
+    if spec.get("journey_name"):
+        values["journey_name"] = spec["journey_name"]
+    sets: dict = {}
+    unknown = []
+    for kname, raw in (spec.get("knobs") or {}).items():
+        knob = recipe.knobs.get(kname)
+        if not knob:
+            unknown.append(kname)
+            continue
+        val = int(round(raw * 100)) if knob.unit == "minor" else raw
+        sets.setdefault(knob.activity, {})[knob.path] = val
+    values["set"] = sets
+    return values, unknown
+
+
+def compose_from_spec(spec: dict) -> tuple[Recipe, dict, str, list[str]]:
+    key = spec.get("recipe")
+    recipe = RECIPES.get(key)
+    if not recipe:
+        raise ValueError(f"unknown recipe {key!r}; choose from {list(RECIPES)}")
+    values, unknown = spec_to_values(recipe, spec)
+    body, name, _ = compose(recipe, values)
+    return recipe, body, name, unknown
+
+
+def catalog() -> dict:
+    """Machine-readable recipe catalog for the planner LLM to emit specs against."""
+    return {
+        "recipes": {
+            k: {
+                "reference": r.reference,
+                "chain": [n.activity for n in r.chain] + [r.terminal],
+                "knobs": {kn: {"unit": v.unit, "desc": v.desc}
+                          for kn, v in r.knobs.items()},
+            } for k, r in RECIPES.items()
+        }
+    }
+
+
 def apply_values(body: dict, values: dict) -> list[str]:
     """Generic override layer. values["set"] = {"<activityName>": {"<dotted.path>": v}}
     applies into that activity's object. Returns a log. (Full knob schemas = #3.)"""
@@ -393,19 +467,39 @@ def emit(recipe: Recipe, body: dict, name: str) -> Path:
 
 
 def main() -> int:
-    if len(sys.argv) < 2 or sys.argv[1] in ("-l", "--list"):
+    args = sys.argv[1:]
+    if not args or args[0] in ("-l", "--list"):
         print("Recipes:")
         for k, r in RECIPES.items():
             chain = " -> ".join(n.activity for n in r.chain) + f" -> {r.terminal}"
             print(f"  {k:24s} [{r.reference}]  {chain}")
-        print("\nUsage: python compose.py <recipe>")
+            if r.knobs:
+                print(f"      knobs: {', '.join(r.knobs)}")
+        print("\nUsage: python compose.py <recipe>            (compose with defaults)")
+        print("       python compose.py --spec spec.json     (compose from an LLM spec)")
+        print("       python compose.py --catalog            (write recipes_catalog.json)")
         return 0
-    key = sys.argv[1]
-    if key not in RECIPES:
-        print(f"unknown recipe {key!r}; run with no args to list")
-        return 2
-    recipe = RECIPES[key]
-    body, name, _ = compose(recipe)
+
+    if args[0] == "--catalog":
+        out = HERE / "recipes_catalog.json"
+        out.write_text(json.dumps(catalog(), indent=2, ensure_ascii=False), encoding="utf-8")
+        print(f"wrote {out}")
+        return 0
+
+    unknown_knobs = []
+    if args[0] == "--spec":
+        spec = json.load(open(args[1], encoding="utf-8")) if len(args) > 1 else json.load(sys.stdin)
+        recipe, body, name, unknown_knobs = compose_from_spec(spec)
+    else:
+        key = args[0]
+        if key not in RECIPES:
+            print(f"unknown recipe {key!r}; run with no args to list")
+            return 2
+        recipe = RECIPES[key]
+        body, name, _ = compose(recipe)
+
+    if unknown_knobs:
+        print(f"  ⚠ ignored unknown knobs (not in recipe {recipe.key}): {unknown_knobs}")
     print(f"Composed: {name}")
     print(f"  activities: {len(body['activities'])}  "
           f"elements: {len(body['rawJourneyData']['elements'])}")

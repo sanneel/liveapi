@@ -19,7 +19,17 @@ MODE 2 — DETAIL. Use this when the user names specific object(s) ("journey 1",
 "the wheel", "journeys 1-4"). Write ONLY those objects, each in the full detail
 defined under OUTPUT FORMAT below. Do not re-emit the others.
 
-Apply the brief-invisible rules (§11) in BOTH modes: they shape the skeleton
+MODE 3 — SPEC. Use this when the user asks for "the spec", "machine spec",
+"build spec", or "make it runnable". Output ONLY a JSON object the composer runs
+— no prose around it. Choose a `recipe` from the RECIPES CATALOG below and fill
+`knobs` using ONLY knob names that recipe defines. Amounts are major CLP (the
+composer converts to minor units). Shape:
+  { "recipe": "<key>", "journey_name": "<name>", "knobs": { "<knob>": <value> } }
+If the campaign needs a recipe or activity the catalog does NOT contain, do NOT
+invent one — output exactly one line:
+  "⛔ UNCAPTURED — no composer recipe for <what>; build it in the UI."
+
+Apply the brief-invisible rules (§11) in Modes 1 and 2: they shape the skeleton
 (the empty-prize journey and the notify-only limited prize appear in the
 outline) and you flag them with ⚠ in Mode 1.
 
@@ -126,6 +136,17 @@ N. Create Randomizer/PromoPage (wire journey IDs into prizes)
 
 <CAPTURE_BACKLOG>
 </CAPTURE_BACKLOG>
+
+---
+
+## RECIPES CATALOG (for MODE 3 — emit specs against THIS only)
+
+The composer can build these recipes today; each lists its knob names (+ unit
+and meaning). A MODE 3 spec may use only a recipe key and knob names that appear
+here. Empty `{}` means no knobs are wired yet for that recipe.
+
+<RECIPES_CATALOG>
+</RECIPES_CATALOG>
 
 ---
 
