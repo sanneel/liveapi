@@ -83,17 +83,17 @@ async def planner_api(
         return JSONResponse(
             {"error": "Gemini key not configured. Set GEMINI_API_KEY in the .env "
                       "(or the jugabet service environment) and restart."},
-            status_code=503,
+            status_code=200,
         )
 
     try:
         payload = await request.json()
     except Exception:
-        return JSONResponse({"error": "Invalid request body."}, status_code=400)
+        return JSONResponse({"error": "Invalid request body."}, status_code=200)
 
     messages = payload.get("messages") or []
     if not isinstance(messages, list) or not messages:
-        return JSONResponse({"error": "No messages."}, status_code=400)
+        return JSONResponse({"error": "No messages."}, status_code=200)
 
     contents = []
     for m in messages[-MAX_MESSAGES:]:
@@ -102,7 +102,7 @@ async def planner_api(
         if text:
             contents.append({"role": role, "parts": [{"text": text}]})
     if not contents:
-        return JSONResponse({"error": "Empty conversation."}, status_code=400)
+        return JSONResponse({"error": "Empty conversation."}, status_code=200)
 
     try:
         temperature = float(payload.get("temperature", 0.2))
@@ -116,7 +116,7 @@ async def planner_api(
         return JSONResponse(
             {"error": f"Planner docs not found under {PLANNER_DIR}. "
                       "Make sure the journey-planner/ folder is deployed."},
-            status_code=500,
+            status_code=200,
         )
 
     body = {
@@ -130,7 +130,7 @@ async def planner_api(
         r = requests.post(url, params={"key": key}, json=body, timeout=120)
     except requests.RequestException as exc:
         logger.warning("gemini request failed: %s", exc)
-        return JSONResponse({"error": f"Upstream request failed: {exc}"}, status_code=502)
+        return JSONResponse({"error": f"Upstream request failed: {exc}"}, status_code=200)
 
     if r.status_code != 200:
         detail = ""
@@ -140,7 +140,7 @@ async def planner_api(
             detail = r.text[:300]
         logger.warning("gemini %s: %s", r.status_code, detail)
         return JSONResponse(
-            {"error": f"Gemini error {r.status_code}: {detail}"}, status_code=502
+            {"error": f"Gemini error {r.status_code}: {detail}"}, status_code=200
         )
 
     data = r.json()
