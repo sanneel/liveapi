@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     # process environment; used by app/services/figma_runner.py.
     figma_token: str = ""
 
+    # ── Journey Planner (Gemini) ─────────────────────────────────────
+    # Server-side Gemini key for the /admin/planner chat. Held here so it is
+    # never shipped to the browser; used by app/routes/admin_planner.py.
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.0-flash"
+
     # ── Database ──────────────────────────────────────────────────────
     database_url: str = f"sqlite:///{BASE_DIR / 'data' / 'jugabet.db'}"
 

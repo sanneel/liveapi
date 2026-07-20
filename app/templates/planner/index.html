@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}Journey Planner · Jugabet Admin{% endblock %}
+{% block content_theme %}content-light{% endblock %}
+{% block page_title %}Journey Planner{% endblock %}
+{% block page_subtitle %}Paste a campaign brief — the planner lays out the backoffice objects, creation order, and the platform-invisible rules it applied. Model: {{ model }}.{% endblock %}
+
+{% block content %}
+<style>
+  .jp-wrap{display:flex;flex-direction:column;height:calc(100vh - 210px);min-height:420px}
+  .jp-banner{background:#fff4d6;border:1px solid #f0d18a;color:#7a5b00;border-radius:10px;
+    padding:10px 14px;font-size:13px;margin-bottom:12px}
+  .jp-log{flex:1;overflow-y:auto;background:#fff;border:1px solid #e6e8ee;border-radius:12px;
+    padding:16px;display:flex;flex-direction:column;gap:14px}
+  .jp-empty{color:#8a93a3;text-align:center;margin:auto;max-width:520px;line-height:1.6;font-size:14px}
+  .jp-msg{display:flex;gap:10px}
+  .jp-role{font-size:11px;color:#8a93a3;text-transform:uppercase;letter-spacing:.5px;min-width:60px;padding-top:5px}
+  .jp-bubble{border:1px solid #e6e8ee;border-radius:10px;padding:10px 13px;flex:1;overflow-x:auto}
+  .jp-msg.user .jp-bubble{background:#eef3fb;border-color:#d6e2f7}
+  .jp-msg.model .jp-bubble{background:#fafbfc}
+  .jp-bubble pre{margin:0;font-family:"SFMono-Regular",Consolas,Menlo,monospace;font-size:12.5px;
+    line-height:1.5;white-space:pre-wrap;word-break:break-word}
+  .jp-bubble .u{white-space:pre-wrap;line-height:1.5;font-size:14px}
+  .jp-warn{color:#b7791f}.jp-uncap{color:#c0392b;font-weight:600}.jp-q{color:#2b6cb0}.jp-head{color:#111;font-weight:600}
+  .jp-tools{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 8px}
+  .jp-tools button{cursor:pointer;border:1px solid #d7dae0;background:#fff;color:#333;border-radius:8px;
+    padding:6px 11px;font-size:12px;font-weight:500}
+  .jp-tools button:hover{border-color:#4c8bf5}
+  .jp-composer{display:flex;gap:8px;align-items:flex-end}
+  .jp-composer textarea{flex:1;resize:vertical;min-height:52px;max-height:220px;border:1px solid #d7dae0;
+    border-radius:8px;padding:10px 12px;font-size:14px;font-family:inherit;line-height:1.4}
+  .jp-send{cursor:pointer;border:none;background:#4c8bf5;color:#fff;border-radius:8px;padding:10px 18px;font-size:14px;font-weight:600}
+  .jp-send:hover{background:#3567c4}.jp-send:disabled{opacity:.5;cursor:not-allowed}
+  .jp-hint{color:#8a93a3;font-size:12px;margin-top:6px;min-height:16px}
+  .jp-dots::after{content:"planning…";color:#4c8bf5}
+</style>
+
+<div class="jp-wrap">
+  {% if not docs_present %}
+    <div class="jp-banner" style="background:#fde8e8;border-color:#f5b5b5;color:#a12020">
+      ⚠ journey-planner/ docs not found on the server — the planner can't load its knowledge base.
+    </div>
+  {% elif not key_configured %}
+    <div class="jp-banner">
+      ⚠ No Gemini key configured. Add <code>GEMINI_API_KEY=…</code> to the <code>.env</code>
+      (or the jugabet service environment) and restart the service.
+    </div>
+  {% endif %}
+
+  <div class="jp-log" id="jpLog">
+    <div class="jp-empty" id="jpEmpty">
+      Click <b>＋ Insert birthday brief</b> to try the sample campaign, or paste your own brief below.<br><br>
+      After the first plan you can ask follow-ups — the conversation keeps context.
+    </div>
+  </div>
+
+  <div class="jp-tools">
+    <button type="button" id="jpInsert">＋ Insert birthday brief</button>
+    <button type="button" id="jpClear">🗑 Clear</button>
+    <button type="button" id="jpCopy">⧉ Copy last reply</button>
+  </div>
+
+  <div class="jp-composer">
+    <textarea id="jpInput" placeholder="Paste a campaign brief, or ask a follow-up…  (Enter to send · Shift+Enter for newline)"></textarea>
+    <button class="jp-send" id="jpSend" type="button">Send</button>
+  </div>
+  <div class="jp-hint" id="jpHint"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const log = document.getElementById("jpLog"),
+        empty = document.getElementById("jpEmpty"),
+        input = document.getElementById("jpInput"),
+        sendBtn = document.getElementById("jpSend"),
+        hint = document.getElementById("jpHint");
+  const history = [];
+  let busy = false;
+
+  // Sample brief inlined so the button works without an extra fetch/route.
+  const BRIEF = `CAMPAIGN BRIEF — "Spin the Wheel — 3 Years JugaBet"
+
+Brand: JugaBet Chile (JBCL)
+Currency: CLP
+Runs: 01 July – 31 July 2025 (Chile time)
+
+WHAT WE WANT
+We're turning 3 years old. We want a birthday Fortune Wheel on the site that
+every visitor can play — including people who are just browsing and haven't
+logged in yet. Each player gets one spin.
+
+WHEEL PRIZES
+1. Free Spins — 100 free spins on "La Gran Copa JugaBet" (jugabet-games). No
+   wagering, spins expire in 24h. This should be the prize most people land on.
+2. Sport Free Bet — a $5.000 CLP free bet, no conditions. Roughly a third of
+   spins.
+3. Birthday Physical Gift — a limited anniversary hamper. We only have 3 of
+   them for the whole campaign. Winners are contacted by the CRM team and the
+   gift is shipped manually. Make this extremely rare.
+
+DEPOSIT FOLLOW-UP (CASINO)
+For players who make a deposit of at least $10.000 CLP after playing the wheel,
+reward them with a birthday casino package:
+  - 300 free spins on "La Gran Copa JugaBet", delivered as 100 free spins per
+    day across 3 days.
+  - Plus a 100% deposit-match casino bonus, x30 wagering, valid 48h.
+Notify them on-site and by email when the package lands.
+
+DEPOSIT FOLLOW-UP (SPORT)
+For players who deposit at least $10.000 CLP, also offer a 30% match sport free
+bet. Notify on-site and by email.
+
+NOTES
+- Landing URL should be short and birthday-themed.
+- Keep it live for the whole of July.`;
+
+  function esc(s){ return s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+  function renderModel(text){
+    const lines = esc(text).split("\n").map(line => {
+      if(/⚠/.test(line)) return `<span class="jp-warn">${line}</span>`;
+      if(/⛔/.test(line)) return `<span class="jp-uncap">${line}</span>`;
+      if(/❓/.test(line)) return `<span class="jp-q">${line}</span>`;
+      if(/^\s*━|^\s*CAMPAIGN:|^\s*[A-Z ]{4,}━/.test(line)) return `<span class="jp-head">${line}</span>`;
+      return line;
+    }).join("\n");
+    return `<pre>${lines}</pre>`;
+  }
+
+  function addMsg(role, text){
+    empty.style.display = "none";
+    const msg = document.createElement("div"); msg.className = "jp-msg " + role;
+    const rl = document.createElement("div"); rl.className = "jp-role"; rl.textContent = role === "user" ? "you" : "planner";
+    const bub = document.createElement("div"); bub.className = "jp-bubble";
+    if(role === "user"){ const d = document.createElement("div"); d.className="u"; d.textContent = text; bub.appendChild(d); }
+    else { bub.innerHTML = renderModel(text); }
+    msg.appendChild(rl); msg.appendChild(bub); log.appendChild(msg);
+    log.scrollTop = log.scrollHeight;
+    return bub;
+  }
+
+  async function send(){
+    if(busy) return;
+    const text = input.value.trim();
+    if(!text) return;
+    hint.textContent = "";
+    addMsg("user", text);
+    history.push({ role: "user", text });
+    input.value = "";
+    busy = true; sendBtn.disabled = true;
+    const bub = addMsg("model", ""); bub.innerHTML = '<span class="jp-dots"></span>';
+    try{
+      const res = await fetch("/admin/planner/api", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ messages: history, temperature: 0.2 }),
+      });
+      const data = await res.json();
+      if(data.error){ bub.innerHTML = `<pre style="color:#c0392b">${esc(data.error)}</pre>`; }
+      else { bub.innerHTML = renderModel(data.text); history.push({ role: "model", text: data.text }); }
+    }catch(err){
+      bub.innerHTML = `<pre style="color:#c0392b">Request failed: ${esc(String(err))}</pre>`;
+    }finally{
+      busy = false; sendBtn.disabled = false; log.scrollTop = log.scrollHeight;
+    }
+  }
+
+  sendBtn.onclick = send;
+  input.addEventListener("keydown", e => {
+    if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); send(); }
+  });
+  document.getElementById("jpInsert").onclick = () => { input.value = BRIEF; input.focus(); };
+  document.getElementById("jpClear").onclick = () => {
+    history.length = 0;
+    log.querySelectorAll(".jp-msg").forEach(n => n.remove());
+    empty.style.display = ""; hint.textContent = "";
+  };
+  document.getElementById("jpCopy").onclick = () => {
+    const last = [...history].reverse().find(m => m.role === "model");
+    if(last){ navigator.clipboard.writeText(last.text); hint.textContent = "Copied last reply."; }
+    else { hint.textContent = "Nothing to copy yet."; }
+  };
+})();
+</script>
+{% endblock %}
