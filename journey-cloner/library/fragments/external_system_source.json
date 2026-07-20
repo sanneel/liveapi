@@ -1,0 +1,98 @@
+{
+  "activityName": "external_system_source",
+  "source_template": "colocolo/followup.json",
+  "journey_size": 48,
+  "activity": {
+    "activityId": "b3ec0d6e-f20d-4bda-ac83-0940db11a47d",
+    "activityName": "external_system_source",
+    "events": [
+      {
+        "eventName": "PlayerAdded",
+        "eventType": "Activation",
+        "eventDisplayName": "Players added to journey",
+        "nextActivityId": "fb19f0b1-caeb-475b-bb62-18719a3dde16",
+        "isUsedInChoosableFlow": false
+      }
+    ],
+    "initializationData": {
+      "description": "JBCL | SP | UDCH PromoCode Follow Up",
+      "targetSystem": "Journey",
+      "isWebhookUrlHidden": false,
+      "displayData": [
+        "Journey"
+      ]
+    },
+    "dataKeys": [],
+    "activityDisplayName": "API",
+    "dataDependencies": [],
+    "dependencies": []
+  },
+  "config": {
+    "data": {
+      "dataKeys": [],
+      "description": "JBCL | SP | UDCH PromoCode Follow Up",
+      "targetSystem": "Journey",
+      "isWebhookUrlHidden": false
+    },
+    "error": false,
+    "displayData": [
+      "Journey"
+    ],
+    "displayName": "API"
+  },
+  "node": {
+    "id": "b3ec0d6e-f20d-4bda-ac83-0940db11a47d",
+    "data": {
+      "name": "external_system_source",
+      "type": "source",
+      "order": 3,
+      "ports": [
+        {
+          "id": "PlayerAdded-b3ec0d6e-f20d-4bda-ac83-0940db11a47d"
+        }
+      ],
+      "events": [
+        {
+          "isHidden": false,
+          "eventName": "PlayerAdded",
+          "eventType": "Activation",
+          "payloadKeys": [
+            "CurrencyCode"
+          ],
+          "payloadKeysV2": [
+            {
+              "key": "CurrencyCode",
+              "isHidden": true,
+              "isOptional": false
+            }
+          ],
+          "eventDisplayName": "Players added to journey",
+          "canBeUsedInChoosableFlow": false
+        }
+      ],
+      "nodeType": "source",
+      "boundaryDefinition": false,
+      "activityDisplayName": "API"
+    },
+    "type": "source",
+    "style": {
+      "cursor": "pointer"
+    },
+    "width": 267,
+    "height": 64,
+    "zIndex": 5,
+    "position": {
+      "x": 0,
+      "y": 0
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false,
+    "positionAbsolute": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "has_config": true,
+  "has_node": true
+}

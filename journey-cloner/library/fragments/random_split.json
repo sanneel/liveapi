@@ -1,0 +1,369 @@
+{
+  "activityName": "random_split",
+  "source_template": "colocolo/two_hours.json",
+  "journey_size": 137,
+  "activity": {
+    "activityId": "1bbbb1a6-ed80-4fee-83b6-4e6c7caf5d28",
+    "activityName": "random_split",
+    "activityDisplayName": "Random split",
+    "events": [
+      {
+        "eventName": "RandomSplitPassedPath10",
+        "eventDisplayName": "Path 10",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "0b871928-8acf-4e3e-bceb-89f649680686",
+        "count": 0,
+        "version": 1
+      },
+      {
+        "eventName": "RandomSplitPassedPath2",
+        "eventDisplayName": "Path 2",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "7ecc29a9-d740-4d30-a1d5-94d41b7c9423",
+        "count": 261,
+        "version": 1
+      },
+      {
+        "eventName": "RandomSplitPassedPath3",
+        "eventDisplayName": "Path 3",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "4b450f49-974f-4e59-9d26-6c83c601b722",
+        "count": 12,
+        "version": 1
+      },
+      {
+        "eventName": "RandomSplitPassedPath4",
+        "eventDisplayName": "Path 4",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "3bebe42a-d190-40f9-bad2-193172314dbd",
+        "count": 0,
+        "version": 1
+      },
+      {
+        "eventName": "RandomSplitPassedPath5",
+        "eventDisplayName": "Path 5",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "c46b47b0-5351-4de0-bafe-748bcd786eef",
+        "count": 0,
+        "version": 1
+      },
+      {
+        "eventName": "RandomSplitPassedPath6",
+        "eventDisplayName": "Path 6",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "5b91e65c-c239-433f-b0e7-5df2335d45aa",
+        "count": 0,
+        "version": 1
+      },
+      {
+        "eventName": "RandomSplitPassedPath7",
+        "eventDisplayName": "Path 7",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "b7426469-9f4b-4203-a7d8-c6f60b037463",
+        "count": 0,
+        "version": 1
+      },
+      {
+        "eventName": "RandomSplitPassedPath8",
+        "eventDisplayName": "Path 8",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "0a6ba8db-8aec-4c23-be2c-cc35cb423ebf",
+        "count": 0,
+        "version": 1
+      },
+      {
+        "eventName": "RandomSplitPassedPath9",
+        "eventDisplayName": "Path 9",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "517c96e6-a6c1-4e69-86b6-3740822c2b92",
+        "count": 0,
+        "version": 1
+      },
+      {
+        "eventName": "RandomSplitPassedPath1",
+        "eventDisplayName": "Path 1",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "a7f081c7-6237-4869-9974-237809cafe2d",
+        "count": 405,
+        "version": 1
+      }
+    ],
+    "eventsHistory": [],
+    "tcGroupEvents": [],
+    "dependencies": [],
+    "dataDependencies": [],
+    "dataKeys": [],
+    "initializationData": {
+      "paths": [
+        {
+          "pathId": "path1",
+          "pathName": "Path 1",
+          "probability": 60
+        },
+        {
+          "pathId": "path2",
+          "pathName": "Path 2",
+          "probability": 38
+        },
+        {
+          "pathId": "55cb8351-31b5-41d4-8a90-adb129274226",
+          "pathName": "Path 3",
+          "probability": 2
+        }
+      ],
+      "displayData": [
+        " 60% / 38% / 2%"
+      ],
+      "pathesConfig": [
+        {
+          "events": [
+            {
+              "eventName": "RandomSplitPassedPath1",
+              "eventType": "Completion",
+              "eventDisplayName": "Path 1"
+            }
+          ],
+          "pathId": "path1",
+          "pathName": "Path 1",
+          "nextActivityId": "a7f081c7-6237-4869-9974-237809cafe2d"
+        },
+        {
+          "events": [
+            {
+              "eventName": "RandomSplitPassedPath2",
+              "eventType": "Completion",
+              "eventDisplayName": "Path 2"
+            }
+          ],
+          "pathId": "path2",
+          "pathName": "Path 2",
+          "nextActivityId": "7ecc29a9-d740-4d30-a1d5-94d41b7c9423"
+        },
+        {
+          "events": [
+            {
+              "eventName": "RandomSplitPassedPath3",
+              "eventType": "Completion",
+              "eventDisplayName": "Path 3"
+            }
+          ],
+          "pathId": "55cb8351-31b5-41d4-8a90-adb129274226",
+          "pathName": "Path 3",
+          "nextActivityId": "4b450f49-974f-4e59-9d26-6c83c601b722"
+        }
+      ],
+      "placements": []
+    },
+    "isEditable": true,
+    "changedBy": {
+      "authorId": "f3e368ad-ac99-4858-a335-33de23759deb",
+      "authorName": "Nikolaos L"
+    },
+    "changedAt": "2026-06-07T13:43:46.1494720Z",
+    "version": 1
+  },
+  "config": {
+    "data": {
+      "paths": [
+        {
+          "pathId": "path1",
+          "pathName": "Path 1",
+          "probability": 60
+        },
+        {
+          "pathId": "path2",
+          "pathName": "Path 2",
+          "probability": 38
+        },
+        {
+          "pathId": "55cb8351-31b5-41d4-8a90-adb129274226",
+          "pathName": "Path 3",
+          "probability": 2
+        }
+      ]
+    },
+    "error": false,
+    "displayData": [
+      " 60% / 38% / 2%"
+    ],
+    "displayName": "Random split"
+  },
+  "node": {
+    "id": "1bbbb1a6-ed80-4fee-83b6-4e6c7caf5d28",
+    "data": {
+      "name": "random_split",
+      "ports": [
+        {
+          "id": "input-1bbbb1a6-ed80-4fee-83b6-4e6c7caf5d28"
+        },
+        {
+          "id": "path1-1bbbb1a6-ed80-4fee-83b6-4e6c7caf5d28"
+        },
+        {
+          "id": "path2-1bbbb1a6-ed80-4fee-83b6-4e6c7caf5d28"
+        },
+        {
+          "id": "55cb8351-31b5-41d4-8a90-adb129274226-1bbbb1a6-ed80-4fee-83b6-4e6c7caf5d28"
+        }
+      ],
+      "events": [
+        {
+          "isHidden": false,
+          "eventName": "RandomSplitPassedPath1",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Path 1",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "RandomSplitPassedPath2",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Path 2",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "RandomSplitPassedPath3",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Path 3",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "RandomSplitPassedPath4",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Path 4",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "RandomSplitPassedPath5",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Path 5",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "RandomSplitPassedPath6",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Path 6",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "RandomSplitPassedPath7",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Path 7",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "RandomSplitPassedPath8",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Path 8",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "RandomSplitPassedPath9",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Path 9",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "RandomSplitPassedPath10",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Path 10",
+          "canBeUsedInChoosableFlow": false
+        }
+      ],
+      "pathes": [
+        {
+          "events": [
+            {
+              "eventName": "RandomSplitPassedPath1",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "path1",
+          "pathName": "Path 1"
+        },
+        {
+          "events": [
+            {
+              "eventName": "RandomSplitPassedPath2",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "path2",
+          "pathName": "Path 2"
+        },
+        {
+          "events": [
+            {
+              "eventName": "RandomSplitPassedPath3",
+              "eventType": "Completion",
+              "eventDisplayName": "Path 3"
+            }
+          ],
+          "pathId": "55cb8351-31b5-41d4-8a90-adb129274226",
+          "pathName": "Path 3"
+        }
+      ],
+      "activityType": "flowControl",
+      "activityDisplayName": "Random split"
+    },
+    "type": "action",
+    "style": {
+      "cursor": "pointer"
+    },
+    "width": 267,
+    "height": 64,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+      "x": -3220.5,
+      "y": 991
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false,
+    "positionAbsolute": {
+      "x": -3220.5,
+      "y": 991
+    }
+  },
+  "has_config": true,
+  "has_node": true
+}

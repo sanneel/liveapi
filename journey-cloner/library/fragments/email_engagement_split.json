@@ -1,0 +1,333 @@
+{
+  "activityName": "email_engagement_split",
+  "source_template": "casino/gow_comms.json",
+  "journey_size": 39,
+  "activity": {
+    "activityId": "407c4e1e-97dc-4faf-b95a-167b8c856e82",
+    "activityName": "email_engagement_split",
+    "events": [
+      {
+        "eventName": "Path1",
+        "eventType": "Completion",
+        "eventDisplayName": "Clicked",
+        "nextActivityId": "b66fc4a8-6756-46e8-9c64-92781c2bc96a",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "Path2",
+        "eventType": "Completion",
+        "nextActivityId": "7a23be85-4680-4538-acd4-d135b7c2838b",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "Path3",
+        "eventType": "Completion",
+        "nextActivityId": "7a23be85-4680-4538-acd4-d135b7c2838b",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "Path4",
+        "eventType": "Completion",
+        "nextActivityId": "7a23be85-4680-4538-acd4-d135b7c2838b",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "Path5",
+        "eventType": "Completion",
+        "nextActivityId": "7a23be85-4680-4538-acd4-d135b7c2838b",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "Path6",
+        "eventType": "Completion",
+        "nextActivityId": "7a23be85-4680-4538-acd4-d135b7c2838b",
+        "isUsedInChoosableFlow": false
+      }
+    ],
+    "initializationData": {
+      "properties": {
+        "paths": [
+          {
+            "pathId": "path1",
+            "pathName": "Clicked",
+            "emailEngagementStatuses": [
+              "OpenedAndClicked"
+            ]
+          },
+          {
+            "pathId": "other",
+            "pathName": "Other",
+            "emailEngagementStatuses": [
+              "Pending",
+              "DeliveredAndNotOpened",
+              "OpenedAndNotClicked",
+              "Bounced"
+            ]
+          }
+        ],
+        "dextraEmailActivityId": "00eecb41-2540-46c0-a193-664938d0ef81"
+      },
+      "pathesConfig": [
+        {
+          "events": [
+            {
+              "eventName": "Path1",
+              "eventType": "Completion",
+              "eventDisplayName": "Clicked"
+            }
+          ],
+          "pathId": "path1",
+          "pathName": "Clicked",
+          "emailEngagementStatuses": [
+            "OpenedAndClicked"
+          ],
+          "nextActivityId": "b66fc4a8-6756-46e8-9c64-92781c2bc96a"
+        },
+        {
+          "events": [
+            {
+              "eventName": "Path2",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "Path3",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "Path4",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "Path5",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "Path6",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "other",
+          "pathName": "Other",
+          "nextActivityId": "7a23be85-4680-4538-acd4-d135b7c2838b"
+        }
+      ],
+      "displayData": [
+        "00eecb41-2540-46c0-a193-664938d0ef81"
+      ]
+    },
+    "activityDisplayName": "Email engagement split",
+    "dataDependencies": [],
+    "dependencies": [
+      {
+        "key": "CommunicationId",
+        "journeyActivityId": "00eecb41-2540-46c0-a193-664938d0ef81",
+        "isOptional": true
+      }
+    ]
+  },
+  "config": {
+    "data": {
+      "properties": {
+        "paths": [
+          {
+            "pathId": "path1",
+            "pathName": "Clicked",
+            "emailEngagementStatuses": [
+              "OpenedAndClicked"
+            ]
+          },
+          {
+            "pathId": "other",
+            "pathName": "Other",
+            "emailEngagementStatuses": [
+              "Pending",
+              "DeliveredAndNotOpened",
+              "OpenedAndNotClicked",
+              "Bounced"
+            ]
+          }
+        ],
+        "dextraEmailActivityId": "00eecb41-2540-46c0-a193-664938d0ef81"
+      },
+      "pathesConfig": [
+        {
+          "events": [
+            {
+              "eventName": "Path1",
+              "eventType": "Completion",
+              "eventDisplayName": "Clicked"
+            }
+          ],
+          "pathId": "path1",
+          "pathName": "Clicked",
+          "emailEngagementStatuses": [
+            "OpenedAndClicked"
+          ]
+        },
+        {
+          "events": [
+            {
+              "eventName": "Path2",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "Path3",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "Path4",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "Path5",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "Path6",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "other",
+          "pathName": "Other"
+        }
+      ]
+    },
+    "error": false,
+    "displayData": [
+      "00eecb41-2540-46c0-a193-664938d0ef81"
+    ],
+    "displayName": "Email engagement split"
+  },
+  "node": {
+    "id": "407c4e1e-97dc-4faf-b95a-167b8c856e82",
+    "data": {
+      "name": "email_engagement_split",
+      "ports": [
+        {
+          "id": "input-407c4e1e-97dc-4faf-b95a-167b8c856e82"
+        },
+        {
+          "id": "path1-407c4e1e-97dc-4faf-b95a-167b8c856e82"
+        },
+        {
+          "id": "other-407c4e1e-97dc-4faf-b95a-167b8c856e82"
+        }
+      ],
+      "events": [
+        {
+          "isHidden": false,
+          "eventName": "Path1",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "eventDisplayName": "Path 1",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "Path2",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "eventDisplayName": "Path 2",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "Path3",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "eventDisplayName": "Path 3",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "Path4",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "eventDisplayName": "Path 4",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "Path5",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "eventDisplayName": "Path 5",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "Path6",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "eventDisplayName": "Path 6",
+          "canBeUsedInChoosableFlow": false
+        }
+      ],
+      "pathes": [
+        {
+          "events": [
+            {
+              "eventName": "Path1",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "path1",
+          "pathName": "Path 1"
+        },
+        {
+          "events": [
+            {
+              "eventName": "Path2",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "Path3",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "Path4",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "Path5",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "other",
+          "pathName": "Other"
+        }
+      ],
+      "activityType": "flowControl",
+      "activityDisplayName": "Email engagement split"
+    },
+    "type": "action",
+    "style": {
+      "cursor": "pointer"
+    },
+    "width": 267,
+    "extent": "parent",
+    "height": 64,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+      "x": 690,
+      "y": 2056
+    },
+    "selected": false,
+    "draggable": false,
+    "parentNode": "cea0b018-d734-4d84-80fc-7c2a7c7e12a1",
+    "connectable": false,
+    "positionAbsolute": {
+      "x": -230.25,
+      "y": 2255
+    }
+  },
+  "has_config": true,
+  "has_node": true
+}

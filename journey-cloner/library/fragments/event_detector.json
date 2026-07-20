@@ -1,0 +1,199 @@
+{
+  "activityName": "event_detector",
+  "source_template": "casino/gow_comms.json",
+  "journey_size": 39,
+  "activity": {
+    "activityId": "71922176-4eec-47ec-98d6-1e2bb13ed3fc",
+    "activityName": "event_detector",
+    "events": [
+      {
+        "eventName": "DetectorFailed",
+        "eventType": "Completion",
+        "nextActivityId": "954f4e33-c356-4f7a-ae1b-7a39840bcec5",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DetectorSuccess",
+        "eventType": "Completion",
+        "nextActivityId": "d70b0f9e-c027-4b2a-bb68-5600b505533c",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DetectorStarted",
+        "eventType": "Boundary",
+        "eventDisplayName": "Detector started",
+        "nextActivityId": null
+      },
+      {
+        "eventName": "EventReceived",
+        "eventType": "Boundary",
+        "eventDisplayName": "Event received",
+        "nextActivityId": null
+      },
+      {
+        "eventName": "EventNotReceived",
+        "eventType": "Boundary",
+        "eventDisplayName": "Event not received",
+        "nextActivityId": null
+      }
+    ],
+    "initializationData": {
+      "properties": {
+        "startingOptions": {
+          "durationTime": "P0Y0M1DT0H0M0S"
+        },
+        "subscriptionOptions": [
+          {
+            "event": {
+              "eventName": "deposit.approved",
+              "sourceName": "platform.orders"
+            },
+            "filter": {},
+            "useV2Flow": true,
+            "shouldCollectEvents": false
+          }
+        ]
+      },
+      "displayData": [
+        "Deposit Success"
+      ],
+      "usedVariables": []
+    },
+    "activityDisplayName": "Event Detector",
+    "dataDependencies": [],
+    "dependencies": []
+  },
+  "config": {
+    "data": {
+      "properties": {
+        "startingOptions": {
+          "durationTime": "P0Y0M1DT0H0M0S"
+        },
+        "subscriptionOptions": [
+          {
+            "event": {
+              "eventName": "deposit.approved",
+              "sourceName": "platform.orders"
+            },
+            "filter": {},
+            "useV2Flow": true,
+            "shouldCollectEvents": false
+          }
+        ]
+      },
+      "displayData": [
+        "Deposit Success"
+      ],
+      "usedVariables": []
+    },
+    "error": false,
+    "isTouched": true,
+    "displayData": [
+      "Deposit Success"
+    ],
+    "displayName": "Event Detector"
+  },
+  "node": {
+    "id": "71922176-4eec-47ec-98d6-1e2bb13ed3fc",
+    "data": {
+      "name": "event_detector",
+      "ports": [
+        {
+          "id": "input-71922176-4eec-47ec-98d6-1e2bb13ed3fc"
+        },
+        {
+          "id": "DetectorStarted-71922176-4eec-47ec-98d6-1e2bb13ed3fc"
+        },
+        {
+          "id": "EventReceived-71922176-4eec-47ec-98d6-1e2bb13ed3fc"
+        },
+        {
+          "id": "EventNotReceived-71922176-4eec-47ec-98d6-1e2bb13ed3fc"
+        },
+        {
+          "id": "DetectorFailed-71922176-4eec-47ec-98d6-1e2bb13ed3fc"
+        },
+        {
+          "id": "DetectorSuccess-71922176-4eec-47ec-98d6-1e2bb13ed3fc"
+        }
+      ],
+      "events": [
+        {
+          "isHidden": false,
+          "eventName": "DetectorStarted",
+          "eventType": "Boundary",
+          "payloadKeys": [
+            "SourceEvent"
+          ],
+          "eventDisplayName": "Detector started",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": true,
+          "eventName": "EventReceived",
+          "eventType": "Boundary",
+          "payloadKeys": [
+            "SourceEvent"
+          ],
+          "eventDisplayName": "Event received",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": true,
+          "eventName": "EventNotReceived",
+          "eventType": "Boundary",
+          "payloadKeys": [
+            "SourceEvent"
+          ],
+          "eventDisplayName": "Event not received",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DetectorFailed",
+          "eventType": "Completion",
+          "payloadKeys": [
+            "SourceEvent"
+          ],
+          "eventDisplayName": "Fail",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DetectorSuccess",
+          "eventType": "Completion",
+          "payloadKeys": [
+            "SourceEvent"
+          ],
+          "eventDisplayName": "Success",
+          "canBeUsedInChoosableFlow": false
+        }
+      ],
+      "activityType": "triger",
+      "activityDisplayName": "Event Detector"
+    },
+    "type": "action",
+    "style": {
+      "cursor": "pointer"
+    },
+    "width": 267,
+    "extent": "parent",
+    "height": 64,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+      "x": 1163.5,
+      "y": 208
+    },
+    "selected": false,
+    "draggable": false,
+    "parentNode": "cea0b018-d734-4d84-80fc-7c2a7c7e12a1",
+    "connectable": false,
+    "positionAbsolute": {
+      "x": 243.25,
+      "y": 407
+    }
+  },
+  "has_config": true,
+  "has_node": true
+}

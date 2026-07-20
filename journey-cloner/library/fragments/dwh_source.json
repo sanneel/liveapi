@@ -1,0 +1,2970 @@
+{
+  "activityName": "dwh_source",
+  "source_template": "casino/nc_discount.json",
+  "journey_size": 4,
+  "activity": {
+    "activityId": "c1725bfd-efde-40b5-9831-82eca02473e2",
+    "activityName": "dwh_source",
+    "activityDisplayName": "Players DWH",
+    "events": [
+      {
+        "eventName": "PlayerAdded",
+        "eventDisplayName": "Players added to journey",
+        "eventType": "Activation",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "fb23d30c-80d5-418d-907c-56beecaf136a",
+        "count": 67708,
+        "version": 1
+      }
+    ],
+    "eventsHistory": [],
+    "tcGroupEvents": [],
+    "dependencies": [],
+    "dataDependencies": [],
+    "dataKeys": [],
+    "initializationData": {
+      "dataSourceName": "default",
+      "filterDetails": {
+        "filtersTree": [
+          {
+            "parentNodeId": null,
+            "nodeId": "10f3cdb0-eba2-4a69-8424-465f8741fb0c",
+            "nodeType": "Operator",
+            "groupOperator": "Or",
+            "children": [
+              "da5704cd-48df-4105-8bc2-6d1fb291ae8b",
+              "e3b38325-e1bd-4c0b-923c-4b7c6a8afc7a"
+            ],
+            "filterConditionId": null,
+            "isDeprecated": true
+          },
+          {
+            "parentNodeId": "10f3cdb0-eba2-4a69-8424-465f8741fb0c",
+            "nodeId": "da5704cd-48df-4105-8bc2-6d1fb291ae8b",
+            "nodeType": "Operator",
+            "groupOperator": "Exclude",
+            "children": [
+              "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+              "b9d8a472-51a8-4bf6-873e-0151092372ff"
+            ],
+            "filterConditionId": null,
+            "isDeprecated": true
+          },
+          {
+            "parentNodeId": "da5704cd-48df-4105-8bc2-6d1fb291ae8b",
+            "nodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+            "nodeType": "Operator",
+            "groupOperator": "And",
+            "children": [
+              "e30461b6-034e-4252-a69b-8fba30cac71e",
+              "a2d8b792-386e-43b6-b736-60b7fec4e84c",
+              "b04cb801-88f3-485f-8dc5-7bb222709a06",
+              "29847602-801c-4afc-b1dd-14fb77270367",
+              "b0536c27-e1e4-44c4-8877-966ba54a84d3"
+            ],
+            "filterConditionId": null,
+            "isDeprecated": true
+          },
+          {
+            "parentNodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+            "nodeId": "e30461b6-034e-4252-a69b-8fba30cac71e",
+            "nodeType": "Filter",
+            "groupOperator": null,
+            "children": [],
+            "filterConditionId": "f021bdd7-c7c1-4fef-b2a3-25906c400995",
+            "name": "deposit_cnt",
+            "column": {
+              "name": "deposit_cnt",
+              "tableName": "agg_payment_stats_summary",
+              "filterName": "Number",
+              "isRequired": false,
+              "description": "Count of successful client deposits for the period and given currency",
+              "displayName": "deposit_cnt",
+              "valuesSource": null,
+              "filterConditions": [
+                {
+                  "operator": "gte",
+                  "conditionType": "Number"
+                },
+                {
+                  "operator": "lte",
+                  "conditionType": "Number"
+                },
+                {
+                  "operator": "equal",
+                  "conditionType": "Number"
+                },
+                {
+                  "operator": "notEqual",
+                  "conditionType": "Number"
+                },
+                {
+                  "operator": "between",
+                  "conditionType": "NumberBetween"
+                }
+              ],
+              "isPredefinedValuesAvailable": false
+            },
+            "height": 41.66666793823242,
+            "operator": "notEqual",
+            "settings": {
+              "value": "",
+              "values": [],
+              "dateType": "days",
+              "hasEmptyState": true
+            },
+            "showForm": false,
+            "tableName": "agg_payment_stats_summary",
+            "filterName": "Number",
+            "isRequired": false,
+            "description": "Count of successful client deposits for the period and given currency",
+            "displayName": "deposit_cnt",
+            "databaseName": "dv_marts",
+            "isDeprecated": false,
+            "valuesSource": null,
+            "conditionType": "Number",
+            "filterConditions": [
+              {
+                "operator": "gte",
+                "conditionType": "Number"
+              },
+              {
+                "operator": "lte",
+                "conditionType": "Number"
+              },
+              {
+                "operator": "equal",
+                "conditionType": "Number"
+              },
+              {
+                "operator": "notEqual",
+                "conditionType": "Number"
+              },
+              {
+                "operator": "between",
+                "conditionType": "NumberBetween"
+              }
+            ],
+            "isPredefinedValuesAvailable": false
+          },
+          {
+            "parentNodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+            "nodeId": "a2d8b792-386e-43b6-b736-60b7fec4e84c",
+            "nodeType": "Filter",
+            "groupOperator": null,
+            "children": [],
+            "filterConditionId": "3dc1b4b5-41d4-42bb-9385-d7b5e6ead6af",
+            "name": "period",
+            "column": {
+              "name": "period",
+              "tableName": "agg_payment_stats_summary",
+              "filterName": "Multiple select",
+              "isRequired": false,
+              "description": "The period for which information on the player was generated",
+              "displayName": "period",
+              "valuesSource": null,
+              "filterConditions": [
+                {
+                  "operator": "in",
+                  "conditionType": "MultiSelect"
+                },
+                {
+                  "operator": "notIn",
+                  "conditionType": "MultiSelect"
+                }
+              ],
+              "isPredefinedValuesAvailable": true
+            },
+            "height": 41.66666793823242,
+            "operator": "in",
+            "settings": {
+              "values": [
+                "3M"
+              ],
+              "dateType": "days",
+              "hasEmptyState": false
+            },
+            "showForm": false,
+            "tableName": "agg_payment_stats_summary",
+            "filterName": "Multiple select",
+            "isRequired": false,
+            "description": "The period for which information on the player was generated",
+            "displayName": "period",
+            "databaseName": "dv_marts",
+            "isDeprecated": false,
+            "valuesSource": null,
+            "conditionType": "MultiSelect",
+            "filterConditions": [
+              {
+                "operator": "in",
+                "conditionType": "MultiSelect"
+              },
+              {
+                "operator": "notIn",
+                "conditionType": "MultiSelect"
+              }
+            ],
+            "isPredefinedValuesAvailable": true
+          },
+          {
+            "parentNodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+            "nodeId": "b04cb801-88f3-485f-8dc5-7bb222709a06",
+            "nodeType": "Filter",
+            "groupOperator": null,
+            "children": [],
+            "filterConditionId": "5aa56a62-dbc2-4765-982c-a48a454017e2",
+            "name": "risk_casino_segment",
+            "column": {
+              "name": "risk_casino_segment",
+              "tableName": "agg_player_summary",
+              "filterName": "Multiple select",
+              "isRequired": false,
+              "description": "Risk segment related to casino.",
+              "displayName": "risk_casino_segment",
+              "valuesSource": null,
+              "filterConditions": [
+                {
+                  "operator": "in",
+                  "conditionType": "MultiSelect"
+                },
+                {
+                  "operator": "notIn",
+                  "conditionType": "MultiSelect"
+                }
+              ],
+              "isPredefinedValuesAvailable": true
+            },
+            "height": 161.59722900390625,
+            "operator": "notIn",
+            "settings": {
+              "values": [
+                "Irregular activity",
+                "Monitoring",
+                "Good guys-X",
+                "VIP-Silver",
+                "Opposite",
+                "VIP-Sport",
+                "VIP-Gold",
+                "VIP-Platinum",
+                "Jackpot Hunting",
+                "Black Games",
+                "Advantage",
+                "VIP-Crypto",
+                "VIP-Black",
+                "Bonus abusers"
+              ],
+              "dateType": "days",
+              "hasEmptyState": false
+            },
+            "showForm": false,
+            "tableName": "agg_player_summary",
+            "filterName": "Multiple select",
+            "isRequired": false,
+            "description": "Risk segment related to casino.",
+            "displayName": "risk_casino_segment",
+            "databaseName": "dv_marts",
+            "isDeprecated": false,
+            "valuesSource": null,
+            "conditionType": "MultiSelect",
+            "filterConditions": [
+              {
+                "operator": "in",
+                "conditionType": "MultiSelect"
+              },
+              {
+                "operator": "notIn",
+                "conditionType": "MultiSelect"
+              }
+            ],
+            "isPredefinedValuesAvailable": true
+          },
+          {
+            "parentNodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+            "nodeId": "29847602-801c-4afc-b1dd-14fb77270367",
+            "nodeType": "Filter",
+            "groupOperator": null,
+            "children": [],
+            "filterConditionId": "97442825-7c8c-49b7-a7cd-81ab15f4771e",
+            "name": "last_bet_total",
+            "column": {
+              "name": "last_bet_total",
+              "tableName": "agg_player_summary",
+              "filterName": "Date&time",
+              "isRequired": false,
+              "description": "Timestamp of the player's last bet across all products.",
+              "displayName": "last_bet_total",
+              "valuesSource": null,
+              "filterConditions": [
+                {
+                  "operator": "equal",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "notEqual",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "gte",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "lte",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "between",
+                  "conditionType": "DateTimeBetween"
+                },
+                {
+                  "operator": "equal",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "notEqual",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "gte",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "lte",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "between",
+                  "conditionType": "DateTimeRelativeBetween"
+                }
+              ],
+              "isPredefinedValuesAvailable": false
+            },
+            "height": 41.66666793823242,
+            "operator": "lte",
+            "settings": {
+              "amount": "30",
+              "values": [],
+              "dateType": "days",
+              "hasEmptyState": false
+            },
+            "showForm": false,
+            "tableName": "agg_player_summary",
+            "filterName": "Date&time",
+            "isRequired": false,
+            "description": "Timestamp of the player's last bet across all products.",
+            "displayName": "last_bet_total",
+            "databaseName": "dv_marts",
+            "dateTimeMode": "Relative",
+            "isDeprecated": false,
+            "valuesSource": null,
+            "conditionType": "DateTimeRelative",
+            "filterConditions": [
+              {
+                "operator": "equal",
+                "conditionType": "DateTime"
+              },
+              {
+                "operator": "notEqual",
+                "conditionType": "DateTime"
+              },
+              {
+                "operator": "gte",
+                "conditionType": "DateTime"
+              },
+              {
+                "operator": "lte",
+                "conditionType": "DateTime"
+              },
+              {
+                "operator": "between",
+                "conditionType": "DateTimeBetween"
+              },
+              {
+                "operator": "equal",
+                "conditionType": "DateTimeRelative"
+              },
+              {
+                "operator": "notEqual",
+                "conditionType": "DateTimeRelative"
+              },
+              {
+                "operator": "gte",
+                "conditionType": "DateTimeRelative"
+              },
+              {
+                "operator": "lte",
+                "conditionType": "DateTimeRelative"
+              },
+              {
+                "operator": "between",
+                "conditionType": "DateTimeRelativeBetween"
+              }
+            ],
+            "isPredefinedValuesAvailable": false
+          },
+          {
+            "parentNodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+            "nodeId": "b0536c27-e1e4-44c4-8877-966ba54a84d3",
+            "nodeType": "Filter",
+            "groupOperator": null,
+            "children": [],
+            "filterConditionId": "7ed79446-743d-42e8-b47e-cc6d05dbd491",
+            "name": "highest_prob_pref_category",
+            "column": {
+              "name": "highest_prob_pref_category",
+              "tableName": "d_player_product_segment",
+              "filterName": "Multiple select",
+              "isRequired": false,
+              "description": "Product preference category with the highest probability",
+              "displayName": "highest_prob_pref_category",
+              "valuesSource": null,
+              "filterConditions": [
+                {
+                  "operator": "in",
+                  "conditionType": "MultiSelect"
+                },
+                {
+                  "operator": "notIn",
+                  "conditionType": "MultiSelect"
+                }
+              ],
+              "isPredefinedValuesAvailable": true
+            },
+            "height": 41.66666793823242,
+            "operator": "in",
+            "settings": {
+              "values": [
+                "casino"
+              ],
+              "dateType": "days",
+              "hasEmptyState": false
+            },
+            "showForm": false,
+            "tableName": "d_player_product_segment",
+            "filterName": "Multiple select",
+            "isRequired": false,
+            "description": "Product preference category with the highest probability",
+            "displayName": "highest_prob_pref_category",
+            "databaseName": "dv_marts",
+            "isDeprecated": false,
+            "valuesSource": null,
+            "conditionType": "MultiSelect",
+            "filterConditions": [
+              {
+                "operator": "in",
+                "conditionType": "MultiSelect"
+              },
+              {
+                "operator": "notIn",
+                "conditionType": "MultiSelect"
+              }
+            ],
+            "isPredefinedValuesAvailable": true
+          },
+          {
+            "parentNodeId": "da5704cd-48df-4105-8bc2-6d1fb291ae8b",
+            "nodeId": "b9d8a472-51a8-4bf6-873e-0151092372ff",
+            "nodeType": "Filter",
+            "groupOperator": null,
+            "children": [],
+            "filterConditionId": "2c750aff-e8ff-4310-81ba-00fc39fb46dd",
+            "name": "restriction_name",
+            "column": {
+              "name": "restriction_name",
+              "tableName": "d_player_restriction",
+              "filterName": "Multiple select",
+              "isRequired": false,
+              "description": "The name of restriction",
+              "displayName": "restriction_name",
+              "valuesSource": null,
+              "filterConditions": [
+                {
+                  "operator": "in",
+                  "conditionType": "MultiSelect"
+                },
+                {
+                  "operator": "notIn",
+                  "conditionType": "MultiSelect"
+                }
+              ],
+              "isPredefinedValuesAvailable": true
+            },
+            "height": 41.66666793823242,
+            "operator": "in",
+            "settings": {
+              "values": [
+                "login",
+                "deposit"
+              ],
+              "dateType": "days",
+              "hasEmptyState": false
+            },
+            "showForm": false,
+            "tableName": "d_player_restriction",
+            "filterName": "Multiple select",
+            "isRequired": false,
+            "description": "The name of restriction",
+            "displayName": "restriction_name",
+            "databaseName": "dv_marts",
+            "isDeprecated": false,
+            "valuesSource": null,
+            "conditionType": "MultiSelect",
+            "filterConditions": [
+              {
+                "operator": "in",
+                "conditionType": "MultiSelect"
+              },
+              {
+                "operator": "notIn",
+                "conditionType": "MultiSelect"
+              }
+            ],
+            "isPredefinedValuesAvailable": true
+          },
+          {
+            "parentNodeId": "10f3cdb0-eba2-4a69-8424-465f8741fb0c",
+            "nodeId": "e3b38325-e1bd-4c0b-923c-4b7c6a8afc7a",
+            "nodeType": "Filter",
+            "groupOperator": null,
+            "children": [],
+            "filterConditionId": "fb030129-27ef-468d-9bac-a6fa5bfeacea",
+            "name": "player_id",
+            "column": {
+              "name": "player_id",
+              "tableName": "agg_player_summary",
+              "filterName": "Text",
+              "isRequired": false,
+              "description": "Identifier for the player.",
+              "displayName": "player_id",
+              "valuesSource": null,
+              "filterConditions": [
+                {
+                  "operator": "equal",
+                  "conditionType": "MultiTextInput"
+                },
+                {
+                  "operator": "notEqual",
+                  "conditionType": "MultiTextInput"
+                },
+                {
+                  "operator": "startWith",
+                  "conditionType": "MultiTextInput"
+                },
+                {
+                  "operator": "contain",
+                  "conditionType": "MultiTextInput"
+                }
+              ],
+              "isPredefinedValuesAvailable": false
+            },
+            "height": 121.61458587646484,
+            "operator": "equal",
+            "settings": {
+              "values": [
+                "605013564",
+                "852909626",
+                "106790682",
+                "723920970",
+                "524983911",
+                "12906987",
+                "73643820",
+                "772457467",
+                "439862289",
+                "273737814",
+                "305088297",
+                "831954299",
+                "846216942",
+                "902463751",
+                "973909759",
+                "360426705",
+                "928387577",
+                "702053405",
+                "451937505",
+                "587912725"
+              ],
+              "dateType": "days",
+              "hasEmptyState": false
+            },
+            "showForm": false,
+            "tableName": "agg_player_summary",
+            "filterName": "Text",
+            "isRequired": false,
+            "description": "Identifier for the player.",
+            "displayName": "player_id",
+            "databaseName": "dv_marts",
+            "isDeprecated": false,
+            "valuesSource": null,
+            "conditionType": "MultiTextInput",
+            "filterConditions": [
+              {
+                "operator": "equal",
+                "conditionType": "MultiTextInput"
+              },
+              {
+                "operator": "notEqual",
+                "conditionType": "MultiTextInput"
+              },
+              {
+                "operator": "startWith",
+                "conditionType": "MultiTextInput"
+              },
+              {
+                "operator": "contain",
+                "conditionType": "MultiTextInput"
+              }
+            ],
+            "isPredefinedValuesAvailable": false
+          }
+        ],
+        "filterConditions": [
+          {
+            "id": "f021bdd7-c7c1-4fef-b2a3-25906c400995",
+            "databaseName": "dv_marts",
+            "tableName": "agg_payment_stats_summary",
+            "fieldName": "deposit_cnt",
+            "operator": "notEqual",
+            "columnName": "deposit_cnt",
+            "conditionType": "Number",
+            "nodeType": "Filter",
+            "value": null,
+            "hasEmptyState": true
+          },
+          {
+            "id": "3dc1b4b5-41d4-42bb-9385-d7b5e6ead6af",
+            "databaseName": "dv_marts",
+            "tableName": "agg_payment_stats_summary",
+            "fieldName": "period",
+            "operator": "in",
+            "columnName": "period",
+            "conditionType": "MultiSelect",
+            "nodeType": "Filter",
+            "values": [
+              "3M"
+            ],
+            "hasEmptyState": false
+          },
+          {
+            "id": "5aa56a62-dbc2-4765-982c-a48a454017e2",
+            "databaseName": "dv_marts",
+            "tableName": "agg_player_summary",
+            "fieldName": "risk_casino_segment",
+            "operator": "notIn",
+            "columnName": "risk_casino_segment",
+            "conditionType": "MultiSelect",
+            "nodeType": "Filter",
+            "values": [
+              "Irregular activity",
+              "Monitoring",
+              "Good guys-X",
+              "VIP-Silver",
+              "Opposite",
+              "VIP-Sport",
+              "VIP-Gold",
+              "VIP-Platinum",
+              "Jackpot Hunting",
+              "Black Games",
+              "Advantage",
+              "VIP-Crypto",
+              "VIP-Black",
+              "Bonus abusers"
+            ],
+            "hasEmptyState": false
+          },
+          {
+            "id": "97442825-7c8c-49b7-a7cd-81ab15f4771e",
+            "databaseName": "dv_marts",
+            "tableName": "agg_player_summary",
+            "fieldName": "last_bet_total",
+            "operator": "lte",
+            "columnName": "last_bet_total",
+            "conditionType": "DateTimeRelative",
+            "nodeType": "Filter",
+            "value": "P0Y0M30DT0H0M0S",
+            "hasEmptyState": false
+          },
+          {
+            "id": "7ed79446-743d-42e8-b47e-cc6d05dbd491",
+            "databaseName": "dv_marts",
+            "tableName": "d_player_product_segment",
+            "fieldName": "highest_prob_pref_category",
+            "operator": "in",
+            "columnName": "highest_prob_pref_category",
+            "conditionType": "MultiSelect",
+            "nodeType": "Filter",
+            "values": [
+              "casino"
+            ],
+            "hasEmptyState": false
+          },
+          {
+            "id": "2c750aff-e8ff-4310-81ba-00fc39fb46dd",
+            "databaseName": "dv_marts",
+            "tableName": "d_player_restriction",
+            "fieldName": "restriction_name",
+            "operator": "in",
+            "columnName": "restriction_name",
+            "conditionType": "MultiSelect",
+            "nodeType": "Filter",
+            "values": [
+              "login",
+              "deposit"
+            ],
+            "hasEmptyState": false
+          },
+          {
+            "id": "fb030129-27ef-468d-9bac-a6fa5bfeacea",
+            "databaseName": "dv_marts",
+            "tableName": "agg_player_summary",
+            "fieldName": "player_id",
+            "operator": "equal",
+            "columnName": "player_id",
+            "conditionType": "MultiTextInput",
+            "nodeType": "Filter",
+            "values": [
+              "605013564",
+              "852909626",
+              "106790682",
+              "723920970",
+              "524983911",
+              "12906987",
+              "73643820",
+              "772457467",
+              "439862289",
+              "273737814",
+              "305088297",
+              "831954299",
+              "846216942",
+              "902463751",
+              "973909759",
+              "360426705",
+              "928387577",
+              "702053405",
+              "451937505",
+              "587912725"
+            ],
+            "hasEmptyState": false
+          }
+        ]
+      },
+      "currentTemplate": {
+        "id": "f75838d0-c81b-49d6-9c4c-a044e013baa9",
+        "name": "JBCL |CS| Active - RB/Bet<=14d /Tour NV",
+        "brand": "JBCL",
+        "currencyCodes": [
+          "CLP"
+        ],
+        "filterDetails": {
+          "filterConditions": [
+            {
+              "conditionType": "Number",
+              "value": null,
+              "hasEmptyState": true,
+              "id": "f021bdd7-c7c1-4fef-b2a3-25906c400995",
+              "databaseName": "dv_marts",
+              "tableName": "agg_payment_stats_summary",
+              "fieldName": "deposit_cnt",
+              "operator": "notEqual"
+            },
+            {
+              "conditionType": "MultiSelect",
+              "values": [
+                "3M"
+              ],
+              "hasEmptyState": false,
+              "id": "3dc1b4b5-41d4-42bb-9385-d7b5e6ead6af",
+              "databaseName": "dv_marts",
+              "tableName": "agg_payment_stats_summary",
+              "fieldName": "period",
+              "operator": "in"
+            },
+            {
+              "conditionType": "MultiSelect",
+              "values": [
+                "Irregular activity",
+                "Monitoring",
+                "Good guys-X",
+                "VIP-Silver",
+                "Opposite",
+                "VIP-Sport",
+                "VIP-Gold",
+                "VIP-Platinum",
+                "Jackpot Hunting",
+                "Black Games",
+                "Advantage",
+                "VIP-Crypto",
+                "VIP-Black",
+                "Bonus abusers"
+              ],
+              "hasEmptyState": false,
+              "id": "5aa56a62-dbc2-4765-982c-a48a454017e2",
+              "databaseName": "dv_marts",
+              "tableName": "agg_player_summary",
+              "fieldName": "risk_casino_segment",
+              "operator": "notIn"
+            },
+            {
+              "conditionType": "DateTimeRelative",
+              "value": "P30D",
+              "hasEmptyState": null,
+              "id": "97442825-7c8c-49b7-a7cd-81ab15f4771e",
+              "databaseName": "dv_marts",
+              "tableName": "agg_player_summary",
+              "fieldName": "last_bet_total",
+              "operator": "lte"
+            },
+            {
+              "conditionType": "MultiSelect",
+              "values": [
+                "casino"
+              ],
+              "hasEmptyState": false,
+              "id": "7ed79446-743d-42e8-b47e-cc6d05dbd491",
+              "databaseName": "dv_marts",
+              "tableName": "d_player_product_segment",
+              "fieldName": "highest_prob_pref_category",
+              "operator": "in"
+            },
+            {
+              "conditionType": "MultiSelect",
+              "values": [
+                "login",
+                "deposit"
+              ],
+              "hasEmptyState": false,
+              "id": "2c750aff-e8ff-4310-81ba-00fc39fb46dd",
+              "databaseName": "dv_marts",
+              "tableName": "d_player_restriction",
+              "fieldName": "restriction_name",
+              "operator": "in"
+            },
+            {
+              "conditionType": "MultiTextInput",
+              "values": [
+                "605013564",
+                "852909626",
+                "106790682",
+                "723920970",
+                "524983911",
+                "12906987",
+                "73643820",
+                "772457467",
+                "439862289",
+                "273737814",
+                "305088297",
+                "831954299",
+                "846216942",
+                "902463751",
+                "973909759",
+                "360426705",
+                "928387577",
+                "702053405",
+                "451937505",
+                "587912725"
+              ],
+              "hasEmptyState": false,
+              "id": "fb030129-27ef-468d-9bac-a6fa5bfeacea",
+              "databaseName": "dv_marts",
+              "tableName": "agg_player_summary",
+              "fieldName": "player_id",
+              "operator": "equal"
+            }
+          ],
+          "filtersTree": [
+            {
+              "parentNodeId": null,
+              "nodeId": "10f3cdb0-eba2-4a69-8424-465f8741fb0c",
+              "nodeType": "Operator",
+              "groupOperator": "Or",
+              "children": [
+                "da5704cd-48df-4105-8bc2-6d1fb291ae8b",
+                "e3b38325-e1bd-4c0b-923c-4b7c6a8afc7a"
+              ],
+              "filterConditionId": null,
+              "isDeprecated": true
+            },
+            {
+              "parentNodeId": "10f3cdb0-eba2-4a69-8424-465f8741fb0c",
+              "nodeId": "da5704cd-48df-4105-8bc2-6d1fb291ae8b",
+              "nodeType": "Operator",
+              "groupOperator": "Exclude",
+              "children": [
+                "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+                "b9d8a472-51a8-4bf6-873e-0151092372ff"
+              ],
+              "filterConditionId": null,
+              "isDeprecated": true
+            },
+            {
+              "parentNodeId": "da5704cd-48df-4105-8bc2-6d1fb291ae8b",
+              "nodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+              "nodeType": "Operator",
+              "groupOperator": "And",
+              "children": [
+                "e30461b6-034e-4252-a69b-8fba30cac71e",
+                "a2d8b792-386e-43b6-b736-60b7fec4e84c",
+                "b04cb801-88f3-485f-8dc5-7bb222709a06",
+                "29847602-801c-4afc-b1dd-14fb77270367",
+                "b0536c27-e1e4-44c4-8877-966ba54a84d3"
+              ],
+              "filterConditionId": null,
+              "isDeprecated": true
+            },
+            {
+              "parentNodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+              "nodeId": "e30461b6-034e-4252-a69b-8fba30cac71e",
+              "nodeType": "Filter",
+              "groupOperator": null,
+              "children": [],
+              "filterConditionId": "f021bdd7-c7c1-4fef-b2a3-25906c400995",
+              "name": "deposit_cnt",
+              "column": {
+                "name": "deposit_cnt",
+                "tableName": "agg_payment_stats_summary",
+                "filterName": "Number",
+                "isRequired": false,
+                "description": "Count of successful client deposits for the period and given currency",
+                "displayName": "deposit_cnt",
+                "valuesSource": null,
+                "filterConditions": [
+                  {
+                    "operator": "gte",
+                    "conditionType": "Number"
+                  },
+                  {
+                    "operator": "lte",
+                    "conditionType": "Number"
+                  },
+                  {
+                    "operator": "equal",
+                    "conditionType": "Number"
+                  },
+                  {
+                    "operator": "notEqual",
+                    "conditionType": "Number"
+                  },
+                  {
+                    "operator": "between",
+                    "conditionType": "NumberBetween"
+                  }
+                ],
+                "isPredefinedValuesAvailable": false
+              },
+              "height": 41.66666793823242,
+              "operator": "notEqual",
+              "settings": {
+                "value": "",
+                "values": [],
+                "dateType": "days",
+                "hasEmptyState": true
+              },
+              "showForm": false,
+              "tableName": "agg_payment_stats_summary",
+              "filterName": "Number",
+              "isRequired": false,
+              "description": "Count of successful client deposits for the period and given currency",
+              "displayName": "deposit_cnt",
+              "databaseName": "dv_marts",
+              "isDeprecated": false,
+              "valuesSource": null,
+              "conditionType": "Number",
+              "filterConditions": [
+                {
+                  "operator": "gte",
+                  "conditionType": "Number"
+                },
+                {
+                  "operator": "lte",
+                  "conditionType": "Number"
+                },
+                {
+                  "operator": "equal",
+                  "conditionType": "Number"
+                },
+                {
+                  "operator": "notEqual",
+                  "conditionType": "Number"
+                },
+                {
+                  "operator": "between",
+                  "conditionType": "NumberBetween"
+                }
+              ],
+              "isPredefinedValuesAvailable": false
+            },
+            {
+              "parentNodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+              "nodeId": "a2d8b792-386e-43b6-b736-60b7fec4e84c",
+              "nodeType": "Filter",
+              "groupOperator": null,
+              "children": [],
+              "filterConditionId": "3dc1b4b5-41d4-42bb-9385-d7b5e6ead6af",
+              "name": "period",
+              "column": {
+                "name": "period",
+                "tableName": "agg_payment_stats_summary",
+                "filterName": "Multiple select",
+                "isRequired": false,
+                "description": "The period for which information on the player was generated",
+                "displayName": "period",
+                "valuesSource": null,
+                "filterConditions": [
+                  {
+                    "operator": "in",
+                    "conditionType": "MultiSelect"
+                  },
+                  {
+                    "operator": "notIn",
+                    "conditionType": "MultiSelect"
+                  }
+                ],
+                "isPredefinedValuesAvailable": true
+              },
+              "height": 41.66666793823242,
+              "operator": "in",
+              "settings": {
+                "values": [
+                  "3M"
+                ],
+                "dateType": "days",
+                "hasEmptyState": false
+              },
+              "showForm": false,
+              "tableName": "agg_payment_stats_summary",
+              "filterName": "Multiple select",
+              "isRequired": false,
+              "description": "The period for which information on the player was generated",
+              "displayName": "period",
+              "databaseName": "dv_marts",
+              "isDeprecated": false,
+              "valuesSource": null,
+              "conditionType": "MultiSelect",
+              "filterConditions": [
+                {
+                  "operator": "in",
+                  "conditionType": "MultiSelect"
+                },
+                {
+                  "operator": "notIn",
+                  "conditionType": "MultiSelect"
+                }
+              ],
+              "isPredefinedValuesAvailable": true
+            },
+            {
+              "parentNodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+              "nodeId": "b04cb801-88f3-485f-8dc5-7bb222709a06",
+              "nodeType": "Filter",
+              "groupOperator": null,
+              "children": [],
+              "filterConditionId": "5aa56a62-dbc2-4765-982c-a48a454017e2",
+              "name": "risk_casino_segment",
+              "column": {
+                "name": "risk_casino_segment",
+                "tableName": "agg_player_summary",
+                "filterName": "Multiple select",
+                "isRequired": false,
+                "description": "Risk segment related to casino.",
+                "displayName": "risk_casino_segment",
+                "valuesSource": null,
+                "filterConditions": [
+                  {
+                    "operator": "in",
+                    "conditionType": "MultiSelect"
+                  },
+                  {
+                    "operator": "notIn",
+                    "conditionType": "MultiSelect"
+                  }
+                ],
+                "isPredefinedValuesAvailable": true
+              },
+              "height": 161.59722900390625,
+              "operator": "notIn",
+              "settings": {
+                "values": [
+                  "Irregular activity",
+                  "Monitoring",
+                  "Good guys-X",
+                  "VIP-Silver",
+                  "Opposite",
+                  "VIP-Sport",
+                  "VIP-Gold",
+                  "VIP-Platinum",
+                  "Jackpot Hunting",
+                  "Black Games",
+                  "Advantage",
+                  "VIP-Crypto",
+                  "VIP-Black",
+                  "Bonus abusers"
+                ],
+                "dateType": "days",
+                "hasEmptyState": false
+              },
+              "showForm": false,
+              "tableName": "agg_player_summary",
+              "filterName": "Multiple select",
+              "isRequired": false,
+              "description": "Risk segment related to casino.",
+              "displayName": "risk_casino_segment",
+              "databaseName": "dv_marts",
+              "isDeprecated": false,
+              "valuesSource": null,
+              "conditionType": "MultiSelect",
+              "filterConditions": [
+                {
+                  "operator": "in",
+                  "conditionType": "MultiSelect"
+                },
+                {
+                  "operator": "notIn",
+                  "conditionType": "MultiSelect"
+                }
+              ],
+              "isPredefinedValuesAvailable": true
+            },
+            {
+              "parentNodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+              "nodeId": "29847602-801c-4afc-b1dd-14fb77270367",
+              "nodeType": "Filter",
+              "groupOperator": null,
+              "children": [],
+              "filterConditionId": "97442825-7c8c-49b7-a7cd-81ab15f4771e",
+              "name": "last_bet_total",
+              "column": {
+                "name": "last_bet_total",
+                "tableName": "agg_player_summary",
+                "filterName": "Date&time",
+                "isRequired": false,
+                "description": "Timestamp of the player's last bet across all products.",
+                "displayName": "last_bet_total",
+                "valuesSource": null,
+                "filterConditions": [
+                  {
+                    "operator": "equal",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "notEqual",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "gte",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "lte",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "between",
+                    "conditionType": "DateTimeBetween"
+                  },
+                  {
+                    "operator": "equal",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "notEqual",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "gte",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "lte",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "between",
+                    "conditionType": "DateTimeRelativeBetween"
+                  }
+                ],
+                "isPredefinedValuesAvailable": false
+              },
+              "height": 41.66666793823242,
+              "operator": "lte",
+              "settings": {
+                "amount": "30",
+                "values": [],
+                "dateType": "days",
+                "hasEmptyState": false
+              },
+              "showForm": false,
+              "tableName": "agg_player_summary",
+              "filterName": "Date&time",
+              "isRequired": false,
+              "description": "Timestamp of the player's last bet across all products.",
+              "displayName": "last_bet_total",
+              "databaseName": "dv_marts",
+              "dateTimeMode": "Relative",
+              "isDeprecated": false,
+              "valuesSource": null,
+              "conditionType": "DateTimeRelative",
+              "filterConditions": [
+                {
+                  "operator": "equal",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "notEqual",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "gte",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "lte",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "between",
+                  "conditionType": "DateTimeBetween"
+                },
+                {
+                  "operator": "equal",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "notEqual",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "gte",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "lte",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "between",
+                  "conditionType": "DateTimeRelativeBetween"
+                }
+              ],
+              "isPredefinedValuesAvailable": false
+            },
+            {
+              "parentNodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+              "nodeId": "b0536c27-e1e4-44c4-8877-966ba54a84d3",
+              "nodeType": "Filter",
+              "groupOperator": null,
+              "children": [],
+              "filterConditionId": "7ed79446-743d-42e8-b47e-cc6d05dbd491",
+              "name": "highest_prob_pref_category",
+              "column": {
+                "name": "highest_prob_pref_category",
+                "tableName": "d_player_product_segment",
+                "filterName": "Multiple select",
+                "isRequired": false,
+                "description": "Product preference category with the highest probability",
+                "displayName": "highest_prob_pref_category",
+                "valuesSource": null,
+                "filterConditions": [
+                  {
+                    "operator": "in",
+                    "conditionType": "MultiSelect"
+                  },
+                  {
+                    "operator": "notIn",
+                    "conditionType": "MultiSelect"
+                  }
+                ],
+                "isPredefinedValuesAvailable": true
+              },
+              "height": 41.66666793823242,
+              "operator": "in",
+              "settings": {
+                "values": [
+                  "casino"
+                ],
+                "dateType": "days",
+                "hasEmptyState": false
+              },
+              "showForm": false,
+              "tableName": "d_player_product_segment",
+              "filterName": "Multiple select",
+              "isRequired": false,
+              "description": "Product preference category with the highest probability",
+              "displayName": "highest_prob_pref_category",
+              "databaseName": "dv_marts",
+              "isDeprecated": false,
+              "valuesSource": null,
+              "conditionType": "MultiSelect",
+              "filterConditions": [
+                {
+                  "operator": "in",
+                  "conditionType": "MultiSelect"
+                },
+                {
+                  "operator": "notIn",
+                  "conditionType": "MultiSelect"
+                }
+              ],
+              "isPredefinedValuesAvailable": true
+            },
+            {
+              "parentNodeId": "da5704cd-48df-4105-8bc2-6d1fb291ae8b",
+              "nodeId": "b9d8a472-51a8-4bf6-873e-0151092372ff",
+              "nodeType": "Filter",
+              "groupOperator": null,
+              "children": [],
+              "filterConditionId": "2c750aff-e8ff-4310-81ba-00fc39fb46dd",
+              "name": "restriction_name",
+              "column": {
+                "name": "restriction_name",
+                "tableName": "d_player_restriction",
+                "filterName": "Multiple select",
+                "isRequired": false,
+                "description": "The name of restriction",
+                "displayName": "restriction_name",
+                "valuesSource": null,
+                "filterConditions": [
+                  {
+                    "operator": "in",
+                    "conditionType": "MultiSelect"
+                  },
+                  {
+                    "operator": "notIn",
+                    "conditionType": "MultiSelect"
+                  }
+                ],
+                "isPredefinedValuesAvailable": true
+              },
+              "height": 41.66666793823242,
+              "operator": "in",
+              "settings": {
+                "values": [
+                  "login",
+                  "deposit"
+                ],
+                "dateType": "days",
+                "hasEmptyState": false
+              },
+              "showForm": false,
+              "tableName": "d_player_restriction",
+              "filterName": "Multiple select",
+              "isRequired": false,
+              "description": "The name of restriction",
+              "displayName": "restriction_name",
+              "databaseName": "dv_marts",
+              "isDeprecated": false,
+              "valuesSource": null,
+              "conditionType": "MultiSelect",
+              "filterConditions": [
+                {
+                  "operator": "in",
+                  "conditionType": "MultiSelect"
+                },
+                {
+                  "operator": "notIn",
+                  "conditionType": "MultiSelect"
+                }
+              ],
+              "isPredefinedValuesAvailable": true
+            },
+            {
+              "parentNodeId": "10f3cdb0-eba2-4a69-8424-465f8741fb0c",
+              "nodeId": "e3b38325-e1bd-4c0b-923c-4b7c6a8afc7a",
+              "nodeType": "Filter",
+              "groupOperator": null,
+              "children": [],
+              "filterConditionId": "fb030129-27ef-468d-9bac-a6fa5bfeacea",
+              "name": "player_id",
+              "column": {
+                "name": "player_id",
+                "tableName": "agg_player_summary",
+                "filterName": "Text",
+                "isRequired": false,
+                "description": "Identifier for the player.",
+                "displayName": "player_id",
+                "valuesSource": null,
+                "filterConditions": [
+                  {
+                    "operator": "equal",
+                    "conditionType": "MultiTextInput"
+                  },
+                  {
+                    "operator": "notEqual",
+                    "conditionType": "MultiTextInput"
+                  },
+                  {
+                    "operator": "startWith",
+                    "conditionType": "MultiTextInput"
+                  },
+                  {
+                    "operator": "contain",
+                    "conditionType": "MultiTextInput"
+                  }
+                ],
+                "isPredefinedValuesAvailable": false
+              },
+              "height": 121.61458587646484,
+              "operator": "equal",
+              "settings": {
+                "values": [
+                  "605013564",
+                  "852909626",
+                  "106790682",
+                  "723920970",
+                  "524983911",
+                  "12906987",
+                  "73643820",
+                  "772457467",
+                  "439862289",
+                  "273737814",
+                  "305088297",
+                  "831954299",
+                  "846216942",
+                  "902463751",
+                  "973909759",
+                  "360426705",
+                  "928387577",
+                  "702053405",
+                  "451937505",
+                  "587912725"
+                ],
+                "dateType": "days",
+                "hasEmptyState": false
+              },
+              "showForm": false,
+              "tableName": "agg_player_summary",
+              "filterName": "Text",
+              "isRequired": false,
+              "description": "Identifier for the player.",
+              "displayName": "player_id",
+              "databaseName": "dv_marts",
+              "isDeprecated": false,
+              "valuesSource": null,
+              "conditionType": "MultiTextInput",
+              "filterConditions": [
+                {
+                  "operator": "equal",
+                  "conditionType": "MultiTextInput"
+                },
+                {
+                  "operator": "notEqual",
+                  "conditionType": "MultiTextInput"
+                },
+                {
+                  "operator": "startWith",
+                  "conditionType": "MultiTextInput"
+                },
+                {
+                  "operator": "contain",
+                  "conditionType": "MultiTextInput"
+                }
+              ],
+              "isPredefinedValuesAvailable": false
+            }
+          ]
+        },
+        "createdBy": "40207567",
+        "group": "myTeamFilterTemplates"
+      },
+      "displayData": [
+        "Activity customized"
+      ]
+    },
+    "isEditable": true,
+    "changedBy": {
+      "authorId": "d676e6ae-dd0d-4057-99ee-afe57d38e239",
+      "authorName": "Erik A"
+    },
+    "changedAt": "2026-06-03T14:16:13.5968890Z",
+    "version": 1
+  },
+  "config": {
+    "data": {
+      "dataSourceName": "default",
+      "filterDetails": {
+        "filtersTree": [
+          {
+            "parentNodeId": null,
+            "nodeId": "10f3cdb0-eba2-4a69-8424-465f8741fb0c",
+            "nodeType": "Operator",
+            "groupOperator": "Or",
+            "children": [
+              "da5704cd-48df-4105-8bc2-6d1fb291ae8b",
+              "e3b38325-e1bd-4c0b-923c-4b7c6a8afc7a"
+            ],
+            "filterConditionId": null,
+            "isDeprecated": true
+          },
+          {
+            "parentNodeId": "10f3cdb0-eba2-4a69-8424-465f8741fb0c",
+            "nodeId": "da5704cd-48df-4105-8bc2-6d1fb291ae8b",
+            "nodeType": "Operator",
+            "groupOperator": "Exclude",
+            "children": [
+              "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+              "b9d8a472-51a8-4bf6-873e-0151092372ff"
+            ],
+            "filterConditionId": null,
+            "isDeprecated": true
+          },
+          {
+            "parentNodeId": "da5704cd-48df-4105-8bc2-6d1fb291ae8b",
+            "nodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+            "nodeType": "Operator",
+            "groupOperator": "And",
+            "children": [
+              "e30461b6-034e-4252-a69b-8fba30cac71e",
+              "a2d8b792-386e-43b6-b736-60b7fec4e84c",
+              "b04cb801-88f3-485f-8dc5-7bb222709a06",
+              "29847602-801c-4afc-b1dd-14fb77270367",
+              "b0536c27-e1e4-44c4-8877-966ba54a84d3"
+            ],
+            "filterConditionId": null,
+            "isDeprecated": true
+          },
+          {
+            "parentNodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+            "nodeId": "e30461b6-034e-4252-a69b-8fba30cac71e",
+            "nodeType": "Filter",
+            "groupOperator": null,
+            "children": [],
+            "filterConditionId": "f021bdd7-c7c1-4fef-b2a3-25906c400995",
+            "name": "deposit_cnt",
+            "column": {
+              "name": "deposit_cnt",
+              "tableName": "agg_payment_stats_summary",
+              "filterName": "Number",
+              "isRequired": false,
+              "description": "Count of successful client deposits for the period and given currency",
+              "displayName": "deposit_cnt",
+              "valuesSource": null,
+              "filterConditions": [
+                {
+                  "operator": "gte",
+                  "conditionType": "Number"
+                },
+                {
+                  "operator": "lte",
+                  "conditionType": "Number"
+                },
+                {
+                  "operator": "equal",
+                  "conditionType": "Number"
+                },
+                {
+                  "operator": "notEqual",
+                  "conditionType": "Number"
+                },
+                {
+                  "operator": "between",
+                  "conditionType": "NumberBetween"
+                }
+              ],
+              "isPredefinedValuesAvailable": false
+            },
+            "height": 41.66666793823242,
+            "operator": "notEqual",
+            "settings": {
+              "value": "",
+              "values": [],
+              "dateType": "days",
+              "hasEmptyState": true
+            },
+            "showForm": false,
+            "tableName": "agg_payment_stats_summary",
+            "filterName": "Number",
+            "isRequired": false,
+            "description": "Count of successful client deposits for the period and given currency",
+            "displayName": "deposit_cnt",
+            "databaseName": "dv_marts",
+            "isDeprecated": false,
+            "valuesSource": null,
+            "conditionType": "Number",
+            "filterConditions": [
+              {
+                "operator": "gte",
+                "conditionType": "Number"
+              },
+              {
+                "operator": "lte",
+                "conditionType": "Number"
+              },
+              {
+                "operator": "equal",
+                "conditionType": "Number"
+              },
+              {
+                "operator": "notEqual",
+                "conditionType": "Number"
+              },
+              {
+                "operator": "between",
+                "conditionType": "NumberBetween"
+              }
+            ],
+            "isPredefinedValuesAvailable": false
+          },
+          {
+            "parentNodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+            "nodeId": "a2d8b792-386e-43b6-b736-60b7fec4e84c",
+            "nodeType": "Filter",
+            "groupOperator": null,
+            "children": [],
+            "filterConditionId": "3dc1b4b5-41d4-42bb-9385-d7b5e6ead6af",
+            "name": "period",
+            "column": {
+              "name": "period",
+              "tableName": "agg_payment_stats_summary",
+              "filterName": "Multiple select",
+              "isRequired": false,
+              "description": "The period for which information on the player was generated",
+              "displayName": "period",
+              "valuesSource": null,
+              "filterConditions": [
+                {
+                  "operator": "in",
+                  "conditionType": "MultiSelect"
+                },
+                {
+                  "operator": "notIn",
+                  "conditionType": "MultiSelect"
+                }
+              ],
+              "isPredefinedValuesAvailable": true
+            },
+            "height": 41.66666793823242,
+            "operator": "in",
+            "settings": {
+              "values": [
+                "3M"
+              ],
+              "dateType": "days",
+              "hasEmptyState": false
+            },
+            "showForm": false,
+            "tableName": "agg_payment_stats_summary",
+            "filterName": "Multiple select",
+            "isRequired": false,
+            "description": "The period for which information on the player was generated",
+            "displayName": "period",
+            "databaseName": "dv_marts",
+            "isDeprecated": false,
+            "valuesSource": null,
+            "conditionType": "MultiSelect",
+            "filterConditions": [
+              {
+                "operator": "in",
+                "conditionType": "MultiSelect"
+              },
+              {
+                "operator": "notIn",
+                "conditionType": "MultiSelect"
+              }
+            ],
+            "isPredefinedValuesAvailable": true
+          },
+          {
+            "parentNodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+            "nodeId": "b04cb801-88f3-485f-8dc5-7bb222709a06",
+            "nodeType": "Filter",
+            "groupOperator": null,
+            "children": [],
+            "filterConditionId": "5aa56a62-dbc2-4765-982c-a48a454017e2",
+            "name": "risk_casino_segment",
+            "column": {
+              "name": "risk_casino_segment",
+              "tableName": "agg_player_summary",
+              "filterName": "Multiple select",
+              "isRequired": false,
+              "description": "Risk segment related to casino.",
+              "displayName": "risk_casino_segment",
+              "valuesSource": null,
+              "filterConditions": [
+                {
+                  "operator": "in",
+                  "conditionType": "MultiSelect"
+                },
+                {
+                  "operator": "notIn",
+                  "conditionType": "MultiSelect"
+                }
+              ],
+              "isPredefinedValuesAvailable": true
+            },
+            "height": 161.59722900390625,
+            "operator": "notIn",
+            "settings": {
+              "values": [
+                "Irregular activity",
+                "Monitoring",
+                "Good guys-X",
+                "VIP-Silver",
+                "Opposite",
+                "VIP-Sport",
+                "VIP-Gold",
+                "VIP-Platinum",
+                "Jackpot Hunting",
+                "Black Games",
+                "Advantage",
+                "VIP-Crypto",
+                "VIP-Black",
+                "Bonus abusers"
+              ],
+              "dateType": "days",
+              "hasEmptyState": false
+            },
+            "showForm": false,
+            "tableName": "agg_player_summary",
+            "filterName": "Multiple select",
+            "isRequired": false,
+            "description": "Risk segment related to casino.",
+            "displayName": "risk_casino_segment",
+            "databaseName": "dv_marts",
+            "isDeprecated": false,
+            "valuesSource": null,
+            "conditionType": "MultiSelect",
+            "filterConditions": [
+              {
+                "operator": "in",
+                "conditionType": "MultiSelect"
+              },
+              {
+                "operator": "notIn",
+                "conditionType": "MultiSelect"
+              }
+            ],
+            "isPredefinedValuesAvailable": true
+          },
+          {
+            "parentNodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+            "nodeId": "29847602-801c-4afc-b1dd-14fb77270367",
+            "nodeType": "Filter",
+            "groupOperator": null,
+            "children": [],
+            "filterConditionId": "97442825-7c8c-49b7-a7cd-81ab15f4771e",
+            "name": "last_bet_total",
+            "column": {
+              "name": "last_bet_total",
+              "tableName": "agg_player_summary",
+              "filterName": "Date&time",
+              "isRequired": false,
+              "description": "Timestamp of the player's last bet across all products.",
+              "displayName": "last_bet_total",
+              "valuesSource": null,
+              "filterConditions": [
+                {
+                  "operator": "equal",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "notEqual",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "gte",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "lte",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "between",
+                  "conditionType": "DateTimeBetween"
+                },
+                {
+                  "operator": "equal",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "notEqual",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "gte",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "lte",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "between",
+                  "conditionType": "DateTimeRelativeBetween"
+                }
+              ],
+              "isPredefinedValuesAvailable": false
+            },
+            "height": 41.66666793823242,
+            "operator": "lte",
+            "settings": {
+              "amount": "30",
+              "values": [],
+              "dateType": "days",
+              "hasEmptyState": false
+            },
+            "showForm": false,
+            "tableName": "agg_player_summary",
+            "filterName": "Date&time",
+            "isRequired": false,
+            "description": "Timestamp of the player's last bet across all products.",
+            "displayName": "last_bet_total",
+            "databaseName": "dv_marts",
+            "dateTimeMode": "Relative",
+            "isDeprecated": false,
+            "valuesSource": null,
+            "conditionType": "DateTimeRelative",
+            "filterConditions": [
+              {
+                "operator": "equal",
+                "conditionType": "DateTime"
+              },
+              {
+                "operator": "notEqual",
+                "conditionType": "DateTime"
+              },
+              {
+                "operator": "gte",
+                "conditionType": "DateTime"
+              },
+              {
+                "operator": "lte",
+                "conditionType": "DateTime"
+              },
+              {
+                "operator": "between",
+                "conditionType": "DateTimeBetween"
+              },
+              {
+                "operator": "equal",
+                "conditionType": "DateTimeRelative"
+              },
+              {
+                "operator": "notEqual",
+                "conditionType": "DateTimeRelative"
+              },
+              {
+                "operator": "gte",
+                "conditionType": "DateTimeRelative"
+              },
+              {
+                "operator": "lte",
+                "conditionType": "DateTimeRelative"
+              },
+              {
+                "operator": "between",
+                "conditionType": "DateTimeRelativeBetween"
+              }
+            ],
+            "isPredefinedValuesAvailable": false
+          },
+          {
+            "parentNodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+            "nodeId": "b0536c27-e1e4-44c4-8877-966ba54a84d3",
+            "nodeType": "Filter",
+            "groupOperator": null,
+            "children": [],
+            "filterConditionId": "7ed79446-743d-42e8-b47e-cc6d05dbd491",
+            "name": "highest_prob_pref_category",
+            "column": {
+              "name": "highest_prob_pref_category",
+              "tableName": "d_player_product_segment",
+              "filterName": "Multiple select",
+              "isRequired": false,
+              "description": "Product preference category with the highest probability",
+              "displayName": "highest_prob_pref_category",
+              "valuesSource": null,
+              "filterConditions": [
+                {
+                  "operator": "in",
+                  "conditionType": "MultiSelect"
+                },
+                {
+                  "operator": "notIn",
+                  "conditionType": "MultiSelect"
+                }
+              ],
+              "isPredefinedValuesAvailable": true
+            },
+            "height": 41.66666793823242,
+            "operator": "in",
+            "settings": {
+              "values": [
+                "casino"
+              ],
+              "dateType": "days",
+              "hasEmptyState": false
+            },
+            "showForm": false,
+            "tableName": "d_player_product_segment",
+            "filterName": "Multiple select",
+            "isRequired": false,
+            "description": "Product preference category with the highest probability",
+            "displayName": "highest_prob_pref_category",
+            "databaseName": "dv_marts",
+            "isDeprecated": false,
+            "valuesSource": null,
+            "conditionType": "MultiSelect",
+            "filterConditions": [
+              {
+                "operator": "in",
+                "conditionType": "MultiSelect"
+              },
+              {
+                "operator": "notIn",
+                "conditionType": "MultiSelect"
+              }
+            ],
+            "isPredefinedValuesAvailable": true
+          },
+          {
+            "parentNodeId": "da5704cd-48df-4105-8bc2-6d1fb291ae8b",
+            "nodeId": "b9d8a472-51a8-4bf6-873e-0151092372ff",
+            "nodeType": "Filter",
+            "groupOperator": null,
+            "children": [],
+            "filterConditionId": "2c750aff-e8ff-4310-81ba-00fc39fb46dd",
+            "name": "restriction_name",
+            "column": {
+              "name": "restriction_name",
+              "tableName": "d_player_restriction",
+              "filterName": "Multiple select",
+              "isRequired": false,
+              "description": "The name of restriction",
+              "displayName": "restriction_name",
+              "valuesSource": null,
+              "filterConditions": [
+                {
+                  "operator": "in",
+                  "conditionType": "MultiSelect"
+                },
+                {
+                  "operator": "notIn",
+                  "conditionType": "MultiSelect"
+                }
+              ],
+              "isPredefinedValuesAvailable": true
+            },
+            "height": 41.66666793823242,
+            "operator": "in",
+            "settings": {
+              "values": [
+                "login",
+                "deposit"
+              ],
+              "dateType": "days",
+              "hasEmptyState": false
+            },
+            "showForm": false,
+            "tableName": "d_player_restriction",
+            "filterName": "Multiple select",
+            "isRequired": false,
+            "description": "The name of restriction",
+            "displayName": "restriction_name",
+            "databaseName": "dv_marts",
+            "isDeprecated": false,
+            "valuesSource": null,
+            "conditionType": "MultiSelect",
+            "filterConditions": [
+              {
+                "operator": "in",
+                "conditionType": "MultiSelect"
+              },
+              {
+                "operator": "notIn",
+                "conditionType": "MultiSelect"
+              }
+            ],
+            "isPredefinedValuesAvailable": true
+          },
+          {
+            "parentNodeId": "10f3cdb0-eba2-4a69-8424-465f8741fb0c",
+            "nodeId": "e3b38325-e1bd-4c0b-923c-4b7c6a8afc7a",
+            "nodeType": "Filter",
+            "groupOperator": null,
+            "children": [],
+            "filterConditionId": "fb030129-27ef-468d-9bac-a6fa5bfeacea",
+            "name": "player_id",
+            "column": {
+              "name": "player_id",
+              "tableName": "agg_player_summary",
+              "filterName": "Text",
+              "isRequired": false,
+              "description": "Identifier for the player.",
+              "displayName": "player_id",
+              "valuesSource": null,
+              "filterConditions": [
+                {
+                  "operator": "equal",
+                  "conditionType": "MultiTextInput"
+                },
+                {
+                  "operator": "notEqual",
+                  "conditionType": "MultiTextInput"
+                },
+                {
+                  "operator": "startWith",
+                  "conditionType": "MultiTextInput"
+                },
+                {
+                  "operator": "contain",
+                  "conditionType": "MultiTextInput"
+                }
+              ],
+              "isPredefinedValuesAvailable": false
+            },
+            "height": 121.61458587646484,
+            "operator": "equal",
+            "settings": {
+              "values": [
+                "605013564",
+                "852909626",
+                "106790682",
+                "723920970",
+                "524983911",
+                "12906987",
+                "73643820",
+                "772457467",
+                "439862289",
+                "273737814",
+                "305088297",
+                "831954299",
+                "846216942",
+                "902463751",
+                "973909759",
+                "360426705",
+                "928387577",
+                "702053405",
+                "451937505",
+                "587912725"
+              ],
+              "dateType": "days",
+              "hasEmptyState": false
+            },
+            "showForm": false,
+            "tableName": "agg_player_summary",
+            "filterName": "Text",
+            "isRequired": false,
+            "description": "Identifier for the player.",
+            "displayName": "player_id",
+            "databaseName": "dv_marts",
+            "isDeprecated": false,
+            "valuesSource": null,
+            "conditionType": "MultiTextInput",
+            "filterConditions": [
+              {
+                "operator": "equal",
+                "conditionType": "MultiTextInput"
+              },
+              {
+                "operator": "notEqual",
+                "conditionType": "MultiTextInput"
+              },
+              {
+                "operator": "startWith",
+                "conditionType": "MultiTextInput"
+              },
+              {
+                "operator": "contain",
+                "conditionType": "MultiTextInput"
+              }
+            ],
+            "isPredefinedValuesAvailable": false
+          }
+        ],
+        "filterConditions": [
+          {
+            "id": "f021bdd7-c7c1-4fef-b2a3-25906c400995",
+            "databaseName": "dv_marts",
+            "tableName": "agg_payment_stats_summary",
+            "fieldName": "deposit_cnt",
+            "operator": "notEqual",
+            "columnName": "deposit_cnt",
+            "conditionType": "Number",
+            "nodeType": "Filter",
+            "value": null,
+            "hasEmptyState": true
+          },
+          {
+            "id": "3dc1b4b5-41d4-42bb-9385-d7b5e6ead6af",
+            "databaseName": "dv_marts",
+            "tableName": "agg_payment_stats_summary",
+            "fieldName": "period",
+            "operator": "in",
+            "columnName": "period",
+            "conditionType": "MultiSelect",
+            "nodeType": "Filter",
+            "values": [
+              "3M"
+            ],
+            "hasEmptyState": false
+          },
+          {
+            "id": "5aa56a62-dbc2-4765-982c-a48a454017e2",
+            "databaseName": "dv_marts",
+            "tableName": "agg_player_summary",
+            "fieldName": "risk_casino_segment",
+            "operator": "notIn",
+            "columnName": "risk_casino_segment",
+            "conditionType": "MultiSelect",
+            "nodeType": "Filter",
+            "values": [
+              "Irregular activity",
+              "Monitoring",
+              "Good guys-X",
+              "VIP-Silver",
+              "Opposite",
+              "VIP-Sport",
+              "VIP-Gold",
+              "VIP-Platinum",
+              "Jackpot Hunting",
+              "Black Games",
+              "Advantage",
+              "VIP-Crypto",
+              "VIP-Black",
+              "Bonus abusers"
+            ],
+            "hasEmptyState": false
+          },
+          {
+            "id": "97442825-7c8c-49b7-a7cd-81ab15f4771e",
+            "databaseName": "dv_marts",
+            "tableName": "agg_player_summary",
+            "fieldName": "last_bet_total",
+            "operator": "lte",
+            "columnName": "last_bet_total",
+            "conditionType": "DateTimeRelative",
+            "nodeType": "Filter",
+            "value": "P0Y0M30DT0H0M0S",
+            "hasEmptyState": false
+          },
+          {
+            "id": "7ed79446-743d-42e8-b47e-cc6d05dbd491",
+            "databaseName": "dv_marts",
+            "tableName": "d_player_product_segment",
+            "fieldName": "highest_prob_pref_category",
+            "operator": "in",
+            "columnName": "highest_prob_pref_category",
+            "conditionType": "MultiSelect",
+            "nodeType": "Filter",
+            "values": [
+              "casino"
+            ],
+            "hasEmptyState": false
+          },
+          {
+            "id": "2c750aff-e8ff-4310-81ba-00fc39fb46dd",
+            "databaseName": "dv_marts",
+            "tableName": "d_player_restriction",
+            "fieldName": "restriction_name",
+            "operator": "in",
+            "columnName": "restriction_name",
+            "conditionType": "MultiSelect",
+            "nodeType": "Filter",
+            "values": [
+              "login",
+              "deposit"
+            ],
+            "hasEmptyState": false
+          },
+          {
+            "id": "fb030129-27ef-468d-9bac-a6fa5bfeacea",
+            "databaseName": "dv_marts",
+            "tableName": "agg_player_summary",
+            "fieldName": "player_id",
+            "operator": "equal",
+            "columnName": "player_id",
+            "conditionType": "MultiTextInput",
+            "nodeType": "Filter",
+            "values": [
+              "605013564",
+              "852909626",
+              "106790682",
+              "723920970",
+              "524983911",
+              "12906987",
+              "73643820",
+              "772457467",
+              "439862289",
+              "273737814",
+              "305088297",
+              "831954299",
+              "846216942",
+              "902463751",
+              "973909759",
+              "360426705",
+              "928387577",
+              "702053405",
+              "451937505",
+              "587912725"
+            ],
+            "hasEmptyState": false
+          }
+        ]
+      },
+      "currentTemplate": {
+        "id": "f75838d0-c81b-49d6-9c4c-a044e013baa9",
+        "name": "JBCL |CS| Active - RB/Bet<=14d /Tour NV",
+        "brand": "JBCL",
+        "currencyCodes": [
+          "CLP"
+        ],
+        "filterDetails": {
+          "filterConditions": [
+            {
+              "conditionType": "Number",
+              "value": null,
+              "hasEmptyState": true,
+              "id": "f021bdd7-c7c1-4fef-b2a3-25906c400995",
+              "databaseName": "dv_marts",
+              "tableName": "agg_payment_stats_summary",
+              "fieldName": "deposit_cnt",
+              "operator": "notEqual"
+            },
+            {
+              "conditionType": "MultiSelect",
+              "values": [
+                "3M"
+              ],
+              "hasEmptyState": false,
+              "id": "3dc1b4b5-41d4-42bb-9385-d7b5e6ead6af",
+              "databaseName": "dv_marts",
+              "tableName": "agg_payment_stats_summary",
+              "fieldName": "period",
+              "operator": "in"
+            },
+            {
+              "conditionType": "MultiSelect",
+              "values": [
+                "Irregular activity",
+                "Monitoring",
+                "Good guys-X",
+                "VIP-Silver",
+                "Opposite",
+                "VIP-Sport",
+                "VIP-Gold",
+                "VIP-Platinum",
+                "Jackpot Hunting",
+                "Black Games",
+                "Advantage",
+                "VIP-Crypto",
+                "VIP-Black",
+                "Bonus abusers"
+              ],
+              "hasEmptyState": false,
+              "id": "5aa56a62-dbc2-4765-982c-a48a454017e2",
+              "databaseName": "dv_marts",
+              "tableName": "agg_player_summary",
+              "fieldName": "risk_casino_segment",
+              "operator": "notIn"
+            },
+            {
+              "conditionType": "DateTimeRelative",
+              "value": "P30D",
+              "hasEmptyState": null,
+              "id": "97442825-7c8c-49b7-a7cd-81ab15f4771e",
+              "databaseName": "dv_marts",
+              "tableName": "agg_player_summary",
+              "fieldName": "last_bet_total",
+              "operator": "lte"
+            },
+            {
+              "conditionType": "MultiSelect",
+              "values": [
+                "casino"
+              ],
+              "hasEmptyState": false,
+              "id": "7ed79446-743d-42e8-b47e-cc6d05dbd491",
+              "databaseName": "dv_marts",
+              "tableName": "d_player_product_segment",
+              "fieldName": "highest_prob_pref_category",
+              "operator": "in"
+            },
+            {
+              "conditionType": "MultiSelect",
+              "values": [
+                "login",
+                "deposit"
+              ],
+              "hasEmptyState": false,
+              "id": "2c750aff-e8ff-4310-81ba-00fc39fb46dd",
+              "databaseName": "dv_marts",
+              "tableName": "d_player_restriction",
+              "fieldName": "restriction_name",
+              "operator": "in"
+            },
+            {
+              "conditionType": "MultiTextInput",
+              "values": [
+                "605013564",
+                "852909626",
+                "106790682",
+                "723920970",
+                "524983911",
+                "12906987",
+                "73643820",
+                "772457467",
+                "439862289",
+                "273737814",
+                "305088297",
+                "831954299",
+                "846216942",
+                "902463751",
+                "973909759",
+                "360426705",
+                "928387577",
+                "702053405",
+                "451937505",
+                "587912725"
+              ],
+              "hasEmptyState": false,
+              "id": "fb030129-27ef-468d-9bac-a6fa5bfeacea",
+              "databaseName": "dv_marts",
+              "tableName": "agg_player_summary",
+              "fieldName": "player_id",
+              "operator": "equal"
+            }
+          ],
+          "filtersTree": [
+            {
+              "parentNodeId": null,
+              "nodeId": "10f3cdb0-eba2-4a69-8424-465f8741fb0c",
+              "nodeType": "Operator",
+              "groupOperator": "Or",
+              "children": [
+                "da5704cd-48df-4105-8bc2-6d1fb291ae8b",
+                "e3b38325-e1bd-4c0b-923c-4b7c6a8afc7a"
+              ],
+              "filterConditionId": null,
+              "isDeprecated": true
+            },
+            {
+              "parentNodeId": "10f3cdb0-eba2-4a69-8424-465f8741fb0c",
+              "nodeId": "da5704cd-48df-4105-8bc2-6d1fb291ae8b",
+              "nodeType": "Operator",
+              "groupOperator": "Exclude",
+              "children": [
+                "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+                "b9d8a472-51a8-4bf6-873e-0151092372ff"
+              ],
+              "filterConditionId": null,
+              "isDeprecated": true
+            },
+            {
+              "parentNodeId": "da5704cd-48df-4105-8bc2-6d1fb291ae8b",
+              "nodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+              "nodeType": "Operator",
+              "groupOperator": "And",
+              "children": [
+                "e30461b6-034e-4252-a69b-8fba30cac71e",
+                "a2d8b792-386e-43b6-b736-60b7fec4e84c",
+                "b04cb801-88f3-485f-8dc5-7bb222709a06",
+                "29847602-801c-4afc-b1dd-14fb77270367",
+                "b0536c27-e1e4-44c4-8877-966ba54a84d3"
+              ],
+              "filterConditionId": null,
+              "isDeprecated": true
+            },
+            {
+              "parentNodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+              "nodeId": "e30461b6-034e-4252-a69b-8fba30cac71e",
+              "nodeType": "Filter",
+              "groupOperator": null,
+              "children": [],
+              "filterConditionId": "f021bdd7-c7c1-4fef-b2a3-25906c400995",
+              "name": "deposit_cnt",
+              "column": {
+                "name": "deposit_cnt",
+                "tableName": "agg_payment_stats_summary",
+                "filterName": "Number",
+                "isRequired": false,
+                "description": "Count of successful client deposits for the period and given currency",
+                "displayName": "deposit_cnt",
+                "valuesSource": null,
+                "filterConditions": [
+                  {
+                    "operator": "gte",
+                    "conditionType": "Number"
+                  },
+                  {
+                    "operator": "lte",
+                    "conditionType": "Number"
+                  },
+                  {
+                    "operator": "equal",
+                    "conditionType": "Number"
+                  },
+                  {
+                    "operator": "notEqual",
+                    "conditionType": "Number"
+                  },
+                  {
+                    "operator": "between",
+                    "conditionType": "NumberBetween"
+                  }
+                ],
+                "isPredefinedValuesAvailable": false
+              },
+              "height": 41.66666793823242,
+              "operator": "notEqual",
+              "settings": {
+                "value": "",
+                "values": [],
+                "dateType": "days",
+                "hasEmptyState": true
+              },
+              "showForm": false,
+              "tableName": "agg_payment_stats_summary",
+              "filterName": "Number",
+              "isRequired": false,
+              "description": "Count of successful client deposits for the period and given currency",
+              "displayName": "deposit_cnt",
+              "databaseName": "dv_marts",
+              "isDeprecated": false,
+              "valuesSource": null,
+              "conditionType": "Number",
+              "filterConditions": [
+                {
+                  "operator": "gte",
+                  "conditionType": "Number"
+                },
+                {
+                  "operator": "lte",
+                  "conditionType": "Number"
+                },
+                {
+                  "operator": "equal",
+                  "conditionType": "Number"
+                },
+                {
+                  "operator": "notEqual",
+                  "conditionType": "Number"
+                },
+                {
+                  "operator": "between",
+                  "conditionType": "NumberBetween"
+                }
+              ],
+              "isPredefinedValuesAvailable": false
+            },
+            {
+              "parentNodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+              "nodeId": "a2d8b792-386e-43b6-b736-60b7fec4e84c",
+              "nodeType": "Filter",
+              "groupOperator": null,
+              "children": [],
+              "filterConditionId": "3dc1b4b5-41d4-42bb-9385-d7b5e6ead6af",
+              "name": "period",
+              "column": {
+                "name": "period",
+                "tableName": "agg_payment_stats_summary",
+                "filterName": "Multiple select",
+                "isRequired": false,
+                "description": "The period for which information on the player was generated",
+                "displayName": "period",
+                "valuesSource": null,
+                "filterConditions": [
+                  {
+                    "operator": "in",
+                    "conditionType": "MultiSelect"
+                  },
+                  {
+                    "operator": "notIn",
+                    "conditionType": "MultiSelect"
+                  }
+                ],
+                "isPredefinedValuesAvailable": true
+              },
+              "height": 41.66666793823242,
+              "operator": "in",
+              "settings": {
+                "values": [
+                  "3M"
+                ],
+                "dateType": "days",
+                "hasEmptyState": false
+              },
+              "showForm": false,
+              "tableName": "agg_payment_stats_summary",
+              "filterName": "Multiple select",
+              "isRequired": false,
+              "description": "The period for which information on the player was generated",
+              "displayName": "period",
+              "databaseName": "dv_marts",
+              "isDeprecated": false,
+              "valuesSource": null,
+              "conditionType": "MultiSelect",
+              "filterConditions": [
+                {
+                  "operator": "in",
+                  "conditionType": "MultiSelect"
+                },
+                {
+                  "operator": "notIn",
+                  "conditionType": "MultiSelect"
+                }
+              ],
+              "isPredefinedValuesAvailable": true
+            },
+            {
+              "parentNodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+              "nodeId": "b04cb801-88f3-485f-8dc5-7bb222709a06",
+              "nodeType": "Filter",
+              "groupOperator": null,
+              "children": [],
+              "filterConditionId": "5aa56a62-dbc2-4765-982c-a48a454017e2",
+              "name": "risk_casino_segment",
+              "column": {
+                "name": "risk_casino_segment",
+                "tableName": "agg_player_summary",
+                "filterName": "Multiple select",
+                "isRequired": false,
+                "description": "Risk segment related to casino.",
+                "displayName": "risk_casino_segment",
+                "valuesSource": null,
+                "filterConditions": [
+                  {
+                    "operator": "in",
+                    "conditionType": "MultiSelect"
+                  },
+                  {
+                    "operator": "notIn",
+                    "conditionType": "MultiSelect"
+                  }
+                ],
+                "isPredefinedValuesAvailable": true
+              },
+              "height": 161.59722900390625,
+              "operator": "notIn",
+              "settings": {
+                "values": [
+                  "Irregular activity",
+                  "Monitoring",
+                  "Good guys-X",
+                  "VIP-Silver",
+                  "Opposite",
+                  "VIP-Sport",
+                  "VIP-Gold",
+                  "VIP-Platinum",
+                  "Jackpot Hunting",
+                  "Black Games",
+                  "Advantage",
+                  "VIP-Crypto",
+                  "VIP-Black",
+                  "Bonus abusers"
+                ],
+                "dateType": "days",
+                "hasEmptyState": false
+              },
+              "showForm": false,
+              "tableName": "agg_player_summary",
+              "filterName": "Multiple select",
+              "isRequired": false,
+              "description": "Risk segment related to casino.",
+              "displayName": "risk_casino_segment",
+              "databaseName": "dv_marts",
+              "isDeprecated": false,
+              "valuesSource": null,
+              "conditionType": "MultiSelect",
+              "filterConditions": [
+                {
+                  "operator": "in",
+                  "conditionType": "MultiSelect"
+                },
+                {
+                  "operator": "notIn",
+                  "conditionType": "MultiSelect"
+                }
+              ],
+              "isPredefinedValuesAvailable": true
+            },
+            {
+              "parentNodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+              "nodeId": "29847602-801c-4afc-b1dd-14fb77270367",
+              "nodeType": "Filter",
+              "groupOperator": null,
+              "children": [],
+              "filterConditionId": "97442825-7c8c-49b7-a7cd-81ab15f4771e",
+              "name": "last_bet_total",
+              "column": {
+                "name": "last_bet_total",
+                "tableName": "agg_player_summary",
+                "filterName": "Date&time",
+                "isRequired": false,
+                "description": "Timestamp of the player's last bet across all products.",
+                "displayName": "last_bet_total",
+                "valuesSource": null,
+                "filterConditions": [
+                  {
+                    "operator": "equal",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "notEqual",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "gte",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "lte",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "between",
+                    "conditionType": "DateTimeBetween"
+                  },
+                  {
+                    "operator": "equal",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "notEqual",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "gte",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "lte",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "between",
+                    "conditionType": "DateTimeRelativeBetween"
+                  }
+                ],
+                "isPredefinedValuesAvailable": false
+              },
+              "height": 41.66666793823242,
+              "operator": "lte",
+              "settings": {
+                "amount": "30",
+                "values": [],
+                "dateType": "days",
+                "hasEmptyState": false
+              },
+              "showForm": false,
+              "tableName": "agg_player_summary",
+              "filterName": "Date&time",
+              "isRequired": false,
+              "description": "Timestamp of the player's last bet across all products.",
+              "displayName": "last_bet_total",
+              "databaseName": "dv_marts",
+              "dateTimeMode": "Relative",
+              "isDeprecated": false,
+              "valuesSource": null,
+              "conditionType": "DateTimeRelative",
+              "filterConditions": [
+                {
+                  "operator": "equal",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "notEqual",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "gte",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "lte",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "between",
+                  "conditionType": "DateTimeBetween"
+                },
+                {
+                  "operator": "equal",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "notEqual",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "gte",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "lte",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "between",
+                  "conditionType": "DateTimeRelativeBetween"
+                }
+              ],
+              "isPredefinedValuesAvailable": false
+            },
+            {
+              "parentNodeId": "e9e833f2-b079-4ba8-8540-8398dcb37db5",
+              "nodeId": "b0536c27-e1e4-44c4-8877-966ba54a84d3",
+              "nodeType": "Filter",
+              "groupOperator": null,
+              "children": [],
+              "filterConditionId": "7ed79446-743d-42e8-b47e-cc6d05dbd491",
+              "name": "highest_prob_pref_category",
+              "column": {
+                "name": "highest_prob_pref_category",
+                "tableName": "d_player_product_segment",
+                "filterName": "Multiple select",
+                "isRequired": false,
+                "description": "Product preference category with the highest probability",
+                "displayName": "highest_prob_pref_category",
+                "valuesSource": null,
+                "filterConditions": [
+                  {
+                    "operator": "in",
+                    "conditionType": "MultiSelect"
+                  },
+                  {
+                    "operator": "notIn",
+                    "conditionType": "MultiSelect"
+                  }
+                ],
+                "isPredefinedValuesAvailable": true
+              },
+              "height": 41.66666793823242,
+              "operator": "in",
+              "settings": {
+                "values": [
+                  "casino"
+                ],
+                "dateType": "days",
+                "hasEmptyState": false
+              },
+              "showForm": false,
+              "tableName": "d_player_product_segment",
+              "filterName": "Multiple select",
+              "isRequired": false,
+              "description": "Product preference category with the highest probability",
+              "displayName": "highest_prob_pref_category",
+              "databaseName": "dv_marts",
+              "isDeprecated": false,
+              "valuesSource": null,
+              "conditionType": "MultiSelect",
+              "filterConditions": [
+                {
+                  "operator": "in",
+                  "conditionType": "MultiSelect"
+                },
+                {
+                  "operator": "notIn",
+                  "conditionType": "MultiSelect"
+                }
+              ],
+              "isPredefinedValuesAvailable": true
+            },
+            {
+              "parentNodeId": "da5704cd-48df-4105-8bc2-6d1fb291ae8b",
+              "nodeId": "b9d8a472-51a8-4bf6-873e-0151092372ff",
+              "nodeType": "Filter",
+              "groupOperator": null,
+              "children": [],
+              "filterConditionId": "2c750aff-e8ff-4310-81ba-00fc39fb46dd",
+              "name": "restriction_name",
+              "column": {
+                "name": "restriction_name",
+                "tableName": "d_player_restriction",
+                "filterName": "Multiple select",
+                "isRequired": false,
+                "description": "The name of restriction",
+                "displayName": "restriction_name",
+                "valuesSource": null,
+                "filterConditions": [
+                  {
+                    "operator": "in",
+                    "conditionType": "MultiSelect"
+                  },
+                  {
+                    "operator": "notIn",
+                    "conditionType": "MultiSelect"
+                  }
+                ],
+                "isPredefinedValuesAvailable": true
+              },
+              "height": 41.66666793823242,
+              "operator": "in",
+              "settings": {
+                "values": [
+                  "login",
+                  "deposit"
+                ],
+                "dateType": "days",
+                "hasEmptyState": false
+              },
+              "showForm": false,
+              "tableName": "d_player_restriction",
+              "filterName": "Multiple select",
+              "isRequired": false,
+              "description": "The name of restriction",
+              "displayName": "restriction_name",
+              "databaseName": "dv_marts",
+              "isDeprecated": false,
+              "valuesSource": null,
+              "conditionType": "MultiSelect",
+              "filterConditions": [
+                {
+                  "operator": "in",
+                  "conditionType": "MultiSelect"
+                },
+                {
+                  "operator": "notIn",
+                  "conditionType": "MultiSelect"
+                }
+              ],
+              "isPredefinedValuesAvailable": true
+            },
+            {
+              "parentNodeId": "10f3cdb0-eba2-4a69-8424-465f8741fb0c",
+              "nodeId": "e3b38325-e1bd-4c0b-923c-4b7c6a8afc7a",
+              "nodeType": "Filter",
+              "groupOperator": null,
+              "children": [],
+              "filterConditionId": "fb030129-27ef-468d-9bac-a6fa5bfeacea",
+              "name": "player_id",
+              "column": {
+                "name": "player_id",
+                "tableName": "agg_player_summary",
+                "filterName": "Text",
+                "isRequired": false,
+                "description": "Identifier for the player.",
+                "displayName": "player_id",
+                "valuesSource": null,
+                "filterConditions": [
+                  {
+                    "operator": "equal",
+                    "conditionType": "MultiTextInput"
+                  },
+                  {
+                    "operator": "notEqual",
+                    "conditionType": "MultiTextInput"
+                  },
+                  {
+                    "operator": "startWith",
+                    "conditionType": "MultiTextInput"
+                  },
+                  {
+                    "operator": "contain",
+                    "conditionType": "MultiTextInput"
+                  }
+                ],
+                "isPredefinedValuesAvailable": false
+              },
+              "height": 121.61458587646484,
+              "operator": "equal",
+              "settings": {
+                "values": [
+                  "605013564",
+                  "852909626",
+                  "106790682",
+                  "723920970",
+                  "524983911",
+                  "12906987",
+                  "73643820",
+                  "772457467",
+                  "439862289",
+                  "273737814",
+                  "305088297",
+                  "831954299",
+                  "846216942",
+                  "902463751",
+                  "973909759",
+                  "360426705",
+                  "928387577",
+                  "702053405",
+                  "451937505",
+                  "587912725"
+                ],
+                "dateType": "days",
+                "hasEmptyState": false
+              },
+              "showForm": false,
+              "tableName": "agg_player_summary",
+              "filterName": "Text",
+              "isRequired": false,
+              "description": "Identifier for the player.",
+              "displayName": "player_id",
+              "databaseName": "dv_marts",
+              "isDeprecated": false,
+              "valuesSource": null,
+              "conditionType": "MultiTextInput",
+              "filterConditions": [
+                {
+                  "operator": "equal",
+                  "conditionType": "MultiTextInput"
+                },
+                {
+                  "operator": "notEqual",
+                  "conditionType": "MultiTextInput"
+                },
+                {
+                  "operator": "startWith",
+                  "conditionType": "MultiTextInput"
+                },
+                {
+                  "operator": "contain",
+                  "conditionType": "MultiTextInput"
+                }
+              ],
+              "isPredefinedValuesAvailable": false
+            }
+          ]
+        },
+        "createdBy": "40207567",
+        "group": "myTeamFilterTemplates"
+      }
+    },
+    "error": false,
+    "isTouched": true,
+    "displayData": [
+      "Activity customized"
+    ],
+    "displayName": "Players DWH"
+  },
+  "node": {
+    "id": "c1725bfd-efde-40b5-9831-82eca02473e2",
+    "data": {
+      "name": "dwh_source",
+      "type": "source",
+      "order": 0,
+      "ports": [
+        {
+          "id": "PlayerAdded-c1725bfd-efde-40b5-9831-82eca02473e2"
+        }
+      ],
+      "events": [
+        {
+          "isHidden": false,
+          "eventName": "PlayerAdded",
+          "eventType": "Activation",
+          "eventDisplayName": "Players added to journey"
+        }
+      ],
+      "nodeType": "source",
+      "boundaryDefinition": false
+    },
+    "type": "source",
+    "style": {
+      "cursor": "pointer"
+    },
+    "width": 267,
+    "height": 64,
+    "zIndex": 5,
+    "position": {
+      "x": 0,
+      "y": 0
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false,
+    "positionAbsolute": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "has_config": true,
+  "has_node": true
+}

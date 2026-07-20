@@ -1,0 +1,107 @@
+{
+  "activityName": "wait_interval",
+  "source_template": "casino/gow_comms.json",
+  "journey_size": 39,
+  "activity": {
+    "activityId": "870b4588-4400-4bd7-9cce-162de4bb1ee8",
+    "activityName": "wait_interval",
+    "events": [
+      {
+        "eventName": "WaitTimeCompleted",
+        "eventType": "Completion",
+        "nextActivityId": "898bc073-00be-4cbb-8791-fee6d168c410",
+        "isUsedInChoosableFlow": false,
+        "checkExitCriteria": false
+      },
+      {
+        "eventName": "WaitTimeStarted",
+        "eventType": "Boundary",
+        "eventDisplayName": "Started",
+        "nextActivityId": null,
+        "checkExitCriteria": false
+      }
+    ],
+    "initializationData": {
+      "waitPeriod": "P0Y0M0DT2H0M0S",
+      "exitCriteria": false,
+      "displayData": [
+        "2 Hours"
+      ]
+    },
+    "activityDisplayName": "Wait",
+    "dataDependencies": [],
+    "dependencies": []
+  },
+  "config": {
+    "data": {
+      "waitPeriod": "P0Y0M0DT2H0M0S",
+      "exitCriteria": false
+    },
+    "error": false,
+    "isTouched": true,
+    "displayData": [
+      "2 Hours"
+    ],
+    "displayName": "Wait"
+  },
+  "node": {
+    "id": "870b4588-4400-4bd7-9cce-162de4bb1ee8",
+    "data": {
+      "name": "wait_interval",
+      "ports": [
+        {
+          "id": "input-870b4588-4400-4bd7-9cce-162de4bb1ee8"
+        },
+        {
+          "id": "WaitTimeStarted-870b4588-4400-4bd7-9cce-162de4bb1ee8"
+        },
+        {
+          "id": "WaitTimeCompleted-870b4588-4400-4bd7-9cce-162de4bb1ee8"
+        }
+      ],
+      "events": [
+        {
+          "isHidden": false,
+          "eventName": "WaitTimeStarted",
+          "eventType": "Boundary",
+          "payloadKeys": [],
+          "eventDisplayName": "Started",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "WaitTimeCompleted",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Completed",
+          "canBeUsedInChoosableFlow": false
+        }
+      ],
+      "activityType": "triger",
+      "activityDisplayName": "Wait"
+    },
+    "type": "action",
+    "style": {
+      "cursor": "pointer"
+    },
+    "width": 267,
+    "extent": "parent",
+    "height": 64,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+      "x": 570,
+      "y": 736
+    },
+    "selected": false,
+    "draggable": false,
+    "parentNode": "cea0b018-d734-4d84-80fc-7c2a7c7e12a1",
+    "connectable": false,
+    "positionAbsolute": {
+      "x": -350.25,
+      "y": 935
+    }
+  },
+  "has_config": true,
+  "has_node": true
+}

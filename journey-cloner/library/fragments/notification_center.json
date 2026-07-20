@@ -1,0 +1,532 @@
+{
+  "activityName": "notification_center",
+  "source_template": "casino/nc_discount.json",
+  "journey_size": 4,
+  "activity": {
+    "activityId": "fb23d30c-80d5-418d-907c-56beecaf136a",
+    "activityName": "notification_center",
+    "activityDisplayName": "Notification Center",
+    "events": [
+      {
+        "eventName": "NotificationSent",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "bf4eb36a-729c-4ba0-b7af-5bfb63e64c83",
+        "count": 67708,
+        "version": 1
+      },
+      {
+        "eventName": "NotificationNotSent",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "5f702491-d573-4be5-b7e1-5ae407a396f2",
+        "count": 0,
+        "version": 1
+      }
+    ],
+    "eventsHistory": [],
+    "tcGroupEvents": [],
+    "dependencies": [],
+    "dataDependencies": [],
+    "dataKeys": [],
+    "initializationData": {
+      "channel": 1,
+      "category": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "contract": 1,
+      "accountId": "",
+      "languages": [
+        {
+          "languageCode": "es"
+        },
+        {
+          "languageCode": "en"
+        }
+      ],
+      "templates": 1935,
+      "displayData": [
+        "1935. JBCL NC Dynamic 2026"
+      ],
+      "deliveryType": "singleChannel",
+      "validityType": "days",
+      "objectForSend": {
+        "metadata": {
+          "utm_source": "boris",
+          "journeyName": "JBCL | CS | NC For Discount 29.06"
+        },
+        "variables": [
+          {
+            "name": "group",
+            "value": "regular"
+          },
+          {
+            "name": "title",
+            "value": "%title-en%"
+          },
+          {
+            "name": "des-en",
+            "value": "No te lo pierdas. Sumérgete en la diversión."
+          },
+          {
+            "name": "layout",
+            "value": "1"
+          },
+          {
+            "name": "link-en",
+            "value": "/launch/slots/iframe/gamzix-coin-win-2-hold-the-spin?%$utm_tags%"
+          },
+          {
+            "name": "icon-src",
+            "value": "%icon%"
+          },
+          {
+            "name": "title-en",
+            "value": "🔥El más jugado del día - Coin Win 2: Hold The Spin"
+          },
+          {
+            "name": "caption-en",
+            "value": " ¡A jugar!"
+          },
+          {
+            "name": "description",
+            "value": "%des-en%"
+          },
+          {
+            "name": "buttons_1_link",
+            "value": "%link-en%?%$utm_tags%"
+          },
+          {
+            "name": "buttons_1_caption",
+            "value": "%caption-en%"
+          },
+          {
+            "name": "buttons_1_deeplink",
+            "value": "%deeplink%?%$utm_tags%"
+          },
+          {
+            "name": "buttons_1_highlighted",
+            "value": "True"
+          },
+          {
+            "name": "group",
+            "value": "regular"
+          },
+          {
+            "name": "title",
+            "value": "%title-es%"
+          },
+          {
+            "name": "des-es",
+            "value": "No te lo pierdas. Sumérgete en la diversión."
+          },
+          {
+            "name": "layout",
+            "value": "1"
+          },
+          {
+            "name": "link-es",
+            "value": "/launch/slots/iframe/gamzix-coin-win-2-hold-the-spin?%$utm_tags%"
+          },
+          {
+            "name": "icon-src",
+            "value": "%icon%"
+          },
+          {
+            "name": "title-es",
+            "value": "🔥El más jugado del día - Coin Win 2: Hold The Spin"
+          },
+          {
+            "name": "caption-es",
+            "value": " ¡A jugar!"
+          },
+          {
+            "name": "description",
+            "value": "%des-es%"
+          },
+          {
+            "name": "buttons_1_link",
+            "value": "%link-es%?%$utm_tags%"
+          },
+          {
+            "name": "buttons_1_caption",
+            "value": "%caption-es%"
+          },
+          {
+            "name": "buttons_1_deeplink",
+            "value": "%deeplink%?%$utm_tags%"
+          },
+          {
+            "name": "buttons_1_highlighted",
+            "value": "True"
+          },
+          {
+            "name": "icon",
+            "value": "https://static.contentin.cloud/c93ad623-44ae-40f6-9aa5-b1aef7fd931a/2db55af6-381a-417c-b8ad-bbe307e6875b.png"
+          },
+          {
+            "name": "deeplink",
+            "value": "/launch/slots/iframe/gamzix-coin-win-2-hold-the-spin?%$utm_tags%"
+          },
+          {
+            "name": "group",
+            "value": "regular"
+          }
+        ],
+        "template_id": 1935,
+        "expire_after": "2.00:00:00.000",
+        "defaultVariables": [],
+        "localizedVariables": []
+      },
+      "singleChannel": {
+        "accordion": {
+          "validList": {
+            "template1312": {
+              "en": true,
+              "es": true
+            },
+            "template1935": {
+              "en": true,
+              "es": true
+            }
+          }
+        },
+        "activityName": "JBCL NC Dynamic 2026",
+        "localizedLanguagesTab": {
+          "en": {
+            "group": "regular",
+            "title": "%title-en%",
+            "des-en": "No te lo pierdas. Sumérgete en la diversión.",
+            "layout": "1",
+            "link-en": "/launch/slots/iframe/gamzix-coin-win-2-hold-the-spin?%$utm_tags%",
+            "icon-src": "%icon%",
+            "title-en": "🔥El más jugado del día - Coin Win 2: Hold The Spin",
+            "caption-en": " ¡A jugar!",
+            "description": "%des-en%",
+            "buttons_1_link": "%link-en%?%$utm_tags%",
+            "buttons_1_caption": "%caption-en%",
+            "buttons_1_deeplink": "%deeplink%?%$utm_tags%",
+            "buttons_1_highlighted": "True"
+          },
+          "es": {
+            "group": "regular",
+            "title": "%title-es%",
+            "des-es": "No te lo pierdas. Sumérgete en la diversión.",
+            "layout": "1",
+            "link-es": "/launch/slots/iframe/gamzix-coin-win-2-hold-the-spin?%$utm_tags%",
+            "icon-src": "%icon%",
+            "title-es": "🔥El más jugado del día - Coin Win 2: Hold The Spin",
+            "caption-es": " ¡A jugar!",
+            "description": "%des-es%",
+            "buttons_1_link": "%link-es%?%$utm_tags%",
+            "buttons_1_caption": "%caption-es%",
+            "buttons_1_deeplink": "%deeplink%?%$utm_tags%",
+            "buttons_1_highlighted": "True"
+          },
+          "common": {
+            "icon": "https://static.contentin.cloud/c93ad623-44ae-40f6-9aa5-b1aef7fd931a/2db55af6-381a-417c-b8ad-bbe307e6875b.png",
+            "deeplink": "/launch/slots/iframe/gamzix-coin-win-2-hold-the-spin?%$utm_tags%"
+          },
+          "dwhVariables": {
+            "en": [],
+            "es": [],
+            "common": []
+          }
+        }
+      },
+      "validityAmount": "2",
+      "dataDependencies": [],
+      "listOfUsedVariables": [],
+      "placements": []
+    },
+    "isEditable": true,
+    "changedBy": {
+      "authorId": "d676e6ae-dd0d-4057-99ee-afe57d38e239",
+      "authorName": "Erik A"
+    },
+    "changedAt": "2026-06-03T14:16:13.5969200Z",
+    "version": 1
+  },
+  "config": {
+    "data": {
+      "channel": 1,
+      "category": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "contract": 1,
+      "accountId": "",
+      "languages": [
+        {
+          "languageCode": "es"
+        },
+        {
+          "languageCode": "en"
+        }
+      ],
+      "templates": 1935,
+      "deliveryType": "singleChannel",
+      "validityType": "days",
+      "objectForSend": {
+        "metadata": {
+          "utm_source": "boris",
+          "journeyName": "JBCL | CS | NC For Discount 29.06"
+        },
+        "variables": [
+          {
+            "name": "group",
+            "value": "regular"
+          },
+          {
+            "name": "title",
+            "value": "%title-en%"
+          },
+          {
+            "name": "des-en",
+            "value": "No te lo pierdas. Sumérgete en la diversión."
+          },
+          {
+            "name": "layout",
+            "value": "1"
+          },
+          {
+            "name": "link-en",
+            "value": "/launch/slots/iframe/gamzix-coin-win-2-hold-the-spin?%$utm_tags%"
+          },
+          {
+            "name": "icon-src",
+            "value": "%icon%"
+          },
+          {
+            "name": "title-en",
+            "value": "🔥El más jugado del día - Coin Win 2: Hold The Spin"
+          },
+          {
+            "name": "caption-en",
+            "value": " ¡A jugar!"
+          },
+          {
+            "name": "description",
+            "value": "%des-en%"
+          },
+          {
+            "name": "buttons_1_link",
+            "value": "%link-en%?%$utm_tags%"
+          },
+          {
+            "name": "buttons_1_caption",
+            "value": "%caption-en%"
+          },
+          {
+            "name": "buttons_1_deeplink",
+            "value": "%deeplink%?%$utm_tags%"
+          },
+          {
+            "name": "buttons_1_highlighted",
+            "value": "True"
+          },
+          {
+            "name": "group",
+            "value": "regular"
+          },
+          {
+            "name": "title",
+            "value": "%title-es%"
+          },
+          {
+            "name": "des-es",
+            "value": "No te lo pierdas. Sumérgete en la diversión."
+          },
+          {
+            "name": "layout",
+            "value": "1"
+          },
+          {
+            "name": "link-es",
+            "value": "/launch/slots/iframe/gamzix-coin-win-2-hold-the-spin?%$utm_tags%"
+          },
+          {
+            "name": "icon-src",
+            "value": "%icon%"
+          },
+          {
+            "name": "title-es",
+            "value": "🔥El más jugado del día - Coin Win 2: Hold The Spin"
+          },
+          {
+            "name": "caption-es",
+            "value": " ¡A jugar!"
+          },
+          {
+            "name": "description",
+            "value": "%des-es%"
+          },
+          {
+            "name": "buttons_1_link",
+            "value": "%link-es%?%$utm_tags%"
+          },
+          {
+            "name": "buttons_1_caption",
+            "value": "%caption-es%"
+          },
+          {
+            "name": "buttons_1_deeplink",
+            "value": "%deeplink%?%$utm_tags%"
+          },
+          {
+            "name": "buttons_1_highlighted",
+            "value": "True"
+          },
+          {
+            "name": "icon",
+            "value": "https://static.contentin.cloud/c93ad623-44ae-40f6-9aa5-b1aef7fd931a/2db55af6-381a-417c-b8ad-bbe307e6875b.png"
+          },
+          {
+            "name": "deeplink",
+            "value": "/launch/slots/iframe/gamzix-coin-win-2-hold-the-spin?%$utm_tags%"
+          },
+          {
+            "name": "group",
+            "value": "regular"
+          }
+        ],
+        "template_id": 1935,
+        "expire_after": "2.00:00:00.000",
+        "defaultVariables": [],
+        "localizedVariables": []
+      },
+      "singleChannel": {
+        "accordion": {
+          "validList": {
+            "template1312": {
+              "en": true,
+              "es": true
+            },
+            "template1935": {
+              "en": true,
+              "es": true
+            }
+          }
+        },
+        "activityName": "JBCL NC Dynamic 2026",
+        "localizedLanguagesTab": {
+          "en": {
+            "group": "regular",
+            "title": "%title-en%",
+            "des-en": "No te lo pierdas. Sumérgete en la diversión.",
+            "layout": "1",
+            "link-en": "/launch/slots/iframe/gamzix-coin-win-2-hold-the-spin?%$utm_tags%",
+            "icon-src": "%icon%",
+            "title-en": "🔥El más jugado del día - Coin Win 2: Hold The Spin",
+            "caption-en": " ¡A jugar!",
+            "description": "%des-en%",
+            "buttons_1_link": "%link-en%?%$utm_tags%",
+            "buttons_1_caption": "%caption-en%",
+            "buttons_1_deeplink": "%deeplink%?%$utm_tags%",
+            "buttons_1_highlighted": "True"
+          },
+          "es": {
+            "group": "regular",
+            "title": "%title-es%",
+            "des-es": "No te lo pierdas. Sumérgete en la diversión.",
+            "layout": "1",
+            "link-es": "/launch/slots/iframe/gamzix-coin-win-2-hold-the-spin?%$utm_tags%",
+            "icon-src": "%icon%",
+            "title-es": "🔥El más jugado del día - Coin Win 2: Hold The Spin",
+            "caption-es": " ¡A jugar!",
+            "description": "%des-es%",
+            "buttons_1_link": "%link-es%?%$utm_tags%",
+            "buttons_1_caption": "%caption-es%",
+            "buttons_1_deeplink": "%deeplink%?%$utm_tags%",
+            "buttons_1_highlighted": "True"
+          },
+          "common": {
+            "icon": "https://static.contentin.cloud/c93ad623-44ae-40f6-9aa5-b1aef7fd931a/2db55af6-381a-417c-b8ad-bbe307e6875b.png",
+            "deeplink": "/launch/slots/iframe/gamzix-coin-win-2-hold-the-spin?%$utm_tags%"
+          },
+          "dwhVariables": {
+            "en": [],
+            "es": [],
+            "common": []
+          }
+        }
+      },
+      "validityAmount": "2",
+      "dataDependencies": [],
+      "listOfUsedVariables": []
+    },
+    "error": false,
+    "isTouched": true,
+    "displayData": [
+      "1935. JBCL NC Dynamic 2026"
+    ],
+    "displayName": "Notification Center"
+  },
+  "node": {
+    "id": "fb23d30c-80d5-418d-907c-56beecaf136a",
+    "data": {
+      "name": "notification_center",
+      "type": "communication",
+      "order": 21,
+      "ports": [
+        {
+          "id": "input-fb23d30c-80d5-418d-907c-56beecaf136a"
+        },
+        {
+          "id": "NotificationSent-fb23d30c-80d5-418d-907c-56beecaf136a"
+        },
+        {
+          "id": "NotificationNotSent-fb23d30c-80d5-418d-907c-56beecaf136a"
+        }
+      ],
+      "events": [
+        {
+          "isHidden": false,
+          "eventName": "NotificationSent",
+          "eventType": "Completion",
+          "eventDisplayName": "Sent"
+        },
+        {
+          "isHidden": false,
+          "eventName": "NotificationNotSent",
+          "eventType": "Completion",
+          "eventDisplayName": "Not Sent"
+        }
+      ],
+      "nodeType": "action",
+      "boundaryDefinition": false
+    },
+    "type": "action",
+    "style": {
+      "cursor": "pointer"
+    },
+    "width": 267,
+    "height": 64,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+      "x": 0,
+      "y": 199
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false,
+    "positionAbsolute": {
+      "x": 0,
+      "y": 199
+    }
+  },
+  "has_config": true,
+  "has_node": true
+}

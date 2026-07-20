@@ -1,0 +1,281 @@
+{
+  "activityName": "dextra_sms",
+  "source_template": "casino/gow_comms.json",
+  "journey_size": 39,
+  "activity": {
+    "activityId": "7a23be85-4680-4538-acd4-d135b7c2838b",
+    "activityName": "dextra_sms",
+    "events": [
+      {
+        "eventName": "FailedSmsSend",
+        "eventType": "Completion",
+        "nextActivityId": "be61a45d-f661-464d-9514-62bd3fb60148",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "SuccessSmsSend",
+        "eventType": "Completion",
+        "nextActivityId": "bffc4df4-7d7f-4573-8eb6-9c63e0ad92ee",
+        "isUsedInChoosableFlow": false
+      }
+    ],
+    "initializationData": {
+      "version": "v2",
+      "rawValues": {
+        "baseUrl": "https://juga.cl",
+        "variables": [
+          {
+            "name": "BrandDomain",
+            "activityId": "",
+            "dataSource": "dwh_source",
+            "isRequired": true,
+            "defaultValue": ""
+          }
+        ],
+        "messageText": "JugaBet | Llega La Gran Copa JugaBet, el juego de la semana! Elige tu deposito y llevate 50 giros gratis. 4 niveles disponibles!\nhttps://{{BrandDomain}}\n/promo/offers/promoPage/e885e241-af8b-4ef9-9d40-ca211b2e8e0b?%$utm_tags%",
+        "transportId": "Default",
+        "languageCode": "es",
+        "useAutologin": false,
+        "validityPeriod": 5,
+        "checkPhoneVerified": true,
+        "deliveryTimeSettings": {
+          "to": "22:00:00",
+          "days": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday"
+          ],
+          "from": "09:00:00"
+        },
+        "validationPeriodType": "hours",
+        "localizedMessageTexts": {
+          "en": {
+            "variables": [],
+            "messageText": "JugaBet | The JugaBet Grand Cup is here, the game of the week! Choose your deposit and get 50 free spins. 4 levels available! https://win.jugabet.cl/promocion/junio-de-mundial",
+            "languageCode": "en"
+          },
+          "es": {
+            "variables": [],
+            "messageText": "JugaBet | Llega La Gran Copa JugaBet, el juego de la semana! Elige tu deposito y llevate 50 giros gratis. 4 niveles disponibles! https://win.jugabet.cl/promocion/junio-de-mundial",
+            "languageCode": "es"
+          }
+        }
+      },
+      "smsSettings": {
+        "baseUrl": "https://juga.cl",
+        "variables": [],
+        "messageText": "JugaBet | Llega La Gran Copa JugaBet, el juego de la semana! Elige tu deposito y llevate 50 giros gratis. 4 niveles disponibles! https://win.jugabet.cl/promocion/junio-de-mundial",
+        "transportId": null,
+        "languageCode": "es",
+        "useAutologin": false,
+        "validityPeriod": "P0Y0M0DT5H0M0S",
+        "checkPhoneVerified": true,
+        "deliveryTimeSettings": {
+          "to": {
+            "hours": 22,
+            "minutes": 0
+          },
+          "days": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday"
+          ],
+          "from": {
+            "hours": 9,
+            "minutes": 0
+          }
+        },
+        "validationPeriodType": "hours",
+        "localizedMessageTexts": [
+          {
+            "variables": [],
+            "messageText": "JugaBet | Llega La Gran Copa JugaBet, el juego de la semana! Elige tu deposito y llevate 50 giros gratis. 4 niveles disponibles! https://win.jugabet.cl/promocion/junio-de-mundial",
+            "languageCode": "es"
+          },
+          {
+            "variables": [],
+            "messageText": "JugaBet | The JugaBet Grand Cup is here, the game of the week! Choose your deposit and get 50 free spins. 4 levels available! https://win.jugabet.cl/promocion/junio-de-mundial",
+            "languageCode": "en"
+          }
+        ]
+      },
+      "dataDependencies": [],
+      "listOfUsedVariables": [],
+      "displayData": [
+        "JugaBet | Llega La Gran Copa JugaBet, el juego de la semana! Elige tu deposito y llevate 50 giros gratis. 4 niveles disponibles! https://win.jugabet.cl/promocion/junio-de-mundial"
+      ]
+    },
+    "activityDisplayName": "SMS",
+    "dataDependencies": [],
+    "dependencies": []
+  },
+  "config": {
+    "data": {
+      "version": "v2",
+      "rawValues": {
+        "baseUrl": "https://juga.cl",
+        "variables": [
+          {
+            "name": "BrandDomain",
+            "activityId": "",
+            "dataSource": "dwh_source",
+            "isRequired": true,
+            "defaultValue": ""
+          }
+        ],
+        "messageText": "JugaBet | Llega La Gran Copa JugaBet, el juego de la semana! Elige tu deposito y llevate 50 giros gratis. 4 niveles disponibles!\nhttps://{{BrandDomain}}\n/promo/offers/promoPage/e885e241-af8b-4ef9-9d40-ca211b2e8e0b?%$utm_tags%",
+        "transportId": "Default",
+        "languageCode": "es",
+        "useAutologin": false,
+        "validityPeriod": 5,
+        "checkPhoneVerified": true,
+        "deliveryTimeSettings": {
+          "to": "22:00:00",
+          "days": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday"
+          ],
+          "from": "09:00:00"
+        },
+        "validationPeriodType": "hours",
+        "localizedMessageTexts": {
+          "en": {
+            "variables": [],
+            "messageText": "JugaBet | The JugaBet Grand Cup is here, the game of the week! Choose your deposit and get 50 free spins. 4 levels available! https://win.jugabet.cl/promocion/junio-de-mundial",
+            "languageCode": "en"
+          },
+          "es": {
+            "variables": [],
+            "messageText": "JugaBet | Llega La Gran Copa JugaBet, el juego de la semana! Elige tu deposito y llevate 50 giros gratis. 4 niveles disponibles! https://win.jugabet.cl/promocion/junio-de-mundial",
+            "languageCode": "es"
+          }
+        }
+      },
+      "smsSettings": {
+        "baseUrl": "https://juga.cl",
+        "variables": [],
+        "messageText": "JugaBet | Llega La Gran Copa JugaBet, el juego de la semana! Elige tu deposito y llevate 50 giros gratis. 4 niveles disponibles! https://win.jugabet.cl/promocion/junio-de-mundial",
+        "transportId": null,
+        "languageCode": "es",
+        "useAutologin": false,
+        "validityPeriod": "P0Y0M0DT5H0M0S",
+        "checkPhoneVerified": true,
+        "deliveryTimeSettings": {
+          "to": {
+            "hours": 22,
+            "minutes": 0
+          },
+          "days": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday"
+          ],
+          "from": {
+            "hours": 9,
+            "minutes": 0
+          }
+        },
+        "validationPeriodType": "hours",
+        "localizedMessageTexts": [
+          {
+            "variables": [],
+            "messageText": "JugaBet | Llega La Gran Copa JugaBet, el juego de la semana! Elige tu deposito y llevate 50 giros gratis. 4 niveles disponibles! https://win.jugabet.cl/promocion/junio-de-mundial",
+            "languageCode": "es"
+          },
+          {
+            "variables": [],
+            "messageText": "JugaBet | The JugaBet Grand Cup is here, the game of the week! Choose your deposit and get 50 free spins. 4 levels available! https://win.jugabet.cl/promocion/junio-de-mundial",
+            "languageCode": "en"
+          }
+        ]
+      },
+      "dataDependencies": [],
+      "listOfUsedVariables": []
+    },
+    "error": false,
+    "displayData": [
+      "JugaBet | Llega La Gran Copa JugaBet, el juego de la semana! Elige tu deposito y llevate 50 giros gratis. 4 niveles disponibles! https://win.jugabet.cl/promocion/junio-de-mundial"
+    ],
+    "displayName": "SMS"
+  },
+  "node": {
+    "id": "7a23be85-4680-4538-acd4-d135b7c2838b",
+    "data": {
+      "name": "dextra_sms",
+      "ports": [
+        {
+          "id": "input-7a23be85-4680-4538-acd4-d135b7c2838b"
+        },
+        {
+          "id": "FailedSmsSend-7a23be85-4680-4538-acd4-d135b7c2838b"
+        },
+        {
+          "id": "SuccessSmsSend-7a23be85-4680-4538-acd4-d135b7c2838b"
+        }
+      ],
+      "events": [
+        {
+          "isHidden": false,
+          "eventName": "FailedSmsSend",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "eventDisplayName": "Not sent",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "SuccessSmsSend",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "eventDisplayName": "Sent to Dextra",
+          "canBeUsedInChoosableFlow": false
+        }
+      ],
+      "activityType": "communication",
+      "activityDisplayName": "SMS",
+      "withoutSourceHandle": false
+    },
+    "type": "action",
+    "style": {
+      "cursor": "pointer"
+    },
+    "width": 267,
+    "extent": "parent",
+    "height": 64,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+      "x": 810,
+      "y": 2320
+    },
+    "selected": false,
+    "draggable": false,
+    "parentNode": "cea0b018-d734-4d84-80fc-7c2a7c7e12a1",
+    "connectable": false,
+    "positionAbsolute": {
+      "x": -110.25,
+      "y": 2519
+    }
+  },
+  "has_config": true,
+  "has_node": true
+}

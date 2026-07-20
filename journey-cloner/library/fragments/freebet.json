@@ -1,0 +1,237 @@
+{
+  "activityName": "freebet",
+  "source_template": "colocolo/followup.json",
+  "journey_size": 48,
+  "activity": {
+    "activityId": "55a5f0d1-1ea9-424f-a6dd-66031674ce4b",
+    "activityName": "freebet",
+    "events": [
+      {
+        "eventName": "PlayerFreebetUsed",
+        "eventType": "Completion",
+        "nextActivityId": "b5a0f5eb-075d-420c-8377-808feb944e34",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "PlayerFreebetExpired",
+        "eventType": "Completion",
+        "nextActivityId": "76fdd2a8-557a-471e-b527-da3d54276144",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "PlayerFreebetCanceled",
+        "eventType": "Completion",
+        "nextActivityId": "24af3a90-164d-403c-860f-85d19f481942",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "FreebetNotIssued",
+        "eventType": "Completion",
+        "eventDisplayName": "Not issued",
+        "nextActivityId": "a2b606fd-ec20-40c8-a69f-c08cc9353c3e",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "FreebetIssued",
+        "eventType": "Boundary",
+        "eventDisplayName": "Issued",
+        "nextActivityId": "be4c9dda-07d8-400b-b666-e84b386ebc04"
+      }
+    ],
+    "initializationData": {
+      "properties": {
+        "maxOdd": 5,
+        "betTypes": [
+          "ordinar",
+          "express"
+        ],
+        "channels": [
+          "ALL"
+        ],
+        "lineTypes": [
+          "live",
+          "prematch"
+        ],
+        "depositRate": 0.15,
+        "expireInDays": 1,
+        "sportTickets": [],
+        "itemsCheckType": "Single",
+        "availableEvents": [],
+        "availableSports": [
+          "ALL"
+        ],
+        "freeBetMaxAmount": {
+          "CLP": 50000
+        },
+        "amountAccrualType": "as_percent",
+        "availableTournaments": [],
+        "isBetBuilderRequired": false
+      },
+      "displayData": [
+        "1 days"
+      ]
+    },
+    "activityDisplayName": "Sport FreeBet",
+    "dataDependencies": [],
+    "dependencies": [
+      {
+        "key": "CurrencyCode",
+        "journeyActivityId": "b3ec0d6e-f20d-4bda-ac83-0940db11a47d"
+      },
+      {
+        "activityName": "promotion",
+        "activityEventName": "PromotionAccepted",
+        "key": "PromotionId",
+        "journeyActivityId": "a27459bd-fa42-4d7f-91ac-170bdd51bc52"
+      },
+      {
+        "activityName": "promotion",
+        "activityEventName": "PromotionAccepted",
+        "key": "PromotionAcceptedAt",
+        "journeyActivityId": "a27459bd-fa42-4d7f-91ac-170bdd51bc52"
+      },
+      {
+        "activityName": "deposit",
+        "key": "DepositAmount",
+        "journeyActivityId": "d0fb1f63-5e32-47b3-a917-f1ebc9d0c20f"
+      },
+      {
+        "activityName": "deposit",
+        "key": "DepositPaidAmount",
+        "journeyActivityId": "d0fb1f63-5e32-47b3-a917-f1ebc9d0c20f"
+      },
+      {
+        "activityName": "deposit",
+        "key": "IsCollectible",
+        "journeyActivityId": "d0fb1f63-5e32-47b3-a917-f1ebc9d0c20f"
+      }
+    ]
+  },
+  "config": {
+    "data": {
+      "properties": {
+        "maxOdd": 5,
+        "betTypes": [
+          "ordinar",
+          "express"
+        ],
+        "channels": [
+          "ALL"
+        ],
+        "lineTypes": [
+          "live",
+          "prematch"
+        ],
+        "depositRate": 0.15,
+        "expireInDays": 1,
+        "sportTickets": [],
+        "itemsCheckType": "Single",
+        "availableEvents": [],
+        "availableSports": [
+          "ALL"
+        ],
+        "freeBetMaxAmount": {
+          "CLP": 50000
+        },
+        "amountAccrualType": "as_percent",
+        "availableTournaments": [],
+        "isBetBuilderRequired": false
+      }
+    },
+    "error": false,
+    "displayData": [
+      "1 days"
+    ],
+    "displayName": "Sport FreeBet",
+    "promotionId": "a27459bd-fa42-4d7f-91ac-170bdd51bc52"
+  },
+  "node": {
+    "id": "55a5f0d1-1ea9-424f-a6dd-66031674ce4b",
+    "data": {
+      "name": "freebet",
+      "ports": [
+        {
+          "id": "input-55a5f0d1-1ea9-424f-a6dd-66031674ce4b"
+        },
+        {
+          "id": "FreebetIssued-55a5f0d1-1ea9-424f-a6dd-66031674ce4b"
+        },
+        {
+          "id": "PlayerFreebetUsed-55a5f0d1-1ea9-424f-a6dd-66031674ce4b"
+        },
+        {
+          "id": "PlayerFreebetExpired-55a5f0d1-1ea9-424f-a6dd-66031674ce4b"
+        },
+        {
+          "id": "PlayerFreebetCanceled-55a5f0d1-1ea9-424f-a6dd-66031674ce4b"
+        },
+        {
+          "id": "FreebetNotIssued-55a5f0d1-1ea9-424f-a6dd-66031674ce4b"
+        }
+      ],
+      "events": [
+        {
+          "isHidden": false,
+          "eventName": "FreebetIssued",
+          "eventType": "Boundary",
+          "eventDisplayName": "Issued",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "PlayerFreebetUsed",
+          "eventType": "Completion",
+          "eventDisplayName": "Used",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "PlayerFreebetExpired",
+          "eventType": "Completion",
+          "eventDisplayName": "Timeout",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": true,
+          "eventName": "PlayerFreebetCanceled",
+          "eventType": "Completion",
+          "eventDisplayName": "Canceled",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "FreebetNotIssued",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Not issued",
+          "canBeUsedInChoosableFlow": false
+        }
+      ],
+      "activityType": "mechanic",
+      "activityDisplayName": "Sport FreeBet"
+    },
+    "type": "action",
+    "style": {
+      "cursor": "pointer"
+    },
+    "width": 267,
+    "extent": "parent",
+    "height": 64,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+      "x": 336.5,
+      "y": 736
+    },
+    "selected": false,
+    "draggable": false,
+    "parentNode": "6377f8ec-9f70-44b5-a0dc-a0eff39664fc",
+    "connectable": false,
+    "positionAbsolute": {
+      "x": -1488.75,
+      "y": 1528
+    }
+  },
+  "has_config": true,
+  "has_node": true
+}
