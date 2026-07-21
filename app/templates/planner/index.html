@@ -114,7 +114,7 @@ NOTES
 - Landing URL should be short and birthday-themed.
 - Keep it live for the whole of July.`;
 
-  function esc(s){ return s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+  function esc(s){ return String(s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 
   function renderModel(text){
     const lines = esc(text).split("\n").map(line => {
@@ -155,9 +155,16 @@ NOTES
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ messages: history, temperature: 0.2 }),
       });
-      const data = await res.json();
+      let data;
+      try { data = await res.json(); }
+      catch(e){ const raw = await res.text().catch(()=>""); throw new Error(`HTTP ${res.status} (non-JSON): ${raw.slice(0,300)}`); }
       if(data.error){ bub.innerHTML = `<pre style="color:#c0392b">${esc(data.error)}</pre>`; }
-      else { bub.innerHTML = renderModel(data.text); history.push({ role: "model", text: data.text }); }
+      else if(typeof data.text === "string" && data.text.length){
+        bub.innerHTML = renderModel(data.text); history.push({ role: "model", text: data.text });
+      } else {
+        // No error and no usable text — surface the raw payload instead of crashing.
+        bub.innerHTML = `<pre style="color:#c0392b">Empty response from server (HTTP ${res.status}). Payload:\n${esc(JSON.stringify(data))}</pre>`;
+      }
     }catch(err){
       bub.innerHTML = `<pre style="color:#c0392b">Request failed: ${esc(String(err))}</pre>`;
     }finally{
