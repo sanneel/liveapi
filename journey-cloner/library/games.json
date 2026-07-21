@@ -58,6 +58,1070 @@
         "super clasico"
       ]
     },
+    "pragmatic-3-magic-eggs": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-3-magic-eggs",
+      "walletGameId": "vs25wolfgmm",
+      "externalGameId": "vs25wolfgmm",
+      "productType": "slots",
+      "gameTranslationKey": "3 Magic Eggs",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "3 magic eggs"
+      ]
+    },
+    "pragmatic-5-lions-megaways-2": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-5-lions-megaways-2",
+      "walletGameId": "vsways5lions2",
+      "externalGameId": "vsways5lions2",
+      "productType": "slots",
+      "gameTranslationKey": "5 Lions Megaways 2",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "5 lions megaways 2"
+      ]
+    },
+    "pragmatic-5-lions-reborn": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-5-lions-reborn",
+      "walletGameId": "vsways5lionsr",
+      "externalGameId": "vsways5lionsr",
+      "productType": "slots",
+      "gameTranslationKey": "5 Lions Reborn",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "5 lions reborn"
+      ]
+    },
+    "pragmatic-alien-invaders": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-alien-invaders",
+      "walletGameId": "vs20alieninv",
+      "externalGameId": "vs20alieninv",
+      "productType": "slots",
+      "gameTranslationKey": "Alien Invaders",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "alien invaders"
+      ]
+    },
+    "pragmatic-ancient-island-megaways": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-ancient-island-megaways",
+      "walletGameId": "vswaysmodfr",
+      "externalGameId": "vswaysmodfr",
+      "productType": "slots",
+      "gameTranslationKey": "Ancient Island Megaways",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "ancient island megaways"
+      ]
+    },
+    "pragmatic-argonauts": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-argonauts",
+      "walletGameId": "vswaysargonts",
+      "externalGameId": "vswaysargonts",
+      "productType": "slots",
+      "gameTranslationKey": "Argonauts",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "argonauts"
+      ]
+    },
+    "pragmatic-bandit-megaways": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-bandit-megaways",
+      "walletGameId": "vswaysbandit",
+      "externalGameId": "vswaysbandit",
+      "productType": "slots",
+      "gameTranslationKey": "Bandit Megaways™",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "bandit megaways™"
+      ]
+    },
+    "pragmatic-big-bass-bonanza-1000": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-big-bass-bonanza-1000",
+      "walletGameId": "vs10bbbnz1000",
+      "externalGameId": "vs10bbbnz1000",
+      "productType": "slots",
+      "gameTranslationKey": "Big Bass Bonanza 1000",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "big bass bonanza 1000"
+      ]
+    },
+    "pragmatic-big-bass-boxing-bonus-round": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-big-bass-boxing-bonus-round",
+      "walletGameId": "vs10bbbbrnd",
+      "externalGameId": "vs10bbbbrnd",
+      "productType": "slots",
+      "gameTranslationKey": "Big Bass Boxing Bonus Round",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "big bass boxing bonus round"
+      ]
+    },
+    "pragmatic-big-bass-christmas---frozen-lake": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-big-bass-christmas---frozen-lake",
+      "walletGameId": "vs10bbglxmas",
+      "externalGameId": "vs10bbglxmas",
+      "productType": "slots",
+      "gameTranslationKey": "Big Bass Christmas – Frozen Lake",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "big bass christmas – frozen lake"
+      ]
+    },
+    "pragmatic-big-bass-halloween-3": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-big-bass-halloween-3",
+      "walletGameId": "vs10bhallbnza3",
+      "externalGameId": "vs10bhallbnza3",
+      "productType": "slots",
+      "gameTranslationKey": "Big Bass Halloween 3",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "big bass halloween 3"
+      ]
+    },
+    "pragmatic-big-bass-raceday-repeat": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-big-bass-raceday-repeat",
+      "walletGameId": "vs10bbrcdr",
+      "externalGameId": "vs10bbrcdr",
+      "productType": "slots",
+      "gameTranslationKey": "Big Bass Raceday Repeat",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "big bass raceday repeat"
+      ]
+    },
+    "pragmatic-big-bass-reel-repeat": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-big-bass-reel-repeat",
+      "walletGameId": "vs10bbrrp",
+      "externalGameId": "vs10bbrrp",
+      "productType": "slots",
+      "gameTranslationKey": "Big Bass Reel Repeat",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "big bass reel repeat"
+      ]
+    },
+    "pragmatic-big-bass-return-to-the-races": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-big-bass-return-to-the-races",
+      "walletGameId": "vs10bbrttr",
+      "externalGameId": "vs10bbrttr",
+      "productType": "slots",
+      "gameTranslationKey": "Big Bass Return to the Races",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "big bass return to the races"
+      ]
+    },
+    "pragmatic-big-bass-splash-1000": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-big-bass-splash-1000",
+      "walletGameId": "vs10bbsplashx",
+      "externalGameId": "vs10bbsplashx",
+      "productType": "slots",
+      "gameTranslationKey": "Big Bass Splash 1000",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "big bass splash 1000"
+      ]
+    },
+    "pragmatic-bingo-mania": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-bingo-mania",
+      "walletGameId": "vs30bingomania",
+      "externalGameId": "vs30bingomania",
+      "productType": "slots",
+      "gameTranslationKey": "Bingo Mania",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "bingo mania"
+      ]
+    },
+    "pragmatic-blitz-super-wheel": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-blitz-super-wheel",
+      "walletGameId": "vs20lightblitz",
+      "externalGameId": "vs20lightblitz",
+      "productType": "slots",
+      "gameTranslationKey": "Blitz Super Wheel",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "blitz super wheel"
+      ]
+    },
+    "pragmatic-bloody-dawn": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-bloody-dawn",
+      "walletGameId": "vswayswildb",
+      "externalGameId": "vswayswildb",
+      "productType": "slots",
+      "gameTranslationKey": "Bloody Dawn",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "bloody dawn"
+      ]
+    },
+    "pragmatic-book-of-monsters": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-book-of-monsters",
+      "walletGameId": "vs20fatbook",
+      "externalGameId": "vs20fatbook",
+      "productType": "slots",
+      "gameTranslationKey": "Book of Monsters",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "book of monsters"
+      ]
+    },
+    "pragmatic-captain-kraken-megaways": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-captain-kraken-megaways",
+      "walletGameId": "vswayschilhtwo",
+      "externalGameId": "vswayschilhtwo",
+      "productType": "slots",
+      "gameTranslationKey": "Captain Kraken Megaways",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "captain kraken megaways"
+      ]
+    },
+    "pragmatic-chilli-heat-spicy-spins": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-chilli-heat-spicy-spins",
+      "walletGameId": "vs10chillihmr",
+      "externalGameId": "vs10chillihmr",
+      "productType": "slots",
+      "gameTranslationKey": "Chilli Heat Spicy Spins",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "chilli heat spicy spins"
+      ]
+    },
+    "pragmatic-club-tropicana---happy-hour": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-club-tropicana---happy-hour",
+      "walletGameId": "vs12trpcnhour",
+      "externalGameId": "vs12trpcnhour",
+      "productType": "slots",
+      "gameTranslationKey": "Club Tropicana - Happy Hour",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "club tropicana - happy hour"
+      ]
+    },
+    "pragmatic-cult": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-cult",
+      "walletGameId": "vs25scolymp",
+      "externalGameId": "vs25scolymp",
+      "productType": "slots",
+      "gameTranslationKey": "CULT.",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": false,
+      "status": "ACTIVE",
+      "aliases": [
+        "cult."
+      ]
+    },
+    "pragmatic-cyberheist-city": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-cyberheist-city",
+      "walletGameId": "vswayscyhecity",
+      "externalGameId": "vswayscyhecity",
+      "productType": "slots",
+      "gameTranslationKey": "Cyberheist City",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "cyberheist city"
+      ]
+    },
+    "pragmatic-dj-neko": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-dj-neko",
+      "walletGameId": "vs10djneko",
+      "externalGameId": "vs10djneko",
+      "productType": "slots",
+      "gameTranslationKey": "DJ Neko",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "dj neko"
+      ]
+    },
+    "pragmatic-dragon-tiger-fortunes": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-dragon-tiger-fortunes",
+      "walletGameId": "vswayshuffpbh",
+      "externalGameId": "vswayshuffpbh",
+      "productType": "slots",
+      "gameTranslationKey": "Dragon Tiger Fortunes",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "dragon tiger fortunes"
+      ]
+    },
+    "pragmatic-duel-of-night--day": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-duel-of-night--day",
+      "walletGameId": "vswaysyinyang",
+      "externalGameId": "vswaysyinyang",
+      "productType": "slots",
+      "gameTranslationKey": "Duel of Night & Day",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "duel of night & day"
+      ]
+    },
+    "pragmatic-emerald-king---wheel-of-wealth": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-emerald-king---wheel-of-wealth",
+      "walletGameId": "vs10dublin",
+      "externalGameId": "vs10dublin",
+      "productType": "slots",
+      "gameTranslationKey": "Emerald King - Wheel of Wealth",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "emerald king - wheel of wealth"
+      ]
+    },
+    "pragmatic-eye-of-spartacus": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-eye-of-spartacus",
+      "walletGameId": "vs15eyeofspart",
+      "externalGameId": "vs15eyeofspart",
+      "productType": "slots",
+      "gameTranslationKey": "Eye of Spartacus",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "eye of spartacus"
+      ]
+    },
+    "pragmatic-fiesta-fortune": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-fiesta-fortune",
+      "walletGameId": "vs10gbseries",
+      "externalGameId": "vs10gbseries",
+      "productType": "slots",
+      "gameTranslationKey": "Fiesta Fortune",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "fiesta fortune"
+      ]
+    },
+    "pragmatic-finger-lickn-free-spins": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-finger-lickn-free-spins",
+      "walletGameId": "vs10fingerlfs",
+      "externalGameId": "vs10fingerlfs",
+      "productType": "slots",
+      "gameTranslationKey": "Finger Lick’n Free Spins",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "finger lick’n free spins"
+      ]
+    },
+    "pragmatic-fire-stampede-2": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-fire-stampede-2",
+      "walletGameId": "vswaysfirest2",
+      "externalGameId": "vswaysfirest2",
+      "productType": "slots",
+      "gameTranslationKey": "Fire Stampede 2",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "fire stampede 2"
+      ]
+    },
+    "pragmatic-fire-stampede-ultimate": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-fire-stampede-ultimate",
+      "walletGameId": "vswaysfirest3",
+      "externalGameId": "vswaysfirest3",
+      "productType": "slots",
+      "gameTranslationKey": "Fire Stampede Ultimate",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "fire stampede ultimate"
+      ]
+    },
+    "pragmatic-floating-dragon-wild-horses": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-floating-dragon-wild-horses",
+      "walletGameId": "vs10fdwhorses",
+      "externalGameId": "vs10fdwhorses",
+      "productType": "slots",
+      "gameTranslationKey": "Floating Dragon Wild Horses",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "floating dragon wild horses"
+      ]
+    },
+    "pragmatic-fortune-of-aztec": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-fortune-of-aztec",
+      "walletGameId": "vswaysaztecgm",
+      "externalGameId": "vswaysaztecgm",
+      "productType": "slots",
+      "gameTranslationKey": "Fortune of Aztec",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "fortune of aztec"
+      ]
+    },
+    "pragmatic-fortune-of-olympus": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-fortune-of-olympus",
+      "walletGameId": "vs20olympgcl",
+      "externalGameId": "vs20olympgcl",
+      "productType": "slots",
+      "gameTranslationKey": "Fortune of Olympus",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "fortune of olympus"
+      ]
+    },
+    "pragmatic-frightening-frankie": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-frightening-frankie",
+      "walletGameId": "vs20frankie",
+      "externalGameId": "vs20frankie",
+      "productType": "slots",
+      "gameTranslationKey": "Frightening Frankie",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "frightening frankie"
+      ]
+    },
+    "pragmatic-gates-of-hades": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-gates-of-hades",
+      "walletGameId": "vs20gtsofhades",
+      "externalGameId": "vs20gtsofhades",
+      "productType": "slots",
+      "gameTranslationKey": "Gates of Hades",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "gates of hades"
+      ]
+    },
+    "pragmatic-gates-of-olympus-super-scatter": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-gates-of-olympus-super-scatter",
+      "walletGameId": "vs20olympgold",
+      "externalGameId": "vs20olympgold",
+      "productType": "slots",
+      "gameTranslationKey": "Gates of Olympus Super Scatter",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "gates of olympus super scatter"
+      ]
+    },
+    "pragmatic-gem-fire-fortune": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-gem-fire-fortune",
+      "walletGameId": "vs20gemfirefor",
+      "externalGameId": "vs20gemfirefor",
+      "productType": "slots",
+      "gameTranslationKey": "Gem Fire Fortune",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "gem fire fortune"
+      ]
+    },
+    "pragmatic-gem-trio": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-gem-trio",
+      "walletGameId": "vs9gemtrio",
+      "externalGameId": "vs9gemtrio",
+      "productType": "slots",
+      "gameTranslationKey": "Gem Trio",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "gem trio"
+      ]
+    },
+    "pragmatic-greedy-fortune-pig": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-greedy-fortune-pig",
+      "walletGameId": "vs10fortnpig",
+      "externalGameId": "vs10fortnpig",
+      "productType": "slots",
+      "gameTranslationKey": "Greedy Fortune Pig",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "greedy fortune pig"
+      ]
+    },
+    "pragmatic-hammerstorm": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-hammerstorm",
+      "walletGameId": "vs40hmrstrm",
+      "externalGameId": "vs40hmrstrm",
+      "productType": "slots",
+      "gameTranslationKey": "Hammerstorm",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "hammerstorm"
+      ]
+    },
+    "pragmatic-happy-nets": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-happy-nets",
+      "walletGameId": "vs20fishptrn",
+      "externalGameId": "vs20fishptrn",
+      "productType": "slots",
+      "gameTranslationKey": "Happy Nets",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "happy nets"
+      ]
+    },
+    "pragmatic-hot-tuna": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-hot-tuna",
+      "walletGameId": "vs10hottuna",
+      "externalGameId": "vs10hottuna",
+      "productType": "slots",
+      "gameTranslationKey": "Hot Tuna",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "hot tuna"
+      ]
+    },
+    "pragmatic-jackpot-blaze": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-jackpot-blaze",
+      "walletGameId": "vs10jpblaze",
+      "externalGameId": "vs10jpblaze",
+      "productType": "slots",
+      "gameTranslationKey": "Jackpot Blaze",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "jackpot blaze"
+      ]
+    },
+    "pragmatic-john-hunter-and-galileos-secrets": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-john-hunter-and-galileos-secrets",
+      "walletGameId": "vs10booklight",
+      "externalGameId": "vs10booklight",
+      "productType": "slots",
+      "gameTranslationKey": "John Hunter and Galileo's Secrets",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "john hunter and galileo's secrets"
+      ]
+    },
+    "pragmatic-jokers-jewels-hold--spin": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-jokers-jewels-hold--spin",
+      "walletGameId": "vs5jokjewhs",
+      "externalGameId": "vs5jokjewhs",
+      "productType": "slots",
+      "gameTranslationKey": "Joker's Jewels Hold & Spin",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "joker's jewels hold & spin"
+      ]
+    },
+    "pragmatic-knights-vs-barbarians": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-knights-vs-barbarians",
+      "walletGameId": "vs10cenrlgdevl",
+      "externalGameId": "vs10cenrlgdevl",
+      "productType": "slots",
+      "gameTranslationKey": "Knights vs Barbarians",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "knights vs barbarians"
+      ]
+    },
+    "pragmatic-lava-balls": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-lava-balls",
+      "walletGameId": "vswayslavabls",
+      "externalGameId": "vswayslavabls",
+      "productType": "slots",
+      "gameTranslationKey": "Lava Balls",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "lava balls"
+      ]
+    },
+    "pragmatic-lobster-house": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-lobster-house",
+      "walletGameId": "vs20lbstrhouse",
+      "externalGameId": "vs20lbstrhouse",
+      "productType": "slots",
+      "gameTranslationKey": "Lobster House",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "lobster house"
+      ]
+    },
+    "pragmatic-lucky-dice": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-lucky-dice",
+      "walletGameId": "vs5luckdce88",
+      "externalGameId": "vs5luckdce88",
+      "productType": "slots",
+      "gameTranslationKey": "Lucky Dice",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "lucky dice"
+      ]
+    },
+    "pragmatic-lucky-dog": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-lucky-dog",
+      "walletGameId": "vs5luckydogly",
+      "externalGameId": "vs5luckydogly",
+      "productType": "slots",
+      "gameTranslationKey": "Lucky Dog",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "lucky dog"
+      ]
+    },
+    "pragmatic-lucky-fortune-tree": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-lucky-fortune-tree",
+      "walletGameId": "vs5luckycol",
+      "externalGameId": "vs5luckycol",
+      "productType": "slots",
+      "gameTranslationKey": "Lucky Fortune Tree",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "lucky fortune tree"
+      ]
+    },
+    "pragmatic-lucky-monkey": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-lucky-monkey",
+      "walletGameId": "vs5luckymly",
+      "externalGameId": "vs5luckymly",
+      "productType": "slots",
+      "gameTranslationKey": "Lucky Monkey",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "lucky monkey"
+      ]
+    },
+    "pragmatic-lucky-tiger-1000": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-lucky-tiger-1000",
+      "walletGameId": "vs5luckyt1kly",
+      "externalGameId": "vs5luckyt1kly",
+      "productType": "slots",
+      "gameTranslationKey": "Lucky Tiger 1000",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "lucky tiger 1000"
+      ]
+    },
+    "pragmatic-lucky-tiger-gold": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-lucky-tiger-gold",
+      "walletGameId": "vs5luckytru",
+      "externalGameId": "vs5luckytru",
+      "productType": "slots",
+      "gameTranslationKey": "Lucky Tiger Gold",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "lucky tiger gold"
+      ]
+    },
+    "pragmatic-luckys-wild-pub": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-luckys-wild-pub",
+      "walletGameId": "vs25luckwildpb",
+      "externalGameId": "vs25luckwildpb",
+      "productType": "slots",
+      "gameTranslationKey": "Lucky’s Wild Pub",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "lucky’s wild pub"
+      ]
+    },
+    "pragmatic-luckys-wild-pub-2": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-luckys-wild-pub-2",
+      "walletGameId": "vs25luckpub",
+      "externalGameId": "vs25luckpub",
+      "productType": "slots",
+      "gameTranslationKey": "Lucky's Wild Pub 2",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "lucky's wild pub 2"
+      ]
+    },
+    "pragmatic-mahjong-wins-super-scatter": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-mahjong-wins-super-scatter",
+      "walletGameId": "vswaysmwss",
+      "externalGameId": "vswaysmwss",
+      "productType": "slots",
+      "gameTranslationKey": "Mahjong Wins Super Scatter",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "mahjong wins super scatter"
+      ]
+    },
+    "pragmatic-mermaids-treasure-trove": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-mermaids-treasure-trove",
+      "walletGameId": "vs20mmdtres",
+      "externalGameId": "vs20mmdtres",
+      "productType": "slots",
+      "gameTranslationKey": "Mermaid’s Treasure Trove",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "mermaid’s treasure trove"
+      ]
+    },
+    "pragmatic-mummys-jewels": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-mummys-jewels",
+      "walletGameId": "vswaysmjwl",
+      "externalGameId": "vswaysmjwl",
+      "productType": "slots",
+      "gameTranslationKey": "Mummy`s Jewels",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "mummy`s jewels"
+      ]
+    },
+    "pragmatic-mummys-jewels-100": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-mummys-jewels-100",
+      "walletGameId": "vswaysmjwl2",
+      "externalGameId": "vswaysmjwl2",
+      "productType": "slots",
+      "gameTranslationKey": "Mummy's Jewels 100",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "mummy's jewels 100"
+      ]
+    },
+    "pragmatic-olympus-wins": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-olympus-wins",
+      "walletGameId": "vswaysolwfp",
+      "externalGameId": "vswaysolwfp",
+      "productType": "slots",
+      "gameTranslationKey": "Olympus Wins",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "olympus wins"
+      ]
+    },
+    "pragmatic-oracle-of-gold": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-oracle-of-gold",
+      "walletGameId": "vs20oragold",
+      "externalGameId": "vs20oragold",
+      "productType": "slots",
+      "gameTranslationKey": "Oracle of Gold",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "oracle of gold"
+      ]
+    },
+    "pragmatic-pandemic-rising": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-pandemic-rising",
+      "walletGameId": "vs40pdmrsg",
+      "externalGameId": "vs40pdmrsg",
+      "productType": "slots",
+      "gameTranslationKey": "Pandemic Rising",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "pandemic rising"
+      ]
+    },
+    "pragmatic-raging-waterfall-megaways": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-raging-waterfall-megaways",
+      "walletGameId": "vswaysmltchmgw",
+      "externalGameId": "vswaysmltchmgw",
+      "productType": "slots",
+      "gameTranslationKey": "Raging Waterfall Megaways™",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "raging waterfall megaways™"
+      ]
+    },
+    "pragmatic-resurrecting-riches": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-resurrecting-riches",
+      "walletGameId": "vswaysresurich",
+      "externalGameId": "vswaysresurich",
+      "productType": "slots",
+      "gameTranslationKey": "Resurrecting Riches",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "resurrecting riches"
+      ]
+    },
+    "pragmatic-ride-the-lightning": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-ride-the-lightning",
+      "walletGameId": "vs9ridelightng",
+      "externalGameId": "vs9ridelightng",
+      "productType": "slots",
+      "gameTranslationKey": "Ride The Lightning",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "ride the lightning"
+      ]
+    },
+    "pragmatic-rolling-in-treasures": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-rolling-in-treasures",
+      "walletGameId": "vs20rnriches",
+      "externalGameId": "vs20rnriches",
+      "productType": "slots",
+      "gameTranslationKey": "Rolling in Treasures",
+      "contributionFactor": 0,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "rolling in treasures"
+      ]
+    },
+    "pragmatic-santas-slay": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-santas-slay",
+      "walletGameId": "vs10santasl",
+      "externalGameId": "vs10santasl",
+      "productType": "slots",
+      "gameTranslationKey": "Santa's Slay",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "santa's slay"
+      ]
+    },
+    "pragmatic-sleeping-dragon": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-sleeping-dragon",
+      "walletGameId": "vs25sleepdrag",
+      "externalGameId": "vs25sleepdrag",
+      "productType": "slots",
+      "gameTranslationKey": "Sleeping Dragon",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "sleeping dragon"
+      ]
+    },
+    "pragmatic-spellmaster": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-spellmaster",
+      "walletGameId": "vs10spellmastr",
+      "externalGameId": "vs10spellmastr",
+      "productType": "slots",
+      "gameTranslationKey": "Spellmaster",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "spellmaster"
+      ]
+    },
+    "pragmatic-starlight-princess-super-scatter": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-starlight-princess-super-scatter",
+      "walletGameId": "vs20starprss",
+      "externalGameId": "vs20starprss",
+      "productType": "slots",
+      "gameTranslationKey": "Starlight Princess Super Scatter",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "starlight princess super scatter"
+      ]
+    },
+    "pragmatic-starlight-wins": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-starlight-wins",
+      "walletGameId": "vswayssw",
+      "externalGameId": "vswayssw",
+      "productType": "slots",
+      "gameTranslationKey": "Starlight Wins",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "starlight wins"
+      ]
+    },
+    "pragmatic-steamin-reels": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-steamin-reels",
+      "walletGameId": "vs10stmreels",
+      "externalGameId": "vs10stmreels",
+      "productType": "slots",
+      "gameTranslationKey": "Steamin’ Reels",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "steamin’ reels"
+      ]
+    },
     "pragmatic-sugar-rush-1000": {
       "provider": "pragmatic",
       "lobbyGameId": "pragmatic-sugar-rush-1000",
@@ -69,6 +1133,48 @@
       "providerTranslationKey": "Pragmatic Play",
       "aliases": [
         "sugar rush 1000"
+      ]
+    },
+    "pragmatic-sugar-rush-super-scatter": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-sugar-rush-super-scatter",
+      "walletGameId": "vs20sugrushss",
+      "externalGameId": "vs20sugrushss",
+      "productType": "slots",
+      "gameTranslationKey": "Sugar Rush Super Scatter",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "sugar rush super scatter"
+      ]
+    },
+    "pragmatic-super-gummy-strike": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-super-gummy-strike",
+      "walletGameId": "vs5supergummy",
+      "externalGameId": "vs5supergummy",
+      "productType": "slots",
+      "gameTranslationKey": "Super Gummy Strike",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "super gummy strike"
+      ]
+    },
+    "pragmatic-super-tiki-strike": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-super-tiki-strike",
+      "walletGameId": "vs5tikistrike",
+      "externalGameId": "vs5tikistrike",
+      "productType": "slots",
+      "gameTranslationKey": "Super Tiki Strike",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "super tiki strike"
       ]
     },
     "pragmatic-sweet-bonanza-1000": {
@@ -96,6 +1202,289 @@
       "aliases": [
         "sweet bonanza super scatter",
         "sweet bonanza superscatter"
+      ],
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE"
+    },
+    "pragmatic-sweet-burst": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-sweet-burst",
+      "walletGameId": "vs10luckybnz",
+      "externalGameId": "vs10luckybnz",
+      "productType": "slots",
+      "gameTranslationKey": "Sweet Burst",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "sweet burst"
+      ]
+    },
+    "pragmatic-sweet-craze": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-sweet-craze",
+      "walletGameId": "vs20chestcol",
+      "externalGameId": "vs20chestcol",
+      "productType": "slots",
+      "gameTranslationKey": "Sweet Craze",
+      "contributionFactor": 50,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "sweet craze"
+      ]
+    },
+    "pragmatic-temple-guardians": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-temple-guardians",
+      "walletGameId": "vs10diamondrgh",
+      "externalGameId": "vs10diamondrgh",
+      "productType": "slots",
+      "gameTranslationKey": "Temple Guardians",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "temple guardians"
+      ]
+    },
+    "pragmatic-the-dog-house---royal-hunt": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-the-dog-house---royal-hunt",
+      "walletGameId": "vs20dhsuper",
+      "externalGameId": "vs20dhsuper",
+      "productType": "slots",
+      "gameTranslationKey": "The Dog House – Royal Hunt",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "the dog house – royal hunt"
+      ]
+    },
+    "pragmatic-treasures-of-osiris": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-treasures-of-osiris",
+      "walletGameId": "vs25tripleps",
+      "externalGameId": "vs25tripleps",
+      "productType": "slots",
+      "gameTranslationKey": "Treasures of Osiris",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "treasures of osiris"
+      ]
+    },
+    "pragmatic-triple-pot-gold": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-triple-pot-gold",
+      "walletGameId": "vswaysasiatrzn",
+      "externalGameId": "vswaysasiatrzn",
+      "productType": "slots",
+      "gameTranslationKey": "Triple Pot Gold",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "triple pot gold"
+      ]
+    },
+    "pragmatic-tuts-treasure-tower": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-tuts-treasure-tower",
+      "walletGameId": "vs5luckytwr",
+      "externalGameId": "vs5luckytwr",
+      "productType": "slots",
+      "gameTranslationKey": "Tut's Treasure Tower",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "tut's treasure tower"
+      ]
+    },
+    "pragmatic-volcano-goddess": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-volcano-goddess",
+      "walletGameId": "vswaysvlcgds",
+      "externalGameId": "vswaysvlcgds",
+      "productType": "slots",
+      "gameTranslationKey": "Volcano Goddess",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "volcano goddess"
+      ]
+    },
+    "pragmatic-waves-of-poseidon": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-waves-of-poseidon",
+      "walletGameId": "vs20bigmass",
+      "externalGameId": "vs20bigmass",
+      "productType": "slots",
+      "gameTranslationKey": "Waves of Poseidon",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "waves of poseidon"
+      ]
+    },
+    "pragmatic-wheel-of-happiness": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-wheel-of-happiness",
+      "walletGameId": "vswayswildeq",
+      "externalGameId": "vswayswildeq",
+      "productType": "slots",
+      "gameTranslationKey": "Wheel of Happiness",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "wheel of happiness"
+      ]
+    },
+    "pragmatic-wild-skullz": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-wild-skullz",
+      "walletGameId": "vswayscyclop",
+      "externalGameId": "vswayscyclop",
+      "productType": "slots",
+      "gameTranslationKey": "Wild Skullz",
+      "contributionFactor": 0,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "wild skullz"
+      ]
+    },
+    "pragmatic-wild-west-gold-blazing-bounty": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-wild-west-gold-blazing-bounty",
+      "walletGameId": "vs20wwgcluster",
+      "externalGameId": "vs20wwgcluster",
+      "productType": "slots",
+      "gameTranslationKey": "Wild West Gold Blazing Bounty",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "wild west gold blazing bounty"
+      ]
+    },
+    "pragmatic-wild-wild-joker": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-wild-wild-joker",
+      "walletGameId": "vswayswwjoker",
+      "externalGameId": "vswayswwjoker",
+      "productType": "slots",
+      "gameTranslationKey": "Wild Wild Joker",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "wild wild joker"
+      ]
+    },
+    "pragmatic-wild-wild-riches-returns": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-wild-wild-riches-returns",
+      "walletGameId": "vswayswwrichr",
+      "externalGameId": "vswayswwrichr",
+      "productType": "slots",
+      "gameTranslationKey": "Wild Wild Riches Returns",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "wild wild riches returns"
+      ]
+    },
+    "pragmatic-wisdom-of-athena-1000-xmas": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-wisdom-of-athena-1000-xmas",
+      "walletGameId": "vs20procountxm",
+      "externalGameId": "vs20procountxm",
+      "productType": "slots",
+      "gameTranslationKey": "Wisdom of Athena 1000 Xmas",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "wisdom of athena 1000 xmas"
+      ]
+    },
+    "pragmatic-witch-heart-megaways": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-witch-heart-megaways",
+      "walletGameId": "vswayswildbrst",
+      "externalGameId": "vswayswildbrst",
+      "productType": "slots",
+      "gameTranslationKey": "Witch Heart Megaways",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "witch heart megaways"
+      ]
+    },
+    "pragmatic-wolf-gold-4-pack": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-wolf-gold-4-pack",
+      "walletGameId": "vs25quadwolf",
+      "externalGameId": "vs25quadwolf",
+      "productType": "slots",
+      "gameTranslationKey": "Wolf Gold 4 Pack",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "wolf gold 4 pack"
+      ]
+    },
+    "pragmatic-you-can-piggy-bank-on-it": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-you-can-piggy-bank-on-it",
+      "walletGameId": "vs10piggybank",
+      "externalGameId": "vs10piggybank",
+      "productType": "slots",
+      "gameTranslationKey": "You Can Piggy Bank On It",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "you can piggy bank on it"
+      ]
+    },
+    "pragmatic-zeus-vs-typhon": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-zeus-vs-typhon",
+      "walletGameId": "vswaysreelbtl",
+      "externalGameId": "vswaysreelbtl",
+      "productType": "slots",
+      "gameTranslationKey": "Zeus vs Typhon",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "zeus vs typhon"
+      ]
+    },
+    "pragmatic-zombie-school-megaways": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-zombie-school-megaways",
+      "walletGameId": "vswayspompmr2",
+      "externalGameId": "vswayspompmr2",
+      "productType": "slots",
+      "gameTranslationKey": "Zombie School Megaways",
+      "contributionFactor": 100,
+      "freeSpinsAvailable": true,
+      "status": "ACTIVE",
+      "aliases": [
+        "zombie school megaways"
       ]
     }
   }

@@ -1,18 +1,27 @@
 #!/usr/bin/env python3
-"""Mine real game IDs from captured journeys → library/games.json.
+"""Mine real game IDs → library/games.json.
 
 The planner must never GUESS a lobbyGameId (real ones are provider-prefixed
 and opaque: pragmatic-sweet-bonanza-super-scatter, walletGameId vs20swbonsup).
 This registry is the only sanctioned source; a game not in it is flagged
 ⛔ RESOLVE_AT_BUILD_TIME by the planner, never invented.
 
+Two sources, richest first:
+  1. The backoffice GAMES CATALOG API — how the UI itself finds ids:
+     GET .../journey-activities/free-spins-bonus-deposit/data/games
+         ?freeSpinTypes=...&gameProvider=...&productType=slots&size=100
+     Response objects use `lobbyId`/`walletId`/`translationKey`. A single
+     capture yields the whole provider catalogue (100s of games), not just
+     the ones a journey happened to use. Refresh live with
+     fetch_games_catalog_console.js.
+  2. freespin configs embedded in journey POST bodies (`lobbyGameId` dicts) —
+     a fallback that only sees games actually used in a campaign.
+
 Usage:
     python build_games_registry.py <file.har|journey.json> [more...]
     python build_games_registry.py ~/Downloads/*.har
 
-Scans every POST body (HAR) or journey object (JSON) for freespin game configs
-(any dict carrying lobbyGameId), merges them with the existing games.json
-(existing hand-tuned aliases are preserved), and rewrites the file.
+Merges into the existing games.json (hand-tuned aliases preserved) and rewrites.
 """
 from __future__ import annotations
 
@@ -29,11 +38,40 @@ FIELDS = ("provider", "lobbyGameId", "walletGameId", "externalGameId",
           "providerTranslationKey")
 
 
+def _from_catalog(g: dict) -> dict | None:
+    """Normalize a GAMES CATALOG API object (lobbyId/walletId/translationKey)
+    into the registry schema. Returns None if it isn't a catalog game."""
+    lid = g.get("lobbyId")
+    if not lid or "walletId" not in g:
+        return None
+    pts = g.get("productTypes") or []
+    return {
+        "provider": g.get("gameProvider"),
+        "lobbyGameId": lid,
+        "walletGameId": g.get("walletId"),
+        "externalGameId": g.get("externalGameId"),
+        "productType": pts[0] if pts else None,
+        "subcategory": None,
+        "gameTranslationKey": g.get("translationKey"),
+        "providerTranslationKey": None,
+        "contributionFactor": g.get("contributionFactor"),
+        "freeSpinsAvailable": g.get("freeSpinsAvailable"),
+        "status": g.get("status"),
+    }
+
+
 def _walk(obj, found: dict):
     if isinstance(obj, dict):
+        # 1) games catalog API object (lobbyId/walletId/translationKey)
+        cat = _from_catalog(obj)
+        if cat:
+            found[cat["lobbyGameId"]] = {k: v for k, v in cat.items() if v is not None}
+        # 2) freespin config embedded in a journey (lobbyGameId dict)
         lid = obj.get("lobbyGameId")
         if lid and ("provider" in obj or "walletGameId" in obj):
-            found[lid] = {k: obj.get(k) for k in FIELDS}
+            found.setdefault(lid, {})  # catalog wins if already present
+            if not found[lid]:
+                found[lid] = {k: obj.get(k) for k in FIELDS if obj.get(k) is not None}
         for v in obj.values():
             _walk(v, found)
     elif isinstance(obj, list):
@@ -50,9 +88,17 @@ def _mine_file(path: str, found: dict):
     if isinstance(data, dict) and "log" in data and "entries" in data["log"]:
         for e in data["log"]["entries"]:
             req = e.get("request", {})
+            # request bodies (journey POSTs → embedded freespin configs)
             if req.get("method") == "POST" and "postData" in req:
                 try:
                     _walk(json.loads(req["postData"]["text"]), found)
+                except Exception:  # noqa: BLE001
+                    pass
+            # response bodies (the games catalog API — the rich source)
+            txt = (e.get("response", {}).get("content", {}) or {}).get("text")
+            if txt and "lobbyId" in txt:
+                try:
+                    _walk(json.loads(txt), found)
                 except Exception:  # noqa: BLE001
                     pass
     else:
