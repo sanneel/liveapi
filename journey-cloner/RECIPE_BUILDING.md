@@ -126,6 +126,38 @@ pattern + discovered knob paths) into `catalog.json`.
 
 ---
 
+## Architecture: what a downstream LLM planner reads
+
+A planner should never open a raw 600 KB template. `catalog.json` is the single
+machine-readable knowledge base; everything it needs is there:
+
+| catalog key | what it gives the planner |
+|---|---|
+| `activities` | every activity type, its purpose, emitted events, init fields, knob hints |
+| `transitions_observed` | the real `from → on_event → to` grammar (what may follow what) |
+| `composed_recipes` | per recipe: node count, the real activity `pattern`, and a **unit-annotated knob schema** (path + example value + `kind`/`unit`/`meaning`/`value_major`), `game_slots` with `resolved_in_games_json`, and `flags` |
+| `kb_rules` | the anti-hallucination rules (campaign_connector, journey→randomizer ⛔) **in machine form** — a catalog-only reader still gets them |
+| `games_catalog` | game-id field mapping + the note that `games.json` is page 1 of 3 |
+| `invariants` | the compile-time guarantees `compose.py verify` enforces |
+
+Self-describing contract for one recipe (no template reading, no unit guessing):
+
+```
+python compose.py <key> --describe        # emits the composed_recipes entry as JSON
+```
+
+Because knobs carry units (`10000 minor = 100 CLP`, `86400000 ms = 1 day`,
+`startAt` is `ISO-8601 UTC, Chile midnight = 04:00Z`), the planner fills a
+campaign by intent and the values are unambiguous — the "wrong number / guessed
+unit" failure class is designed out. `game_slots[].resolved_in_games_json =
+false` tells the planner a game is real-but-uncaptured (flag, don't drop).
+
+> `compose.py` writes composed recipes to the `composed_recipes` key; the curated
+> `recipes` (intent→pattern sketches) are owned by `build_catalog.py`. The two
+> never clobber each other, so `build_catalog.py` can be re-run any time.
+
+---
+
 ## Corrections / KB rules
 
 ### Object connections use campaign_connector, not CTAs

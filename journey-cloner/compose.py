@@ -218,9 +218,42 @@ def raw_mirror_refs(body):
 # --------------------------------------------------------------------------- #
 # knob discovery
 # --------------------------------------------------------------------------- #
+def knob_meta(path, value):
+    """Infer the unit/kind/meaning of a knob so a downstream reader never has to
+    guess units — the #1 'wrong number' failure. Grounded in the observed field
+    naming and value shapes of the REA journey model (CLP minor units ×100, etc.).
+    """
+    leaf = path.split(".")[-1]
+    meta = {"kind": type(value).__name__}
+    money_leaves = {"betAmount", "maxBonusAmount", "minBonusAmount", "amount",
+                    "minDepositAmount", "maxDepositAmount"}
+    if leaf in money_leaves and isinstance(value, (int, float)):
+        meta.update(kind="money", unit="CLP minor units (×100)",
+                    value_major=value / 100,
+                    meaning=f"{value} minor = {value/100:g} CLP")
+    elif leaf == "spins":
+        meta.update(kind="int", unit="spin count")
+    elif leaf in ("spinsExpirationDuration", "bonusExpirationTime"):
+        meta.update(kind="int", unit="milliseconds",
+                    meaning=(f"{value} ms = {value/86400000:g} day(s)"
+                             if isinstance(value, (int, float)) else None))
+    elif leaf in ("startAt", "stopAt", "waitUntil", "date"):
+        meta.update(kind="datetime", unit="ISO-8601 UTC (Chile midnight = 04:00Z)")
+    elif leaf in ("timeToAccept", "expirationTimeout", "duration"):
+        meta.update(kind="duration", unit="ISO-8601 duration (P…T…)")
+    elif leaf == "bonusPercent":
+        meta.update(kind="int", unit="percent (deposit-match %)")
+    elif leaf in ("wageringRequirement", "releaseLimitMultiplier"):
+        meta.update(kind="number", unit="multiplier (×)")
+    elif leaf == "autoAccept":
+        meta.update(kind="bool")
+    return {k: v for k, v in meta.items() if v is not None}
+
+
 def discover_knobs(body, games_by_lobby):
     """Return (knobs, game_slots). Knobs are grounded: only paths that resolve in
-    the reference's real initializationData are reported."""
+    the reference's real initializationData are reported. Each knob carries its
+    real current value plus an inferred unit/meaning."""
     knobs = []
     game_slots = []
     for a in body.get("activities", []):
@@ -234,6 +267,7 @@ def discover_knobs(body, games_by_lobby):
                     knobs.append({
                         "activity": name, "activityId": aid,
                         "path": path, "value": val,
+                        **knob_meta(path, val),
                     })
         # game-id knob slot (freespin games)
         fa = init.get("freespinActivity")
@@ -429,30 +463,75 @@ def observed_pattern(body):
     return list(Counter(order).items())
 
 
-def publish_catalog(recipe, body, knobs):
-    if not CATALOG_PATH.exists():
-        die(f"catalog.json not found at {CATALOG_PATH}")
-    cat = load_json(CATALOG_PATH)
+def recipe_flags(body):
+    """Machine-readable ⛔/⚠ flags a downstream reader MUST heed for this recipe.
+    Only what the reference actually implies — never speculative."""
+    flags = []
+    names = {a.get("activityName") for a in body.get("activities", [])}
+    if "campaign_connector" in names:
+        flags.append({
+            "level": "warn",
+            "rule": "campaign_connector-hand-off",
+            "message": "connects to another journey/randomizer via campaign_connector "
+                       "{journeyId, activityId} — set both, do not rely on a CTA link.",
+        })
+    # unwired terminals / editor chrome are surfaced by verify; not a build blocker.
+    return flags
+
+
+def recipe_entry(recipe, body, knobs, game_slots):
+    """The full self-describing contract for one recipe — everything a planner
+    needs without ever opening the raw template."""
     pattern = [f"{n}×{c}" if c > 1 else n for n, c in observed_pattern(body)]
-    knob_paths = sorted({f"{k['activity']}:{k['path']}" for k in knobs})
-    entry = {
+    # enriched, de-duplicated knob schema (path -> value + unit + meaning)
+    seen, knob_schema = set(), []
+    for k in knobs:
+        sig = f"{k['activity']}:{k['path']}"
+        if sig in seen:
+            continue
+        seen.add(sig)
+        knob_schema.append({
+            "id": sig, "activity": k["activity"], "path": k["path"],
+            "example_value": k["value"],
+            **{kk: k[kk] for kk in ("kind", "unit", "meaning", "value_major") if kk in k},
+        })
+    games = [{
+        "activityId": g["activityId"][:8], "lobbyGameId": g["lobbyGameId"],
+        "game": g["game"], "resolved_in_games_json": g["resolved"],
+    } for g in game_slots]
+    return {
         "key": recipe["key"],
         "intent": recipe.get("title") or recipe["key"],
         "kind": recipe.get("kind"),
         "template": recipe["template"],
         "nodes": len(body.get("activities", [])),
         "pattern": pattern,
-        "knobs": knob_paths,
+        "knobs": knob_schema,
+        "game_slots": games,
+        "flags": recipe_flags(body),
         "notes": recipe.get("notes", ""),
         "source": "composed",
+        "compose_cmd": f"python compose.py {recipe['key']} "
+                       f"--game <lobbyId> --set <activity>:<path>=<value> --catalog",
     }
-    recipes = cat.setdefault("recipes", [])
+
+
+def publish_catalog(recipe, body, knobs, game_slots):
+    if not CATALOG_PATH.exists():
+        die(f"catalog.json not found at {CATALOG_PATH}")
+    cat = load_json(CATALOG_PATH)
+    entry = recipe_entry(recipe, body, knobs, game_slots)
+    # Write to a dedicated key so re-running build_catalog.py (which owns the
+    # curated `recipes`) never clobbers composed recipes, and vice versa.
+    recipes = cat.setdefault("composed_recipes", [])
     recipes[:] = [r for r in recipes if r.get("key") != recipe["key"]]
     recipes.append(entry)
+    recipes.sort(key=lambda r: r["key"])
     CATALOG_PATH.write_text(
         json.dumps(cat, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"\ncatalog: registered recipe '{recipe['key']}' "
-          f"({len(pattern)} pattern types, {len(knob_paths)} knobs)")
+    print(f"\ncatalog: registered composed recipe '{recipe['key']}' into "
+          f"composed_recipes ({len(entry['pattern'])} pattern types, "
+          f"{len(entry['knobs'])} knobs, {len(entry['flags'])} flags)")
 
 
 # --------------------------------------------------------------------------- #
@@ -475,6 +554,8 @@ def main(argv=None):
     ap.add_argument("--list", action="store_true", help="list recipes")
     ap.add_argument("--verify", action="store_true", help="verify only, write nothing")
     ap.add_argument("--catalog", action="store_true", help="register into catalog.json")
+    ap.add_argument("--describe", action="store_true",
+                    help="print the recipe's self-describing JSON contract and exit")
     ap.add_argument("--game", help="swap freespin game to this lobbyId (from games.json)")
     ap.add_argument("--set", action="append", default=[],
                     help="activityName:dot.path=value  (repeatable)")
@@ -488,6 +569,11 @@ def main(argv=None):
     games_by_lobby = load_games()
     body = compose(recipe, args, games_by_lobby)
     knobs, game_slots = discover_knobs(body, games_by_lobby)
+
+    if args.describe:
+        print(json.dumps(recipe_entry(recipe, body, knobs, game_slots),
+                         ensure_ascii=False, indent=2))
+        return 0
 
     print(f"recipe '{recipe['key']}'  template={recipe['template']}  "
           f"nodes={len(body.get('activities', []))}")
@@ -510,7 +596,7 @@ def main(argv=None):
     print(f"\nwrote {out}")
 
     if args.catalog:
-        publish_catalog(recipe, body, knobs)
+        publish_catalog(recipe, body, knobs, game_slots)
     return 0
 
 

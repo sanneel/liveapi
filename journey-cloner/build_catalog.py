@@ -91,6 +91,28 @@ RECIPES = [
 ]
 
 
+# Anti-hallucination rules, machine-readable so a planner reading ONLY catalog.json
+# (never the prose RECIPE_BUILDING.md) still gets them. Grounded corrections: the
+# failure class they guard is "inventing a connection mechanic with no ground truth."
+KB_RULES = [
+    {"id": "connections-use-campaign_connector",
+     "level": "must",
+     "rule": "Journeys connect to other journeys/randomizers via the campaign_connector "
+             "activity + the {journeyId, activityId} hand-off — NOT via a notification/CTA "
+             "link. A CTA is marketing (tells the player); it is never the structural "
+             "connection. Granting/unlocking a randomizer after a condition is a "
+             "campaign_connector to the randomizer's entry."},
+    {"id": "journey-grants-randomizer-uncaptured",
+     "level": "flag",
+     "symbol": "⛔",
+     "rule": "The journey → randomizer direction is UNCAPTURED. Every captured example is "
+             "randomizer → journey (prize routes into a reward). A journey GRANTING a "
+             "randomizer shot (deposit → unlock scratch card) has NO captured example. "
+             "Flag ⛔ 'journey-grants-randomizer mechanic unverified — confirm how the shot "
+             "entitlement is wired before building' instead of inventing it."},
+]
+
+
 def build_automations() -> list[dict]:
     """The top-level 'automation graph': the named things you can generate in
     this backoffice, each a distinct endpoint/output. Curated, but the WOF
@@ -282,6 +304,24 @@ def build() -> dict:
         "reward_presets": rewards,
         "segments": segments,
         "recipes": RECIPES,
+        "kb_rules": KB_RULES,
+        "games_catalog": {
+            "file": "games.json",
+            "note": "Game-id knob source, captured from GET .../free-spins-bonus-deposit/"
+                    "data/games. Partial: 100 of 293 games (page 1 of 3 only). A freespin "
+                    "game absent here is not invalid — it may live on an uncaptured page; "
+                    "compose.py verify flags it ⚠, never invents a row.",
+            "fields": {"lobbyId": "freespinActivity.lobbyGameId",
+                       "walletId": "freespinActivity.walletGameId",
+                       "externalGameId": "freespinActivity.externalGameId",
+                       "gameProvider": "freespinActivity.provider",
+                       "translationKey": "freespinActivity.gameTranslationKey"},
+        },
+        "composed_recipes_note": "Recipes built by compose.py from ONE captured reference "
+                                 "each; see the composed_recipes key (added by "
+                                 "`compose.py <key> --catalog`). Curated `recipes` above are "
+                                 "intent→pattern sketches; composed_recipes carry real node "
+                                 "counts, chains, and unit-annotated knobs.",
         "invariants": [
             "compiled body.activities MUST equal the rawJourneyData editor mirror",
             "every activity UUID regenerated consistently on clone; never reuse JRN/CSE ids",

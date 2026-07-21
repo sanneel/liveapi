@@ -1144,7 +1144,41 @@
         "deposit"
       ],
       "notes": "API entry -> flat-drip lobby/cashier card -> deposit gate. GOW campaign head."
+    }
+  ],
+  "kb_rules": [
+    {
+      "id": "connections-use-campaign_connector",
+      "level": "must",
+      "rule": "Journeys connect to other journeys/randomizers via the campaign_connector activity + the {journeyId, activityId} hand-off — NOT via a notification/CTA link. A CTA is marketing (tells the player); it is never the structural connection. Granting/unlocking a randomizer after a condition is a campaign_connector to the randomizer's entry."
     },
+    {
+      "id": "journey-grants-randomizer-uncaptured",
+      "level": "flag",
+      "symbol": "⛔",
+      "rule": "The journey → randomizer direction is UNCAPTURED. Every captured example is randomizer → journey (prize routes into a reward). A journey GRANTING a randomizer shot (deposit → unlock scratch card) has NO captured example. Flag ⛔ 'journey-grants-randomizer mechanic unverified — confirm how the shot entitlement is wired before building' instead of inventing it."
+    }
+  ],
+  "games_catalog": {
+    "file": "games.json",
+    "note": "Game-id knob source, captured from GET .../free-spins-bonus-deposit/data/games. Partial: 100 of 293 games (page 1 of 3 only). A freespin game absent here is not invalid — it may live on an uncaptured page; compose.py verify flags it ⚠, never invents a row.",
+    "fields": {
+      "lobbyId": "freespinActivity.lobbyGameId",
+      "walletId": "freespinActivity.walletGameId",
+      "externalGameId": "freespinActivity.externalGameId",
+      "gameProvider": "freespinActivity.provider",
+      "translationKey": "freespinActivity.gameTranslationKey"
+    }
+  },
+  "composed_recipes_note": "Recipes built by compose.py from ONE captured reference each; see the composed_recipes key (added by `compose.py <key> --catalog`). Curated `recipes` above are intent→pattern sketches; composed_recipes carry real node counts, chains, and unit-annotated knobs.",
+  "invariants": [
+    "compiled body.activities MUST equal the rawJourneyData editor mirror",
+    "every activity UUID regenerated consistently on clone; never reuse JRN/CSE ids",
+    "strip duplicatedFromId/Version and stale promotionDisplayId",
+    "every nextActivityId/journeyActivityId must resolve to an existing activity",
+    "channel copy must be present for every channel flagged TRUE in the spec"
+  ],
+  "composed_recipes": [
     {
       "key": "instant_bonus",
       "intent": "One-round instant free-spin bonus",
@@ -1157,17 +1191,87 @@
         "freespin_bonus"
       ],
       "knobs": [
-        "freespin_bonus:freespinActivity.currenciesConfig.CLP.betAmount",
-        "freespin_bonus:freespinActivity.currenciesConfig.CLP.maxBonusAmount",
-        "freespin_bonus:freespinActivity.spins",
-        "freespin_bonus:freespinActivity.spinsExpirationDuration",
-        "freespin_bonus:freespinActivity.startAt",
-        "freespin_bonus:freespinActivity.stopAt",
-        "promotion:autoAccept",
-        "promotion:timeToAccept"
+        {
+          "id": "promotion:timeToAccept",
+          "activity": "promotion",
+          "path": "timeToAccept",
+          "example_value": "P0Y0M1DT0H0M0S",
+          "kind": "duration",
+          "unit": "ISO-8601 duration (P…T…)"
+        },
+        {
+          "id": "promotion:autoAccept",
+          "activity": "promotion",
+          "path": "autoAccept",
+          "example_value": false,
+          "kind": "bool"
+        },
+        {
+          "id": "freespin_bonus:freespinActivity.spins",
+          "activity": "freespin_bonus",
+          "path": "freespinActivity.spins",
+          "example_value": 1,
+          "kind": "int",
+          "unit": "spin count"
+        },
+        {
+          "id": "freespin_bonus:freespinActivity.startAt",
+          "activity": "freespin_bonus",
+          "path": "freespinActivity.startAt",
+          "example_value": "2026-07-01T08:53:43Z",
+          "kind": "datetime",
+          "unit": "ISO-8601 UTC (Chile midnight = 04:00Z)"
+        },
+        {
+          "id": "freespin_bonus:freespinActivity.stopAt",
+          "activity": "freespin_bonus",
+          "path": "freespinActivity.stopAt",
+          "example_value": "2026-07-21T08:53:43Z",
+          "kind": "datetime",
+          "unit": "ISO-8601 UTC (Chile midnight = 04:00Z)"
+        },
+        {
+          "id": "freespin_bonus:freespinActivity.currenciesConfig.CLP.betAmount",
+          "activity": "freespin_bonus",
+          "path": "freespinActivity.currenciesConfig.CLP.betAmount",
+          "example_value": 10000,
+          "kind": "money",
+          "unit": "CLP minor units (×100)",
+          "meaning": "10000 minor = 100 CLP",
+          "value_major": 100.0
+        },
+        {
+          "id": "freespin_bonus:freespinActivity.currenciesConfig.CLP.maxBonusAmount",
+          "activity": "freespin_bonus",
+          "path": "freespinActivity.currenciesConfig.CLP.maxBonusAmount",
+          "example_value": 5000000,
+          "kind": "money",
+          "unit": "CLP minor units (×100)",
+          "meaning": "5000000 minor = 50000 CLP",
+          "value_major": 50000.0
+        },
+        {
+          "id": "freespin_bonus:freespinActivity.spinsExpirationDuration",
+          "activity": "freespin_bonus",
+          "path": "freespinActivity.spinsExpirationDuration",
+          "example_value": 86400000,
+          "kind": "int",
+          "unit": "milliseconds",
+          "meaning": "86400000 ms = 1 day(s)"
+        }
       ],
+      "game_slots": [
+        {
+          "activityId": "edc70edb",
+          "lobbyGameId": "pragmatic-sweet-bonanza-super-scatter",
+          "game": "Sweet Bonanza Super Scatter",
+          "resolved_in_games_json": true
+        }
+      ],
+      "flags": [],
       "notes": "external_system_source -> promotion -> freespin_bonus (instantFreeSpin, no wagering) -> end. Single free-spin award; game/spins/bet/dates are the knobs. Reference: JRN-0-601517 draft (FTCL|CS|Card|Una ronda de bono instantaneo).",
-      "source": "composed"
+      "source": "composed",
+      "compose_cmd": "python compose.py instant_bonus --game <lobbyId> --set <activity>:<path>=<value> --catalog"
     },
     {
       "key": "multipurpose",
@@ -1193,30 +1297,156 @@
         "email_engagement_split"
       ],
       "knobs": [
-        "casino_bonus_v2:bonusExpirationTime",
-        "casino_bonus_v2:bonusPercent",
-        "casino_bonus_v2:releaseLimitMultiplier",
-        "casino_bonus_v2:wageringRequirement",
-        "deposit:depositConditions.expirationTimeout",
-        "deposit:depositConditions.minDepositAmounts.0.amount",
-        "freespin_bonus:freespinActivity.currenciesConfig.CLP.betAmount",
-        "freespin_bonus:freespinActivity.currenciesConfig.CLP.maxBonusAmount",
-        "freespin_bonus:freespinActivity.spins",
-        "freespin_bonus:freespinActivity.spinsExpirationDuration",
-        "freespin_bonus:freespinActivity.startAt",
-        "freespin_bonus:freespinActivity.stopAt",
-        "multipurpose_promotion:autoAccept",
-        "multipurpose_promotion:timeToAccept"
+        {
+          "id": "freespin_bonus:freespinActivity.spins",
+          "activity": "freespin_bonus",
+          "path": "freespinActivity.spins",
+          "example_value": 75,
+          "kind": "int",
+          "unit": "spin count"
+        },
+        {
+          "id": "freespin_bonus:freespinActivity.startAt",
+          "activity": "freespin_bonus",
+          "path": "freespinActivity.startAt",
+          "example_value": "2026-07-09T09:08:44Z",
+          "kind": "datetime",
+          "unit": "ISO-8601 UTC (Chile midnight = 04:00Z)"
+        },
+        {
+          "id": "freespin_bonus:freespinActivity.stopAt",
+          "activity": "freespin_bonus",
+          "path": "freespinActivity.stopAt",
+          "example_value": "2026-07-19T09:08:44Z",
+          "kind": "datetime",
+          "unit": "ISO-8601 UTC (Chile midnight = 04:00Z)"
+        },
+        {
+          "id": "freespin_bonus:freespinActivity.currenciesConfig.CLP.betAmount",
+          "activity": "freespin_bonus",
+          "path": "freespinActivity.currenciesConfig.CLP.betAmount",
+          "example_value": 10000,
+          "kind": "money",
+          "unit": "CLP minor units (×100)",
+          "meaning": "10000 minor = 100 CLP",
+          "value_major": 100.0
+        },
+        {
+          "id": "freespin_bonus:freespinActivity.currenciesConfig.CLP.maxBonusAmount",
+          "activity": "freespin_bonus",
+          "path": "freespinActivity.currenciesConfig.CLP.maxBonusAmount",
+          "example_value": 20000000,
+          "kind": "money",
+          "unit": "CLP minor units (×100)",
+          "meaning": "20000000 minor = 200000 CLP",
+          "value_major": 200000.0
+        },
+        {
+          "id": "freespin_bonus:freespinActivity.spinsExpirationDuration",
+          "activity": "freespin_bonus",
+          "path": "freespinActivity.spinsExpirationDuration",
+          "example_value": 86400000,
+          "kind": "int",
+          "unit": "milliseconds",
+          "meaning": "86400000 ms = 1 day(s)"
+        },
+        {
+          "id": "deposit:depositConditions.expirationTimeout",
+          "activity": "deposit",
+          "path": "depositConditions.expirationTimeout",
+          "example_value": "P0Y0M1DT0H0M0S",
+          "kind": "duration",
+          "unit": "ISO-8601 duration (P…T…)"
+        },
+        {
+          "id": "deposit:depositConditions.minDepositAmounts.0.amount",
+          "activity": "deposit",
+          "path": "depositConditions.minDepositAmounts.0.amount",
+          "example_value": 10000,
+          "kind": "money",
+          "unit": "CLP minor units (×100)",
+          "meaning": "10000 minor = 100 CLP",
+          "value_major": 100.0
+        },
+        {
+          "id": "casino_bonus_v2:bonusPercent",
+          "activity": "casino_bonus_v2",
+          "path": "bonusPercent",
+          "example_value": 100,
+          "kind": "int",
+          "unit": "percent (deposit-match %)"
+        },
+        {
+          "id": "casino_bonus_v2:wageringRequirement",
+          "activity": "casino_bonus_v2",
+          "path": "wageringRequirement",
+          "example_value": 30,
+          "kind": "number",
+          "unit": "multiplier (×)"
+        },
+        {
+          "id": "casino_bonus_v2:releaseLimitMultiplier",
+          "activity": "casino_bonus_v2",
+          "path": "releaseLimitMultiplier",
+          "example_value": 20,
+          "kind": "number",
+          "unit": "multiplier (×)"
+        },
+        {
+          "id": "casino_bonus_v2:bonusExpirationTime",
+          "activity": "casino_bonus_v2",
+          "path": "bonusExpirationTime",
+          "example_value": 259200000,
+          "kind": "int",
+          "unit": "milliseconds",
+          "meaning": "259200000 ms = 3 day(s)"
+        },
+        {
+          "id": "multipurpose_promotion:timeToAccept",
+          "activity": "multipurpose_promotion",
+          "path": "timeToAccept",
+          "example_value": "P0Y0M1DT0H0M0S",
+          "kind": "duration",
+          "unit": "ISO-8601 duration (P…T…)"
+        },
+        {
+          "id": "multipurpose_promotion:autoAccept",
+          "activity": "multipurpose_promotion",
+          "path": "autoAccept",
+          "example_value": false,
+          "kind": "bool"
+        }
       ],
+      "game_slots": [
+        {
+          "activityId": "a67fa18e",
+          "lobbyGameId": "endorphina-fortune-chests",
+          "game": "Fortune Chests",
+          "resolved_in_games_json": false
+        },
+        {
+          "activityId": "46993412",
+          "lobbyGameId": "jugabet-games-la-gran-copa-jugabet",
+          "game": "La Gran Copa Jugabet",
+          "resolved_in_games_json": false
+        },
+        {
+          "activityId": "43a3d0a8",
+          "lobbyGameId": "pragmatic-sweet-bonanza-1000",
+          "game": "Sweet Bonanza 1000",
+          "resolved_in_games_json": false
+        },
+        {
+          "activityId": "dd8b48df",
+          "lobbyGameId": "amigo-1000-olympus-rivals",
+          "game": "1000 Olympus Rivals",
+          "resolved_in_games_json": false
+        }
+      ],
+      "flags": [],
       "notes": "external_system_source -> multipurpose_promotion drip with deposit gates, 4x freespin_bonus/casino_bonus_v2 reward flows, and comms branches (native_push, dextra_email, notification_center, engagement + ams decision splits). Reference: JRN-0-610902 draft (JBCL|CS|Spin Ladder July boosted).",
-      "source": "composed"
+      "source": "composed",
+      "compose_cmd": "python compose.py multipurpose --game <lobbyId> --set <activity>:<path>=<value> --catalog"
     }
-  ],
-  "invariants": [
-    "compiled body.activities MUST equal the rawJourneyData editor mirror",
-    "every activity UUID regenerated consistently on clone; never reuse JRN/CSE ids",
-    "strip duplicatedFromId/Version and stale promotionDisplayId",
-    "every nextActivityId/journeyActivityId must resolve to an existing activity",
-    "channel copy must be present for every channel flagged TRUE in the spec"
   ]
 }
