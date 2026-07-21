@@ -1,0 +1,8 @@
+{
+  "key": "instant_bonus",
+  "family": "casino",
+  "template": "casino/instant_bonus.json",
+  "title": "One-round instant free-spin bonus",
+  "kind": "linear",
+  "notes": "external_system_source -> promotion -> freespin_bonus (instantFreeSpin, no wagering) -> end. Single free-spin award; game/spins/bet/dates are the knobs. Reference: JRN-0-601517 draft (FTCL|CS|Card|Una ronda de bono instantaneo)."
+}

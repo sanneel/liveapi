@@ -1,0 +1,8 @@
+{
+  "key": "multipurpose",
+  "family": "casino",
+  "template": "casino/multipurpose.json",
+  "title": "Multipurpose spin-ladder (branching bonus + comms)",
+  "kind": "branching",
+  "notes": "external_system_source -> multipurpose_promotion drip with deposit gates, 4x freespin_bonus/casino_bonus_v2 reward flows, and comms branches (native_push, dextra_email, notification_center, engagement + ams decision splits). Reference: JRN-0-610902 draft (JBCL|CS|Spin Ladder July boosted)."
+}

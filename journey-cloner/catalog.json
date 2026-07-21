@@ -1144,6 +1144,72 @@
         "deposit"
       ],
       "notes": "API entry -> flat-drip lobby/cashier card -> deposit gate. GOW campaign head."
+    },
+    {
+      "key": "instant_bonus",
+      "intent": "One-round instant free-spin bonus",
+      "kind": "linear",
+      "template": "casino/instant_bonus.json",
+      "nodes": 11,
+      "pattern": [
+        "external_system_source",
+        "promotion",
+        "freespin_bonus"
+      ],
+      "knobs": [
+        "freespin_bonus:freespinActivity.currenciesConfig.CLP.betAmount",
+        "freespin_bonus:freespinActivity.currenciesConfig.CLP.maxBonusAmount",
+        "freespin_bonus:freespinActivity.spins",
+        "freespin_bonus:freespinActivity.spinsExpirationDuration",
+        "freespin_bonus:freespinActivity.startAt",
+        "freespin_bonus:freespinActivity.stopAt",
+        "promotion:autoAccept",
+        "promotion:timeToAccept"
+      ],
+      "notes": "external_system_source -> promotion -> freespin_bonus (instantFreeSpin, no wagering) -> end. Single free-spin award; game/spins/bet/dates are the knobs. Reference: JRN-0-601517 draft (FTCL|CS|Card|Una ronda de bono instantaneo).",
+      "source": "composed"
+    },
+    {
+      "key": "multipurpose",
+      "intent": "Multipurpose spin-ladder (branching bonus + comms)",
+      "kind": "branching",
+      "template": "casino/multipurpose.json",
+      "nodes": 148,
+      "pattern": [
+        "external_system_source",
+        "wait_date",
+        "multipurpose_promotion",
+        "promotion×4",
+        "event_detector×6",
+        "ams_decision_split",
+        "deposit×4",
+        "notification_center×4",
+        "native_push",
+        "freespin_bonus×4",
+        "wait_interval×2",
+        "dextra_email",
+        "casino_bonus_v2×4",
+        "notification_center_engagement_split",
+        "email_engagement_split"
+      ],
+      "knobs": [
+        "casino_bonus_v2:bonusExpirationTime",
+        "casino_bonus_v2:bonusPercent",
+        "casino_bonus_v2:releaseLimitMultiplier",
+        "casino_bonus_v2:wageringRequirement",
+        "deposit:depositConditions.expirationTimeout",
+        "deposit:depositConditions.minDepositAmounts.0.amount",
+        "freespin_bonus:freespinActivity.currenciesConfig.CLP.betAmount",
+        "freespin_bonus:freespinActivity.currenciesConfig.CLP.maxBonusAmount",
+        "freespin_bonus:freespinActivity.spins",
+        "freespin_bonus:freespinActivity.spinsExpirationDuration",
+        "freespin_bonus:freespinActivity.startAt",
+        "freespin_bonus:freespinActivity.stopAt",
+        "multipurpose_promotion:autoAccept",
+        "multipurpose_promotion:timeToAccept"
+      ],
+      "notes": "external_system_source -> multipurpose_promotion drip with deposit gates, 4x freespin_bonus/casino_bonus_v2 reward flows, and comms branches (native_push, dextra_email, notification_center, engagement + ams decision splits). Reference: JRN-0-610902 draft (JBCL|CS|Spin Ladder July boosted).",
+      "source": "composed"
     }
   ],
   "invariants": [
