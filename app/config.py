@@ -37,8 +37,10 @@ class Settings(BaseSettings):
     # Server-side Gemini key for the /admin/planner chat. Held here so it is
     # never shipped to the browser; used by app/routes/admin_planner.py.
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.0-flash"
-    # 2.5-flash runs "thinking" by default — those tokens bill at the output
+    # flash-lite is the cheapest 2.5 tier — materially lower input/output price
+    # than 2.0/2.5-flash, enough for the planner's structured MODE 1/2/3 output.
+    gemini_model: str = "gemini-2.5-flash-lite"
+    # 2.5 models run "thinking" by default — those tokens bill at the output
     # rate and dominate cost. 0 disables it (planner needs no chain-of-thought);
     # raise it only if answer quality needs it.
     gemini_thinking_budget: int = 0

@@ -90,7 +90,8 @@ def plan_gemini(brief: str) -> str:
 
     genai.configure(api_key=key)
     model = genai.GenerativeModel(
-        "gemini-1.5-flash",
+        # Keep aligned with app/config.py gemini_model (cheapest 2.5 tier).
+        "gemini-2.5-flash-lite",
         system_instruction=SYSTEM_PROMPT,
     )
     r = model.generate_content(brief)
