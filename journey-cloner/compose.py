@@ -355,11 +355,56 @@ def spec_to_values(recipe: Recipe, spec: dict) -> tuple[dict, list[str]]:
     return values, unknown
 
 
-def compose_from_spec(spec: dict) -> tuple[Recipe, dict, str, list[str]]:
+# Sentinel markers a planner emits when it cannot resolve a value. A spec
+# carrying any of these is a PLAN WITH A HOLE — the composer refuses it rather
+# than papering over it with a default (assembler discipline: never guess).
+BLOCKER_MARKERS = ("⛔", "RESOLVE_AT_BUILD_TIME", "UNCAPTURED")
+
+
+class SpecError(ValueError):
+    """A spec the composer refuses to build (unknown recipe or a ⛔ blocker)."""
+
+
+def _find_blockers(obj, prefix: str = "") -> list[str]:
+    """Recursively collect dotted paths whose string value carries a blocker."""
+    hits: list[str] = []
+    if isinstance(obj, str):
+        if any(m in obj for m in BLOCKER_MARKERS):
+            hits.append(f"{prefix or '<root>'} = {obj!r}")
+    elif isinstance(obj, dict):
+        for k, v in obj.items():
+            hits += _find_blockers(v, f"{prefix}.{k}" if prefix else str(k))
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            hits += _find_blockers(v, f"{prefix}[{i}]")
+    return hits
+
+
+def validate_spec(spec: dict) -> Recipe:
+    """Refuse a spec the composer must not build. Two hard gates:
+      1. `recipe` must be one of the PROVEN recipes — no remap to the nearest.
+      2. NO ⛔ / RESOLVE_AT_BUILD_TIME / UNCAPTURED blocker anywhere in the spec.
+    Returns the resolved Recipe on success, else raises SpecError with the why."""
     key = spec.get("recipe")
     recipe = RECIPES.get(key)
     if not recipe:
-        raise ValueError(f"unknown recipe {key!r}; choose from {list(RECIPES)}")
+        raise SpecError(
+            f"unknown recipe {key!r}. The composer only builds proven recipes: "
+            f"{list(RECIPES)}. If none fits, the campaign is ⛔ UNCAPTURED — "
+            f"capture a template first; do not remap to the nearest recipe.")
+    blockers = _find_blockers(spec)
+    if blockers:
+        joined = "\n    ".join(blockers)
+        raise SpecError(
+            f"spec carries {len(blockers)} unresolved blocker(s) — refusing to "
+            f"build (a ⛔ value would ship as a literal string):\n    {joined}\n"
+            f"  Resolve each (e.g. a real lobbyGameId from the games registry) "
+            f"and re-emit the spec.")
+    return recipe
+
+
+def compose_from_spec(spec: dict) -> tuple[Recipe, dict, str, list[str]]:
+    recipe = validate_spec(spec)
     values, unknown = spec_to_values(recipe, spec)
     body, name, _ = compose(recipe, values)
     return recipe, body, name, unknown
@@ -586,7 +631,11 @@ def main() -> int:
     unknown_knobs = []
     if args[0] == "--spec":
         spec = json.load(open(args[1], encoding="utf-8")) if len(args) > 1 else json.load(sys.stdin)
-        recipe, body, name, unknown_knobs = compose_from_spec(spec)
+        try:
+            recipe, body, name, unknown_knobs = compose_from_spec(spec)
+        except SpecError as exc:
+            print(f"⛔ REFUSED — {exc}")
+            return 3
     else:
         key = args[0]
         if key not in RECIPES:
