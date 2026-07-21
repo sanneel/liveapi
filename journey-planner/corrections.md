@@ -44,3 +44,15 @@ the knowledge base when they conflict. Add a line the moment you learn something
   - "Instant Bonus" with Cashout: 1 (release limit 1×) = NO real wagering grind. Single activity, do NOT chain to casino_bonus_v2.
   - Only chain `freespin_bonus → casino_bonus_v2` when there is a REAL wagering requirement (Wager: N with N > 1, or "x30 on winnings" language).
   - Instant bonuses are terminal rewards; wagering bonuses are chained follow-ups.
+- The planner NEVER hand-writes journey JSON or a console script (HARD RULE — this is the #1 cause of blank-canvas / non-working drafts):
+  - The ONLY renderable output comes from `journey-cloner/compose.py`. A journey body the LLM types by hand will ALWAYS fail: it has `elements: []` (blank canvas — the canvas has no generator, it is copied from a template), invented event names (real freespin completion is `FreespinBonusCollectingFinished`, NOT `FreespinBonusIssued`; sources fire `PlayerAdded`/`Activation`, NOT `Completion`), and a stub `activitiesConfiguration` — every COMPOSER_RULES.md rule is violated at once.
+  - When the user asks for "the console script" / "paste script" / "generate the JS", the planner's job ENDS at the MODE 3 spec. Emit the spec block(s) and say: "Run `python journey-cloner/compose.py --spec <file>` to get the renderable console script — I cannot hand-build one that renders." NEVER fabricate a `fetch()` / `journey-drafts` POST script.
+- MODE 3 recipe/knob discipline (refuse, never remap):
+  - The ONLY valid recipes are the 3 in the catalog: `comms`, `sport_deposit_freebet`, `casino_deposit_freespins`. `multipurpose_promotion`, `empty_prize`, `instant_bonus`, `choosable_deposit` etc. are NOT recipes — emitting them is a hallucination. If no recipe fits, output the ⛔ UNCAPTURED line, do NOT map to the nearest recipe.
+  - NEVER map an empty-prize/fallback journey to `comms`. NEVER map an instant-bonus (no wagering) journey to `casino_deposit_freespins` with `wagering_x: 1` — that recipe chains a real `casino_bonus_v2` wagering node, which contradicts an instant bonus. Both are ⛔ UNCAPTURED until a matching recipe is captured.
+- MODE 3 spec must preserve blockers (⛔ survives into the machine spec):
+  - Any ⛔ UNCAPTURED or ⛔ RESOLVE_AT_BUILD_TIME from the plan MUST appear in the spec as an explicit unresolved field, e.g. `"spin_game_id": "⛔ RESOLVE_AT_BUILD_TIME"`.
+  - The composer REFUSES to build a spec containing any ⛔ value, and REFUSES any recipe not in the proven list. A blocker is never silently dropped or guessed away — it stays visible until a human resolves it.
+- Game/provider IDs come from the games registry ONLY (fixes guessed lobby IDs):
+  - Never invent a `lobbyGameId`/`provider` (e.g. `sweet-bonanza-super-scatter`, `pragmatic`). Real IDs have provider-prefixed formats (`pragmatic-vs20olympgate`, `jugabet-games-la-gran-copa-jugabet`) that cannot be guessed.
+  - If the game is not in the captured registry, flag `⛔ RESOLVE_AT_BUILD_TIME` for both `provider` and `lobbyGameId` — never a plausible-looking guess.
