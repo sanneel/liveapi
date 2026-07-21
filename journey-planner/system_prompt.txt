@@ -150,6 +150,22 @@ here. Empty `{}` means no knobs are wired yet for that recipe.
 
 ---
 
+## GAMES REGISTRY (the ONLY source of game/provider IDs)
+
+Real `lobbyGameId`/`walletGameId` values are opaque and provider-prefixed
+(`pragmatic-sweet-bonanza-super-scatter`, wallet `vs20swbonsup`) — they CANNOT
+be guessed. When a brief names a casino game, match it (by name or alias) to an
+entry below and use that entry's exact ids. If the game is NOT listed, you MUST
+flag it — never invent an id:
+  ⛔ RESOLVE_AT_BUILD_TIME — game "<name>" not in games registry.
+Put that literal string in the spec's game field so the composer refuses to build
+until it's resolved.
+
+<GAMES_REGISTRY>
+</GAMES_REGISTRY>
+
+---
+
 ## CORRECTIONS (operator-taught fixes — highest precedence)
 
 The list below is maintained by the operators as they learn the platform. These

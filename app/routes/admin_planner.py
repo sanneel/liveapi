@@ -50,11 +50,14 @@ def _build_system_prompt() -> str:
     corrections = corr_file.read_text(encoding="utf-8") if corr_file.exists() else ""
     cat_file = REPO_ROOT / "journey-cloner" / "recipes_catalog.json"
     catalog = cat_file.read_text(encoding="utf-8") if cat_file.exists() else "{}"
+    games_file = REPO_ROOT / "journey-cloner" / "library" / "games.json"
+    games = games_file.read_text(encoding="utf-8") if games_file.exists() else "{}"
     return (
         tpl
         .replace("<KNOWLEDGE_BASE>\n</KNOWLEDGE_BASE>", kb)
         .replace("<CAPTURE_BACKLOG>\n</CAPTURE_BACKLOG>", backlog)
         .replace("<RECIPES_CATALOG>\n</RECIPES_CATALOG>", catalog)
+        .replace("<GAMES_REGISTRY>\n</GAMES_REGISTRY>", games)
         .replace("<CORRECTIONS>\n</CORRECTIONS>", corrections)
     )
 

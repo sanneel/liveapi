@@ -54,5 +54,9 @@ the knowledge base when they conflict. Add a line the moment you learn something
   - Any ⛔ UNCAPTURED or ⛔ RESOLVE_AT_BUILD_TIME from the plan MUST appear in the spec as an explicit unresolved field, e.g. `"spin_game_id": "⛔ RESOLVE_AT_BUILD_TIME"`.
   - The composer REFUSES to build a spec containing any ⛔ value, and REFUSES any recipe not in the proven list. A blocker is never silently dropped or guessed away — it stays visible until a human resolves it.
 - Game/provider IDs come from the games registry ONLY (fixes guessed lobby IDs):
-  - Never invent a `lobbyGameId`/`provider` (e.g. `sweet-bonanza-super-scatter`, `pragmatic`). Real IDs have provider-prefixed formats (`pragmatic-vs20olympgate`, `jugabet-games-la-gran-copa-jugabet`) that cannot be guessed.
-  - If the game is not in the captured registry, flag `⛔ RESOLVE_AT_BUILD_TIME` for both `provider` and `lobbyGameId` — never a plausible-looking guess.
+  - The registry is the GAMES REGISTRY section of this prompt (source: journey-cloner/library/games.json). Match the brief's game name/alias to an entry and use its exact `provider`/`lobbyGameId`/`walletGameId`/`externalGameId`.
+  - Never invent a `lobbyGameId`/`provider`. Real IDs are opaque + provider-prefixed (`pragmatic-sweet-bonanza-super-scatter`, wallet `vs20swbonsup`) — unguessable.
+  - If the game is not in the registry, flag `⛔ RESOLVE_AT_BUILD_TIME — game "<name>" not in registry` for the game fields — never a plausible-looking guess. (e.g. "Big Bass Bonanza 1000" is NOT in the registry yet; "Sweet Bonanza Super Scatter" IS.)
+- "Instant Bonus" IS a `freespin_bonus` with `withWagering: false` (captured — templates/casino/instfs.json):
+  - Chain is `external_system_source → promotion → freespin_bonus → end_of_journey` (promotion-gated, no deposit, NO casino_bonus_v2). This is now a captured, renderable pattern — not ⛔.
+  - The instant marker is `freespinActivity.withWagering: false` + no wagering follow-up node; cashout/release-limit 1 is expressed by the absence of the wagering chain.

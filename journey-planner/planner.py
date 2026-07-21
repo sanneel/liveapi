@@ -40,11 +40,19 @@ RECIPES_CATALOG = (
     _CATALOG_FILE.read_text(encoding="utf-8") if _CATALOG_FILE.exists() else "{}"
 )
 
+# Games registry — the only sanctioned source of provider/game IDs. Missing
+# file = no games advertised (planner then flags every game ⛔).
+_GAMES_FILE = SCRIPT_DIR.parent / "journey-cloner" / "library" / "games.json"
+GAMES_REGISTRY = (
+    _GAMES_FILE.read_text(encoding="utf-8") if _GAMES_FILE.exists() else "{}"
+)
+
 SYSTEM_PROMPT = (
     SYSTEM_PROMPT_TEMPLATE
     .replace("<KNOWLEDGE_BASE>\n</KNOWLEDGE_BASE>", KNOWLEDGE_BASE)
     .replace("<CAPTURE_BACKLOG>\n</CAPTURE_BACKLOG>", CAPTURE_BACKLOG)
     .replace("<RECIPES_CATALOG>\n</RECIPES_CATALOG>", RECIPES_CATALOG)
+    .replace("<GAMES_REGISTRY>\n</GAMES_REGISTRY>", GAMES_REGISTRY)
     .replace("<CORRECTIONS>\n</CORRECTIONS>", CORRECTIONS)
 )
 

@@ -1,0 +1,102 @@
+{
+  "_doc": "Games registry — real provider/game IDs mined from captured journeys. The planner resolves a brief's game NAME to these IDs; if a game is not here it MUST flag it (do not guess an ID). Regenerate with build_games_registry.py after capturing new journeys. gameTranslationKey is the human name used for matching.",
+  "games": {
+    "amigo-1000-olympus-rivals": {
+      "provider": "amigo",
+      "lobbyGameId": "amigo-1000-olympus-rivals",
+      "walletGameId": "amigo_1000OlympusRivals@AMIGO",
+      "externalGameId": "amigo_1000OlympusRivals@AMIGO",
+      "productType": "slots",
+      "subcategory": "freeSpin",
+      "gameTranslationKey": "1000 Olympus Rivals",
+      "providerTranslationKey": "Amigo Gaming",
+      "aliases": [
+        "1000 olympus rivals",
+        "olympus rivals"
+      ]
+    },
+    "endorphina-fortune-chests": {
+      "provider": "endorphina",
+      "lobbyGameId": "endorphina-fortune-chests",
+      "walletGameId": "endorphina2_FortuneChests@ENDORPHINA",
+      "externalGameId": "endorphina2_FortuneChests@ENDORPHINA",
+      "productType": "slots",
+      "subcategory": "freeSpin",
+      "gameTranslationKey": "Fortune Chests",
+      "providerTranslationKey": "Endorphina",
+      "aliases": [
+        "fortune chests"
+      ]
+    },
+    "jugabet-games-la-gran-copa-jugabet": {
+      "provider": "jugabet-games",
+      "lobbyGameId": "jugabet-games-la-gran-copa-jugabet",
+      "walletGameId": "gg_la_gran_copa_jugabet",
+      "externalGameId": "gg_la_gran_copa_jugabet",
+      "productType": "slots",
+      "subcategory": "freeSpin",
+      "gameTranslationKey": "La Gran Copa Jugabet",
+      "providerTranslationKey": "Jugabet Games",
+      "aliases": [
+        "la gran copa jugabet",
+        "la gran copa",
+        "gran copa"
+      ]
+    },
+    "jugabet-games-superclasico": {
+      "provider": "jugabet-games",
+      "lobbyGameId": "jugabet-games-superclasico",
+      "walletGameId": "gg_super_clasico_jb",
+      "externalGameId": "gg_super_clasico_jb",
+      "productType": "slots",
+      "subcategory": "freeSpin",
+      "gameTranslationKey": "Superclasico Jugabet",
+      "providerTranslationKey": "Jugabet Games",
+      "aliases": [
+        "superclasico jugabet",
+        "superclasico",
+        "super clasico"
+      ]
+    },
+    "pragmatic-sugar-rush-1000": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-sugar-rush-1000",
+      "walletGameId": "vs20sugarrushx",
+      "externalGameId": "vs20sugarrushx",
+      "productType": "slots",
+      "subcategory": "instantFreeSpin",
+      "gameTranslationKey": "Sugar Rush 1000",
+      "providerTranslationKey": "Pragmatic Play",
+      "aliases": [
+        "sugar rush 1000"
+      ]
+    },
+    "pragmatic-sweet-bonanza-1000": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-sweet-bonanza-1000",
+      "walletGameId": "vs20fruitswx",
+      "externalGameId": "vs20fruitswx",
+      "productType": "slots",
+      "subcategory": "freeSpin",
+      "gameTranslationKey": "Sweet Bonanza 1000",
+      "providerTranslationKey": "Pragmatic Play",
+      "aliases": [
+        "sweet bonanza 1000"
+      ]
+    },
+    "pragmatic-sweet-bonanza-super-scatter": {
+      "provider": "pragmatic",
+      "lobbyGameId": "pragmatic-sweet-bonanza-super-scatter",
+      "walletGameId": "vs20swbonsup",
+      "externalGameId": "vs20swbonsup",
+      "productType": "slots",
+      "subcategory": "instantFreeSpin",
+      "gameTranslationKey": "Sweet Bonanza Super Scatter",
+      "providerTranslationKey": "Pragmatic Play",
+      "aliases": [
+        "sweet bonanza super scatter",
+        "sweet bonanza superscatter"
+      ]
+    }
+  }
+}
