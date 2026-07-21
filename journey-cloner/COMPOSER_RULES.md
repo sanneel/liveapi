@@ -8,6 +8,9 @@ show a blank gray canvas if these are violated).
 
 Reference implementation: `compose_comms.py` (`build_body`).
 
+> **Adding a recipe?** These rules are the constraints; `RECIPE_BUILDING.md` is
+> the step-by-step process (and a reusable prompt) for building one.
+
 ## The canvas is a mirror of the graph
 
 Every journey is stored twice and both must agree (`activities[]` runtime +

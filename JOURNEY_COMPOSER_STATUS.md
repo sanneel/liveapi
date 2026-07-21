@@ -1,14 +1,29 @@
 # Journey Composer System — Project Status & Implementation Guide
 
-**Last Updated:** 2026-07-20  
+**Last Updated:** 2026-07-21  
 **Branch:** `claude/journey-planner-mvp-test-882ubc`  
-**Status:** 75% Ready — Core system complete, UI integration pending
+**Status:** ~80% Ready — Core system + games registry complete; 2 recipes + UI pending
 
 ---
 
 ## What This System Does
 
 Converts a campaign **brief** → AI **outline** → AI **spec JSON** → **working journey draft** that renders in the backoffice.
+
+> **Building a new recipe?** See `journey-cloner/RECIPE_BUILDING.md` — the step-by-step
+> guide (and a reusable prompt) for turning a captured journey into a composable recipe.
+
+### Recent additions (2026-07-21)
+- **Spec validator** (`compose.py::validate_spec`) — refuses unknown recipes and any
+  ⛔/RESOLVE_AT_BUILD_TIME blocker before building.
+- **Games registry** (`library/games.json`, 106 games) — planner resolves a brief's game
+  NAME → real ids; unknown games flagged ⛔. Refresh live with
+  `console_scripts/fetch_games_catalog_console.js`; rebuild from HAR with
+  `build_games_registry.py`.
+- **Captured templates** (not yet recipes): `templates/casino/instfs.json` (instant
+  freespin, renders) and `templates/casino/multipurpose_spinladder.json` (choosable
+  ladder, 74 nodes).
+- Model → `gemini-2.5-flash-lite`; planner UI hardened against no-text responses.
 
 ```
 Human Brief
