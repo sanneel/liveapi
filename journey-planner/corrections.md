@@ -32,3 +32,15 @@ the knowledge base when they conflict. Add a line the moment you learn something
   - Freespins → then wagering bonus: `freespin_bonus → casino_bonus_v2` (freespin produces winnings, casino bonus wagers them). NEVER parallel or reversed.
   - Deposit gate ALWAYS before the reward it gates: `deposit → (reward)`.
   - "Casino FreeSpin + Wagering + Deposit" recipe order: `external_system_source → deposit → promotion → freespin_bonus → casino_bonus_v2 → end`.
+- Promotion BEFORE Deposit (HARD RULE — fixes wiring errors):
+  - Order is ALWAYS: `promotion → deposit → reward`. NEVER `deposit → promotion`.
+  - A deposit/bet condition before promotion has nothing to gate — platform rejects or misbehaves.
+  - Player must ACCEPT the promotion before any condition gates the reward.
+- Fields to IGNORE (pre-calculated by author, NOT wire fields):
+  - "Contribution: N" (e.g. 0.1, 0.3, 0.4) — calculation input, not a wire field. Do NOT map to contributionRate or anything. Ignore silently.
+  - "Bonus amount: N" standalone derived helpers — author's math check (bet × spins). Take actual bet, spins, max bonus from their own labelled rows; ignore the derived "bonus amount" column.
+  - Rule: if it's a derived/check value the author computed, ignore it. Only map primary labelled inputs (bet, spins, min deposit, max bonus, cashout, wager).
+- Instant bonus vs wagering bonus (don't over-chain):
+  - "Instant Bonus" with Cashout: 1 (release limit 1×) = NO real wagering grind. Single activity, do NOT chain to casino_bonus_v2.
+  - Only chain `freespin_bonus → casino_bonus_v2` when there is a REAL wagering requirement (Wager: N with N > 1, or "x30 on winnings" language).
+  - Instant bonuses are terminal rewards; wagering bonuses are chained follow-ups.
