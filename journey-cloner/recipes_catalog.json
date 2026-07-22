@@ -84,6 +84,41 @@
           "desc": "max cashout as a multiple of the bonus"
         }
       }
+    },
+    "casino_instant_freespin": {
+      "reference": "casino/instfs.json",
+      "chain": [
+        "external_system_source",
+        "promotion",
+        "freespin_bonus",
+        "end_of_journey"
+      ],
+      "knobs": {
+        "spins": {
+          "unit": "raw",
+          "desc": "number of free spins granted"
+        },
+        "spin_bet_clp": {
+          "unit": "minor",
+          "desc": "bet value per spin, in CLP"
+        },
+        "spin_provider": {
+          "unit": "raw",
+          "desc": "game provider id (e.g. pragmatic) — from games registry"
+        },
+        "spin_game_lobby": {
+          "unit": "raw",
+          "desc": "lobbyGameId — from games registry, never guessed"
+        },
+        "spin_game_wallet": {
+          "unit": "raw",
+          "desc": "walletGameId — from games registry"
+        },
+        "spin_game_external": {
+          "unit": "raw",
+          "desc": "externalGameId — from games registry"
+        }
+      }
     }
   }
 }

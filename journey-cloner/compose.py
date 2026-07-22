@@ -151,6 +151,40 @@ RECIPES: dict[str, Recipe] = {
                 "raw", "max cashout as a multiple of the bonus"),
         },
     ),
+    # An INSTANT bonus — a promotion-gated freespin with NO wagering follow-up
+    # (withWagering:false, no casino_bonus_v2). "Una Ronda de Bono Instantáneo".
+    # Reference instfs.json renders (6 nodes). Linear: source→promotion→freespin.
+    "casino_instant_freespin": Recipe(
+        key="casino_instant_freespin",
+        reference="casino/instfs.json",
+        chain=[
+            Node("external_system_source", "PlayerAdded", "Entry"),
+            Node("promotion", "PromotionAccepted", "Offer"),
+            Node("freespin_bonus", "FreespinBonusCollectingFinished", "Instant free spins"),
+        ],
+        # Game ids come from the games registry (library/games.json) — the planner
+        # resolves a game NAME to these; never guess them.
+        knobs={
+            "spins": Knob(
+                "freespin_bonus", "initializationData.freespinActivity.spins",
+                "raw", "number of free spins granted"),
+            "spin_bet_clp": Knob(
+                "freespin_bonus", "initializationData.freespinActivity.currenciesConfig.CLP.betAmount",
+                "minor", "bet value per spin, in CLP"),
+            "spin_provider": Knob(
+                "freespin_bonus", "initializationData.freespinActivity.provider",
+                "raw", "game provider id (e.g. pragmatic) — from games registry"),
+            "spin_game_lobby": Knob(
+                "freespin_bonus", "initializationData.freespinActivity.lobbyGameId",
+                "raw", "lobbyGameId — from games registry, never guessed"),
+            "spin_game_wallet": Knob(
+                "freespin_bonus", "initializationData.freespinActivity.walletGameId",
+                "raw", "walletGameId — from games registry"),
+            "spin_game_external": Knob(
+                "freespin_bonus", "initializationData.freespinActivity.externalGameId",
+                "raw", "externalGameId — from games registry"),
+        },
+    ),
 }
 
 
@@ -487,14 +521,24 @@ def apply_values(body: dict, values: dict) -> list[str]:
     by_name = {}
     for a in body["activities"]:
         by_name.setdefault(a["activityName"], a)
+    # editor mirror, keyed by activityId; the equivalent of an activity's
+    # `initializationData.X` path is `data.X` inside its config here.
+    mirror = (body.get("rawJourneyData") or {}).get("activitiesConfiguration") or {}
     for aname, overrides in sets.items():
         act = by_name.get(aname)
         if not act:
             log.append(f"skip {aname}: not in journey")
             continue
+        mcfg = mirror.get(act.get("activityId"))
         for path, v in overrides.items():
             ok = _dotted_set(act, path, v)
             log.append(f"{'set' if ok else 'MISS'} {aname}.{path} = {v!r}")
+            # Keep the rawJourneyData editor mirror in sync (dual-storage rule):
+            # a stale mirror ships an inconsistent journey.
+            if mcfg is not None and path.startswith("initializationData."):
+                mpath = "data." + path[len("initializationData."):]
+                mok = _dotted_set(mcfg, mpath, v)
+                log.append(f"{'set' if mok else 'MISS'} mirror {aname}.{mpath} = {v!r}")
     return log
 
 
