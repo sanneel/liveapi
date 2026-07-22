@@ -105,14 +105,20 @@ def _call_gemini(settings, system_prompt: str, messages: list, temperature: floa
         text = str(m.get("text", ""))[:MAX_CHARS]
         if text:
             contents.append({"role": role, "parts": [{"text": text}]})
+    gen_config = {
+        "temperature": temperature,
+        "maxOutputTokens": settings.planner_max_tokens,
+    }
+    # thinkingConfig is only valid on models that support "thinking" (2.5 flash/
+    # pro). flash-lite rejects it → HTTP 400 invalid argument. Only send it when
+    # a positive budget is set (i.e. you explicitly want to cap thinking); a 0/
+    # unset budget just omits it (flash-lite doesn't think by default anyway).
+    if settings.gemini_thinking_budget and settings.gemini_thinking_budget > 0:
+        gen_config["thinkingConfig"] = {"thinkingBudget": settings.gemini_thinking_budget}
     body = {
         "system_instruction": {"parts": [{"text": system_prompt}]},
         "contents": contents,
-        "generationConfig": {
-            "temperature": temperature,
-            "maxOutputTokens": settings.planner_max_tokens,
-            "thinkingConfig": {"thinkingBudget": settings.gemini_thinking_budget},
-        },
+        "generationConfig": gen_config,
     }
     url = GEMINI_URL.format(model=settings.gemini_model)
     try:
