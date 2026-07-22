@@ -41,11 +41,16 @@ router = APIRouter()
 
 
 def _resolve_provider(settings) -> str:
-    """Pick the planner LLM. Explicit planner_provider wins; otherwise prefer
-    Groq (free tier, cheapest) when its key is set, else Gemini."""
+    """Pick the planner LLM. Explicit planner_provider ("groq"|"gemini") always
+    wins. Otherwise prefer GEMINI — it handles the full ~17K prompt with no
+    per-minute token wall; Groq's free tier can't (12K TPM), so Groq is opt-in
+    (set PLANNER_PROVIDER=groq, ideally on Dev tier). Fall back to whichever key
+    exists."""
     p = (settings.planner_provider or "").strip().lower()
     if p in ("groq", "gemini"):
         return p
+    if settings.gemini_api_key.strip():
+        return "gemini"
     if settings.groq_api_key.strip():
         return "groq"
     return "gemini"
