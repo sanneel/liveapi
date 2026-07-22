@@ -139,13 +139,37 @@ def _call_gemini(settings, system_prompt: str, messages: list, temperature: floa
     return text, None
 
 
-def _build_system_prompt() -> str:
-    """Assemble system_prompt.txt with the two KB docs inlined — identical to
+# Lean-prompt stand-ins for the two big reference docs. Groq's free tier caps
+# tokens/minute (12K on 70b), and the full KB (~7.7K tok) + backlog (~2.2K)
+# blow past it. The operational essentials the planner actually needs to emit
+# specs — recipes, games, corrections — stay full; the deep reference is dropped
+# with a pointer. Gemini (no such cap) still gets the full docs.
+_LEAN_KB = (
+    "(Knowledge base omitted to fit this model's token budget. Rely on the "
+    "RECIPES CATALOG, GAMES REGISTRY and CORRECTIONS below — they are the "
+    "authoritative, up-to-date truth. Do NOT invent activities or recipes not "
+    "listed there; if the brief needs something absent, output the ⛔ UNCAPTURED "
+    "line.)"
+)
+_LEAN_BACKLOG = (
+    "(Capture backlog omitted. Only build recipes in the RECIPES CATALOG below; "
+    "anything else is ⛔ UNCAPTURED.)"
+)
+
+
+def _build_system_prompt(lean: bool = False) -> str:
+    """Assemble system_prompt.txt with the KB docs inlined — identical to
     journey-planner/planner.py. Read fresh each call so doc edits take effect
-    without a restart. Raises FileNotFoundError if the docs are missing."""
+    without a restart. When lean=True, the two big reference docs are replaced
+    with short pointers (for token-capped providers like Groq free tier); the
+    recipes/games/corrections — what specs are actually built from — stay full.
+    Raises FileNotFoundError if the docs are missing."""
     tpl = (PLANNER_DIR / "system_prompt.txt").read_text(encoding="utf-8")
-    kb = (PLANNER_DIR / "REA_KNOWLEDGE_BASE.md").read_text(encoding="utf-8")
-    backlog = (PLANNER_DIR / "REA_CAPTURE_BACKLOG_CHECKLIST.md").read_text(encoding="utf-8")
+    if lean:
+        kb, backlog = _LEAN_KB, _LEAN_BACKLOG
+    else:
+        kb = (PLANNER_DIR / "REA_KNOWLEDGE_BASE.md").read_text(encoding="utf-8")
+        backlog = (PLANNER_DIR / "REA_CAPTURE_BACKLOG_CHECKLIST.md").read_text(encoding="utf-8")
     corr_file = PLANNER_DIR / "corrections.md"
     corrections = corr_file.read_text(encoding="utf-8") if corr_file.exists() else ""
     cat_file = REPO_ROOT / "journey-cloner" / "recipes_catalog.json"
@@ -229,8 +253,10 @@ async def planner_api(
         temperature = 0.2
     temperature = min(max(temperature, 0.0), 1.0)
 
+    # Groq's free tier is token-capped → send it the lean prompt (drops the big
+    # reference docs, keeps recipes/games/corrections). Gemini gets the full one.
     try:
-        system_prompt = _build_system_prompt()
+        system_prompt = _build_system_prompt(lean=(provider == "groq"))
     except FileNotFoundError:
         return JSONResponse(
             {"error": f"Planner docs not found under {PLANNER_DIR}. "

@@ -40,11 +40,12 @@ class Settings(BaseSettings):
     planner_provider: str = ""          # "groq" | "gemini" | "" (auto)
 
     # Groq — free tier at console.groq.com; OpenAI-compatible chat API.
-    # 8b-instant fits the free tier's ~30K TPM (70b-versatile is capped at 12K
-    # TPM, too small for this ~17K-token prompt → HTTP 413). For 70b quality,
-    # set GROQ_MODEL=llama-3.3-70b-versatile AND upgrade to Groq's Dev tier.
+    # 70b-versatile has the highest free-tier token budget (12K TPM; 8b-instant
+    # is only 6K). Even so the FULL prompt won't fit free — the backoffice sends
+    # Groq a LEAN prompt (no big KB doc) so it stays under budget. For the full
+    # prompt on Groq, upgrade to Dev tier (removes the TPM cap).
     groq_api_key: str = ""
-    groq_model: str = "llama-3.1-8b-instant"
+    groq_model: str = "llama-3.3-70b-versatile"
 
     # Max output tokens per reply. Counts toward Groq's per-minute token limit,
     # so keep it modest; MODE 1/3 replies are short, MODE 2 asks per-object.
