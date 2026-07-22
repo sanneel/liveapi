@@ -41,8 +41,9 @@
     </div>
   {% elif not key_configured %}
     <div class="jp-banner">
-      ⚠ No Gemini key configured. Add <code>GEMINI_API_KEY=…</code> to the <code>.env</code>
+      ⚠ No {{ provider|capitalize }} key configured. Add <code>{{ key_env }}=…</code> to the <code>.env</code>
       (or the jugabet service environment) and restart the service.
+      {% if provider == 'groq' %}<br>Get a free key at <code>console.groq.com</code>.{% endif %}
     </div>
   {% endif %}
 

@@ -187,6 +187,8 @@ def planner_page(
             "active_page": "planner",
             "current_user": user,
             "model": f"{provider}:{model}",
+            "provider": provider,
+            "key_env": "GROQ_API_KEY" if provider == "groq" else "GEMINI_API_KEY",
             "key_configured": key_ok,
             "docs_present": (PLANNER_DIR / "system_prompt.txt").exists(),
         },
