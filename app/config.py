@@ -33,9 +33,18 @@ class Settings(BaseSettings):
     # process environment; used by app/services/figma_runner.py.
     figma_token: str = ""
 
-    # ── Journey Planner (Gemini) ─────────────────────────────────────
-    # Server-side Gemini key for the /admin/planner chat. Held here so it is
-    # never shipped to the browser; used by app/routes/admin_planner.py.
+    # ── Journey Planner ──────────────────────────────────────────────
+    # Which LLM backs the /admin/planner chat: "groq" (free tier, cheapest) or
+    # "gemini". Auto-resolved at request time: if planner_provider is unset it
+    # prefers Groq when GROQ_API_KEY is present, else Gemini.
+    planner_provider: str = ""          # "groq" | "gemini" | "" (auto)
+
+    # Groq — free tier at console.groq.com; OpenAI-compatible chat API. Far
+    # cheaper than Gemini for the planner's structured output.
+    groq_api_key: str = ""
+    groq_model: str = "llama-3.3-70b-versatile"
+
+    # Gemini (fallback). Server-side key, never shipped to the browser.
     gemini_api_key: str = ""
     # flash-lite is the cheapest 2.5 tier — materially lower input/output price
     # than 2.0/2.5-flash, enough for the planner's structured MODE 1/2/3 output.

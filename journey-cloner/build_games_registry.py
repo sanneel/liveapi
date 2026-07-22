@@ -110,6 +110,30 @@ def _auto_alias(g: dict) -> list[str]:
     return [name] if name else []
 
 
+INDEX = HERE / "library" / "games_index.md"
+
+
+def write_compact_index(games: dict) -> None:
+    """Write a terse name→ids table for the planner PROMPT. The full games.json
+    (with metadata) is authoritative; this compact view is what gets injected so
+    the system prompt stays small (~1 line/game vs ~11). Format per line:
+      Name | provider | lobbyGameId | walletGameId | externalGameId
+    """
+    lines = [
+        "# Games registry (compact) — resolve a brief's game NAME to these ids.",
+        "# Never guess an id; if a game isn't listed, flag ⛔ RESOLVE_AT_BUILD_TIME.",
+        "# Name | provider | lobbyGameId | walletGameId | externalGameId",
+    ]
+    for g in sorted(games.values(), key=lambda x: (x.get("gameTranslationKey") or "").lower()):
+        name = g.get("gameTranslationKey") or g.get("lobbyGameId")
+        lines.append(" | ".join([
+            str(name), str(g.get("provider") or ""),
+            str(g.get("lobbyGameId") or ""), str(g.get("walletGameId") or ""),
+            str(g.get("externalGameId") or ""),
+        ]))
+    INDEX.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def main() -> int:
     args = sys.argv[1:]
     if not args:
@@ -143,7 +167,9 @@ def main() -> int:
 
     reg["games"] = dict(sorted(games.items()))
     REGISTRY.write_text(json.dumps(reg, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    write_compact_index(reg["games"])
     print(f"\n{added} added, {updated} updated → {REGISTRY} ({len(games)} games total)")
+    print(f"compact prompt index → {INDEX}")
     return 0
 
 

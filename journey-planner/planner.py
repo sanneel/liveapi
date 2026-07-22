@@ -40,11 +40,14 @@ RECIPES_CATALOG = (
     _CATALOG_FILE.read_text(encoding="utf-8") if _CATALOG_FILE.exists() else "{}"
 )
 
-# Games registry — the only sanctioned source of provider/game IDs. Missing
-# file = no games advertised (planner then flags every game ⛔).
+# Games registry — the only sanctioned source of provider/game IDs. Inject the
+# COMPACT index (name→ids, ~1 line/game) to keep the prompt small; the full
+# games.json stays authoritative. Missing = no games advertised (flag every ⛔).
+_GAMES_INDEX = SCRIPT_DIR.parent / "journey-cloner" / "library" / "games_index.md"
 _GAMES_FILE = SCRIPT_DIR.parent / "journey-cloner" / "library" / "games.json"
 GAMES_REGISTRY = (
-    _GAMES_FILE.read_text(encoding="utf-8") if _GAMES_FILE.exists() else "{}"
+    _GAMES_INDEX.read_text(encoding="utf-8") if _GAMES_INDEX.exists()
+    else (_GAMES_FILE.read_text(encoding="utf-8") if _GAMES_FILE.exists() else "{}")
 )
 
 SYSTEM_PROMPT = (
@@ -58,7 +61,7 @@ SYSTEM_PROMPT = (
 
 
 def plan_groq(brief: str) -> str:
-    """Groq free tier — Llama 3.1 70B. Get key at console.groq.com"""
+    """Groq free tier — Llama 3.3 70B. Get key at console.groq.com"""
     import os
 
     try:
@@ -72,7 +75,7 @@ def plan_groq(brief: str) -> str:
 
     client = Groq(api_key=key)
     r = client.chat.completions.create(
-        model="llama-3.1-70b-versatile",
+        model=os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile"),
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": brief},
