@@ -120,5 +120,46 @@
         }
       }
     }
+  },
+  "references": {
+    "casino/gow_comms.json": [
+      "ams_decision_split",
+      "dextra_email",
+      "dextra_sms",
+      "dwh_source",
+      "email_engagement_split",
+      "end_of_path",
+      "event_detector",
+      "notification_center",
+      "notification_center_engagement_split",
+      "wait_interval"
+    ],
+    "udch/two_hours.json": [
+      "ams_decision_split",
+      "campaign_connector",
+      "deposit",
+      "end_of_journey",
+      "freebet",
+      "promotion",
+      "random_split",
+      "registration",
+      "sport_bonus"
+    ],
+    "casino/gow.json": [
+      "casino_bonus_v2",
+      "deposit",
+      "end_of_path",
+      "event_detector",
+      "external_system_source",
+      "freespin_bonus",
+      "multipurpose_promotion",
+      "promotion"
+    ],
+    "casino/instfs.json": [
+      "end_of_journey",
+      "external_system_source",
+      "freespin_bonus",
+      "promotion"
+    ]
   }
 }

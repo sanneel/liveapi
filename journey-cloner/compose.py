@@ -444,8 +444,100 @@ def compose_from_spec(spec: dict) -> tuple[Recipe, dict, str, list[str]]:
     return recipe, body, name, unknown
 
 
+def compose_from_graph(spec: dict) -> tuple[Recipe, dict, str, list[str]]:
+    """Build a journey from an INLINE activity graph — no pre-registered recipe.
+
+    This is the programmatic "define activities and connect them" entry point an
+    AI/agent can emit. It's an ad-hoc recipe: still LINEAR and still sourced from
+    ONE reference journey that renders (the same safety guarantees as a recipe —
+    see COMPOSER_RULES.md), just defined per-call instead of in the RECIPES dict.
+
+    Spec shape:
+      {
+        "reference": "casino/instfs.json",      # a template that RENDERS; every
+                                                 # chain activity is sourced from it
+        "journey_name": "JBCL | ...",            # optional
+        "terminal": "end_of_journey",            # optional (default)
+        "chain": [                               # ordered; each wired to the next
+          {"activity": "external_system_source", "primary": "PlayerAdded"},
+          {"activity": "promotion",  "primary": "PromotionAccepted"},
+          {"activity": "freespin_bonus", "primary": "FreespinBonusCollectingFinished",
+           "display": "Instant free spins"}
+        ],
+        "set": {                                 # optional knob overrides, applied
+          "freespin_bonus": {                    # into BOTH storage copies
+            "initializationData.freespinActivity.spins": 5
+          }
+        }
+      }
+    Refuses ⛔ blockers and a missing/uncaptured reference, exactly like a spec.
+    """
+    ref = spec.get("reference")
+    if not ref or not (TEMPLATES / ref).exists():
+        raise SpecError(
+            f"reference {ref!r} not found under templates/. A graph must be sourced "
+            f"from ONE captured journey that renders (no schema mixing).")
+    chain_spec = spec.get("chain") or []
+    if not chain_spec:
+        raise SpecError("graph spec needs a non-empty 'chain' of activities.")
+    for i, c in enumerate(chain_spec):
+        if not c.get("activity") or not c.get("primary"):
+            raise SpecError(
+                f"chain[{i}] needs both 'activity' and 'primary' (the forward "
+                f"event that wires it to the next node).")
+    blockers = _find_blockers(spec)
+    if blockers:
+        joined = "\n    ".join(blockers)
+        raise SpecError(
+            f"graph carries {len(blockers)} unresolved blocker(s) — refusing to "
+            f"build:\n    {joined}")
+
+    chain = [Node(c["activity"], c["primary"], c.get("display")) for c in chain_spec]
+    recipe = Recipe(
+        key=spec.get("key") or "graph",
+        reference=ref,
+        chain=chain,
+        terminal=spec.get("terminal", "end_of_journey"),
+    )
+    values: dict = {}
+    if spec.get("journey_name"):
+        values["journey_name"] = spec["journey_name"]
+    if spec.get("set"):
+        values["set"] = spec["set"]
+    # compose() raises ValueError if the reference can't supply an activity/event;
+    # surface that as a SpecError so the CLI/API reports it cleanly.
+    try:
+        body, name, _ = compose(recipe, values)
+    except ValueError as exc:
+        raise SpecError(str(exc)) from exc
+    return recipe, body, name, []
+
+
+def _reference_index() -> dict:
+    """List every template journey and the activities it can supply — so the
+    planner knows which reference a MODE 4 graph can be sourced from. Only
+    references used by a recipe (proven to render) are listed; each maps to the
+    distinct activityNames that have a canvas node in it."""
+    refs: dict = {}
+    for r in RECIPES.values():
+        if r.reference in refs:
+            continue
+        try:
+            ref = _load(r.reference)
+        except Exception:  # noqa: BLE001
+            continue
+        node_ids = {e["id"] for e in ref["rawJourneyData"]["elements"]
+                    if e.get("type") in NODE_TYPES}
+        acts = sorted({a["activityName"] for a in ref["activities"]
+                       if a["activityId"] in node_ids})
+        refs[r.reference] = acts
+    return refs
+
+
 def catalog() -> dict:
-    """Machine-readable recipe catalog for the planner LLM to emit specs against."""
+    """Machine-readable recipe catalog for the planner LLM to emit specs against.
+    Includes a `references` index for MODE 4 graphs (which reference journey can
+    supply which activities)."""
     return {
         "recipes": {
             k: {
@@ -454,7 +546,8 @@ def catalog() -> dict:
                 "knobs": {kn: {"unit": v.unit, "desc": v.desc}
                           for kn, v in r.knobs.items()},
             } for k, r in RECIPES.items()
-        }
+        },
+        "references": _reference_index(),
     }
 
 
@@ -662,7 +755,8 @@ def main() -> int:
             if r.knobs:
                 print(f"      knobs: {', '.join(r.knobs)}")
         print("\nUsage: python compose.py <recipe>            (compose with defaults)")
-        print("       python compose.py --spec spec.json     (compose from an LLM spec)")
+        print("       python compose.py --spec spec.json     (compose from an LLM recipe-spec)")
+        print("       python compose.py --graph graph.json   (compose from an inline activity graph)")
         print("       python compose.py --catalog            (write recipes_catalog.json)")
         return 0
 
@@ -677,6 +771,13 @@ def main() -> int:
         spec = json.load(open(args[1], encoding="utf-8")) if len(args) > 1 else json.load(sys.stdin)
         try:
             recipe, body, name, unknown_knobs = compose_from_spec(spec)
+        except SpecError as exc:
+            print(f"⛔ REFUSED — {exc}")
+            return 3
+    elif args[0] == "--graph":
+        spec = json.load(open(args[1], encoding="utf-8")) if len(args) > 1 else json.load(sys.stdin)
+        try:
+            recipe, body, name, unknown_knobs = compose_from_graph(spec)
         except SpecError as exc:
             print(f"⛔ REFUSED — {exc}")
             return 3

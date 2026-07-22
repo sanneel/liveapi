@@ -163,6 +163,43 @@ Then `python compose.py casino_instant_freespin` → render-check → `--catalog
 
 ---
 
+## Two ways to build: registered recipe vs inline graph
+
+There are two paths to a journey; both are LINEAR and both source every node from
+ONE reference journey (same safety guarantees):
+
+- **Registered recipe** (`RECIPES` dict → `compose.py <key>` / `--spec`): named,
+  reusable, with named LLM-facing knobs. Use for patterns you run repeatedly.
+- **Inline graph** (`compose.py --graph graph.json` → `compose_from_graph`): an
+  ad-hoc recipe defined per-call — the AI passes the reference, the chain
+  (activities + the forward event that connects each to the next), and raw `set`
+  overrides. No registration needed. Use for a one-off linear journey a reference
+  already supports. The planner emits this as **MODE 4 — GRAPH**.
+
+Graph example (reproduces the instant freespin without a registered recipe):
+```json
+{
+  "reference": "casino/instfs.json",
+  "journey_name": "JBCL | Instant FS — Big Bass",
+  "chain": [
+    {"activity": "external_system_source", "primary": "PlayerAdded"},
+    {"activity": "promotion",  "primary": "PromotionAccepted"},
+    {"activity": "freespin_bonus", "primary": "FreespinBonusCollectingFinished"}
+  ],
+  "set": {
+    "freespin_bonus": {
+      "initializationData.freespinActivity.spins": 3,
+      "initializationData.freespinActivity.lobbyGameId": "pragmatic-big-bass-bonanza-1000",
+      "initializationData.freespinActivity.walletGameId": "vs10bbbnz1000",
+      "initializationData.freespinActivity.externalGameId": "vs10bbbnz1000"
+    }
+  }
+}
+```
+`set` values are applied verbatim into BOTH storage copies, so CLP amounts are
+MINOR units here (×100). The composer refuses a graph whose reference can't
+supply a chain activity, or that carries any ⛔ blocker.
+
 ## Non-linear recipes (choosable flows, splits) — NOT covered yet
 
 Recipes today assume a **linear** chain (`pathesConfiguration: {}`,
