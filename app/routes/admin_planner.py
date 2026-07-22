@@ -63,7 +63,7 @@ def _call_groq(settings, system_prompt: str, messages: list, temperature: float)
         "model": settings.groq_model,
         "messages": chat,
         "temperature": temperature,
-        "max_tokens": 8192,
+        "max_tokens": settings.planner_max_tokens,
     }
     try:
         r = requests.post(
@@ -105,7 +105,7 @@ def _call_gemini(settings, system_prompt: str, messages: list, temperature: floa
         "contents": contents,
         "generationConfig": {
             "temperature": temperature,
-            "maxOutputTokens": 8192,
+            "maxOutputTokens": settings.planner_max_tokens,
             "thinkingConfig": {"thinkingBudget": settings.gemini_thinking_budget},
         },
     }

@@ -39,10 +39,16 @@ class Settings(BaseSettings):
     # prefers Groq when GROQ_API_KEY is present, else Gemini.
     planner_provider: str = ""          # "groq" | "gemini" | "" (auto)
 
-    # Groq — free tier at console.groq.com; OpenAI-compatible chat API. Far
-    # cheaper than Gemini for the planner's structured output.
+    # Groq — free tier at console.groq.com; OpenAI-compatible chat API.
+    # 8b-instant fits the free tier's ~30K TPM (70b-versatile is capped at 12K
+    # TPM, too small for this ~17K-token prompt → HTTP 413). For 70b quality,
+    # set GROQ_MODEL=llama-3.3-70b-versatile AND upgrade to Groq's Dev tier.
     groq_api_key: str = ""
-    groq_model: str = "llama-3.3-70b-versatile"
+    groq_model: str = "llama-3.1-8b-instant"
+
+    # Max output tokens per reply. Counts toward Groq's per-minute token limit,
+    # so keep it modest; MODE 1/3 replies are short, MODE 2 asks per-object.
+    planner_max_tokens: int = 4096
 
     # Gemini (fallback). Server-side key, never shipped to the browser.
     gemini_api_key: str = ""
