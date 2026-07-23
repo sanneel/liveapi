@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Query, Request, Response, HTTPException
+from fastapi.responses import FileResponse
 from PIL import Image
 
 from ..logging_config import get_logger
@@ -27,6 +28,21 @@ from ..services import slot_card_runner as runner
 logger = get_logger("app.routes.public_slot_gif")
 
 router = APIRouter()
+
+# Pre-rendered JUGABET slot scene GIF (logo top-left, compressed <1MB).
+JBSLOT_PATH = Path(__file__).resolve().parent.parent / "static" / "jbslot.gif"
+
+
+@router.get("/r/jbslot.gif")
+def jbslot_gif() -> Response:
+    """Serve the pre-rendered JUGABET slot scene GIF."""
+    if not JBSLOT_PATH.exists():
+        raise HTTPException(404, "jbslot.gif not found")
+    return FileResponse(
+        str(JBSLOT_PATH),
+        media_type="image/gif",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
 
 # GIF cache: (image_data_hash, bet_hearts, bet_diamonds, bet_clubs, bet_spades, free_spins, width) -> (ts, gif_bytes)
 _gif_cache_lock = threading.Lock()
