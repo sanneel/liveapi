@@ -1,7 +1,9 @@
 """
 REA Journey Planner — in-backoffice chat.
 
-  GET  /admin/planner        chat page (editor+)
+  GET  /admin/planner         redirects to the Optimization page's Planner tab
+                              (/admin/promotions?tab=planner), where the chat
+                              widget actually lives (partials/_planner_panel.html)
   POST /admin/planner/api     Gemini proxy — assembles the system prompt from the
                               journey-planner docs and forwards the conversation
 
@@ -17,8 +19,7 @@ from pathlib import Path
 
 import requests
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from ..auth.dependencies import require_role
 from ..config import get_settings
@@ -30,7 +31,6 @@ logger = get_logger("app.routes.admin_planner")
 BASE_DIR = Path(__file__).resolve().parent.parent          # app/
 REPO_ROOT = BASE_DIR.parent                                # repo root
 PLANNER_DIR = REPO_ROOT / "journey-planner"
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
@@ -205,29 +205,31 @@ def _build_system_prompt(lean: bool = False) -> str:
     )
 
 
-@router.get("/admin/planner", response_class=HTMLResponse)
-def planner_page(
-    request: Request,
-    user: User = Depends(require_role("editor")),
-) -> HTMLResponse:
+def planner_view_context() -> dict:
+    """State the Planner tab partial needs — shared by the (now-redirecting)
+    standalone page and the Optimization page's Planner tab."""
     settings = get_settings()
     provider = _resolve_provider(settings)
     model = settings.groq_model if provider == "groq" else settings.gemini_model
     key_ok = bool((settings.groq_api_key if provider == "groq"
                    else settings.gemini_api_key).strip())
-    return templates.TemplateResponse(
-        request,
-        "planner/index.html",
-        {
-            "active_page": "planner",
-            "current_user": user,
-            "model": f"{provider}:{model}",
-            "provider": provider,
-            "key_env": "GROQ_API_KEY" if provider == "groq" else "GEMINI_API_KEY",
-            "key_configured": key_ok,
-            "docs_present": (PLANNER_DIR / "system_prompt.txt").exists(),
-        },
-    )
+    return {
+        "model": f"{provider}:{model}",
+        "provider": provider,
+        "key_env": "GROQ_API_KEY" if provider == "groq" else "GEMINI_API_KEY",
+        "key_configured": key_ok,
+        "docs_present": (PLANNER_DIR / "system_prompt.txt").exists(),
+    }
+
+
+@router.get("/admin/planner")
+def planner_page(
+    request: Request,
+    user: User = Depends(require_role("editor")),
+) -> RedirectResponse:
+    """Planner moved into the Optimization hub as a tab — keep the old URL
+    working for bookmarks/links instead of 404ing."""
+    return RedirectResponse(url="/admin/promotions?tab=planner", status_code=307)
 
 
 @router.post("/admin/planner/api")

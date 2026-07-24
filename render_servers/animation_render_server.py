@@ -84,7 +84,7 @@ FONT_FILENAME = "fonts/Jugabet-BlackItalic.ttf"
 
 app = FastAPI(title="Animation Render Server (JUGABET)")
 
-_BASE_DIR = Path(__file__).resolve().parent
+_BASE_DIR = Path(__file__).resolve().parents[1]  # repo root (this file lives in render_servers/)
 
 
 # ================== CACHES ==================

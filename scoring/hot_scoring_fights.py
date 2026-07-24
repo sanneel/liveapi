@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from zoneinfo import ZoneInfo
 
-from weights_fights_chile_first import (
+from .weights_fights_chile_first import (
     ALLOWED_MARKET_TYPES,
     BASE_SCORE,
     BOTH_CHILE_FIGHTERS_BONUS,

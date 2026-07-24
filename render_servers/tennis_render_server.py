@@ -43,9 +43,10 @@ CENTER_SAFE_ZONE = 240         # keep as-is (do not change)
 
 BASE_TEAM_FONT = 36
 MIN_TEAM_FONT = 20
+MIN_TEAM_FONT_DOUBLES = 18
 TEAM_FONT_STEP = 2
 
-LIVE_SCORE_FONT = 86           # keep as-is
+LIVE_SCORE_FONT = 96           # keep as-is
 
 TEAM_Y_OFFSET = -20
 ODDS_Y_OFFSET = -4
@@ -80,11 +81,11 @@ TRANSPARENT_PNG_1X1 = (
     b"\x00\x00\x00\x00IEND\xaeB`\x82"
 )
 
-app = FastAPI(title="Basketball Hot PNG Renderer", version="1.0")
+app = FastAPI(title="Tennis Hot PNG Renderer", version="1.0")
 
 
 # ---------- Fonts ----------
-_BASE_DIR = Path(__file__).resolve().parent
+_BASE_DIR = Path(__file__).resolve().parents[1]  # repo root (this file lives in render_servers/)
 _FONTS_DIR = _BASE_DIR / "fonts"
 
 _FONT_REGULAR = _FONTS_DIR / "RobotoCondensed-Regular.ttf"
@@ -149,12 +150,77 @@ def _txt(v: Any) -> str:
         return ""
     return str(v).strip()
 
+def _is_doubles_event(ev: Dict[str, Any]) -> bool:
+    tname = _txt((ev.get("tournament") or {}).get("name"))
+    if "dobles" in tname.lower() or "doubles" in tname.lower():
+        return True
+
+    home_name = _txt(((ev.get("competitors") or {}).get("home") or {}).get("name"))
+    away_name = _txt(((ev.get("competitors") or {}).get("away") or {}).get("name"))
+    return ("/" in home_name) or ("/" in away_name)
+
+
+def _last_name(full_name: str) -> str:
+    """
+    Try to take a 'broadcast-friendly' last name:
+      - strip junk
+      - take the last token
+      - cap length to avoid overflow
+    """
+    s = " ".join((full_name or "").strip().split())
+    if not s:
+        return ""
+
+    # remove dots in initials like "J." -> "J"
+    s = s.replace(".", "")
+
+    parts = [p for p in s.split(" ") if p]
+    if not parts:
+        return ""
+
+    last = parts[-1]
+    # hard cap (TV-like)
+    if len(last) > 14:
+        last = last[:13] + "…"
+    return last
+
+
+def _shorten_doubles_team(name: str) -> str:
+    """
+    "Juan Estevez/Lucio Ratti" -> "Estevez / Ratti"
+    "A B/C D" -> "B / D"
+    """
+    s = " ".join((name or "").strip().split())
+    if not s:
+        return s
+
+    if "/" not in s:
+        # some feeds may separate with " & " or " and "
+        # keep as-is
+        return s
+
+    players = [p.strip() for p in s.split("/") if p.strip()]
+    if not players:
+        return s
+
+    last_names = []
+    for p in players[:2]:  # tennis doubles: 2 players per side
+        ln = _last_name(p)
+        last_names.append(ln if ln else p)
+
+    out = " / ".join(last_names)
+    # If still too long (edge), cap whole string
+    if len(out) > 28:
+        out = out[:27] + "…"
+    return out
+
 
 def _display_team_name(ev: Dict[str, Any], side: str) -> str:
     comp = ((ev.get("competitors") or {}).get(side) or {})
     name = _txt(comp.get("name")) or "-"
+    if _is_doubles_event(ev):
+        return _shorten_doubles_team(name)
     return name
-
 
 def _time_raw(event: Dict[str, Any]) -> str:
     return _txt((event.get("time") or {}).get("raw"))
@@ -166,68 +232,37 @@ def _score_text(event: Dict[str, Any]) -> str:
     a = sc.get("away")
     if h is None or a is None:
         return ""
+    # tennis: show as "1–1" (en dash)
     return f"{h}–{a}"
 
 
-# ---------- Basketball header center text ----------
-_Q_RE = re.compile(r"(\d+)\s*º\s*cuarto", re.IGNORECASE)
-_MIN_RE = re.compile(r"(\d+)\s*['’]", re.IGNORECASE)
-_OT_RE = re.compile(r"prórroga|prorroga", re.IGNORECASE)
-
-
-def _normalize_basket_live_time(tr: str) -> str:
-    s = " ".join((tr or "").strip().split())
-    if not s:
-        return "LIVE"
-
-    sl = s.lower()
-
-    # Half-time
-    if "descanso" in sl:
-        return "HT"
-
-    # Overtime
-    if _OT_RE.search(s):
-        mmin = _MIN_RE.search(s)
-        if mmin:
-            return f"OT {mmin.group(1)}'"
-        return "OT"
-
-    # Quarter
-    mq = _Q_RE.search(s)
-    if mq:
-        q = mq.group(1)
-        mmin = _MIN_RE.search(s)
-        if mmin:
-            return f"Q{q} {mmin.group(1)}'"
-        return f"Q{q}"
-
-    # Fallback: keep compact uppercase but avoid super long
-    out = s.upper()
-    if len(out) > 12:
-        out = out[:11] + "…"
-    return out
+_SET_RE = re.compile(r"\bset\s*(\d+)\b", re.IGNORECASE)
 
 
 def _header_center_text(ev: Dict[str, Any]) -> str:
     """
-    Basketball rule (variant 1 "like tennis"):
-      - LIVE: show normalized quarter/clock (from time.raw)
-      - PREMATCH: show time.raw as-is (uppercased)
+    Tennis rule:
+      - LIVE: center header shows SET N (from time.raw like "Set 3")
+      - PREMATCH: center header shows time.raw as-is
     """
     status = (_txt(ev.get("status"))).lower()
     tr = _time_raw(ev)
 
     if status == "live":
-        return _normalize_basket_live_time(tr)
+        m = _SET_RE.search(tr)
+        if m:
+            return f"SET {m.group(1)}"
+        # fallback (don't break layout)
+        return "LIVE"
 
+    # prematch
     return tr.upper() if tr else ""
 
 
-def _odds_values_winner(event: Dict[str, Any]) -> Tuple[str, str]:
+def _odds_values_tennis(event: Dict[str, Any]) -> Tuple[str, str]:
     """
-    Keep EXACT same odds behavior as tennis renderer:
-    market.type == 'winner' -> render (p1, p2)
+    Tennis hot includes only market.type == 'winner' (2-way).
+    Render only (p1, p2).
     """
     market = event.get("market") or {}
     odds = (market.get("odds") or {}) if (market.get("type") == "winner") else {}
@@ -572,6 +607,8 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
         top_y = y0 + 20
 
         tournament = (_txt((ev.get("tournament") or {}).get("name")) or "-").upper()
+
+        # Tennis header center text rule:
         time_txt = _header_center_text(ev)
 
         left_pad = 22
@@ -652,13 +689,16 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
         max_home_w = max(60, left_name_max_right - left_name_x)
         max_away_w = max(60, right_name_right_edge - right_name_max_left)
 
+        is_doubles = _is_doubles_event(ev)
+        min_team_font = MIN_TEAM_FONT_DOUBLES if is_doubles else MIN_TEAM_FONT
+
         fitted_size = _fit_team_font_size(
             d,
             home_name,
             away_name,
             max_home_w,
             max_away_w,
-            min_size=MIN_TEAM_FONT,
+            min_size=min_team_font,
         )
         font_team = _pick_font(fitted_size)
 
@@ -668,7 +708,7 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
         d.text((right_name_right_edge - away_w, baseline_y + TEAM_Y_OFFSET), away_name, fill=text_main, font=font_team)
 
         # Center big text:
-        #  - LIVE: big score "64–72"
+        #  - LIVE: big score "1–1"
         #  - PREMATCH: "VS"
         if is_live:
             score = _score_text(ev) or "—"
@@ -681,8 +721,8 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
             vs_y = int(baseline_y - (font_vs.size * 0.60))
             d.text((center_x - vw / 2, vs_y), vs_txt, fill=accent, font=font_vs)
 
-        # Odds block: EXACT same as tennis (2 pills p1/p2)
-        p1, p2 = _odds_values_winner(ev)
+        # Tennis odds: 2 pills (p1, p2), same style
+        p1, p2 = _odds_values_tennis(ev)
         vals2 = [p1, p2]
 
         pill_y0 = y0 + 192
@@ -721,7 +761,7 @@ _png_cache: Dict[int, Dict[str, Any]] = {}  # limit -> {ts, bytes, meta}
 
 
 def fetch_hot_json(limit: int) -> Dict[str, Any]:
-    url = f"{DATA_API_BASE}/events/basketball/hot"
+    url = f"{DATA_API_BASE}/events/tennis/hot"
     r = requests.get(url, params={"limit": limit}, timeout=REQUEST_TIMEOUT)
     r.raise_for_status()
     return r.json()
@@ -742,8 +782,8 @@ def set_cached_png(limit: int, png_bytes: bytes, meta: Dict[str, Any]) -> None:
 
 
 # ---------- API ----------
-@app.get("/render/basketball/hot.png")
-def render_basketball_hot_png(limit: int = DEFAULT_LIMIT) -> Response:
+@app.get("/render/tennis/hot.png")
+def render_tennis_hot_png(limit: int = DEFAULT_LIMIT) -> Response:
     limit = max(1, min(int(limit), MAX_LIMIT))
 
     cached, meta = get_cached_png(limit)
@@ -781,8 +821,8 @@ def fetch_manual_json(slot: str) -> list:
     return r.json().get("events") or []
 
 
-@app.get("/render/basketball/manual/{slot}.png")
-def render_basketball_manual_png(slot: str) -> Response:
+@app.get("/render/tennis/manual/{slot}.png")
+def render_tennis_manual_png(slot: str) -> Response:
     """Render a manually curated slot as a PNG. No caching — always fresh."""
     try:
         events = fetch_manual_json(slot)
@@ -817,5 +857,5 @@ def health() -> Dict[str, Any]:
         "team_font_base": BASE_TEAM_FONT,
         "team_font_min": MIN_TEAM_FONT,
         "live_score_font": LIVE_SCORE_FONT,
-        "endpoint": "/render/basketball/hot.png",
+        "endpoint": "/render/tennis/hot.png",
     }

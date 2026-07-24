@@ -82,7 +82,7 @@ app = FastAPI(title="Fights Hot PNG Renderer", version="1.0")
 
 
 # ---------- Fonts ----------
-_BASE_DIR = Path(__file__).resolve().parent
+_BASE_DIR = Path(__file__).resolve().parents[1]  # repo root (this file lives in render_servers/)
 _FONTS_DIR = _BASE_DIR / "fonts"
 
 _FONT_REGULAR = _FONTS_DIR / "RobotoCondensed-Regular.ttf"

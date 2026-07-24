@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 import threading
 import time
 from io import BytesIO
@@ -33,18 +34,18 @@ LOGO_MAX_CACHE = 500           # max cached logos in memory
 WIDTH = 1000
 PADDING = 0
 
-LOGO_BOX = 104
+LOGO_BOX = 104                 # TV feel
 LOGO_RADIUS = 8
 LOGO_INNER_PAD = 10
 LOGO_INNER = LOGO_BOX - 2 * LOGO_INNER_PAD
 
-CENTER_SAFE_ZONE = 240
+CENTER_SAFE_ZONE = 240         # keep as-is (do not change)
 
 BASE_TEAM_FONT = 36
 MIN_TEAM_FONT = 20
 TEAM_FONT_STEP = 2
 
-LIVE_SCORE_FONT = 86
+LIVE_SCORE_FONT = 86           # keep as-is
 
 TEAM_Y_OFFSET = -20
 ODDS_Y_OFFSET = -4
@@ -58,16 +59,17 @@ TIME_FONT_BASE = 20
 TIME_FONT_MIN = 14
 TIME_FONT_STEP = 1
 
-HEADER_TIME_GAP = 16
+HEADER_TIME_GAP = 16  # px gap between league and centered time
 
 CARD_BEVEL_CUT = 24
 
 # Brand logo (Jugabet) in top-right of each card
 BRAND_LOGO_REL_PATH = "logos/logo_jugabet.png"
-BRAND_LOGO_HEIGHT = 40
-BRAND_PAD = 22
+BRAND_LOGO_HEIGHT = 40     # px (rendered height)
+BRAND_PAD = 22             # padding from card edges (kept)
 # ==================
 
+#1px x 1px if feed is empty:
 TRANSPARENT_PNG_1X1 = (
     b"\x89PNG\r\n\x1a\n"
     b"\x00\x00\x00\rIHDR"
@@ -78,11 +80,11 @@ TRANSPARENT_PNG_1X1 = (
     b"\x00\x00\x00\x00IEND\xaeB`\x82"
 )
 
-app = FastAPI(title="Cybersport Hot PNG Renderer", version="1.0")
+app = FastAPI(title="Basketball Hot PNG Renderer", version="1.0")
 
 
 # ---------- Fonts ----------
-_BASE_DIR = Path(__file__).resolve().parent
+_BASE_DIR = Path(__file__).resolve().parents[1]  # repo root (this file lives in render_servers/)
 _FONTS_DIR = _BASE_DIR / "fonts"
 
 _FONT_REGULAR = _FONTS_DIR / "RobotoCondensed-Regular.ttf"
@@ -113,7 +115,7 @@ def _pick_font(size: int, extrabold: bool = False) -> ImageFont.FreeTypeFont | I
 
 # ---------- Brand logo cache ----------
 _brand_lock = threading.Lock()
-_brand_cache: Dict[int, Optional[Image.Image]] = {}
+_brand_cache: Dict[int, Optional[Image.Image]] = {}  # height -> RGBA image resized
 
 
 def _get_brand_logo(height: int) -> Optional[Image.Image]:
@@ -142,7 +144,6 @@ def _get_brand_logo(height: int) -> Optional[Image.Image]:
     return im
 
 
-# ---------- Small helpers ----------
 def _txt(v: Any) -> str:
     if v is None:
         return ""
@@ -151,7 +152,8 @@ def _txt(v: Any) -> str:
 
 def _display_team_name(ev: Dict[str, Any], side: str) -> str:
     comp = ((ev.get("competitors") or {}).get(side) or {})
-    return _txt(comp.get("name")) or "-"
+    name = _txt(comp.get("name")) or "-"
+    return name
 
 
 def _time_raw(event: Dict[str, Any]) -> str:
@@ -167,53 +169,66 @@ def _score_text(event: Dict[str, Any]) -> str:
     return f"{h}–{a}"
 
 
-# ---------- Cybersport header center text ----------
-def _normalize_cybersport_live_time(tr: str) -> str:
+# ---------- Basketball header center text ----------
+_Q_RE = re.compile(r"(\d+)\s*º\s*cuarto", re.IGNORECASE)
+_MIN_RE = re.compile(r"(\d+)\s*['’]", re.IGNORECASE)
+_OT_RE = re.compile(r"prórroga|prorroga", re.IGNORECASE)
+
+
+def _normalize_basket_live_time(tr: str) -> str:
     s = " ".join((tr or "").strip().split())
     if not s:
         return "LIVE"
 
     sl = s.lower()
 
-    if sl == "live":
-        return "LIVE"
-
+    # Half-time
     if "descanso" in sl:
-        return "BREAK"
+        return "HT"
 
-    if "mapa" in sl:
-        out = s.upper()
-        if len(out) > 12:
-            out = out[:11] + "…"
-        return out
+    # Overtime
+    if _OT_RE.search(s):
+        mmin = _MIN_RE.search(s)
+        if mmin:
+            return f"OT {mmin.group(1)}'"
+        return "OT"
 
+    # Quarter
+    mq = _Q_RE.search(s)
+    if mq:
+        q = mq.group(1)
+        mmin = _MIN_RE.search(s)
+        if mmin:
+            return f"Q{q} {mmin.group(1)}'"
+        return f"Q{q}"
+
+    # Fallback: keep compact uppercase but avoid super long
     out = s.upper()
     if len(out) > 12:
         out = out[:11] + "…"
     return out
 
 
-def _normalize_cybersport_prematch_time(tr: str) -> str:
-    s = " ".join((tr or "").strip().split())
-    if not s:
-        return ""
-
-    s = s.replace(" , ", ", ")
-    s = s.replace(" ,", ",")
-    return s.upper()
-
-
 def _header_center_text(ev: Dict[str, Any]) -> str:
-    status = _txt(ev.get("status")).lower()
+    """
+    Basketball rule (variant 1 "like tennis"):
+      - LIVE: show normalized quarter/clock (from time.raw)
+      - PREMATCH: show time.raw as-is (uppercased)
+    """
+    status = (_txt(ev.get("status"))).lower()
     tr = _time_raw(ev)
 
     if status == "live":
-        return _normalize_cybersport_live_time(tr)
+        return _normalize_basket_live_time(tr)
 
-    return _normalize_cybersport_prematch_time(tr)
+    return tr.upper() if tr else ""
 
 
 def _odds_values_winner(event: Dict[str, Any]) -> Tuple[str, str]:
+    """
+    Keep EXACT same odds behavior as tennis renderer:
+    market.type == 'winner' -> render (p1, p2)
+    """
     market = event.get("market") or {}
     odds = (market.get("odds") or {}) if (market.get("type") == "winner") else {}
 
@@ -224,9 +239,10 @@ def _odds_values_winner(event: Dict[str, Any]) -> Tuple[str, str]:
     return f(odds.get("p1")), f(odds.get("p2"))
 
 
-# ---------- Logo cache ----------
+# ---------- Logo cache (anti-DDOS) ----------
 _logo_lock = threading.Lock()
 _logo_cache: Dict[str, Dict[str, Any]] = {}
+# entry: url -> {"ts": epoch, "png": bytes (RGBA PNG resized to LOGO_INNER) or None}
 
 
 def _prune_logo_cache() -> None:
@@ -440,7 +456,7 @@ def _fit_header_font_size(
     return min_size
 
 
-# ---------- Team font autosize ----------
+# ---------- Team font autosize (NO ellipsis; one size for both) ----------
 def _fit_team_font_size(
     draw: ImageDraw.ImageDraw,
     home_name: str,
@@ -464,6 +480,7 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
     card_h = 270
     gap = 18
 
+    # same palette as football renderer (do not change styles)
     card = (3, 16, 42)
     card_live = (3, 16, 42)
 
@@ -477,15 +494,16 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
     odds_plate = (23, 45, 86)
     odds_plate_live = (45, 39, 59)
 
-    font_score = _pick_font(LIVE_SCORE_FONT, extrabold=True)
-    font_vs = _pick_font(LIVE_SCORE_FONT, extrabold=True)
-    font_odds = _pick_font(36)
+    font_score = _pick_font(LIVE_SCORE_FONT, extrabold=True)  # ExtraBold (LIVE score)
+    font_vs = _pick_font(LIVE_SCORE_FONT, extrabold=True)     # ExtraBold
+    font_odds = _pick_font(36)                                # Regular
 
     brand_logo = _get_brand_logo(BRAND_LOGO_HEIGHT)
 
     n = min(len(events), 50)
 
     if n == 0:
+        # Нема матчів → повертаємо прозорий 1x1 PNG (щоб <img> не ламався)
         return TRANSPARENT_PNG_1X1
 
     height = PADDING + n * card_h + (n - 1) * gap + PADDING
@@ -494,7 +512,8 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
 
     y = PADDING
 
-    for ev in events[:n]:
+    for i in range(n):
+        ev = events[i]
         status = (ev.get("status") or "").strip().lower()
         is_live = status == "live"
 
@@ -502,6 +521,7 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
         x1, y1 = WIDTH - PADDING, y + card_h
         center_x = (x0 + x1) // 2
 
+        # Main card: beveled corners
         fill_color = (card_live if is_live else card)
         bevel_mask = _paste_beveled_rect(img, x0, y0, x1, y1, fill_rgba=fill_color, cut=CARD_BEVEL_CUT)
 
@@ -517,6 +537,7 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
             blur_radius=10,
         )
 
+        # Green accent border (2px)
         border_color = (182, 222, 19, 255)
         border_width = 2
 
@@ -537,6 +558,7 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
         border_layer.putalpha(border_alpha)
         img.alpha_composite(border_layer, dest=(x0, y0))
 
+        # Brand logo (top-right)
         if brand_logo is not None:
             bx = x1 - brand_logo.width
             by = y0
@@ -546,6 +568,7 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
                 by = y0
             img.alpha_composite(brand_logo, dest=(int(bx), int(by)))
 
+        # top strip
         top_y = y0 + 20
 
         tournament = (_txt((ev.get("tournament") or {}).get("name")) or "-").upper()
@@ -555,6 +578,7 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
         right_pad = 22
         league_x = x0 + left_pad
 
+        # TIME (center): autosize and get real width first
         time_w = 0.0
         font_time = _pick_font(TIME_FONT_BASE)
         if time_txt:
@@ -567,7 +591,10 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
             font_time = _pick_font(time_font_size)
             time_w = d.textlength(time_txt, font=font_time)
 
+        # Reserve centered zone for time (+ gap)
         time_left = (center_x - time_w / 2) - HEADER_TIME_GAP
+
+        # LEAGUE: fit into area up to time_left
         league_max_w = max(80, int(time_left - league_x))
 
         league_font_size = _fit_header_font_size(
@@ -582,9 +609,11 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
         if time_txt:
             d.text((center_x - time_w / 2, top_y), time_txt, fill=(255, 255, 255), font=font_time)
 
+        # main row baseline
         baseline_y = y0 + 118
 
         logo_y = int(baseline_y - (LOGO_BOX / 2))
+
         left_logo_x = x0 + 22
         right_logo_x = x1 - 22 - LOGO_BOX
 
@@ -638,6 +667,9 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
         away_w = d.textlength(away_name, font=font_team)
         d.text((right_name_right_edge - away_w, baseline_y + TEAM_Y_OFFSET), away_name, fill=text_main, font=font_team)
 
+        # Center big text:
+        #  - LIVE: big score "64–72"
+        #  - PREMATCH: "VS"
         if is_live:
             score = _score_text(ev) or "—"
             sw = d.textlength(score, font=font_score)
@@ -649,6 +681,7 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
             vs_y = int(baseline_y - (font_vs.size * 0.60))
             d.text((center_x - vw / 2, vs_y), vs_txt, fill=accent, font=font_vs)
 
+        # Odds block: EXACT same as tennis (2 pills p1/p2)
         p1, p2 = _odds_values_winner(ev)
         vals2 = [p1, p2]
 
@@ -657,7 +690,7 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
         pill_gap = 14
 
         total_w = (x1 - x0) - 44
-        pill_w = int((total_w - pill_gap) / 2)
+        pill_w = int((total_w - 1 * pill_gap) / 2)  # 2 pills, 1 gap
 
         start_x = x0 + 22
         for j in range(2):
@@ -684,11 +717,11 @@ def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
 
 # ---------- PNG cache ----------
 _cache_lock = threading.Lock()
-_png_cache: Dict[int, Dict[str, Any]] = {}
+_png_cache: Dict[int, Dict[str, Any]] = {}  # limit -> {ts, bytes, meta}
 
 
 def fetch_hot_json(limit: int) -> Dict[str, Any]:
-    url = f"{DATA_API_BASE}/events/cybersport/hot"
+    url = f"{DATA_API_BASE}/events/basketball/hot"
     r = requests.get(url, params={"limit": limit}, timeout=REQUEST_TIMEOUT)
     r.raise_for_status()
     return r.json()
@@ -709,8 +742,8 @@ def set_cached_png(limit: int, png_bytes: bytes, meta: Dict[str, Any]) -> None:
 
 
 # ---------- API ----------
-@app.get("/render/cybersport/hot.png")
-def render_cybersport_hot_png(limit: int = DEFAULT_LIMIT) -> Response:
+@app.get("/render/basketball/hot.png")
+def render_basketball_hot_png(limit: int = DEFAULT_LIMIT) -> Response:
     limit = max(1, min(int(limit), MAX_LIMIT))
 
     cached, meta = get_cached_png(limit)
@@ -748,8 +781,8 @@ def fetch_manual_json(slot: str) -> list:
     return r.json().get("events") or []
 
 
-@app.get("/render/cybersport/manual/{slot}.png")
-def render_cybersport_manual_png(slot: str) -> Response:
+@app.get("/render/basketball/manual/{slot}.png")
+def render_basketball_manual_png(slot: str) -> Response:
     """Render a manually curated slot as a PNG. No caching — always fresh."""
     try:
         events = fetch_manual_json(slot)
@@ -784,5 +817,5 @@ def health() -> Dict[str, Any]:
         "team_font_base": BASE_TEAM_FONT,
         "team_font_min": MIN_TEAM_FONT,
         "live_score_font": LIVE_SCORE_FONT,
-        "endpoint": "/render/cybersport/hot.png",
+        "endpoint": "/render/basketball/hot.png",
     }

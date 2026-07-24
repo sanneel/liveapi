@@ -45,7 +45,7 @@ app = FastAPI(title="Media Cub Renderer", version="1.1")
 
 
 def _here_path(filename: str) -> str:
-    here = os.path.dirname(os.path.abspath(__file__))
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # repo root (this file lives in render_servers/)
     return os.path.join(here, filename)
 
 

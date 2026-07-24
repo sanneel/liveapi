@@ -3,10 +3,8 @@
 
 from __future__ import annotations
 
-import inspect
 import threading
 import time
-from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -27,7 +25,7 @@ DATA_API_BASE = "http://127.0.0.1:8000"
 DEFAULT_LIMIT = 5
 MAX_LIMIT = 50
 
-PNG_TTL_SECONDS = 120          # cache rendered PNG for 3 minutes
+PNG_TTL_SECONDS = 120          # cache rendered PNG for 2 minutes
 REQUEST_TIMEOUT = 10           # seconds (json + logo downloads)
 LOGO_TTL_SECONDS = 6 * 3600    # cache logos for 6 hours
 LOGO_MAX_CACHE = 500           # max cached logos in memory
@@ -35,18 +33,18 @@ LOGO_MAX_CACHE = 500           # max cached logos in memory
 WIDTH = 1000
 PADDING = 0
 
-LOGO_BOX = 104                 # TV feel
+LOGO_BOX = 104
 LOGO_RADIUS = 8
 LOGO_INNER_PAD = 10
 LOGO_INNER = LOGO_BOX - 2 * LOGO_INNER_PAD
 
-CENTER_SAFE_ZONE = 240         # reserved for score / VS
+CENTER_SAFE_ZONE = 240
 
 BASE_TEAM_FONT = 36
 MIN_TEAM_FONT = 20
 TEAM_FONT_STEP = 2
 
-LIVE_SCORE_FONT = 96           # requested
+LIVE_SCORE_FONT = 86
 
 TEAM_Y_OFFSET = -20
 ODDS_Y_OFFSET = -4
@@ -60,93 +58,16 @@ TIME_FONT_BASE = 20
 TIME_FONT_MIN = 14
 TIME_FONT_STEP = 1
 
-# Reserve real centered time width + some gap so league never touches it
-HEADER_TIME_GAP = 16  # px gap between league and centered time
+HEADER_TIME_GAP = 16
 
-# Facet / bevel (cut corners) for the main event card
 CARD_BEVEL_CUT = 24
 
 # Brand logo (Jugabet) in top-right of each card
 BRAND_LOGO_REL_PATH = "logos/logo_jugabet.png"
-BRAND_LOGO_HEIGHT = 40     # px (rendered height)
-BRAND_PAD = 22             # padding from card edges
+BRAND_LOGO_HEIGHT = 40
+BRAND_PAD = 22
 # ==================
 
-# ---------- Card color themes ----------
-RGB = Tuple[int, int, int]
-
-
-@dataclass(frozen=True)
-class CardTheme:
-    """All colors that define one card look. Geometry/layout is shared; only
-    these RGB values change between themes (e.g. default vs VIP)."""
-    card: RGB              # card background (non-live)
-    card_live: RGB         # card background (live)
-    text_main: RGB         # team names
-    accent: RGB            # "VS" text + green accent border
-    score: RGB             # live score
-    logo_plate: RGB        # plate behind team logos (non-live)
-    logo_plate_live: RGB
-    odds_plate: RGB        # odds pill fill (non-live)
-    odds_plate_live: RGB
-    border: RGB            # 2px beveled accent border
-    glow_idle: RGB         # center glow, non-live
-    glow_live: RGB         # center glow, live
-    shadow_idle: RGB       # inner shadow, non-live
-    shadow_live: RGB       # inner shadow, live
-
-
-# DEFAULT — the original navy / blue-glow / lime look (unchanged values).
-_THEME_DEFAULT = CardTheme(
-    card=(3, 16, 42),
-    card_live=(3, 16, 42),
-    text_main=(245, 245, 245),
-    accent=(182, 222, 19),
-    score=(238, 49, 36),
-    logo_plate=(29, 47, 90),
-    logo_plate_live=(31, 36, 51),
-    odds_plate=(23, 45, 86),
-    odds_plate_live=(45, 39, 59),
-    border=(182, 222, 19),
-    glow_idle=(0, 92, 255),
-    glow_live=(160, 40, 40),
-    shadow_idle=(0, 92, 255),
-    shadow_live=(255, 0, 40),
-)
-
-# VIP — purple / violet-glow palette sampled from the JUGAVIP email creative
-# (deep indigo backgrounds, violet→magenta gradient, royal-blue CTA, the same
-# lime "JUGA/VIP" accent + crowns, gold trophy). Keeps the lime accent + border
-# so it still reads as Jugabet; swaps navy/blue for indigo/violet and uses a
-# magenta glow for live cards instead of red.
-_THEME_VIP = CardTheme(
-    card=(26, 14, 64),
-    card_live=(30, 14, 58),
-    text_main=(245, 245, 248),
-    accent=(182, 222, 19),
-    score=(255, 74, 120),
-    logo_plate=(84, 50, 190),
-    logo_plate_live=(74, 42, 150),
-    odds_plate=(74, 44, 170),
-    odds_plate_live=(86, 44, 150),
-    border=(182, 222, 19),
-    glow_idle=(140, 74, 255),
-    glow_live=(214, 60, 150),
-    shadow_idle=(140, 74, 255),
-    shadow_live=(255, 60, 130),
-)
-
-_CARD_THEMES: Dict[str, CardTheme] = {
-    "default": _THEME_DEFAULT,
-    "vip": _THEME_VIP,
-}
-
-
-def get_card_theme(name: Optional[str]) -> CardTheme:
-    """Resolve a theme name to its palette, falling back to default."""
-    return _CARD_THEMES.get((name or "default").strip().lower(), _THEME_DEFAULT)
-
-#1px x 1px if feed is empty:
 TRANSPARENT_PNG_1X1 = (
     b"\x89PNG\r\n\x1a\n"
     b"\x00\x00\x00\rIHDR"
@@ -157,10 +78,11 @@ TRANSPARENT_PNG_1X1 = (
     b"\x00\x00\x00\x00IEND\xaeB`\x82"
 )
 
-app = FastAPI(title="Hot PNG Renderer", version="1.8")
+app = FastAPI(title="Cybersport Hot PNG Renderer", version="1.0")
+
 
 # ---------- Fonts ----------
-_BASE_DIR = Path(__file__).resolve().parent
+_BASE_DIR = Path(__file__).resolve().parents[1]  # repo root (this file lives in render_servers/)
 _FONTS_DIR = _BASE_DIR / "fonts"
 
 _FONT_REGULAR = _FONTS_DIR / "RobotoCondensed-Regular.ttf"
@@ -171,13 +93,6 @@ _font_cache: Dict[Tuple[str, int], ImageFont.FreeTypeFont] = {}
 
 
 def _pick_font(size: int, extrabold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    """
-    Uses local bundled fonts:
-      - fonts/RobotoCondensed-Regular.ttf for everything
-      - fonts/RobotoCondensed-ExtraBold.ttf for LIVE score
-    Falls back to PIL default font if ttf is missing/unreadable.
-    Cached to avoid repeated disk IO per render.
-    """
     path = _FONT_EXTRABOLD if extrabold else _FONT_REGULAR
     key = (str(path), int(size))
 
@@ -198,16 +113,11 @@ def _pick_font(size: int, extrabold: bool = False) -> ImageFont.FreeTypeFont | I
 
 # ---------- Brand logo cache ----------
 _brand_lock = threading.Lock()
-_brand_cache: Dict[int, Optional[Image.Image]] = {}  # height -> RGBA image resized
+_brand_cache: Dict[int, Optional[Image.Image]] = {}
 
 
 def _get_brand_logo(height: int) -> Optional[Image.Image]:
-    """
-    Load and cache the Jugabet brand logo resized to the given height.
-    Returns an RGBA image or None. Never raises.
-    """
     h = max(1, int(height))
-
     with _brand_lock:
         cached = _brand_cache.get(h)
         if cached is not None:
@@ -229,14 +139,19 @@ def _get_brand_logo(height: int) -> Optional[Image.Image]:
 
     with _brand_lock:
         _brand_cache[h] = im
-
     return im
 
 
+# ---------- Small helpers ----------
 def _txt(v: Any) -> str:
     if v is None:
         return ""
     return str(v).strip()
+
+
+def _display_team_name(ev: Dict[str, Any], side: str) -> str:
+    comp = ((ev.get("competitors") or {}).get(side) or {})
+    return _txt(comp.get("name")) or "-"
 
 
 def _time_raw(event: Dict[str, Any]) -> str:
@@ -249,37 +164,69 @@ def _score_text(event: Dict[str, Any]) -> str:
     a = sc.get("away")
     if h is None or a is None:
         return ""
-    return f"{h}:{a}"
+    return f"{h}–{a}"
 
 
-def _odds_pills(event: Dict[str, Any]) -> List[str]:
-    """Odds to render as pills, adapting to the market shape so a 2-way fixture
-    mixed into a campaign (e.g. a basketball game in a football campaign) shows
-    its real odds instead of three blank dashes:
+# ---------- Cybersport header center text ----------
+def _normalize_cybersport_live_time(tr: str) -> str:
+    s = " ".join((tr or "").strip().split())
+    if not s:
+        return "LIVE"
 
-      * 1x2 (home / draw / away)   -> [p1, draw, p2]   (3 pills)
-      * winner / 2-way (home/away) -> [p1, p2]         (2 pills)
+    sl = s.lower()
 
-    A draw price is what distinguishes a 3-way market; without one we render the
-    two-pill layout the basketball/tennis renderers already use.
-    """
+    if sl == "live":
+        return "LIVE"
+
+    if "descanso" in sl:
+        return "BREAK"
+
+    if "mapa" in sl:
+        out = s.upper()
+        if len(out) > 12:
+            out = out[:11] + "…"
+        return out
+
+    out = s.upper()
+    if len(out) > 12:
+        out = out[:11] + "…"
+    return out
+
+
+def _normalize_cybersport_prematch_time(tr: str) -> str:
+    s = " ".join((tr or "").strip().split())
+    if not s:
+        return ""
+
+    s = s.replace(" , ", ", ")
+    s = s.replace(" ,", ",")
+    return s.upper()
+
+
+def _header_center_text(ev: Dict[str, Any]) -> str:
+    status = _txt(ev.get("status")).lower()
+    tr = _time_raw(ev)
+
+    if status == "live":
+        return _normalize_cybersport_live_time(tr)
+
+    return _normalize_cybersport_prematch_time(tr)
+
+
+def _odds_values_winner(event: Dict[str, Any]) -> Tuple[str, str]:
     market = event.get("market") or {}
-    odds = market.get("odds") or {}
+    odds = (market.get("odds") or {}) if (market.get("type") == "winner") else {}
 
     def f(x: Any) -> str:
         s = _txt(x)
         return s if s else "-"
 
-    has_draw = (market.get("type") == "1x2") or (_txt(odds.get("draw")) != "")
-    if has_draw:
-        return [f(odds.get("p1")), f(odds.get("draw")), f(odds.get("p2"))]
-    return [f(odds.get("p1")), f(odds.get("p2"))]
+    return f(odds.get("p1")), f(odds.get("p2"))
 
 
-# ---------- Logo cache (anti-DDOS) ----------
+# ---------- Logo cache ----------
 _logo_lock = threading.Lock()
 _logo_cache: Dict[str, Dict[str, Any]] = {}
-# entry: url -> {"ts": epoch, "png": bytes (RGBA PNG resized to LOGO_INNER) or None}
 
 
 def _prune_logo_cache() -> None:
@@ -313,8 +260,6 @@ def _download_logo(url: str) -> Optional[bytes]:
 
 
 def get_logo_png_bytes(url: Optional[str]) -> Optional[bytes]:
-    # Delegate to the shared on-disk-cached pipeline (app/render/logos.py)
-    # so failures are logged and successes survive process restarts.
     return _shared_get_logo_png_bytes(url)
 
 
@@ -347,16 +292,12 @@ def paste_logo_box(
 
 # ---------- Facet / bevel helpers ----------
 def _bevel_mask(w: int, h: int, cut: int) -> Image.Image:
-    """
-    Returns an 'L' mask (0..255) with cut corners (facet / bevel).
-    """
     c = max(0, int(cut))
     c = min(c, w // 2, h // 2)
 
     mask = Image.new("L", (w, h), 255)
     md = ImageDraw.Draw(mask)
 
-    # Cut 4 corners
     md.polygon([(0, 0), (c, 0), (0, c)], fill=0)
     md.polygon([(w - 1, 0), (w - 1 - c, 0), (w - 1, c)], fill=0)
     md.polygon([(w - 1, h - 1), (w - 1 - c, h - 1), (w - 1, h - 1 - c)], fill=0)
@@ -366,9 +307,6 @@ def _bevel_mask(w: int, h: int, cut: int) -> Image.Image:
 
 
 def _paste_beveled_rect(img: Image.Image, x0: int, y0: int, x1: int, y1: int, fill_rgba, cut: int) -> Image.Image:
-    """
-    Paste a filled beveled rectangle into img and return the bevel mask used.
-    """
     w = x1 - x0
     h = y1 - y0
     if w <= 0 or h <= 0:
@@ -393,7 +331,6 @@ def _make_center_glow_overlay(w: int, h: int, color_rgb: Tuple[int, int, int], p
         t = 1.0 - (abs(x - mid) / mid)
         if t < 0:
             t = 0
-        # keep user's current behavior (do not change here)
         a = int(peak_alpha * (t * 1.3))
         if a <= 0:
             continue
@@ -423,14 +360,7 @@ def _make_vignette_overlay(w: int, h: int, strength: int = 55) -> Image.Image:
     return overlay
 
 
-def _apply_card_fx_masked(
-    img: Image.Image, x0: int, y0: int, x1: int, y1: int,
-    is_live: bool, mask: Image.Image, theme: CardTheme = _THEME_DEFAULT,
-) -> None:
-    """
-    Apply vignette + center glow only inside 'mask' (beveled shape).
-    Glow color comes from the active card theme.
-    """
+def _apply_card_fx_masked(img: Image.Image, x0: int, y0: int, x1: int, y1: int, is_live: bool, mask: Image.Image) -> None:
     w = x1 - x0
     h = y1 - y0
     if w <= 0 or h <= 0:
@@ -440,16 +370,16 @@ def _apply_card_fx_masked(
     fx.alpha_composite(_make_vignette_overlay(w, h, strength=48), dest=(0, 0))
 
     if is_live:
-        fx.alpha_composite(_make_center_glow_overlay(w, h, color_rgb=theme.glow_live, peak_alpha=95), dest=(0, 0))
+        fx.alpha_composite(_make_center_glow_overlay(w, h, color_rgb=(160, 40, 40), peak_alpha=95), dest=(0, 0))
     else:
-        fx.alpha_composite(_make_center_glow_overlay(w, h, color_rgb=theme.glow_idle, peak_alpha=45), dest=(0, 0))
+        fx.alpha_composite(_make_center_glow_overlay(w, h, color_rgb=(0, 92, 255), peak_alpha=45), dest=(0, 0))
 
-    # Clip FX to bevel mask: alpha = alpha * mask
     a = fx.getchannel("A")
     a = ImageChops.multiply(a, mask)
     fx.putalpha(a)
 
     img.alpha_composite(fx, dest=(x0, y0))
+
 
 def _apply_inner_shadow(
     img: Image.Image,
@@ -462,9 +392,6 @@ def _apply_inner_shadow(
     thickness: int = 8,
     blur_radius: int = 24,
 ):
-    """
-    Adds inner shadow inside a beveled rectangle using its mask.
-    """
     w = x1 - x0
     h = y1 - y0
     if w <= 0 or h <= 0:
@@ -473,10 +400,8 @@ def _apply_inner_shadow(
     if w - 2 * thickness <= 2 or h - 2 * thickness <= 2:
         return
 
-    # Outer mask (full shape)
     outer = mask
 
-    # Inner mask (shrunk shape)
     inner = _bevel_mask(
         w - 2 * thickness,
         h - 2 * thickness,
@@ -486,16 +411,10 @@ def _apply_inner_shadow(
     inner_full = Image.new("L", (w, h), 0)
     inner_full.paste(inner, (thickness, thickness))
 
-    # Shadow ring = outer - inner
     shadow_mask = ImageChops.subtract(outer, inner_full)
-
-    # Blur it
     shadow_mask = shadow_mask.filter(ImageFilter.GaussianBlur(blur_radius))
-
-    # IMPORTANT: clip again to bevel (blur expands outside)
     shadow_mask = ImageChops.multiply(shadow_mask, outer)
 
-    # Create colored shadow layer (keep 255 as requested)
     r, g, b = color_rgb
     shadow_layer = Image.new("RGBA", (w, h), (r, g, b, 255))
     shadow_layer.putalpha(shadow_mask)
@@ -521,54 +440,52 @@ def _fit_header_font_size(
     return min_size
 
 
-# ---------- Team font autosize (NO ellipsis; one size for both) ----------
+# ---------- Team font autosize ----------
 def _fit_team_font_size(
     draw: ImageDraw.ImageDraw,
     home_name: str,
     away_name: str,
     max_home_w: int,
     max_away_w: int,
+    min_size: int,
 ) -> int:
     size = BASE_TEAM_FONT
-    while size >= MIN_TEAM_FONT:
+    min_size = int(min_size)
+    while size >= min_size:
         f = _pick_font(size)
         if draw.textlength(home_name, font=f) <= max_home_w and draw.textlength(away_name, font=f) <= max_away_w:
             return size
         size -= TEAM_FONT_STEP
-    return MIN_TEAM_FONT
+    return min_size
 
 
 # ---------- Rendering ----------
-def render_hot_png(events: List[Dict[str, Any]], theme: str = "default") -> bytes:
+def render_hot_png(events: List[Dict[str, Any]]) -> bytes:
     card_h = 270
     gap = 18
 
-    # Resolve the color palette for this render ("default" or "vip"); only
-    # colors differ between themes, all geometry below is shared.
-    pal = get_card_theme(theme)
-    card = pal.card
-    card_live = pal.card_live
+    card = (3, 16, 42)
+    card_live = (3, 16, 42)
 
-    text_main = pal.text_main
-    accent = pal.accent
-    red = pal.score
+    text_main = (245, 245, 245)
+    accent = (182, 222, 19)
+    red = (238, 49, 36)
 
-    logo_plate = pal.logo_plate
-    logo_plate_live = pal.logo_plate_live
+    logo_plate = (29, 47, 90)
+    logo_plate_live = (31, 36, 51)
 
-    odds_plate = pal.odds_plate
-    odds_plate_live = pal.odds_plate_live
+    odds_plate = (23, 45, 86)
+    odds_plate_live = (45, 39, 59)
 
-    font_score = _pick_font(LIVE_SCORE_FONT, extrabold=True)  # ExtraBold (LIVE score)
-    font_vs = _pick_font(LIVE_SCORE_FONT, extrabold=True)     # ExtraBold
-    font_odds = _pick_font(36)                                # Regular
+    font_score = _pick_font(LIVE_SCORE_FONT, extrabold=True)
+    font_vs = _pick_font(LIVE_SCORE_FONT, extrabold=True)
+    font_odds = _pick_font(36)
 
     brand_logo = _get_brand_logo(BRAND_LOGO_HEIGHT)
 
     n = min(len(events), 50)
 
     if n == 0:
-        # Нема матчів → повертаємо прозорий 1x1 PNG (щоб <img> не ламався)
         return TRANSPARENT_PNG_1X1
 
     height = PADDING + n * card_h + (n - 1) * gap + PADDING
@@ -577,8 +494,7 @@ def render_hot_png(events: List[Dict[str, Any]], theme: str = "default") -> byte
 
     y = PADDING
 
-    for i in range(n):
-        ev = events[i]
+    for ev in events[:n]:
         status = (ev.get("status") or "").strip().lower()
         is_live = status == "live"
 
@@ -586,15 +502,12 @@ def render_hot_png(events: List[Dict[str, Any]], theme: str = "default") -> byte
         x1, y1 = WIDTH - PADDING, y + card_h
         center_x = (x0 + x1) // 2
 
-        # --- Main card: beveled corners (facet) ---
         fill_color = (card_live if is_live else card)
         bevel_mask = _paste_beveled_rect(img, x0, y0, x1, y1, fill_rgba=fill_color, cut=CARD_BEVEL_CUT)
 
-        # FX clipped to the bevel shape
-        _apply_card_fx_masked(img, x0, y0, x1, y1, is_live=is_live, mask=bevel_mask, theme=pal)
+        _apply_card_fx_masked(img, x0, y0, x1, y1, is_live=is_live, mask=bevel_mask)
 
-        # --- Inner shadow ---
-        shadow_color = pal.shadow_live if is_live else pal.shadow_idle
+        shadow_color = (255, 0, 40) if is_live else (0, 92, 255)
         _apply_inner_shadow(
             img,
             x0, y0, x1, y1,
@@ -604,8 +517,7 @@ def render_hot_png(events: List[Dict[str, Any]], theme: str = "default") -> byte
             blur_radius=10,
         )
 
-        # --- Accent border (2px) AFTER blur/fx so it stays чистий ---
-        border_color = (*pal.border, 255)
+        border_color = (182, 222, 19, 255)
         border_width = 2
 
         outer_mask = _bevel_mask(x1 - x0, y1 - y0, cut=CARD_BEVEL_CUT)
@@ -625,7 +537,6 @@ def render_hot_png(events: List[Dict[str, Any]], theme: str = "default") -> byte
         border_layer.putalpha(border_alpha)
         img.alpha_composite(border_layer, dest=(x0, y0))
 
-        # Brand logo (top-right)
         if brand_logo is not None:
             bx = x1 - brand_logo.width
             by = y0
@@ -635,18 +546,15 @@ def render_hot_png(events: List[Dict[str, Any]], theme: str = "default") -> byte
                 by = y0
             img.alpha_composite(brand_logo, dest=(int(bx), int(by)))
 
-        # top strip
         top_y = y0 + 20
 
         tournament = (_txt((ev.get("tournament") or {}).get("name")) or "-").upper()
-        time_txt = _time_raw(ev)
-        time_txt = time_txt.upper() if time_txt else ""
+        time_txt = _header_center_text(ev)
 
         left_pad = 22
         right_pad = 22
         league_x = x0 + left_pad
 
-        # --- TIME: autosize and get real width first (so league never touches it) ---
         time_w = 0.0
         font_time = _pick_font(TIME_FONT_BASE)
         if time_txt:
@@ -659,10 +567,7 @@ def render_hot_png(events: List[Dict[str, Any]], theme: str = "default") -> byte
             font_time = _pick_font(time_font_size)
             time_w = d.textlength(time_txt, font=font_time)
 
-        # Reserve centered zone for time (+ gap)
         time_left = (center_x - time_w / 2) - HEADER_TIME_GAP
-
-        # --- LEAGUE: fit into area up to time_left ---
         league_max_w = max(80, int(time_left - league_x))
 
         league_font_size = _fit_header_font_size(
@@ -674,22 +579,20 @@ def render_hot_png(events: List[Dict[str, Any]], theme: str = "default") -> byte
 
         d.text((league_x, top_y), tournament, fill=(255, 255, 255), font=font_tour)
 
-        # Draw time centered
         if time_txt:
             d.text((center_x - time_w / 2, top_y), time_txt, fill=(255, 255, 255), font=font_time)
 
-        # ---- ONE horizontal line for: [logo] [home] [score/VS] [away] [logo] ----
-        baseline_y = y0 + 118  # single "broadcast" baseline
+        baseline_y = y0 + 118
 
         logo_y = int(baseline_y - (LOGO_BOX / 2))
-
         left_logo_x = x0 + 22
         right_logo_x = x1 - 22 - LOGO_BOX
 
         home = ((ev.get("competitors") or {}).get("home") or {})
         away = ((ev.get("competitors") or {}).get("away") or {})
-        home_name = _txt(home.get("name")) or "-"
-        away_name = _txt(away.get("name")) or "-"
+
+        home_name = _display_team_name(ev, "home")
+        away_name = _display_team_name(ev, "away")
 
         home_logo = get_logo_bytes_for_team(home)
         away_logo = get_logo_bytes_for_team(away)
@@ -720,7 +623,14 @@ def render_hot_png(events: List[Dict[str, Any]], theme: str = "default") -> byte
         max_home_w = max(60, left_name_max_right - left_name_x)
         max_away_w = max(60, right_name_right_edge - right_name_max_left)
 
-        fitted_size = _fit_team_font_size(d, home_name, away_name, max_home_w, max_away_w)
+        fitted_size = _fit_team_font_size(
+            d,
+            home_name,
+            away_name,
+            max_home_w,
+            max_away_w,
+            min_size=MIN_TEAM_FONT,
+        )
         font_team = _pick_font(fitted_size)
 
         d.text((left_name_x, baseline_y + TEAM_Y_OFFSET), home_name, fill=text_main, font=font_team)
@@ -739,17 +649,18 @@ def render_hot_png(events: List[Dict[str, Any]], theme: str = "default") -> byte
             vs_y = int(baseline_y - (font_vs.size * 0.60))
             d.text((center_x - vw / 2, vs_y), vs_txt, fill=accent, font=font_vs)
 
-        vals = _odds_pills(ev)
-        n = len(vals)  # 3 for 1x2, 2 for a 2-way market (basketball, tennis…)
+        p1, p2 = _odds_values_winner(ev)
+        vals2 = [p1, p2]
 
         pill_y0 = y0 + 192
         pill_h = 54
         pill_gap = 14
+
         total_w = (x1 - x0) - 44
-        pill_w = int((total_w - (n - 1) * pill_gap) / n)
+        pill_w = int((total_w - pill_gap) / 2)
 
         start_x = x0 + 22
-        for j in range(n):
+        for j in range(2):
             px0 = start_x + j * (pill_w + pill_gap)
             px1 = px0 + pill_w
             _rounded_rect(
@@ -759,7 +670,7 @@ def render_hot_png(events: List[Dict[str, Any]], theme: str = "default") -> byte
                 fill=(odds_plate_live if is_live else odds_plate),
             )
 
-            val = vals[j] if vals[j] else "-"
+            val = vals2[j] if vals2[j] else "-"
             tw = d.textlength(val, font=font_odds)
             text_y = pill_y0 + (pill_h / 2) - (font_odds.size / 2) + ODDS_Y_OFFSET
             d.text((px0 + (pill_w - tw) / 2, text_y), val, fill=(230, 230, 235), font=font_odds)
@@ -773,11 +684,11 @@ def render_hot_png(events: List[Dict[str, Any]], theme: str = "default") -> byte
 
 # ---------- PNG cache ----------
 _cache_lock = threading.Lock()
-_png_cache: Dict[int, Dict[str, Any]] = {}  # limit -> {ts, bytes, meta}
+_png_cache: Dict[int, Dict[str, Any]] = {}
 
 
 def fetch_hot_json(limit: int) -> Dict[str, Any]:
-    url = f"{DATA_API_BASE}/events/football/hot"
+    url = f"{DATA_API_BASE}/events/cybersport/hot"
     r = requests.get(url, params={"limit": limit}, timeout=REQUEST_TIMEOUT)
     r.raise_for_status()
     return r.json()
@@ -798,8 +709,8 @@ def set_cached_png(limit: int, png_bytes: bytes, meta: Dict[str, Any]) -> None:
 
 
 # ---------- API ----------
-@app.get("/render/football/hot.png")
-def render_football_hot_png(limit: int = DEFAULT_LIMIT) -> Response:
+@app.get("/render/cybersport/hot.png")
+def render_cybersport_hot_png(limit: int = DEFAULT_LIMIT) -> Response:
     limit = max(1, min(int(limit), MAX_LIMIT))
 
     cached, meta = get_cached_png(limit)
@@ -837,8 +748,8 @@ def fetch_manual_json(slot: str) -> list:
     return r.json().get("events") or []
 
 
-@app.get("/render/football/manual/{slot}.png")
-def render_football_manual_png(slot: str) -> Response:
+@app.get("/render/cybersport/manual/{slot}.png")
+def render_cybersport_manual_png(slot: str) -> Response:
     """Render a manually curated slot as a PNG. No caching — always fresh."""
     try:
         events = fetch_manual_json(slot)
@@ -873,4 +784,5 @@ def health() -> Dict[str, Any]:
         "team_font_base": BASE_TEAM_FONT,
         "team_font_min": MIN_TEAM_FONT,
         "live_score_font": LIVE_SCORE_FONT,
+        "endpoint": "/render/cybersport/hot.png",
     }

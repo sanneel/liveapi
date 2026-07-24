@@ -1,6 +1,9 @@
 """Slot-card configurator admin page.
 
-  GET  /admin/slot-cards            → drop-a-photo UI
+  GET  /admin/slot-cards            → redirects to the Optimization page's
+                                       Slot Cards tab (/admin/promotions?tab=slot_cards),
+                                       where the drop-a-photo UI actually lives
+                                       (partials/_slot_cards_panel.html)
   POST /admin/slot-cards/generate   → multipart image + suit + free-spins,
                                        returns the rendered flip GIF + front PNG
                                        (base64 data URIs) with the photo in the
@@ -16,8 +19,7 @@ import base64
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from ..auth.dependencies import require_role
 from ..logging_config import get_logger
@@ -26,26 +28,19 @@ from ..services import slot_card_runner as runner
 from .public_slot_gif import _store_image
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 logger = get_logger("app.routes.admin_slot_cards")
 
 router = APIRouter()
 
 
-@router.get("/admin/slot-cards", response_class=HTMLResponse)
+@router.get("/admin/slot-cards")
 def slot_cards_page(
     request: Request,
     user: User = Depends(require_role("editor")),
-) -> HTMLResponse:
-    return templates.TemplateResponse(
-        request,
-        "slot_cards.html",
-        {
-            "active_page": "slot_cards",
-            "current_user": user,
-            "suits": runner.suit_choices(),
-        },
-    )
+) -> RedirectResponse:
+    """Slot Cards moved into the Optimization hub as a tab — keep the old URL
+    working for bookmarks/links instead of 404ing."""
+    return RedirectResponse(url="/admin/promotions?tab=slot_cards", status_code=307)
 
 
 def _uri(raw: bytes, ct: str) -> str:

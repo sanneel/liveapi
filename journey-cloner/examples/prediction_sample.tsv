@@ -1,0 +1,7 @@
+internalName	urlShortName	brand	currency	languages	showDate	hideDate	expirationDate	startDate	endDate	headerTitle_en	headerTitle_es	termsText_en	termsText_es	prizeStructure_en	prizeStructure_es	howToParticipate_en	howToParticipate_es
+JBCL|PR|CHL Test	test-prediction-2026	JBCL	CLP	en,es	2026-08-01T12:00:00Z	2026-08-05T04:00:00Z	2026-08-04T18:59:00Z	2026-08-01T12:01:00Z	2026-08-04T23:00:00Z	<p>Prediction: Test Match</p>	<p>Pronóstico: Partido de Prueba</p>	<p>Standard terms apply.</p>	<p>Aplican términos estándar.</p>	<p>Prize structure here.</p>	<p>Estructura de premios aquí.</p>	<p>Place a qualifying bet.</p>	<p>Realiza una apuesta calificativa.</p>
+
+order	question_en	question_es	answer1_en	answer1_es	answer0_en	answer0_es	answer2_en	answer2_es
+1	Who scores first?	¿Quién anota primero?	Home	Local	No goal	Sin gol	Away	Visita
+2	Will there be a red card?	¿Habrá tarjeta roja?	Yes	Sí	No	No
+3	How many corners?	¿Cuántos córners?	Over 8.5	Más de 8.5	Under 8.5	Menos de 8.5

@@ -1,6 +1,6 @@
 python3 -m uvicorn server:app --host 127.0.0.1 --port 8000 --reload & 
-python3 -m uvicorn render_server:app --host 127.0.0.1 --port 8001 --reload & 
-python3 -m uvicorn basketball_render_server:app --host 127.0.0.1 --port 8002 --reload & 
-python3 -m uvicorn tennis_render_server:app --host 127.0.0.1 --port 8003 --reload & 
-python3 -m uvicorn cybersport_render_server:app --host 127.0.0.1 --port 8004 --reload & 
-python3 -m uvicorn fights_render_server:app --host 127.0.0.1 --port 8005 --reload
+python3 -m uvicorn render_servers.render_server:app --host 127.0.0.1 --port 8001 --reload & 
+python3 -m uvicorn render_servers.basketball_render_server:app --host 127.0.0.1 --port 8002 --reload & 
+python3 -m uvicorn render_servers.tennis_render_server:app --host 127.0.0.1 --port 8003 --reload & 
+python3 -m uvicorn render_servers.cybersport_render_server:app --host 127.0.0.1 --port 8004 --reload & 
+python3 -m uvicorn render_servers.fights_render_server:app --host 127.0.0.1 --port 8005 --reload

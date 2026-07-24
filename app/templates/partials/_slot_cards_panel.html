@@ -1,10 +1,6 @@
-{% extends "base.html" %}
-{% block title %}Slot Cards · Jugabet Admin{% endblock %}
-{% block content_theme %}content-light{% endblock %}
-{% block page_title %}Slot Cards{% endblock %}
-{% block page_subtitle %}Drop one slot-game photo and render all four Ace cards (PNG + email flip GIF) at once.{% endblock %}
-
-{% block content %}
+{# Slot Cards configurator. Included from the Optimization page's "Slot Cards"
+   tab (promotions.html) — /admin/slot-cards just redirects here now.
+   Expects: suits. #}
 <style>
   .sc-wrap{ display:grid; grid-template-columns:minmax(0,380px) minmax(0,1fr); gap:18px; align-items:start; }
   @media(max-width:820px){ .sc-wrap{ grid-template-columns:1fr; } }
@@ -41,6 +37,8 @@
   .sc-public-url code{ user-select:all; font-family:monospace; }
   .sc-public-url .label{ font-weight:600; margin-bottom:4px; color:var(--t,#223); display:block; }
 </style>
+
+<p class="card-sub" style="margin-bottom:12px">Drop one slot-game photo and render all four Ace cards (PNG + email flip GIF) at once.</p>
 
 <div class="sc-wrap">
   <form class="card card-pad" id="sc-form" onsubmit="return false">
@@ -95,6 +93,7 @@
       go = document.getElementById('sc-go'),
       err = document.getElementById('sc-err'),
       result = document.getElementById('sc-result');
+  if (!drop || !file || !go) return;
   var picked = null;
 
   function setPreview(f) {
@@ -154,13 +153,9 @@
           return;
         }
         var d = res.j;
-        // Build public URL with current parameters (bet values, free spins, width, image)
         var baseUrl = window.location.origin + '/r/slot.gif';
         var params = [];
-
-        // Add image ID if available
         if (d.img_id) params.push('img_id=' + encodeURIComponent(d.img_id));
-
         var bets = ['hearts', 'diamonds', 'clubs', 'spades'];
         bets.forEach(function (suit) {
           var val = betFor(suit);
@@ -207,4 +202,3 @@
   });
 })();
 </script>
-{% endblock %}

@@ -11,14 +11,14 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from zoneinfo import ZoneInfo
 
-from weights_chile_first import (
+from .weights_chile_first import (
     FORCED_TIMEZONE,
     EXCLUDE_TOURNAMENT_PATTERNS,
     EXCLUDE_TOURNAMENT_YOUTH_PATTERNS,
     LEAGUE_BOOST_PATTERNS,
     TEAM_BOOST_PATTERNS,
 )
-from hot_weights_config import (
+from .hot_weights_config import (
     HORIZON_DAYS as CFG_HORIZON_DAYS,
     TIME_BOOST_WITHIN_6H,
     TIME_BOOST_WITHIN_24H,

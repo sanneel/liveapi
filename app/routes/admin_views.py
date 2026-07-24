@@ -640,7 +640,7 @@ def figma_run(
     return templates.TemplateResponse(request, "figma.html", ctx)
 
 
-_PROMO_TABS = {"overview", "gow", "journey_cloner", "randomizers", "nc_discount", "scripts"}
+_PROMO_TABS = {"overview", "gow", "journey_cloner", "randomizers", "nc_discount", "scripts", "prediction", "planner", "slot_cards"}
 _JC_TYPES = ["followup", "bfr", "two_hours", "aft"]
 
 
@@ -700,17 +700,36 @@ def _nc_ns(*, error="", result=None, console_script=None,
     }
 
 
-def _promotions_context(*, user, active_tab="overview", gow=None, jc=None, rnd=None, nc=None) -> dict:
-    """Full context for the unified Promotions page: automation graph + the
-    embedded generators (GOW, Journey Cloner, Randomizers, Discount NC) +
-    all-scripts list."""
+def _pred_ns(*, sheet="", draft_id="", content_id="", front_id="", base_body="",
+             dry_run=False, error="", result=None, console_script=None) -> dict:
+    return {
+        "sheet": sheet, "draft_id": draft_id, "content_id": content_id,
+        "front_id": front_id, "base_body": base_body, "dry_run": dry_run,
+        "error": error, "result": result, "console_script": console_script,
+    }
+
+
+def _planner_ns() -> dict:
+    from .admin_planner import planner_view_context
+    return planner_view_context()
+
+
+def _slot_ns() -> dict:
+    from ..services import slot_card_runner as runner
+    return {"suits": runner.suit_choices()}
+
+
+def _promotions_context(*, user, active_tab="overview", gow=None, jc=None, rnd=None, nc=None, pred=None) -> dict:
+    """Full context for the unified Optimization page: automation graph + the
+    embedded generators (GOW, Journey Cloner, Randomizers, Discount NC,
+    Prediction, Planner, Slot Cards) + all-scripts list. All of Promotions,
+    Planner, NC Cloner and Slot Cards now live under one sidebar entry
+    ("Optimization" -> /admin/promotions) as tabs on this one page."""
     from ..services import promotions_catalog as pc
     cat = pc.load_catalog()
     tab = active_tab if active_tab in _PROMO_TABS else "overview"
-    # The Notification Cloner (Discount NC) also has its own sidebar entry, so
-    # highlight that nav item when its tab is active instead of "Promotions".
     return {
-        "active_page": "nc_cloner" if tab == "nc_discount" else "promotions",
+        "active_page": "optimization",
         "current_user": user,
         "active_tab": tab,
         "meta": cat.get("meta", {}),
@@ -720,6 +739,9 @@ def _promotions_context(*, user, active_tab="overview", gow=None, jc=None, rnd=N
         "jc": jc if jc is not None else _jc_ns(),
         "rnd": rnd if rnd is not None else _rnd_ns(),
         "nc": nc if nc is not None else _nc_ns(),
+        "pred": pred if pred is not None else _pred_ns(),
+        "pl": _planner_ns(),
+        "sc": _slot_ns(),
     }
 
 
@@ -898,6 +920,52 @@ def promotions_git_pull(
         user=user,
         active_tab="nc_discount",
         nc=_nc_ns(git_result=git_result),
+    )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
+
+
+@router.post("/admin/promotions/prediction", response_class=HTMLResponse)
+def promotions_prediction(
+    request: Request,
+    sheet: str = Form(...),
+    draft_id: str = Form(...),
+    content_id: str = Form(...),
+    front_id: str = Form(...),
+    base_body: str = Form(""),
+    dry_run: str = Form(""),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """Update a Multi Number Prediction promo from a pasted sheet, from the
+    Optimization page's Prediction tab (wraps journey-cloner/prediction_campaign.py)."""
+    from ..services.journey_cloner_runner import generate_prediction_console_script
+    do_dry_run = dry_run.strip().lower() in ("on", "true", "1", "yes")
+    error = ""
+    result = None
+    console_script = None
+    try:
+        if not sheet.strip():
+            raise ValueError("Paste the sheet (top-level fields + questions table).")
+        exit_code, output, display_cmd, js_text, js_name = generate_prediction_console_script(
+            sheet_text=sheet, draft_id=draft_id, content_id=content_id, front_id=front_id,
+            base_body_path=base_body, dry_run=do_dry_run,
+        )
+        result = {"exit_code": exit_code, "output": output, "command": display_cmd,
+                  "ok": exit_code == 0}
+        if exit_code == 0 and js_text is not None:
+            console_script = {"name": js_name, "text": js_text}
+        elif exit_code != 0:
+            error = "Generation failed. Check the run output below."
+    except ValueError as exc:
+        error = str(exc)
+    except Exception as exc:  # noqa: BLE001
+        error = str(exc)
+
+    ctx = _promotions_context(
+        user=user,
+        active_tab="prediction",
+        pred=_pred_ns(sheet=sheet, draft_id=draft_id, content_id=content_id, front_id=front_id,
+                      base_body=base_body, dry_run=do_dry_run,
+                      error=error, result=result, console_script=console_script),
     )
     return templates.TemplateResponse(request, "promotions.html", ctx)
 

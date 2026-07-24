@@ -8,7 +8,7 @@ import re
 from functools import lru_cache
 from typing import Any, Dict, List, Optional, Tuple
 
-from weights_cybersport_chile import (
+from .weights_cybersport_chile import (
     ACADEMY_PATTERNS,
     ACADEMY_PENALTY,
     ALLOWED_MARKET_TYPES,

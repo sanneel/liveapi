@@ -1,12 +1,8 @@
-{% extends "base.html" %}
-{% block title %}Journey Planner · Jugabet Admin{% endblock %}
-{% block content_theme %}content-light{% endblock %}
-{% block page_title %}Journey Planner{% endblock %}
-{% block page_subtitle %}Paste a campaign brief — the planner lays out the backoffice objects, creation order, and the platform-invisible rules it applied. Model: {{ model }}.{% endblock %}
-
-{% block content %}
+{# Journey Planner chat widget. Included both from the Optimization page's
+   "Planner" tab (promotions.html) and — nowhere else now; /admin/planner just
+   redirects here. Expects: docs_present, key_configured, provider, key_env, model. #}
 <style>
-  .jp-wrap{display:flex;flex-direction:column;height:calc(100vh - 210px);min-height:420px}
+  .jp-wrap{display:flex;flex-direction:column;height:calc(100vh - 310px);min-height:420px}
   .jp-banner{background:#fff4d6;border:1px solid #f0d18a;color:#7a5b00;border-radius:10px;
     padding:10px 14px;font-size:13px;margin-bottom:12px}
   .jp-log{flex:1;overflow-y:auto;background:#fff;border:1px solid #e6e8ee;border-radius:12px;
@@ -33,6 +29,8 @@
   .jp-hint{color:#8a93a3;font-size:12px;margin-top:6px;min-height:16px}
   .jp-dots::after{content:"planning…";color:#4c8bf5}
 </style>
+
+<p class="card-sub" style="margin-bottom:12px">Paste a campaign brief — the AI lays out the backoffice objects, creation order, and the platform-invisible rules it applied. Model: {{ model }}.</p>
 
 <div class="jp-wrap">
   {% if not docs_present %}
@@ -75,6 +73,7 @@
         input = document.getElementById("jpInput"),
         sendBtn = document.getElementById("jpSend"),
         hint = document.getElementById("jpHint");
+  if (!log || !input || !sendBtn) return;
   const history = [];
   let busy = false;
 
@@ -131,7 +130,7 @@ NOTES
   function addMsg(role, text){
     empty.style.display = "none";
     const msg = document.createElement("div"); msg.className = "jp-msg " + role;
-    const rl = document.createElement("div"); rl.className = "jp-role"; rl.textContent = role === "user" ? "you" : "planner";
+    const rl = document.createElement("div"); rl.className = "jp-role"; rl.textContent = role === "user" ? "you" : "AI";
     const bub = document.createElement("div"); bub.className = "jp-bubble";
     if(role === "user"){ const d = document.createElement("div"); d.className="u"; d.textContent = text; bub.appendChild(d); }
     else { bub.innerHTML = renderModel(text); }
@@ -163,7 +162,6 @@ NOTES
       else if(typeof data.text === "string" && data.text.length){
         bub.innerHTML = renderModel(data.text); history.push({ role: "model", text: data.text });
       } else {
-        // No error and no usable text — surface the raw payload instead of crashing.
         bub.innerHTML = `<pre style="color:#c0392b">Empty response from server (HTTP ${res.status}). Payload:\n${esc(JSON.stringify(data))}</pre>`;
       }
     }catch(err){
@@ -190,4 +188,3 @@ NOTES
   };
 })();
 </script>
-{% endblock %}

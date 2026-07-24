@@ -50,15 +50,15 @@ def run_scoring(
     # stays semantic ("ufc looks at the next 60 days").
     extra: dict[str, object] = {}
     if sport == "football":
-        from hot_scoring import pick_hot
+        from scoring.hot_scoring import pick_hot
     elif sport == "tennis":
-        from hot_scoring_tennis import pick_hot
+        from scoring.hot_scoring_tennis import pick_hot
     elif sport == "basketball":
-        from hot_scoring_basketball import pick_hot
+        from scoring.hot_scoring_basketball import pick_hot
     elif sport == "cybersport":
-        from hot_scoring_cybersport import pick_hot
+        from scoring.hot_scoring_cybersport import pick_hot
     elif sport in ("fights", "ufc", "mma", "boxing"):
-        from hot_scoring_fights import pick_hot
+        from scoring.hot_scoring_fights import pick_hot
         extra["horizon_days"] = 60
         # When the caller asks for one canonical combat sport (not the
         # 'fights' union), every candidate is already in that sport, so
@@ -70,7 +70,7 @@ def run_scoring(
             extra["single_sport"] = True
     else:
         logger.warning(f"unknown sport {sport}, using football scorer")
-        from hot_scoring import pick_hot
+        from scoring.hot_scoring import pick_hot
 
     payload = pick_hot(
         events=events,

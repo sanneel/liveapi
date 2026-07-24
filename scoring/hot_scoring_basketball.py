@@ -11,7 +11,7 @@ from functools import lru_cache
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from zoneinfo import ZoneInfo
 
-from weights_basketball_chile_first import (
+from .weights_basketball_chile_first import (
     FORCED_TIMEZONE,
     EXCLUDE_TOURNAMENT_PATTERNS,
     EXCLUDE_TOURNAMENT_YOUTH_PATTERNS,
