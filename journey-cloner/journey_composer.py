@@ -264,6 +264,8 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
         if "bet_amount" in s:
             cc = (fa.get("currenciesConfig") or {}).get("CLP") or {}
             note("betAmount", cc.get("betAmount"), s["bet_amount"]); cc["betAmount"] = s["bet_amount"]
+            if "betAmount_majorUnits" in cc:      # proven pipeline keeps both in sync
+                cc["betAmount_majorUnits"] = int(s["bet_amount"]) // 100
     elif kind == "casino_bonus_v2":
         pairs = {"bonus_percent": "bonusPercent", "wagering": "wageringRequirement",
                  "release_multiplier": "releaseLimitMultiplier", "expiration_ms": "bonusExpirationTime"}
@@ -274,7 +276,10 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
                 if isinstance(wa, dict) and fk in wa:      # nested mirror
                     wa[fk] = s[sk]
     elif kind in ("notification_center#contract1", "notification_center#contract5"):
+        # copy lives in objectForSend.variables AND singleChannel.localizedLanguagesTab
+        # (contract1 keys: title-en/des-en/caption-en; contract5: title_en/description_en/caption_en)
         vars_ = (init.get("objectForSend") or {}).get("variables") or []
+        tabs = (init.get("singleChannel") or {}).get("localizedLanguagesTab") or {}
         keymap = {"title": "title", "desc": "des", "caption": "caption"}
         for skey, stem in keymap.items():
             for lang in ("en", "es"):
@@ -286,6 +291,13 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
                     n = (v.get("name") or "").lower()
                     if stem in n and lang in n:
                         note(v["name"], v.get("value"), val); v["value"] = val; hit = True
+                for tab in tabs.values():
+                    if not isinstance(tab, dict):
+                        continue
+                    for tk in tab:
+                        tn = tk.lower()
+                        if stem in tn and lang in tn:
+                            tab[tk] = val; hit = True
                 if not hit:
                     warnings.append(f"{kind}: no captured variable matched {skey}_{lang}")
     elif kind == "dextra_sms":
@@ -334,6 +346,8 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
         for k in ("filterDetails", "currentTemplate", "dataSourceName"):
             if k in frag:
                 init[k] = frag[k]
+                if cfg is not None and k in cfg:    # keep the editor mirror in sync
+                    cfg[k] = copy.deepcopy(frag[k])
         report.append(f"dwh_source: segment <- {frag_path.name} "
                       f"({(frag.get('currentTemplate') or {}).get('name')!r})")
 
@@ -571,37 +585,68 @@ def compose(spec: dict) -> dict:
     raw["boundaryConfiguration"] = {}
     raw["exitCriteriaSettings"] = None
 
-    # name / dates / lineage / server-minted ids
+    # name — top-level, infoValues, AND every notification's
+    # objectForSend.metadata.journeyName (the documented three places)
     name = spec.get("name") or f"JBCL | composed | {' -> '.join(kinds)}"
     body["journeyName"] = name
     raw["infoValues"]["journeyName"] = name
+    for d in _walk_dicts(body):
+        md = d.get("metadata")
+        if isinstance(md, dict) and "journeyName" in md:
+            md["journeyName"] = name
+
+    # dates — byte-identical behavior to the proven set_dates() /
+    # set_immediately_after_publish(): top-level in .NET ".0000000Z" form,
+    # infoValues in plain "Z" form, and startAt is NULL when immediate.
     date = spec.get("date")
     days = int(spec.get("days", 1))
     immediately = bool(spec.get("immediately", True))
     now = datetime.now(timezone.utc).replace(microsecond=0)
     if date:
         y, m, d = (int(x) for x in date.split("-"))
-        stop = datetime(y, m, d, 4, 0, tzinfo=timezone.utc) + timedelta(days=days)
-        start = now + timedelta(minutes=2) if immediately else datetime(y, m, d, 4, 0, tzinfo=timezone.utc)
+        start = datetime(y, m, d, 4, 0, tzinfo=timezone.utc)      # Chile midnight
+        stop = start + timedelta(days=days)
     else:
-        start = now + timedelta(minutes=2)
+        start = now
         stop = now + timedelta(days=days)
-    fmt = lambda dt: dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-    body["stopAt"] = fmt(stop)
-    body["startAt"] = fmt(start)
-    body["isImmediatelyAfterPublish"] = immediately
-    for key, val in (("stopAt", fmt(stop)), ("startAt", fmt(start)),
-                     ("isImmediatelyAfterPublish", immediately), ("journeyName", name)):
-        raw["infoValues"][key] = val
-    body["reservedJourneyId"] = ""
-    for k in ("duplicatedFromId", "duplicatedFromVersion", "allJourneyActivationsCount",
-              "overJourneyActivationsCount", "changedBy"):
+    dotnet = lambda dt: dt.strftime("%Y-%m-%dT%H:%M:%S.0000000Z")
+    plain = lambda dt: dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    info = raw["infoValues"]
+    body["stopAt"] = dotnet(stop)
+    info["stopAt"] = plain(stop)
+    body["timeZoneId"] = info["timeZoneId"] = "Chile/Continental"
+    body["isImmediatelyAfterPublish"] = info["isImmediatelyAfterPublish"] = immediately
+    if immediately:
+        body["startAt"] = info["startAt"] = None    # captured immediate-publish state
+    else:
+        body["startAt"] = dotnet(start)
+        info["startAt"] = plain(start)
+    # free-spin validity window: starts with the campaign, claimable for a week
+    for a in body["activities"]:
+        fa = (a.get("initializationData") or {}).get("freespinActivity")
+        if isinstance(fa, dict):
+            fa["startAt"] = plain(start)
+            fa["stopAt"] = plain(start + timedelta(days=7))
+
+    # placeholder matching the proven console-script swap; lineage stripped
+    body["reservedJourneyId"] = "DRY-RUN-CASINO"
+    for k in ("duplicatedFromId", "duplicatedFromVersion"):
         body.pop(k, None)
 
     _strip_key_everywhere(body, "promotionDisplayId")
 
     return {"body": body, "report": report, "warnings": warnings,
             "chain": [src_kind] + kinds, "name": name}
+
+
+def _walk_dicts(obj):
+    if isinstance(obj, dict):
+        yield obj
+        for v in obj.values():
+            yield from _walk_dicts(v)
+    elif isinstance(obj, list):
+        for v in obj:
+            yield from _walk_dicts(v)
 
 
 def _strip_key_everywhere(obj, key: str) -> int:
@@ -741,9 +786,8 @@ def emit_console_script(body: dict, out_path: Path) -> str:
     activity uuids at paste time -> POST /journey-drafts -> aggregatedError log).
     """
     from casino_journey import build_js  # the battle-tested JS template
-    scripted = copy.deepcopy(body)
-    scripted["reservedJourneyId"] = "DRY-RUN-CASINO"   # swapped for the real JRN id at paste time
-    js = build_js(scripted)
+    # body already carries the DRY-RUN-CASINO placeholder the script swaps
+    js = build_js(body)
     out_path.write_text(js, encoding="utf-8")
     return str(out_path)
 
@@ -773,8 +817,9 @@ def cmd_compose(spec: dict, as_json: bool, script: bool) -> int:
         "handoff": ("Paste the console script into a logged-in backoffice DevTools console to "
                     "create the draft (it reserves the JRN id and POSTs)."
                     if js_path else
-                    "reservedJourneyId is blank: re-run with --script for a paste-ready console "
-                    "script, or use the create_journeys.py machinery. This tool never calls the API."),
+                    "reservedJourneyId carries the DRY-RUN-CASINO placeholder: re-run with "
+                    "--script for a paste-ready console script that swaps in a real JRN id. "
+                    "This tool never calls the API."),
     }
     if as_json:
         print(json.dumps(summary, ensure_ascii=False, indent=2))
