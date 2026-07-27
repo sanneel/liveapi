@@ -15,6 +15,8 @@ CLI and the backoffice chat always agree — edit the docs, not this file.
 
 from __future__ import annotations
 
+import json
+import re
 from pathlib import Path
 
 import requests
@@ -236,6 +238,47 @@ def planner_page(
     return RedirectResponse(url="/admin/promotions?tab=planner", status_code=307)
 
 
+def _detect_mode(text: str, fallback: str) -> str:
+    """Pick the engine from the spec's own keys.
+
+    The browser guesses with a regex, which misroutes often enough to matter (a
+    chain spec sent to --spec dies as "unknown recipe None"). Parsing the object
+    here is deterministic: `reference` means a MODE 4 graph, `chain` a MODE 5
+    chain, `recipe` a MODE 3 spec. Falls back to the caller's mode when nothing
+    parses — the composer then produces its own clean refusal.
+    """
+    blob = text.strip()
+    fences = re.findall(r"```(?:json|JSON)?\s*(.*?)```", blob, re.S)
+    candidates = [*reversed([f.strip() for f in fences]), blob]
+    # ...and the first balanced {...}, which is what a "Here is the spec:"
+    # lead-in leaves behind. Same three-way fallback as compose._extract_json.
+    depth, start = 0, None
+    for i, ch in enumerate(blob):
+        if ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}" and depth:
+            depth -= 1
+            if depth == 0 and start is not None:
+                candidates.append(blob[start:i + 1])
+                break
+    for candidate in candidates:
+        try:
+            spec = json.loads(candidate)
+        except ValueError:
+            continue
+        if not isinstance(spec, dict):
+            continue
+        if "reference" in spec:
+            return "graph"
+        if isinstance(spec.get("chain"), list):
+            return "chain"
+        if "recipe" in spec:
+            return "spec"
+    return fallback
+
+
 def _repair_spec(settings, spec_text: str, refusal: str, mode: str) -> str | None:
     """Ask the planner to fix a spec the composer refused. Returns the corrected
     reply, or None if the model could not be reached.
@@ -296,6 +339,8 @@ def planner_compose(
     except ImportError as exc:
         return JSONResponse({"error": f"Composer not available: {exc}"})
 
+    # The browser's regex guess is only a fallback — the spec's own keys decide.
+    mode = _detect_mode(text, mode)
     settings = get_settings()
     attempts: list[dict] = []
     current = text

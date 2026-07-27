@@ -622,19 +622,23 @@ def _check_games(recipe: Recipe, knobs: dict) -> None:
             f"  Resolve each from the GAMES REGISTRY, or emit "
             f"'⛔ RESOLVE_AT_BUILD_TIME' so the blocker stays visible.")
     # All ids resolve individually — now make sure they describe the SAME game.
+    # lobbyGameId is the registry's primary key, so when the other fields
+    # disagree with it the spec is COERCED to that row rather than refused: a
+    # mixed tuple is never intentional (it comes from the model pattern-matching
+    # two similarly-named titles), and the registry is the authoritative answer
+    # for what the rest of the tuple must be. Refusing here just bounced a spec
+    # whose correct form was already fully determined.
     lobby_knob = next((k for k, f in fields.items() if f == "lobbyGameId"), None)
     lobby = given.get(lobby_knob)
     entry = games.get(lobby) if lobby else None
     if entry:
-        mixed = [f"{k} = {v!r} belongs to a different game (expected "
-                 f"{entry.get(fields[k])!r})"
-                 for k, v in given.items()
-                 if fields[k] != "lobbyGameId" and v != entry.get(fields[k])]
-        if mixed:
-            joined = "\n    ".join(mixed)
-            raise SpecError(
-                f"spec mixes ids from different games — every game field must "
-                f"come from the {lobby!r} row of the registry:\n    {joined}")
+        for kname, value in given.items():
+            field_name = fields[kname]
+            if field_name == "lobbyGameId":
+                continue
+            correct = entry.get(field_name)
+            if correct and value != correct:
+                knobs[kname] = correct
 
 
 def validate_spec(spec: dict) -> Recipe:

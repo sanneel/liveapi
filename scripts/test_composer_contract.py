@@ -123,7 +123,25 @@ refuses("an omitted required knob", mutate(spin_game_lobby=None))
 refuses("a blocker sentinel", mutate(spin_game_lobby="⛔ RESOLVE_AT_BUILD_TIME"))
 refuses("a fabricated game id", mutate(spin_game_lobby="pragmatic-mega-dragon-fortune-deluxe"))
 refuses("a placeholder token", mutate(spin_provider="TBD"))
-refuses("game ids mixed across two games", mutate(spin_game_wallet="vs20swbonsup"))
+
+# A mixed tuple is COERCED, not refused: lobbyGameId is the registry's primary
+# key, so the correct wallet/external/provider are already determined. The model
+# produces these by pattern-matching two similarly-named titles; refusing bounced
+# a spec whose right answer was known.
+print("\na game tuple mixed across two games is corrected from the registry")
+try:
+    mixed = mutate(spin_game_wallet="vs20swbonsup", spin_game_external="vs20swbonsup")
+    _r, mixed_body, _n, _u = C.compose_from_spec(mixed)
+    fa = next(a for a in mixed_body["activities"]
+              if a["activityName"] == "freespin_bonus")["initializationData"]["freespinActivity"]
+    check("wallet id corrected to the lobby's game", fa["walletGameId"] == "vs10bbbnz1000", fa["walletGameId"])
+    check("external id corrected to the lobby's game", fa["externalGameId"] == "vs10bbbnz1000", fa["externalGameId"])
+    check("lobby id untouched", fa["lobbyGameId"] == "pragmatic-big-bass-bonanza-1000", fa["lobbyGameId"])
+except Exception as exc:
+    check("mixed tuple is coerced", False, f"{type(exc).__name__}: {exc}")
+# ...but an unresolvable lobby id is still a hard refusal.
+refuses("an unknown lobby id even when the rest is valid",
+        mutate(spin_game_lobby="pragmatic-not-a-real-game"))
 # Reproduced live 2026-07-27: a "100 CLP per spin" brief came back as 10000
 # (minor units), which the x100 conversion turned into a 10,000 CLP spin with
 # every check green. The prose unit contract did not hold; the range gate does.
