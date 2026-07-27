@@ -191,9 +191,16 @@ def build() -> dict:
                 "init_fields": set(),
                 "knobs": KNOB_HINTS.get(k, []),
                 "seen_in": set(),
+                "depends_on": set(),
             })
             entry["seen_in"].add(tkey)
             entry["init_fields"].update(init.keys())
+            # observed data dependencies: which key this activity pulls from
+            # which upstream activity TYPE (the composer rewires these by role)
+            for d in a.get("dependencies") or []:
+                tgt = by_id.get(d.get("journeyActivityId"))
+                if tgt is not None and d.get("key"):
+                    entry["depends_on"].add((d["key"], akey(tgt)))
             for ev in a.get("events", []):
                 en = ev.get("eventName")
                 if en:
@@ -219,6 +226,7 @@ def build() -> dict:
             "init_fields": sorted(e["init_fields"]),
             "knobs": e["knobs"],
             "seen_in": sorted(e["seen_in"]),
+            "depends_on": [{"key": dk, "from": df} for dk, df in sorted(e["depends_on"])],
         })
 
     # rewards presets (read from gow campaign)
@@ -288,6 +296,13 @@ def build() -> dict:
             "strip duplicatedFromId/Version and stale promotionDisplayId",
             "every nextActivityId/journeyActivityId must resolve to an existing activity",
             "channel copy must be present for every channel flagged TRUE in the spec",
+            "top-level startAt/stopAt use .NET '.0000000Z' form; infoValues copies use plain 'Z'",
+            "immediate journeys post startAt=null (+isImmediatelyAfterPublish=true) in BOTH copies",
+            "journeyName lives in 3 places: top-level, infoValues, every objectForSend.metadata",
+            "SMS copy lives in 3 mirrored places; localizedMessageTexts is dict-by-lang in rawValues but list-by-languageCode in smsSettings",
+            "notification copy lives in objectForSend.variables AND singleChannel.localizedLanguagesTab",
+            "end_of_journey targets need no mirror element (capture has 18 undrawn ones)",
+            "freespinActivity validity window = campaign start -> start + 7 days (plain 'Z')",
         ],
     }
 

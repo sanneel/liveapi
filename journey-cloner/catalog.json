@@ -218,6 +218,12 @@
       "knobs": [],
       "seen_in": [
         "gow_comms"
+      ],
+      "depends_on": [
+        {
+          "key": "CurrencyCode",
+          "from": "dwh_source"
+        }
       ]
     },
     {
@@ -265,6 +271,28 @@
       "knobs": [],
       "seen_in": [
         "gow_campaign"
+      ],
+      "depends_on": [
+        {
+          "key": "CurrencyCode",
+          "from": "external_system_source"
+        },
+        {
+          "key": "DepositAmount",
+          "from": "deposit"
+        },
+        {
+          "key": "DepositPaidAmount",
+          "from": "deposit"
+        },
+        {
+          "key": "PromotionId",
+          "from": "promotion"
+        },
+        {
+          "key": "bonusAmountCollected",
+          "from": "freespin_bonus"
+        }
       ]
     },
     {
@@ -290,6 +318,20 @@
       ],
       "seen_in": [
         "gow_campaign"
+      ],
+      "depends_on": [
+        {
+          "key": "CurrencyCode",
+          "from": "external_system_source"
+        },
+        {
+          "key": "PromotionAcceptedAt",
+          "from": "promotion"
+        },
+        {
+          "key": "PromotionId",
+          "from": "promotion"
+        }
       ]
     },
     {
@@ -313,7 +355,8 @@
       ],
       "seen_in": [
         "gow_comms"
-      ]
+      ],
+      "depends_on": []
     },
     {
       "key": "dextra_sms",
@@ -343,7 +386,8 @@
       ],
       "seen_in": [
         "gow_comms"
-      ]
+      ],
+      "depends_on": []
     },
     {
       "key": "dwh_source",
@@ -367,7 +411,8 @@
       ],
       "seen_in": [
         "gow_comms"
-      ]
+      ],
+      "depends_on": []
     },
     {
       "key": "email_engagement_split",
@@ -391,6 +436,12 @@
       "knobs": [],
       "seen_in": [
         "gow_comms"
+      ],
+      "depends_on": [
+        {
+          "key": "CommunicationId",
+          "from": "dextra_email"
+        }
       ]
     },
     {
@@ -407,7 +458,8 @@
       "seen_in": [
         "gow_campaign",
         "gow_comms"
-      ]
+      ],
+      "depends_on": []
     },
     {
       "key": "end_of_path",
@@ -423,7 +475,8 @@
       "seen_in": [
         "gow_campaign",
         "gow_comms"
-      ]
+      ],
+      "depends_on": []
     },
     {
       "key": "event_detector",
@@ -448,7 +501,8 @@
       "seen_in": [
         "gow_campaign",
         "gow_comms"
-      ]
+      ],
+      "depends_on": []
     },
     {
       "key": "external_system_source",
@@ -469,7 +523,8 @@
       "knobs": [],
       "seen_in": [
         "gow_campaign"
-      ]
+      ],
+      "depends_on": []
     },
     {
       "key": "freespin_bonus",
@@ -514,6 +569,24 @@
       ],
       "seen_in": [
         "gow_campaign"
+      ],
+      "depends_on": [
+        {
+          "key": "CurrencyCode",
+          "from": "external_system_source"
+        },
+        {
+          "key": "DepositAmount",
+          "from": "deposit"
+        },
+        {
+          "key": "DepositPaidAmount",
+          "from": "deposit"
+        },
+        {
+          "key": "PromotionId",
+          "from": "promotion"
+        }
       ]
     },
     {
@@ -543,6 +616,16 @@
       "knobs": [],
       "seen_in": [
         "gow_campaign"
+      ],
+      "depends_on": [
+        {
+          "key": "CurrencyCode",
+          "from": "external_system_source"
+        },
+        {
+          "key": "PromotionLinkId",
+          "from": "external_system_source"
+        }
       ]
     },
     {
@@ -577,7 +660,8 @@
       ],
       "seen_in": [
         "gow_comms"
-      ]
+      ],
+      "depends_on": []
     },
     {
       "key": "notification_center#contract5",
@@ -611,7 +695,8 @@
       ],
       "seen_in": [
         "gow_comms"
-      ]
+      ],
+      "depends_on": []
     },
     {
       "key": "notification_center_engagement_split",
@@ -634,7 +719,8 @@
       "knobs": [],
       "seen_in": [
         "gow_comms"
-      ]
+      ],
+      "depends_on": []
     },
     {
       "key": "promotion",
@@ -661,6 +747,20 @@
       "knobs": [],
       "seen_in": [
         "gow_campaign"
+      ],
+      "depends_on": [
+        {
+          "key": "CurrencyCode",
+          "from": "external_system_source"
+        },
+        {
+          "key": "PromotionLinkId",
+          "from": "external_system_source"
+        },
+        {
+          "key": "SelectedCurrencyCode",
+          "from": "external_system_source"
+        }
       ]
     },
     {
@@ -681,7 +781,8 @@
       "knobs": [],
       "seen_in": [
         "gow_comms"
-      ]
+      ],
+      "depends_on": []
     }
   ],
   "transitions_observed": [
@@ -1151,6 +1252,13 @@
     "every activity UUID regenerated consistently on clone; never reuse JRN/CSE ids",
     "strip duplicatedFromId/Version and stale promotionDisplayId",
     "every nextActivityId/journeyActivityId must resolve to an existing activity",
-    "channel copy must be present for every channel flagged TRUE in the spec"
+    "channel copy must be present for every channel flagged TRUE in the spec",
+    "top-level startAt/stopAt use .NET '.0000000Z' form; infoValues copies use plain 'Z'",
+    "immediate journeys post startAt=null (+isImmediatelyAfterPublish=true) in BOTH copies",
+    "journeyName lives in 3 places: top-level, infoValues, every objectForSend.metadata",
+    "SMS copy lives in 3 mirrored places; localizedMessageTexts is dict-by-lang in rawValues but list-by-languageCode in smsSettings",
+    "notification copy lives in objectForSend.variables AND singleChannel.localizedLanguagesTab",
+    "end_of_journey targets need no mirror element (capture has 18 undrawn ones)",
+    "freespinActivity validity window = campaign start -> start + 7 days (plain 'Z')"
   ]
 }

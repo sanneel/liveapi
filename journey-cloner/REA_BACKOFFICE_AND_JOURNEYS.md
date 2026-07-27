@@ -364,6 +364,10 @@ design and differ only by an image.
 | `generate_console_script.py` | Renders a **self-contained browser console script** that does the API calls from a logged-in backoffice tab (captures token, reserves ids, regenerates activity ids at paste time, posts drafts). Reuses `prepare_body`/`verify_body`. |
 | `web_ui.py` | A small local HTML form wrapper around the runner. |
 | `app/services/journey_cloner_runner.py` | Integrates the cloner into the main app's admin UI (runs the scripts as subprocesses, manages templates per team). |
+| `build_catalog.py` | Phase 1: extracts `catalog.json` (activities, transitions, dependencies, channels, segments, invariants) from the captured templates — the planner's grounded knowledge. |
+| `plan_lint.py` | Phase 3 gatekeeper: validates a flow-plan DSL against `catalog.json` before anything is built. |
+| `ai_campaign_builder.py` | AI entry point over the fixed compilers: `options` (the menu), `plan` (DSL + lint), `build` (dispatch to the right compiler, dry-run by default). |
+| `journey_composer.py` | **Custom-journey composer**: takes a chain spec (source + activities with settings, `follow`/`branches` for routing) and assembles a REAL `POST /journey-drafts` body from captured nodes, plus the paste-ready console script (`--script`). See §19. |
 
 ### Two ways to create drafts
 1. **Direct API** (`create_journeys.py`, on a machine that can reach the
@@ -849,7 +853,73 @@ source image and fan them out across all these slot paths in both objects.
 
 ---
 
-## 18. Open questions / unknowns
+## 18. Journey anatomy facts learned while building the composer
+
+Verified against the captured gow.json / gow_comms.json and cross-checked
+against the proven generators' dry-run output (`casino_journey.py`):
+
+### Date formats (two different forms in ONE body)
+- **Top-level** `startAt`/`stopAt`: .NET style `2026-08-01T04:00:00.0000000Z`.
+- **`rawJourneyData.infoValues`** copies: plain `2026-08-01T04:00:00Z`.
+- **Immediate journeys** (`isImmediatelyAfterPublish: true`) post
+  `startAt: null` in BOTH places — not "now". This is the captured state.
+- `freespinActivity.startAt/stopAt` (plain `Z`): campaign start → **start + 7
+  days** (spins stay claimable a week regardless of the journey window).
+
+### journeyName lives in THREE places
+top-level `journeyName`, `infoValues.journeyName`, and **every**
+`objectForSend.metadata.journeyName` inside notification activities.
+
+### Channel copy storage (all copies must stay in sync)
+- **Notification/Pop-up**: `objectForSend.variables` AND
+  `singleChannel.localizedLanguagesTab` (contract 1 keys `title-en`/`des-en`/
+  `caption-en`; contract 5 keys `title_en`/`description_en`/`caption_en`).
+- **SMS**: three mirrored places with **two different shapes** —
+  `rawValues.localizedMessageTexts` is a *dict by language* (`{"en": {...}}`)
+  but `smsSettings.localizedMessageTexts` is a *list* of
+  `{messageText, languageCode}` objects. Plus `displayData`.
+
+### Dependencies are role-regular (see catalog.json `depends_on`)
+Every activity pulls `CurrencyCode` from the **source**; rewards chain data
+from their mechanics: `deposit` needs `PromotionId`/`PromotionAcceptedAt` from
+the upstream promotion; `freespin_bonus` needs `PromotionId` + deposit
+amounts; `casino_bonus_v2` additionally needs `bonusAmountCollected` from the
+freespin. Cloning into a new graph = rewire each `journeyActivityId` to the
+nearest upstream node of the same captured type.
+
+### The editor mirror is *partial* by design
+The captured GOW journey has **18 `end_of_journey` activities with no mirror
+element at all** (and no edges to them) — the platform accepts completion
+events that target undrawn activities. Fail-path events can therefore route to
+fresh undrawn `end_of_journey` nodes; only the happy path needs drawing.
+
+## 19. The journey composer (`journey_composer.py`)
+Composes arbitrary custom journeys from a chain spec:
+
+```json
+{"name": "...", "source": {"type": "segment"},
+ "chain": [{"type": "promotion"},
+            {"type": "deposit", "min_deposit": 1500000},
+            {"type": "freespins", "spins": 50, "game": "lagrancopa"},
+            {"type": "casino_bonus", "bonus_percent": 100, "wagering": 30}],
+ "date": "2026-08-01", "days": 1}
+```
+
+- Every node is a deep-cloned captured activity (fresh uuid via global string
+  replace); wiring uses each node's real completion events (`follow` picks the
+  continuing event, `branches` routes others into nested sub-chains).
+- `options --json` exposes all 14 chainable types, their full event lists,
+  settings, and all 71 captured (from,event,to) connections.
+- `compose --script` emits the paste-ready console script through
+  `casino_journey.build_js` (token capture → reserve JRN → paste-time id regen
+  → POST). The body carries the `DRY-RUN-CASINO` placeholder the script swaps.
+- Known limitation: `multipurpose_promotion` composes correctly in
+  `activities[]` but its choosable-flow sub-elements (flowEntry/dropZone) are
+  not re-drawn — verify that draft in the editor before publishing.
+
+---
+
+## 20. Open questions / unknowns
 
 - Whether there are **further server-minted unique fields** beyond `campaignId`
   and `promotionDisplayId` that a clone must clear (none known to remain, but
