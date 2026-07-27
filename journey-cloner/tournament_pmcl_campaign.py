@@ -520,9 +520,13 @@ def prepare_comms(
     return body, report, start_local, stop_local, email_content
 
 
-def verify(body: dict, tournament_id: str, upload_photos: bool) -> list[tuple[bool, str]]:
+def verify(body: dict, tournament_id: str, upload_photos: bool,
+           email_content: dict | None = None) -> list[tuple[bool, str]]:
     checks: list[tuple[bool, str]] = []
     serialized = json.dumps(body, ensure_ascii=False)
+    # The hero placeholder lives in the email *content*, never in the journey
+    # payload — checking `serialized` for it always failed.
+    email_serialized = json.dumps(email_content, ensure_ascii=False) if email_content is not None else ""
 
     checks.append((bool(body.get("journeyName")), f"journeyName is {body.get('journeyName')!r}"))
     checks.append((body.get("reservedJourneyId") == RESERVED_ID_TOKEN, f"reservedJourneyId is {body.get('reservedJourneyId')!r}"))
@@ -540,10 +544,18 @@ def verify(body: dict, tournament_id: str, upload_photos: bool) -> list[tuple[bo
     if upload_photos:
         checks.append((NC_ICON_TOKEN in serialized, "NC icon placeholder present (filled at paste time)"))
         checks.append((POPUP_BG_TOKEN in serialized, "Pop-up background placeholder present (filled at paste time)"))
-        checks.append((EMAIL_HERO_TOKEN in serialized, "Email hero image placeholder present (filled at paste time)"))
+        if email_content is not None:
+            checks.append((EMAIL_HERO_TOKEN in email_serialized,
+                           "Email hero placeholder present in the email content (filled at paste time)"))
     else:
-        checks.append((NC_ICON_TOKEN not in serialized and POPUP_BG_TOKEN not in serialized and EMAIL_HERO_TOKEN not in serialized,
+        checks.append((NC_ICON_TOKEN not in serialized and POPUP_BG_TOKEN not in serialized,
                        "no photo placeholders (template image URLs kept)"))
+        if email_content is not None:
+            checks.append((EMAIL_HERO_TOKEN not in email_serialized,
+                           "email content keeps its template hero image"))
+    # A token that survives into the published content would render as a broken
+    # image, so never let one reach the journey payload either.
+    checks.append((EMAIL_HERO_TOKEN not in serialized, "no stray hero placeholder in the journey payload"))
     sms_act = next((a for a in body.get("activities", []) if a.get("activityName") == "dextra_sms"), None)
     sms_body = ((sms_act or {}).get("initializationData") or {}).get("smsSettings", {}).get("messageText", "")
     checks.append((sms_body.lower().startswith(SMS_PREFIX.lower()), f"SMS text starts with 'Fortunazo |' ({sms_body[:22]!r}...)"))
@@ -704,10 +716,18 @@ JS_TEMPLATE = r"""// PMCL Tournament Communications console script — generated
 
   // Creates the marketing-email content (create -> save -> publish), pointing
   // the journey's email activity at the new content id. The copy + link are
-  // already baked into EMAIL_CONTENT server-side; the images are kept from the
-  // template, so there is no photo upload here.
-  async function buildAndPublishEmail() {
-    const content = EMAIL_CONTENT;
+  // already baked into EMAIL_CONTENT server-side. The hero image is NOT — it
+  // lives in the content body as EMAIL_HERO_TOKEN and has to be swapped for the
+  // uploaded URL here, before the create, since the content is published in
+  // this function and never passes through the journey-payload substitution.
+  async function buildAndPublishEmail(heroUrl) {
+    let raw = JSON.stringify(EMAIL_CONTENT);
+    if (raw.includes(EMAIL_HERO_TOKEN)) {
+      if (!heroUrl) throw new Error('Email content still contains ' + EMAIL_HERO_TOKEN + ' but no hero image was uploaded — refusing to publish a broken image.');
+      raw = raw.split(EMAIL_HERO_TOKEN).join(heroUrl);
+      console.log('  hero image set to', heroUrl);
+    }
+    const content = JSON.parse(raw);
     let r = await fetch(CONTENT_BASE, { method: 'POST', headers: { ...headers(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(content) });
     let resp = await r.text();
     if (!r.ok) throw new Error('Email content create failed: HTTP ' + r.status + ' ' + resp);
@@ -743,14 +763,17 @@ JS_TEMPLATE = r"""// PMCL Tournament Communications console script — generated
     return t;
   }
 
-  let ncIconUrl = null, popupBgUrl = null;
+  // Declared together: emailHeroUrl is read unconditionally further down, so a
+  // missing declaration threw ReferenceError under 'use strict' on every run.
+  let ncIconUrl = null, popupBgUrl = null, emailHeroUrl = null;
+  const emailNeedsHero = !!EMAIL_CONTENT && JSON.stringify(EMAIL_CONTENT).includes(EMAIL_HERO_TOKEN);
   if (FOLDER_ID) {
-    console.log('Uploading photos...');
+    console.log('Uploading photos — ' + (emailNeedsHero ? 'three' : 'two') + ' pickers.');
     const ncIconFile = await pickFile('NC ICON');
     ncIconUrl = (await uploadAsset(ncIconFile, 'NC ICON')).absolute_link;
     const popupBgFile = await pickFile('POP-UP BACKGROUND');
     popupBgUrl = (await uploadAsset(popupBgFile, 'POP-UP BACKGROUND')).absolute_link;
-    if (EMAIL_CONTENT && EMAIL_HERO_TOKEN) {
+    if (emailNeedsHero) {
       const emailHeroFile = await pickFile('EMAIL HERO IMAGE');
       emailHeroUrl = (await uploadAsset(emailHeroFile, 'EMAIL HERO IMAGE')).absolute_link;
     }
@@ -761,7 +784,7 @@ JS_TEMPLATE = r"""// PMCL Tournament Communications console script — generated
   let emailContentId = null;
   if (EMAIL_CONTENT) {
     console.log('Creating + publishing email content...');
-    emailContentId = await buildAndPublishEmail();
+    emailContentId = await buildAndPublishEmail(emailHeroUrl);
   }
 
   console.log('Reserving journey id...');
@@ -772,7 +795,8 @@ JS_TEMPLATE = r"""// PMCL Tournament Communications console script — generated
   text = text.split(RESERVED_ID_TOKEN).join(realId);
   if (ncIconUrl) text = text.split(NC_ICON_TOKEN).join(ncIconUrl);
   if (popupBgUrl) text = text.split(POPUP_BG_TOKEN).join(popupBgUrl);
-  if (emailHeroUrl) text = text.split(EMAIL_HERO_TOKEN).join(emailHeroUrl);
+  // No EMAIL_HERO_TOKEN pass here: the hero lives in the email *content*, which
+  // buildAndPublishEmail already substituted and published above.
   if (emailContentId) text = text.split(EMAIL_CONTENT_ID_TOKEN).join(emailContentId);
   text = regen(text);
   const body = JSON.parse(text);
@@ -863,7 +887,7 @@ def main() -> int:
 
     print("Verification:")
     all_ok = True
-    for ok, msg in verify(body, args.tournament_id, upload_photos):
+    for ok, msg in verify(body, args.tournament_id, upload_photos, email_content):
         print(f"  {'OK  ' if ok else 'FAIL'} {msg}")
         all_ok = all_ok and ok
     if not all_ok:
