@@ -315,6 +315,62 @@ def _detect_mode(text: str, fallback: str) -> str:
     return fallback
 
 
+def _extract_all_specs(text: str) -> list[dict]:
+    """Every JSON object in a reply that looks like a buildable spec.
+
+    A campaign is many objects but a spec builds ONE, so an operator either asks
+    per object or gets several specs in one reply. Both are supported: fenced
+    blocks first (what the model emits when listing several), else the whole
+    reply, else the first balanced {...}."""
+    blob = (text or "").strip()
+    found: list[dict] = []
+    seen: set[str] = set()
+
+    def consider(candidate: str) -> None:
+        try:
+            spec = json.loads(candidate)
+        except ValueError:
+            return
+        if not isinstance(spec, dict):
+            return
+        # A spec is identifiable by the key that selects its engine.
+        if not ({"recipe", "chain", "reference", "kind"} & set(spec)):
+            return
+        fingerprint = json.dumps(spec, sort_keys=True)
+        if fingerprint not in seen:
+            seen.add(fingerprint)
+            found.append(spec)
+
+    for fence in re.findall(r"```(?:json|JSON)?\s*(.*?)```", blob, re.S):
+        consider(fence.strip())
+    if not found:
+        consider(blob)
+    if not found:
+        depth, start = 0, None
+        for i, ch in enumerate(blob):
+            if ch == "{":
+                if depth == 0:
+                    start = i
+                depth += 1
+            elif ch == "}" and depth:
+                depth -= 1
+                if depth == 0 and start is not None:
+                    consider(blob[start:i + 1])
+                    start = None
+    return found
+
+
+def _spec_mode(spec: dict) -> str:
+    """Which engine builds this spec, from its own keys."""
+    if "kind" in spec and ("date" in spec or "dates" in spec):
+        return "randomizer"
+    if "reference" in spec:
+        return "graph"
+    if isinstance(spec.get("chain"), list):
+        return "chain"
+    return "spec"
+
+
 def _repair_spec(settings, spec_text: str, refusal: str, mode: str) -> str | None:
     """Ask the planner to fix a spec the composer refused. Returns the corrected
     reply, or None if the model could not be reached.
@@ -376,9 +432,40 @@ def planner_compose(
     except ImportError as exc:
         return JSONResponse({"error": f"Composer not available: {exc}"})
 
-    # The browser's regex guess is only a fallback — the spec's own keys decide.
-    mode = _detect_mode(text, mode)
     settings = get_settings()
+
+    # A campaign is many objects; a spec builds one. Build every spec present so
+    # a reply listing several journeys produces several scripts in one click.
+    specs = _extract_all_specs(text)
+    if not specs:
+        return JSONResponse({
+            "error": "That reply is a plan, not a spec — there is no buildable "
+                     "JSON object in it. Ask for one object at a time: say "
+                     "\"journey 2 in full\", then \"generate json\". For the "
+                     "whole campaign, ask for \"the spec JSON for every "
+                     "journey, one JSON block each\"."})
+    if len(specs) > 1:
+        results = []
+        for i, spec in enumerate(specs, 1):
+            spec_mode = _spec_mode(spec)
+            try:
+                code, log, cmd, js, filename = generate_composed_console_script(
+                    json.dumps(spec), mode=spec_mode)
+            except Exception as exc:
+                logger.warning("planner compose failed on spec %d: %s", i, exc)
+                code, log, js, filename = 1, f"Composer failed to run: {exc}", None, ""
+            results.append({
+                "index": i,
+                "name": spec.get("journey_name") or spec.get("name") or f"object {i}",
+                "mode": spec_mode, "ok": code == 0 and bool(js),
+                "returncode": code, "log": log, "js": js, "filename": filename,
+            })
+        built = sum(1 for r in results if r["ok"])
+        return JSONResponse({"ok": built > 0, "multi": True, "built": built,
+                             "total": len(results), "results": results})
+
+    # Single spec: the mode comes from the spec itself, not the browser's guess.
+    mode = _spec_mode(specs[0])
     attempts: list[dict] = []
     current = text
     # Every refusal the composer emits names the offending field and says how to

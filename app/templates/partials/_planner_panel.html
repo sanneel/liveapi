@@ -218,9 +218,40 @@ NOTES
       try { data = await res.json(); }
       catch(e){ const raw = await res.text().catch(()=>""); throw new Error(`HTTP ${res.status} (non-JSON): ${raw.slice(0,300)}`); }
 
+      const dlLink = (js, filename, label) => {
+        const url = URL.createObjectURL(new Blob([js], { type: "text/javascript" }));
+        const a = document.createElement("a");
+        a.href = url; a.download = filename || "composed_console.js";
+        a.textContent = label || ("⬇ " + (filename || "console script"));
+        a.style.cssText = "display:inline-block;font-weight:600;text-decoration:none;"
+                        + "border:1px solid #d7dae0;border-radius:6px;padding:6px 10px;color:inherit";
+        return a;
+      };
+
       if(data.error){
         bub.innerHTML = `<pre style="color:#c0392b">${esc(data.error)}</pre>`;
         hint.textContent = "";
+      } else if(data.multi){
+        // A campaign is many objects; one reply can carry several specs.
+        bub.innerHTML = `<div style="font-weight:600;margin-bottom:6px">`
+                      + `Built ${data.built} of ${data.total} objects</div>`;
+        const list = document.createElement("div");
+        list.style.cssText = "display:flex;flex-direction:column;gap:6px";
+        for(const r of data.results){
+          const row = document.createElement("div");
+          if(r.ok){
+            row.append(dlLink(r.js, r.filename, `⬇ ${r.index}. ${r.name} (${r.mode})`));
+          } else {
+            const why = (r.log || "").trim().split("\n").filter(Boolean).pop() || "refused";
+            row.innerHTML = `<span style="color:#c0392b">⛔ ${esc(String(r.index))}. `
+                          + `${esc(r.name)} — ${esc(why.slice(0,160))}</span>`;
+          }
+          list.append(row);
+        }
+        bub.append(list);
+        hint.textContent = data.built === data.total
+          ? "All built. Paste each into a logged-in backoffice console (F12)."
+          : "Some refused — paste the reason back into the chat to have the planner fix those.";
       } else if(!data.ok){
         bub.innerHTML = `<pre style="color:#c0392b">⛔ Composer refused (exit ${esc(String(data.returncode))})\n\n`
                       + `${esc(data.log || "")}</pre>`;
