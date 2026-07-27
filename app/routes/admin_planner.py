@@ -35,6 +35,10 @@ PLANNER_DIR = REPO_ROOT / "journey-planner"
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 MAX_MESSAGES = 40          # cap conversation length forwarded upstream
+# Composer refusals are precise and single-edit, so one or two automatic repair
+# rounds convert most of them into a script. Beyond that the model tends to
+# rewrite the journey rather than fix the field, so the operator should see it.
+MAX_COMPOSE_REPAIRS = 2
 MAX_CHARS = 20000          # per-message guard
 
 router = APIRouter()
@@ -232,6 +236,35 @@ def planner_page(
     return RedirectResponse(url="/admin/promotions?tab=planner", status_code=307)
 
 
+def _repair_spec(settings, spec_text: str, refusal: str, mode: str) -> str | None:
+    """Ask the planner to fix a spec the composer refused. Returns the corrected
+    reply, or None if the model could not be reached.
+
+    Kept deliberately narrow: the model is given the spec, the exact refusal and
+    one instruction — change only what the refusal names. A free-form "try
+    again" tends to produce a different journey rather than the same journey
+    with the error fixed."""
+    instruction = (
+        f"The composer REFUSED this {mode} spec. Fix ONLY what the refusal names "
+        f"and re-emit the corrected JSON object — no prose, no explanation, no "
+        f"other changes to the journey.\n\n"
+        f"--- SPEC ---\n{spec_text}\n\n--- REFUSAL ---\n{refusal.strip()[:4000]}\n"
+    )
+    try:
+        provider = _resolve_provider(settings)
+        system_prompt = _build_system_prompt(lean=(provider == "groq"))
+        caller = _call_groq if provider == "groq" else _call_gemini
+        text, error = caller(settings, system_prompt,
+                             [{"role": "user", "text": instruction}], 0.0)
+    except Exception as exc:
+        logger.warning("spec repair call failed: %s", exc)
+        return None
+    if error or not text:
+        logger.warning("spec repair unavailable: %s", error)
+        return None
+    return text
+
+
 @router.post("/admin/planner/compose")
 def planner_compose(
     payload: dict = Body(...),
@@ -260,18 +293,41 @@ def planner_compose(
 
     try:
         from ..services.journey_cloner_runner import generate_composed_console_script
-        code, log, cmd, js, filename = generate_composed_console_script(text, mode=mode)
-    except FileNotFoundError as exc:
-        return JSONResponse({"error": f"Composer not found: {exc}"})
-    except Exception as exc:                      # subprocess timeout, OSError, ...
-        logger.warning("planner compose failed: %s", exc)
-        return JSONResponse({"error": f"Composer failed to run: {exc}"})
+    except ImportError as exc:
+        return JSONResponse({"error": f"Composer not available: {exc}"})
 
-    if code != 0 or not js:
-        logger.info("planner compose refused (exit %s)", code)
-        return JSONResponse({"ok": False, "returncode": code, "log": log, "cmd": cmd})
-    return JSONResponse({"ok": True, "returncode": 0, "log": log, "cmd": cmd,
-                         "js": js, "filename": filename})
+    settings = get_settings()
+    attempts: list[dict] = []
+    current = text
+    # Every refusal the composer emits names the offending field and says how to
+    # fix it, so a refusal is a repair instruction the model can act on. The
+    # common failures — minor-vs-major units, a game tuple from two different
+    # games, a knob the chosen recipe lacks — are all one-edit fixes that the
+    # model gets right when told. Retrying here is the difference between "the
+    # tool refused" and "the tool produced a script".
+    for attempt in range(1 + MAX_COMPOSE_REPAIRS):
+        try:
+            code, log, cmd, js, filename = generate_composed_console_script(current, mode=mode)
+        except Exception as exc:                  # subprocess timeout, OSError, ...
+            logger.warning("planner compose failed: %s", exc)
+            return JSONResponse({"error": f"Composer failed to run: {exc}"})
+        attempts.append({"attempt": attempt + 1, "returncode": code, "log": log})
+        if code == 0 and js:
+            return JSONResponse({"ok": True, "returncode": 0, "log": log, "cmd": cmd,
+                                 "js": js, "filename": filename,
+                                 "attempts": attempts, "repaired": attempt > 0})
+        if attempt >= MAX_COMPOSE_REPAIRS:
+            break
+        repaired = _repair_spec(settings, current, log, mode)
+        if not repaired:
+            break
+        logger.info("planner compose refused (exit %s) — retrying with a repair", code)
+        current = repaired
+
+    logger.info("planner compose refused after %d attempt(s)", len(attempts))
+    return JSONResponse({"ok": False, "returncode": attempts[-1]["returncode"],
+                         "log": attempts[-1]["log"], "cmd": cmd,
+                         "attempts": attempts})
 
 
 @router.post("/admin/planner/api")

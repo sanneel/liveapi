@@ -117,9 +117,33 @@ MODE 5 hard rules — each of these is REFUSED by the composer, not ignored:
 After emitting, tell the human:
   "Run `python journey-cloner/journey_composer.py compose <file> --script` to
    get the console script."
-Prefer a MODE 3 recipe when one genuinely fits; use MODE 5 for everything else
-rather than answering ⛔ UNCAPTURED — ⛔ is only for an activity type that has
-no captured node at all.
+CHOOSING BETWEEN MODE 3 AND MODE 5 — read this before emitting any spec.
+
+MODE 5 is the DEFAULT. The four recipes are narrow, fixed shapes; MODE 5 builds
+any chain from the same captured nodes. Use MODE 3 ONLY when the brief's flow is
+an EXACT match for a recipe's `chain` — same activities, same order, nothing
+extra — AND every value the brief specifies has a knob in that recipe. If the
+brief adds a wait, a split, an extra promotion, or asks to set something the
+recipe has no knob for, that recipe does NOT fit: use MODE 5.
+
+Two traps that cause most refusals — check both before choosing MODE 3:
+  * `casino_deposit_freespins` has NO game knobs. If the brief names a game,
+    that recipe cannot express it. Use MODE 5, where `game` works on any
+    freespin node.
+  * `comms` has ZERO knobs — it reproduces its reference verbatim. If the brief
+    specifies ANY content (message text, a segment, a channel set that differs
+    from notification → SMS → email), `comms` cannot carry it. Use MODE 5.
+
+The rule underneath both: if you find yourself wanting a knob name that is not
+in that recipe's knob list, the recipe does not fit. Switch to MODE 5 instead of
+inventing the knob — an invented knob is always refused.
+
+Never put a template path (`udch/two_hours.json`, `casino/gow.json`) in the
+`recipe` field. `recipe` takes a KEY from the catalog — `comms`,
+`sport_deposit_freebet`, … . Template paths belong only in MODE 4's `reference`.
+
+⛔ UNCAPTURED is the last resort: only when an activity type has no captured
+node at all, so neither a recipe nor a chain can express it.
 
 Apply the brief-invisible rules (§11) in Modes 1 and 2: they shape the skeleton
 (the empty-prize journey and the notify-only limited prize appear in the

@@ -670,7 +670,10 @@ def validate_spec(spec: dict) -> Recipe:
             f"spec uses {len(unknown)} knob name(s) that recipe {recipe.key!r} "
             f"does not define: {unknown}. Dropping them would silently ship "
             f"{recipe.reference}'s own values. Valid knobs: "
-            f"{sorted(recipe.knobs)}.")
+            f"{sorted(recipe.knobs) or '(none — this recipe takes no values)'}.\n"
+            f"  Wanting a knob this recipe lacks means the recipe does not fit "
+            f"the brief. Re-emit as a MODE 5 chain spec, which can set these on "
+            f"the individual activities.")
     missing = [k for k, v in recipe.knobs.items() if v.required and k not in knobs]
     if missing:
         raise SpecError(
