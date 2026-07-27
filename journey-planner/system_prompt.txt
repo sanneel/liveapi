@@ -168,9 +168,12 @@ N. Create Randomizer/PromoPage (wire journey IDs into prizes)
 
 ## RECIPES CATALOG (for MODE 3 — emit specs against THIS only)
 
-The composer can build these recipes today; each lists its knob names (+ unit
-and meaning). A MODE 3 spec may use only a recipe key and knob names that appear
-here. Empty `{}` means no knobs are wired yet for that recipe.
+The composer can build these recipes today; each lists its knob names (+ meaning,
+`wire_unit`, and whether it is `required`). A MODE 3 spec may use only a recipe
+key and knob names that appear here — an unknown or missing-required knob is now
+REFUSED by the composer, not ignored. Empty `{}` means no knobs are wired yet for
+that recipe. Read `_legend` first: `wire_unit` is the unit of the DESTINATION
+field, NOT the unit you send — always send amounts in major CLP.
 
 <RECIPES_CATALOG>
 </RECIPES_CATALOG>

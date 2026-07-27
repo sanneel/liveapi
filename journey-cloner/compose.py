@@ -47,12 +47,26 @@ class Node:
 
 @dataclass
 class Knob:
-    """A named, LLM-facing value → a real dotted path on one activity. Paths are
-    validated against the recipe's OWN reference journey (they vary per journey)."""
+    """A named, LLM-facing value → a real dotted path on one activity. Paths vary
+    per reference journey; a path that no longer resolves is a hard failure at
+    compose time (see apply_values' MISS handling), never a silent no-op.
+
+    `unit` describes the DESTINATION wire field, not the expected input — a spec
+    always sends major CLP and the composer converts. `required=True` means a
+    spec that omits the knob is refused rather than silently inheriting the
+    reference template's own value (which is real production content)."""
     activity: str
     path: str
     unit: str = "raw"                 # raw | minor  (minor: major CLP × 100)
     desc: str = ""
+    required: bool = False
+    # Extra targets that must receive the SAME logical value, as
+    # (activity, path) or (activity, path, unit). A platform value is often
+    # duplicated across nodes — e.g. a promotion's promo-lobby card carries its
+    # own copy of the freespin game/spins/bet. Setting only the reward node
+    # ships a card advertising the reference template's game. Unit defaults to
+    # this knob's unit; override it for `*_majorUnits` twin fields.
+    also: tuple = ()
 
 
 @dataclass
@@ -66,6 +80,10 @@ class Recipe:
     terminal: str = "end_of_journey"
     knobs: dict[str, Knob] = field(default_factory=dict)   # named -> path
 
+
+# A promotion's promo-lobby card holds its own copy of the reward config. Reward
+# knobs fan out here as well so the card and the bonus never disagree.
+PROMO_FS = "initializationData.placements.0.data.freespinActivity."
 
 RECIPES: dict[str, Recipe] = {
     # The proven comms chain (equivalent to compose_comms.py).
@@ -164,25 +182,42 @@ RECIPES: dict[str, Recipe] = {
         ],
         # Game ids come from the games registry (library/games.json) — the planner
         # resolves a game NAME to these; never guess them.
+        # PROMO is the promotion node's promo-lobby card. It carries its own full
+        # copy of the freespin config (game, spins, bet), so every reward knob
+        # below must write there too or the card advertises instfs.json's own
+        # game/spins while the bonus grants something else.
         knobs={
             "spins": Knob(
                 "freespin_bonus", "initializationData.freespinActivity.spins",
-                "raw", "number of free spins granted"),
+                "raw", "number of free spins granted",
+                also=(("promotion", PROMO_FS + "spins"),)),
             "spin_bet_clp": Knob(
                 "freespin_bonus", "initializationData.freespinActivity.currenciesConfig.CLP.betAmount",
-                "minor", "bet value per spin, in CLP"),
+                "minor", "bet value per spin, in CLP",
+                also=(
+                    ("freespin_bonus", "initializationData.freespinActivity.currenciesConfig.CLP.betAmount_majorUnits", "raw"),
+                    ("promotion", PROMO_FS + "currenciesConfig.CLP.betAmount", "minor"),
+                    ("promotion", PROMO_FS + "currenciesConfig.CLP.betAmount_majorUnits", "raw"),
+                )),
+            # Game ids are `required`: omitting them used to silently ship the
+            # reference template's own game (Sweet Bonanza Super Scatter), which
+            # passes every verify() check. A spec must name the game explicitly.
             "spin_provider": Knob(
                 "freespin_bonus", "initializationData.freespinActivity.provider",
-                "raw", "game provider id (e.g. pragmatic) — from games registry"),
+                "raw", "game provider id (e.g. pragmatic) — from games registry",
+                required=True, also=(("promotion", PROMO_FS + "provider"),)),
             "spin_game_lobby": Knob(
                 "freespin_bonus", "initializationData.freespinActivity.lobbyGameId",
-                "raw", "lobbyGameId — from games registry, never guessed"),
+                "raw", "lobbyGameId — from games registry, never guessed",
+                required=True, also=(("promotion", PROMO_FS + "lobbyGameId"),)),
             "spin_game_wallet": Knob(
                 "freespin_bonus", "initializationData.freespinActivity.walletGameId",
-                "raw", "walletGameId — from games registry"),
+                "raw", "walletGameId — from games registry", required=True,
+                also=(("promotion", PROMO_FS + "walletGameId"),)),
             "spin_game_external": Knob(
                 "freespin_bonus", "initializationData.freespinActivity.externalGameId",
-                "raw", "externalGameId — from games registry"),
+                "raw", "externalGameId — from games registry", required=True,
+                also=(("promotion", PROMO_FS + "externalGameId"),)),
         },
     ),
 }
@@ -363,7 +398,19 @@ def compose(recipe: Recipe, values: dict | None = None) -> tuple[dict, str, list
         "exitCriteriaSettings": None,
         "activitiesConfiguration": acts_cfg,
     }
-    apply_values(shell, values)
+    apply_log = apply_values(shell, values)
+    # A MISS means a knob path did not resolve against this reference — the value
+    # never landed and the journey would ship the template's own value instead.
+    # That used to be invisible (the log was discarded here). Fail closed.
+    misses = [line for line in apply_log if line.startswith("MISS ")]
+    if misses:
+        joined = "\n    ".join(misses)
+        raise SpecError(
+            f"{len(misses)} knob path(s) did not resolve against reference "
+            f"{recipe.reference} — the value would NOT have been applied and the "
+            f"journey would ship the template's own value:\n    {joined}\n"
+            f"  The reference template's shape has changed; re-check the knob "
+            f"paths in RECIPES for this recipe.")
     fix_dates(shell)
     return shell, name, chain_ids
 
@@ -373,6 +420,9 @@ def spec_to_values(recipe: Recipe, spec: dict) -> tuple[dict, list[str]]:
     generic values dict compose() takes. Returns (values, unknown_knob_names).
     Unit-converts CLP majors to minor units. Unknown knobs are refused, not
     guessed (assembler discipline)."""
+    def conv(unit, raw):
+        return int(round(raw * 100)) if unit == "minor" else raw
+
     values: dict = {}
     if spec.get("journey_name"):
         values["journey_name"] = spec["journey_name"]
@@ -383,8 +433,12 @@ def spec_to_values(recipe: Recipe, spec: dict) -> tuple[dict, list[str]]:
         if not knob:
             unknown.append(kname)
             continue
-        val = int(round(raw * 100)) if knob.unit == "minor" else raw
-        sets.setdefault(knob.activity, {})[knob.path] = val
+        sets.setdefault(knob.activity, {})[knob.path] = conv(knob.unit, raw)
+        # Fan the same logical value out to every duplicate copy of it.
+        for target in knob.also:
+            act, path = target[0], target[1]
+            unit = target[2] if len(target) > 2 else knob.unit
+            sets.setdefault(act, {})[path] = conv(unit, raw)
     values["set"] = sets
     return values, unknown
 
@@ -415,9 +469,13 @@ def _find_blockers(obj, prefix: str = "") -> list[str]:
 
 
 def validate_spec(spec: dict) -> Recipe:
-    """Refuse a spec the composer must not build. Two hard gates:
+    """Refuse a spec the composer must not build. Four hard gates:
       1. `recipe` must be one of the PROVEN recipes — no remap to the nearest.
       2. NO ⛔ / RESOLVE_AT_BUILD_TIME / UNCAPTURED blocker anywhere in the spec.
+      3. Every knob name must exist on that recipe. An invented name is a plan
+         with a hole: it used to be dropped with a warning, which shipped the
+         reference template's own value under a green build.
+      4. Every `required` knob must be present, for the same reason.
     Returns the resolved Recipe on success, else raises SpecError with the why."""
     key = spec.get("recipe")
     recipe = RECIPES.get(key)
@@ -434,6 +492,21 @@ def validate_spec(spec: dict) -> Recipe:
             f"build (a ⛔ value would ship as a literal string):\n    {joined}\n"
             f"  Resolve each (e.g. a real lobbyGameId from the games registry) "
             f"and re-emit the spec.")
+    knobs = spec.get("knobs") or {}
+    unknown = [k for k in knobs if k not in recipe.knobs]
+    if unknown:
+        raise SpecError(
+            f"spec uses {len(unknown)} knob name(s) that recipe {recipe.key!r} "
+            f"does not define: {unknown}. Dropping them would silently ship "
+            f"{recipe.reference}'s own values. Valid knobs: "
+            f"{sorted(recipe.knobs)}.")
+    missing = [k for k, v in recipe.knobs.items() if v.required and k not in knobs]
+    if missing:
+        raise SpecError(
+            f"spec omits {len(missing)} required knob(s) for recipe "
+            f"{recipe.key!r}: {missing}. Without them the journey ships "
+            f"{recipe.reference}'s own values (real production content). "
+            f"Resolve each from the games registry and re-emit the spec.")
     return recipe
 
 
@@ -539,11 +612,21 @@ def catalog() -> dict:
     Includes a `references` index for MODE 4 graphs (which reference journey can
     supply which activities)."""
     return {
+        "_legend": {
+            "wire_unit": "Unit of the DESTINATION field on the platform, NOT the "
+                         "unit you send. ALWAYS send amounts in major CLP — the "
+                         "composer converts where wire_unit is 'minor'. Sending "
+                         "minor units yields a 100x value.",
+            "required": "A spec that omits this knob is REFUSED, because omitting "
+                        "it would silently ship the reference template's own value.",
+        },
         "recipes": {
             k: {
                 "reference": r.reference,
                 "chain": [n.activity for n in r.chain] + [r.terminal],
-                "knobs": {kn: {"unit": v.unit, "desc": v.desc}
+                "knobs": {kn: ({"wire_unit": v.unit, "desc": v.desc, "required": True}
+                               if v.required else
+                               {"wire_unit": v.unit, "desc": v.desc})
                           for kn, v in r.knobs.items()},
             } for k, r in RECIPES.items()
         },
@@ -627,10 +710,17 @@ def apply_values(body: dict, values: dict) -> list[str]:
             ok = _dotted_set(act, path, v)
             log.append(f"{'set' if ok else 'MISS'} {aname}.{path} = {v!r}")
             # Keep the rawJourneyData editor mirror in sync (dual-storage rule):
-            # a stale mirror ships an inconsistent journey.
+            # a stale mirror ships an inconsistent journey. The mirror nests an
+            # activity's config under `data.` for most activity types but under
+            # `properties.` for some (a promotion's `placements`, for one), so
+            # try both before calling it a MISS.
             if mcfg is not None and path.startswith("initializationData."):
-                mpath = "data." + path[len("initializationData."):]
-                mok = _dotted_set(mcfg, mpath, v)
+                rest = path[len("initializationData."):]
+                mok, mpath = False, "data." + rest
+                for prefix in ("data.", "properties."):
+                    if _dotted_set(mcfg, prefix + rest, v):
+                        mok, mpath = True, prefix + rest
+                        break
                 log.append(f"{'set' if mok else 'MISS'} mirror {aname}.{mpath} = {v!r}")
     return log
 

@@ -5,6 +5,12 @@ the right rule. These are appended to the planner's system prompt and OVERRIDE
 the knowledge base when they conflict. Add a line the moment you learn something
 — no need to restructure the main KB.
 
+PRECEDENCE INSIDE THIS FILE: the list is append-only and ordered oldest → newest.
+When two bullets here conflict, the LATER one wins — it was learned afterwards.
+Never restate a machine-generated fact (recipe keys, knob names, game IDs) as
+prose here: the RECIPES CATALOG and GAMES REGISTRY sections of the prompt are
+generated and authoritative, and a prose copy can only drift out of date.
+
 - Casino "Cashout" / limit value N → `releaseLimitMultiplier: N` with `limitType: "multiplier"` (it's a multiplier, not a bonus amount).
 - Casino "Contribution" N → the wagering contribution rate; set it ONLY when `withWagering` is true.
 - A Randomizer that has its own `urlShortName` needs NO separate Promo Page — the wheel URL is itself the landing page.
@@ -48,15 +54,15 @@ the knowledge base when they conflict. Add a line the moment you learn something
   - The ONLY renderable output comes from `journey-cloner/compose.py`. A journey body the LLM types by hand will ALWAYS fail: it has `elements: []` (blank canvas — the canvas has no generator, it is copied from a template), invented event names (real freespin completion is `FreespinBonusCollectingFinished`, NOT `FreespinBonusIssued`; sources fire `PlayerAdded`/`Activation`, NOT `Completion`), and a stub `activitiesConfiguration` — every COMPOSER_RULES.md rule is violated at once.
   - When the user asks for "the console script" / "paste script" / "generate the JS", the planner's job ENDS at the MODE 3 spec. Emit the spec block(s) and say: "Run `python journey-cloner/compose.py --spec <file>` to get the renderable console script — I cannot hand-build one that renders." NEVER fabricate a `fetch()` / `journey-drafts` POST script.
 - MODE 3 recipe/knob discipline (refuse, never remap):
-  - The ONLY valid recipes are the 3 in the catalog: `comms`, `sport_deposit_freebet`, `casino_deposit_freespins`. `multipurpose_promotion`, `empty_prize`, `instant_bonus`, `choosable_deposit` etc. are NOT recipes — emitting them is a hallucination. If no recipe fits, output the ⛔ UNCAPTURED line, do NOT map to the nearest recipe.
-  - NEVER map an empty-prize/fallback journey to `comms`. NEVER map an instant-bonus (no wagering) journey to `casino_deposit_freespins` with `wagering_x: 1` — that recipe chains a real `casino_bonus_v2` wagering node, which contradicts an instant bonus. Both are ⛔ UNCAPTURED until a matching recipe is captured.
+  - The ONLY valid recipe keys are exactly the keys of the RECIPES CATALOG section of this prompt — read them from there, never from a list written here (a prose copy drifts every time a recipe is captured). `multipurpose_promotion`, `empty_prize`, `instant_bonus`, `choosable_deposit` etc. are NOT recipe keys — emitting them is a hallucination. If no catalog recipe fits, output the ⛔ UNCAPTURED line, do NOT map to the nearest recipe.
+  - NEVER map an empty-prize/fallback journey to `comms` — that is ⛔ UNCAPTURED until a matching recipe is captured. NEVER map an instant-bonus (no wagering) journey to `casino_deposit_freespins` with `wagering_x: 1` — that recipe chains a real `casino_bonus_v2` wagering node, which contradicts an instant bonus; use the `casino_instant_freespin` recipe instead.
 - MODE 3 spec must preserve blockers (⛔ survives into the machine spec):
-  - Any ⛔ UNCAPTURED or ⛔ RESOLVE_AT_BUILD_TIME from the plan MUST appear in the spec as an explicit unresolved field, e.g. `"spin_game_id": "⛔ RESOLVE_AT_BUILD_TIME"`.
+  - Any ⛔ UNCAPTURED or ⛔ RESOLVE_AT_BUILD_TIME from the plan MUST appear in the spec as an explicit unresolved field, under a REAL knob name from the catalog, e.g. `"spin_game_lobby": "⛔ RESOLVE_AT_BUILD_TIME"`.
   - The composer REFUSES to build a spec containing any ⛔ value, and REFUSES any recipe not in the proven list. A blocker is never silently dropped or guessed away — it stays visible until a human resolves it.
 - Game/provider IDs come from the games registry ONLY (fixes guessed lobby IDs):
-  - The registry is the GAMES REGISTRY section of this prompt (source: journey-cloner/library/games.json). Match the brief's game name/alias to an entry and use its exact `provider`/`lobbyGameId`/`walletGameId`/`externalGameId`.
+  - The registry is the GAMES REGISTRY section of this prompt (source: journey-cloner/library/games_index.md, generated from library/games.json). Match the brief's game name/alias to an entry and use its exact `provider`/`lobbyGameId`/`walletGameId`/`externalGameId`.
   - Never invent a `lobbyGameId`/`provider`. Real IDs are opaque + provider-prefixed (`pragmatic-sweet-bonanza-super-scatter`, wallet `vs20swbonsup`) — unguessable.
-  - If the game is not in the registry, flag `⛔ RESOLVE_AT_BUILD_TIME — game "<name>" not in registry` for the game fields — never a plausible-looking guess. (e.g. "Big Bass Bonanza 1000" is NOT in the registry yet; "Sweet Bonanza Super Scatter" IS.)
+  - If the game is not in the registry, flag `⛔ RESOLVE_AT_BUILD_TIME — game "<name>" not in registry` for the game fields — never a plausible-looking guess. Decide membership by looking it up in the GAMES REGISTRY section every time; never from memory or from an example written here.
 - "Instant Bonus" IS a `freespin_bonus` with `withWagering: false` (captured — templates/casino/instfs.json):
   - Chain is `external_system_source → promotion → freespin_bonus → end_of_journey` (promotion-gated, no deposit, NO casino_bonus_v2). This is now a captured, renderable pattern — not ⛔.
   - The instant marker is `freespinActivity.withWagering: false` + no wagering follow-up node; cashout/release-limit 1 is expressed by the absence of the wagering chain.

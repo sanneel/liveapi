@@ -1,4 +1,8 @@
 {
+  "_legend": {
+    "wire_unit": "Unit of the DESTINATION field on the platform, NOT the unit you send. ALWAYS send amounts in major CLP — the composer converts where wire_unit is 'minor'. Sending minor units yields a 100x value.",
+    "required": "A spec that omits this knob is REFUSED, because omitting it would silently ship the reference template's own value."
+  },
   "recipes": {
     "comms": {
       "reference": "casino/gow_comms.json",
@@ -23,23 +27,23 @@
       ],
       "knobs": {
         "deposit_min_clp": {
-          "unit": "minor",
+          "wire_unit": "minor",
           "desc": "minimum deposit to unlock the offer, in CLP"
         },
         "freebet_amount_clp": {
-          "unit": "minor",
+          "wire_unit": "minor",
           "desc": "free-bet value in CLP"
         },
         "freebet_expire_days": {
-          "unit": "raw",
+          "wire_unit": "raw",
           "desc": "days the free bet stays valid"
         },
         "freebet_max_odd": {
-          "unit": "raw",
+          "wire_unit": "raw",
           "desc": "maximum odds the free bet can be used at"
         },
         "promocode": {
-          "unit": "raw",
+          "wire_unit": "raw",
           "desc": "entry promocode players redeem"
         }
       }
@@ -56,31 +60,31 @@
       ],
       "knobs": {
         "deposit_min_clp": {
-          "unit": "minor",
+          "wire_unit": "minor",
           "desc": "minimum deposit to unlock, in CLP"
         },
         "spins": {
-          "unit": "raw",
+          "wire_unit": "raw",
           "desc": "number of free spins granted"
         },
         "spin_bet_clp": {
-          "unit": "minor",
+          "wire_unit": "minor",
           "desc": "bet value per spin, in CLP"
         },
         "bonus_percent": {
-          "unit": "raw",
+          "wire_unit": "raw",
           "desc": "deposit-match percent (100 = 100%)"
         },
         "wagering_x": {
-          "unit": "raw",
+          "wire_unit": "raw",
           "desc": "wagering multiplier (e.g. 30 = x30)"
         },
         "bonus_expiry_ms": {
-          "unit": "raw",
+          "wire_unit": "raw",
           "desc": "bonus validity in milliseconds (172800000 = 48h)"
         },
         "release_limit_x": {
-          "unit": "raw",
+          "wire_unit": "raw",
           "desc": "max cashout as a multiple of the bonus"
         }
       }
@@ -95,28 +99,32 @@
       ],
       "knobs": {
         "spins": {
-          "unit": "raw",
+          "wire_unit": "raw",
           "desc": "number of free spins granted"
         },
         "spin_bet_clp": {
-          "unit": "minor",
+          "wire_unit": "minor",
           "desc": "bet value per spin, in CLP"
         },
         "spin_provider": {
-          "unit": "raw",
-          "desc": "game provider id (e.g. pragmatic) — from games registry"
+          "wire_unit": "raw",
+          "desc": "game provider id (e.g. pragmatic) — from games registry",
+          "required": true
         },
         "spin_game_lobby": {
-          "unit": "raw",
-          "desc": "lobbyGameId — from games registry, never guessed"
+          "wire_unit": "raw",
+          "desc": "lobbyGameId — from games registry, never guessed",
+          "required": true
         },
         "spin_game_wallet": {
-          "unit": "raw",
-          "desc": "walletGameId — from games registry"
+          "wire_unit": "raw",
+          "desc": "walletGameId — from games registry",
+          "required": true
         },
         "spin_game_external": {
-          "unit": "raw",
-          "desc": "externalGameId — from games registry"
+          "wire_unit": "raw",
+          "desc": "externalGameId — from games registry",
+          "required": true
         }
       }
     }
