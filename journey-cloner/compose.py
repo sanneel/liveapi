@@ -129,7 +129,7 @@ RECIPES: dict[str, Recipe] = {
             "freebet_amount_clp": Knob(
                 "freebet", "initializationData.properties.freeBetAmount.CLP",
                 "minor", "free-bet value in CLP",
-                min_major=100, max_major=1_000_000),
+                min_major=100, max_major=100_000),
             "freebet_expire_days": Knob(
                 "freebet", "initializationData.properties.expireInDays",
                 "raw", "days the free bet stays valid",
@@ -560,6 +560,42 @@ GAME_FIELDS = ("provider", "lobbyGameId", "walletGameId", "externalGameId")
 GAMES_FILE = HERE / "library" / "games.json"
 
 
+def _check_recipe_fit(recipe: Recipe, knobs: dict) -> None:
+    """Refuse a recipe that cannot express the journey being asked for.
+
+    The gates below check VALUES. This one checks SHAPE, because the expensive
+    failures are recipes force-fitted onto a different flow — the spec is
+    structurally perfect and the journey is still wrong. Both cases here were
+    produced by a real brief:
+
+      * `comms` has no knobs at all, so it can only ever ship its reference
+        journey verbatim. A "Physical Prize — notify the winner" journey built
+        as `comms` shipped the Game of the Week segment, its two on-site
+        messages, its SMS and its email, with live production copy.
+      * a recipe whose chain contains a deposit gate, given a minimum of 0, is
+        the wrong recipe: the journey wanted has no deposit step. A wheel-prize
+        freebet built as `sport_deposit_freebet` shipped a pointless deposit
+        node AND the reference's registration entry, promocode and all.
+    """
+    if not recipe.knobs:
+        raise SpecError(
+            f"recipe {recipe.key!r} defines no knobs, so it can only reproduce "
+            f"{recipe.reference} EXACTLY — including its segment, its message "
+            f"copy and its promo links. Building a different campaign with it "
+            f"ships that campaign's content under your journey's name.\n"
+            f"  Use a MODE 5 chain spec instead, where each activity's content "
+            f"is set explicitly.")
+    chain = [n.activity for n in recipe.chain]
+    if "deposit" in chain and knobs.get("deposit_min_clp") == 0:
+        raise SpecError(
+            f"recipe {recipe.key!r} is deposit-gated (chain: "
+            f"{' -> '.join(chain)}) but the spec sets deposit_min_clp to 0. "
+            f"A zero gate means the journey has no deposit step, so this is the "
+            f"wrong recipe — it would still build the deposit node, and the "
+            f"reference's entry activity with it.\n"
+            f"  Use a MODE 5 chain spec with only the activities you want.")
+
+
 def _check_ranges(recipe: Recipe, knobs: dict) -> None:
     """Refuse values outside a knob's plausible range, and non-numeric values on
     numeric knobs.
@@ -574,6 +610,14 @@ def _check_ranges(recipe: Recipe, knobs: dict) -> None:
     for kname, raw in knobs.items():
         knob = recipe.knobs.get(kname)
         if knob is None:
+            continue
+        # null is not "leave it alone" — apply_values would write None into the
+        # journey. A planner emitting `"promocode": null` meant "no promocode",
+        # but the result is a null promocode field, and the reference's own
+        # promocode survives everywhere it is duplicated.
+        if raw is None:
+            bad.append(f"{kname} = null. Omit the knob entirely if it does not "
+                       f"apply; null is written into the journey as-is")
             continue
         numeric = knob.unit == "minor" or knob.min_major is not None or knob.max_major is not None
         if numeric and isinstance(raw, bool):
@@ -759,6 +803,7 @@ def validate_spec(spec: dict) -> Recipe:
             f"{recipe.key!r}: {missing}. Without them the journey ships "
             f"{recipe.reference}'s own values (real production content). "
             f"Resolve each from the games registry and re-emit the spec.")
+    _check_recipe_fit(recipe, knobs)
     _check_ranges(recipe, knobs)
     _check_games(recipe, knobs)
     return recipe

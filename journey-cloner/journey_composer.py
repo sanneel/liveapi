@@ -161,6 +161,11 @@ ALIASES = {
     "bonus": "casino_bonus_v2", "casino_bonus": "casino_bonus_v2", "wagering": "casino_bonus_v2",
     "casino_bonus_v2": "casino_bonus_v2",
     "notification": "notification_center#contract1", "nc": "notification_center#contract1",
+    # The canonical activity name must resolve too. Without it a spec written
+    # with the platform's own wire name — which is what the knowledge base and
+    # MODE 1/2 output both use — was refused as an unknown chain type.
+    "notification_center": "notification_center#contract1",
+    "onsite": "notification_center#contract1",
     "popup": "notification_center#contract5",
     "sms": "dextra_sms", "dextra_sms": "dextra_sms",
     "email": "dextra_email", "dextra_email": "dextra_email",
@@ -203,6 +208,8 @@ SETTINGS_DOC = {
     "deposit": {"min_deposit": "minimum deposit amount, platform minor units (all tiers set to this)",
                 "timeout": "ISO-8601 window, e.g. P0Y0M1DT0H0M0S"},
     "freespin_bonus": {"spins": "free-spin count",
+                       "with_wagering": "false for an INSTANT bonus (no wagering "
+                                        "grind, no casino_bonus follow-up node)",
                        "game": "game name, id or alias from library/games.json "
                                "(see the `games` key); unknown names are REFUSED",
                        "bet_amount": "currenciesConfig.CLP.betAmount (minor units)"},
@@ -322,6 +329,13 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
             # reference template's game in place under a green build.
             for k, v in resolve_game(str(s["game"])).items():
                 note(k, fa.get(k), v); fa[k] = v
+        if "with_wagering" in s:
+            # The instant-bonus marker: freespinActivity.withWagering false and
+            # no wagering follow-up node. Without this setting an instant bonus
+            # could only be expressed by omitting the casino_bonus_v2 node, and
+            # the captured node's own withWagering=true survived into it.
+            v = bool(s["with_wagering"])
+            note("withWagering", fa.get("withWagering"), v); fa["withWagering"] = v
         if "bet_amount" in s:
             cc = (fa.get("currenciesConfig") or {}).get("CLP") or {}
             note("betAmount", cc.get("betAmount"), s["bet_amount"]); cc["betAmount"] = s["bet_amount"]
@@ -419,7 +433,7 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
     # asked for 30 on Big Bass, "VERIFIED OK", exit 0.
     known = {
         "deposit": {"min_deposit", "timeout"},
-        "freespin_bonus": {"spins", "game", "bet_amount"},
+        "freespin_bonus": {"spins", "game", "bet_amount", "with_wagering"},
         "casino_bonus_v2": {"bonus_percent", "wagering", "release_multiplier", "expiration_ms"},
         "notification_center#contract1": {f"{a}_{l}" for a in ("title", "desc", "caption") for l in ("en", "es")},
         "notification_center#contract5": {f"{a}_{l}" for a in ("title", "desc", "caption") for l in ("en", "es")},

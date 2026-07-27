@@ -157,6 +157,23 @@ The rule underneath both: if you find yourself wanting a knob name that is not
 in that recipe's knob list, the recipe does not fit. Switch to MODE 5 instead of
 inventing the knob — an invented knob is always refused.
 
+WHEEL-PRIZE JOURNEYS ARE ALWAYS MODE 5. A journey a randomizer routes a winner
+into starts from the wheel, grants the prize, and ends. It has NO deposit gate
+and NO promocode/registration entry. Every reward recipe carries one or both, so
+none of them fits:
+  * "promotion → freebet"      is NOT sport_deposit_freebet (that is
+    registration → deposit → promotion → freebet, and it will ship a deposit
+    node and the reference's promocode).
+  * "notify the winner"        is NOT comms (that is a segment plus four
+    messages, and it will ship the reference campaign's SMS and email copy).
+Setting a knob to 0 or null to "switch off" the part you do not want does NOT
+work — the activity is still built, and the composer now refuses these outright.
+Write the chain you actually want:
+  {"name": "...", "source": {"type": "api"},
+   "chain": [{"type": "promotion"}, {"type": "freespins", "spins": 30,
+              "game": "La Gran Copa Jugabet", "bet_amount": 2000}],
+   "date": "2026-07-01", "days": 1}
+
 Never put a template path (`udch/two_hours.json`, `casino/gow.json`) in the
 `recipe` field. `recipe` takes a KEY from the catalog — `comms`,
 `sport_deposit_freebet`, … . Template paths belong only in MODE 4's `reference`.

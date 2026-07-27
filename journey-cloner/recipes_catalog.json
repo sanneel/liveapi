@@ -40,7 +40,7 @@
           "desc": "free-bet value in CLP",
           "range": [
             100,
-            1000000
+            100000
           ]
         },
         "freebet_expire_days": {
@@ -308,7 +308,8 @@
         "inline_keys": [
           "bet_amount",
           "game",
-          "spins"
+          "spins",
+          "with_wagering"
         ]
       },
       "multipurpose_promotion": {
@@ -324,7 +325,9 @@
       "notification_center#contract1": {
         "aliases": [
           "nc",
-          "notification"
+          "notification",
+          "notification_center",
+          "onsite"
         ],
         "follow": "NotificationSent",
         "inline_keys": [
