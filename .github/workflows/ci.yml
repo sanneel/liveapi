@@ -25,8 +25,10 @@ jobs:
           pip install -r requirements.txt
 
       # Compile check: catches syntax errors and bad imports across the app.
+      # journey-cloner/ and journey-planner/ are included because the planner
+      # contract lives there and was previously not even syntax-checked.
       - name: Compile sources
-        run: python -m compileall -q app server.py
+        run: python -m compileall -q app server.py journey-cloner journey-planner
 
       # Standalone unit tests (no network, no browser, no live server).
       - name: Embedded odds extraction test
@@ -37,6 +39,12 @@ jobs:
 
       - name: Parser drift canary classification test
         run: python scripts/test_drift_canary.py
+
+      # Planner LLM -> compose.py contract: refusal gates, game-id grounding,
+      # and that recipes_catalog.json (injected verbatim into the prompt) is not
+      # stale relative to compose.py's RECIPES.
+      - name: Composer contract test
+        run: python scripts/test_composer_contract.py
 
       # Migrations must apply cleanly from scratch on a temp database.
       - name: Alembic migrations apply
