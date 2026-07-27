@@ -144,8 +144,24 @@
   const byProvider = {};
   Object.values(sorted).forEach(g => { byProvider[g.provider] = (byProvider[g.provider] || 0) + 1; });
   console.log('Games per provider:', byProvider);
-  try { copy(json); console.log('Copied to clipboard — save as journey-cloner/library/games.json, then rebuild the compact index.'); }
-  catch(e) { console.log('Clipboard blocked; JSON below:'); }
-  console.log(json);
+  // Download as a real file. The full registry runs to a few hundred KB, which
+  // some consoles silently truncate on copy() — a truncated games.json is
+  // invalid JSON and fails at the far end, so the file is the safe path and the
+  // clipboard is the convenience.
+  try {
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'games.json';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+    console.log('%cDownloaded games.json to your Downloads folder.', 'color:#22c55e;font-weight:bold');
+  } catch (e) {
+    console.warn('Download failed:', e.message);
+  }
+  try { copy(json); console.log('Also copied to clipboard (may truncate if very large — prefer the downloaded file).'); }
+  catch(e) { console.log('Clipboard blocked — use the downloaded file.'); }
+  console.log('Next: replace journey-cloner/library/games.json with it, then run');
+  console.log('  python journey-cloner/build_games_registry.py --reindex');
   window.__gamesRegistry = out;
 })();
