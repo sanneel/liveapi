@@ -38,6 +38,7 @@ from ..services.journey_cloner_runner import (
     generate_console_script,
     generate_gow_combined_console_script,
     generate_gow_console_script,
+    generate_bet_and_get_pmcl_console_script,
     generate_tournament_pmcl_console_script,
     missing_templates,
     run_journey_cloner,
@@ -641,7 +642,7 @@ def figma_run(
     return templates.TemplateResponse(request, "figma.html", ctx)
 
 
-_PROMO_TABS = {"overview", "gow", "tournament_pmcl", "journey_cloner", "randomizers", "nc_discount", "scripts", "prediction", "planner", "slot_cards"}
+_PROMO_TABS = {"overview", "gow", "tournament_pmcl", "bet_and_get", "journey_cloner", "randomizers", "nc_discount", "scripts", "prediction", "planner", "slot_cards"}
 _JC_TYPES = ["followup", "bfr", "two_hours", "aft"]
 
 
@@ -729,7 +730,11 @@ def _slot_ns() -> dict:
     return {"suits": runner.suit_choices()}
 
 
-def _promotions_context(*, user, active_tab="overview", gow=None, tournament=None, jc=None,
+
+def _bag_ns(*, form=None, error="", result=None, console_script=None) -> dict:
+    return {"form": form or {}, "error": error, "result": result, "console_script": console_script}
+
+def _promotions_context(*, user, active_tab="overview", gow=None, tournament=None, bag=None, jc=None,
                         rnd=None, nc=None, pred=None) -> dict:
     """Full context for the unified Optimization page: automation graph + the
     embedded generators (GOW, Tournament Comms, Journey Cloner, Randomizers,
@@ -748,6 +753,7 @@ def _promotions_context(*, user, active_tab="overview", gow=None, tournament=Non
         "all_scripts": pc.all_scripts(),
         "gow": gow if gow is not None else _gow_ns(),
         "tournament": tournament if tournament is not None else _tournament_ns(),
+        "bag": bag if bag is not None else _bag_ns(),
         "jc": jc if jc is not None else _jc_ns(),
         "rnd": rnd if rnd is not None else _rnd_ns(),
         "nc": nc if nc is not None else _nc_ns(),
@@ -1171,6 +1177,48 @@ def promotions_tournament_pmcl(
         user=user,
         active_tab="tournament_pmcl",
         tournament=_tournament_ns(form=form, error=error, result=result, console_script=console_script),
+    )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
+
+
+
+@router.post("/admin/promotions/bet-and-get", response_class=HTMLResponse)
+def promotions_bet_and_get(
+    request: Request,
+    date: str = Form(...),
+    email_spec: str = Form(...),
+    allow_any_weekday: str = Form(""),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """Generate the PMCL "Bet & Get" weekend console script — one paste creates
+    the promo page, the journey and the email, all as drafts."""
+    form = {"date": date, "email_spec": email_spec, "allow_any_weekday": bool(allow_any_weekday)}
+    error = ""
+    result = None
+    console_script = None
+    try:
+        if not date.strip():
+            raise ValueError("The promo's Friday date is required.")
+        if not email_spec.strip():
+            raise ValueError("Paste the email text (Subject / Pre-header / Body).")
+        exit_code, output, display_cmd, js_text, js_name = generate_bet_and_get_pmcl_console_script(
+            date=date,
+            email_spec=email_spec,
+            allow_any_weekday=bool(allow_any_weekday),
+        )
+        result = {"exit_code": exit_code, "output": output, "command": display_cmd,
+                  "ok": exit_code == 0 and js_text is not None}
+        if exit_code == 0 and js_text is not None:
+            console_script = {"name": js_name, "text": js_text}
+        else:
+            error = "Console script was not generated. Check the run output below."
+    except Exception as exc:  # noqa: BLE001
+        error = str(exc)
+
+    ctx = _promotions_context(
+        user=user,
+        active_tab="bet_and_get",
+        bag=_bag_ns(form=form, error=error, result=result, console_script=console_script),
     )
     return templates.TemplateResponse(request, "promotions.html", ctx)
 

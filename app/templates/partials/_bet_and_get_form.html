@@ -1,0 +1,109 @@
+{% if bag.error %}<div class="alert err">{{ bag.error }}</div>{% endif %}
+{% if bag.result %}
+  <div class="alert {% if bag.result.ok %}ok{% else %}err{% endif %}">
+    {% if bag.result.ok %}Console script generated.{% else %}Generation exited with code {{ bag.result.exit_code }}.{% endif %}
+  </div>
+{% endif %}
+
+<div class="row-flex">
+  <form method="post" action="/admin/promotions/bet-and-get" class="card card-pad col-rail" style="display:flex; flex-direction:column; gap:14px">
+    <div>
+      <h2 class="card-title">PMCL Bet &amp; Get</h2>
+      <p class="card-sub">The weekend deposit-and-get-a-freebet promotion. One paste creates <b>three drafts</b>: the promo page, the journey and the email. Nothing changes week to week except the dates and the email copy.</p>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Promo Friday</span>
+      <input class="input" name="date" type="date" required value="{{ bag.form.date or '' }}"/>
+      <p class="help" style="margin-top:6px">Pick the <b>Friday</b>. Everything else is derived (Chile time):</p>
+      <ul class="help" style="margin:6px 0 0; padding-left:18px; line-height:1.7">
+        <li>Promo page <b>Fri 04:40</b> → <b>Sun 21:59</b></li>
+        <li>Journey starts <b>immediately</b>, stops <b>Sun 22:00</b></li>
+      </ul>
+      <label class="help" style="display:flex; align-items:center; gap:7px; margin-top:8px; cursor:pointer">
+        <input type="checkbox" name="allow_any_weekday" value="1" {% if bag.form.allow_any_weekday %}checked{% endif %}/>
+        Allow a non-Friday date (shifts the whole window)
+      </label>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Email text</span>
+      <textarea class="input mono" name="email_spec" required rows="18" spellcheck="false" style="font-size:12px" placeholder="Subject: ...
+Pre-header: ...
+Body:
+⚽ El fin de semana trae los mejores partidazos a Fortunazo.
+
+💰 Deposita hoy y recibe un 20% extra en Apuesta Gratis.
+🇨🇱 Apoya a tu favorito en el [Colo Colo vs Concepcion](https://fortunazo.cl/events/...).
+Vive la emoción de Premier League en el [Liverpool vs Chelsea](https://fortunazo.cl/events/...).
+🇪🇸 Y no te pierdas el gran duelo de La Liga: [Barcelona vs Real Madrid](https://fortunazo.cl/events/...).
+
+👉 Elige tu partido, aprovecha tu bono y multiplica tus ganancias.">{{ bag.form.email_spec or '' }}</textarea>
+      <p class="help" style="margin-top:6px">Three sections: <span class="mono">Subject:</span>, <span class="mono">Pre-header:</span> and <span class="mono">Body:</span>. In the body write the three top matches as <span class="mono">[Team A vs Team B](https://fortunazo.cl/events/…)</span> — they become the email's underlined links. A blank line is a paragraph break; a single newline is a line break.</p>
+    </div>
+
+    <button class="btn primary" style="justify-content:center">Generate console script</button>
+    <p class="help">No token needed — the script grabs it from the PMCL backoffice tab on paste.</p>
+  </form>
+
+  <div class="col-main stack">
+    {% if bag.console_script %}
+      <section class="card" style="overflow:hidden">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">Console Script Ready</h2>
+            <p class="card-sub">{{ bag.console_script.name }}</p>
+          </div>
+          <button type="button" id="copy-bag-script" class="btn primary">Copy script</button>
+        </div>
+        <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+          <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
+            <li>Click <b>Copy script</b> above.</li>
+            <li>Open the <b>PMCL</b> backoffice in Chrome (logged in). Press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
+            <li>Paste and press Enter. No file pickers — the promo page keeps its captured background.</li>
+            <li>Watch for the green <b>DONE</b> with the journey, promo page and email ids. All three are <b>drafts</b> — review and publish them by hand.</li>
+          </ol>
+          <textarea id="bag-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ bag.console_script.text }}</textarea>
+        </div>
+      </section>
+      <script>
+        (function () {
+          var btn = document.getElementById('copy-bag-script');
+          var area = document.getElementById('bag-script-text');
+          if (!btn || !area) return;
+          btn.addEventListener('click', function () {
+            var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); });
+            } else { area.select(); document.execCommand('copy'); done(); }
+          });
+        })();
+      </script>
+    {% endif %}
+
+    {% if bag.result %}
+      <section class="card" style="overflow:hidden">
+        <div class="card-head"><h2 class="card-title">Run Output</h2></div>
+        <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+          <div>
+            <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Command</div>
+            <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0">{{ bag.result.command }}</pre>
+          </div>
+          <div>
+            <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Output</div>
+            <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:32rem; margin:0">{{ bag.result.output }}</pre>
+          </div>
+        </div>
+      </section>
+    {% else %}
+      <section class="card card-pad">
+        <h2 class="card-title" style="margin-bottom:8px">What the script creates</h2>
+        <div class="help" style="line-height:1.7">
+          <p style="margin:0 0 8px">In one paste, in this order: reserves a promotion-display id and a journey id → copies the promo page's content and front templates to fresh ids → creates and saves the <b>email content</b> → creates the <b>journey draft</b> (external source → promotion → deposit → freebet → email) already pointing at that email → creates and saves the <b>promo page draft</b> → uploads the promo page's six content files to S3.</p>
+          <p style="margin:0 0 8px">The promo page is linked to <b>this run's</b> journey entry activity, and every activity id in the journey is regenerated so it's a clean graph rather than a copy.</p>
+          <p style="margin:0">No images are uploaded — the copied template already carries the captured background, so there are no file pickers.</p>
+        </div>
+      </section>
+    {% endif %}
+  </div>
+</div>

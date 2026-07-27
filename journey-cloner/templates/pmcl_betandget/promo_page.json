@@ -1,0 +1,139 @@
+{
+ "playerVisibility": "Unauthorized",
+ "showDate": "2026-07-17T08:40:00.0000000Z",
+ "urlShortName": "723dee19-41d2-4102-9e73-27b2a2037104",
+ "promotionSettings": {
+  "type": "JourneyPromotion",
+  "journeyPromotionSettings": {
+   "journeyId": "JRN-0-620043",
+   "activityId": "c05b5769-1819-4a71-bbbd-06fd55c7612e",
+   "activityDescription": "FTCL | SP | Weekend deposit"
+  }
+ },
+ "promotionDisplayId": null,
+ "internalName": "FTCL Weekend",
+ "type": "PromoPage",
+ "subType": null,
+ "languages": [
+  "es"
+ ],
+ "filterConditions": [
+  {
+   "values": [
+    {
+     "id": 40,
+     "name": "VIP-Platinum"
+    },
+    {
+     "id": 42,
+     "name": "VIP-Silver"
+    },
+    {
+     "id": 41,
+     "name": "VIP-Gold"
+    },
+    {
+     "id": 36,
+     "name": "Suspicious"
+    },
+    {
+     "id": 51,
+     "name": "Scammer"
+    },
+    {
+     "id": 48,
+     "name": "Monitoring"
+    },
+    {
+     "id": 45,
+     "name": "Good guys-X"
+    },
+    {
+     "id": 47,
+     "name": "Dangerous"
+    },
+    {
+     "id": 37,
+     "name": "Arbitrageur non-VIP"
+    },
+    {
+     "id": 49,
+     "name": "Arbitrageur"
+    }
+   ],
+   "conditionType": "MultiSelect",
+   "key": "Sport",
+   "filterType": "fairplay_sport_segment",
+   "displayName": "fairplay_sport_segment",
+   "operator": "notIn"
+  },
+  {
+   "values": [
+    {
+     "id": 12,
+     "name": "VIP-Platinum"
+    },
+    {
+     "id": 3,
+     "name": "VIP-Silver"
+    },
+    {
+     "id": 13,
+     "name": "VIP-Gold"
+    },
+    {
+     "id": 11,
+     "name": "Jackpot Hunting"
+    },
+    {
+     "id": 9,
+     "name": "Irregular activity"
+    },
+    {
+     "id": 4,
+     "name": "Good guys-X"
+    },
+    {
+     "id": 10,
+     "name": "Black Games"
+    },
+    {
+     "id": 14,
+     "name": "Bonus abusers"
+    },
+    {
+     "id": 7,
+     "name": "Advantage"
+    },
+    {
+     "id": 8,
+     "name": "Opposite"
+    }
+   ],
+   "conditionType": "MultiSelect",
+   "key": "Casino",
+   "filterType": "fairplay_casino_segment",
+   "displayName": "fairplay_casino_segment",
+   "operator": "notIn"
+  }
+ ],
+ "entrySourceRules": null,
+ "hasCsv": false,
+ "startDate": "2026-07-17T08:40:00.0000000Z",
+ "endDate": "2026-07-20T01:59:00.0000000Z",
+ "promoCode": null,
+ "createDate": "2026-07-27T11:40:50.6949290Z",
+ "redirect": null,
+ "initialShowDate": "2026-07-17T08:40:00.0000000Z",
+ "initialEndDate": "2026-07-20T01:59:00.0000000Z",
+ "riskLevels": null,
+ "brand": "PMCL",
+ "currencies": [
+  {
+   "brand": "PMCL",
+   "currency": "CLP"
+  }
+ ],
+ "contentId": "55ea3f10-9cb3-4bf2-90b6-dddf81882656",
+ "frontId": "a7aa1a9f-53e6-42e9-8c9a-8fee2a102670"
+}

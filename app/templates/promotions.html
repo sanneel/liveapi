@@ -19,6 +19,7 @@
     <div class="tab-group-btns">
       <button type="button" class="tab" data-tab="gow">GOW</button>
       <button type="button" class="tab" data-tab="tournament_pmcl">PMCL Tournament</button>
+      <button type="button" class="tab" data-tab="bet_and_get">PMCL Bet &amp; Get</button>
       <button type="button" class="tab" data-tab="journey_cloner">Promo Codes</button>
       <button type="button" class="tab" data-tab="prediction">Prediction</button>
       <button type="button" class="tab" data-tab="randomizers">Randomizers</button>
@@ -132,6 +133,11 @@
   {% with form=tournament.form, error=tournament.error, result=tournament.result, console_script=tournament.console_script %}
     {% include "partials/_tournament_pmcl_form.html" %}
   {% endwith %}
+</section>
+
+{# ── PMCL Bet & Get (promo page + journey + email) ────────────────────── #}
+<section data-panel="bet_and_get" hidden>
+  {% include "partials/_bet_and_get_form.html" %}
 </section>
 
 {# ── Journey Cloner ──────────────────────────────────────────────────── #}
