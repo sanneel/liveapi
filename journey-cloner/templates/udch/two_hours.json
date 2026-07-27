@@ -1381,9 +1381,9 @@
                 "CLP": 1000
               },
               "wagerFactor": 10,
-              "wageringDays": 7,
+              "wageringDays": 5,
               "wageringInfo": {
-                "minOdd": 2,
+                "minOdd": 2.5,
                 "betTypes": [
                   "ordinar",
                   "express"
@@ -1397,13 +1397,13 @@
                   "prematch"
                 ],
                 "wagerFactor": 10,
-                "minOddParlay": 1.8,
-                "wageringDays": 7,
+                "minOddParlay": 2,
+                "wageringDays": 5,
                 "itemsCheckType": "All",
                 "maxBonusRelease": {
                   "CLP": 10000
                 },
-                "minOddItemParlay": 1.8,
+                "minOddItemParlay": 2,
                 "prolongationDays": 7,
                 "isAllowedToCancel": true
               },
@@ -5059,7 +5059,7 @@
             "CLP": 1000
           },
           "wageringInfo": {
-            "minOdd": 2,
+            "minOdd": 2.5,
             "betTypes": [
               "ordinar",
               "express"
@@ -5073,20 +5073,20 @@
               "prematch"
             ],
             "wagerFactor": 10,
-            "minOddParlay": 1.8,
-            "wageringDays": 7,
+            "minOddParlay": 2,
+            "wageringDays": 5,
             "itemsCheckType": "All",
             "maxBonusRelease": {
               "CLP": 10000
             },
-            "minOddItemParlay": 1.8,
+            "minOddItemParlay": 2,
             "prolongationDays": 7,
             "isAllowedToCancel": true
           },
           "isSportBonusLockEnabled": true
         },
         "displayData": [
-          "7 days"
+          "5 days"
         ],
         "placements": []
       },
@@ -11843,9 +11843,9 @@
                   "CLP": 1000
                 },
                 "wagerFactor": 10,
-                "wageringDays": 7,
+                "wageringDays": 5,
                 "wageringInfo": {
-                  "minOdd": 2,
+                  "minOdd": 2.5,
                   "betTypes": [
                     "ordinar",
                     "express"
@@ -11859,13 +11859,13 @@
                     "prematch"
                   ],
                   "wagerFactor": 10,
-                  "minOddParlay": 1.8,
-                  "wageringDays": 7,
+                  "minOddParlay": 2,
+                  "wageringDays": 5,
                   "itemsCheckType": "All",
                   "maxBonusRelease": {
                     "CLP": 10000
                   },
-                  "minOddItemParlay": 1.8,
+                  "minOddItemParlay": 2,
                   "prolongationDays": 7,
                   "isAllowedToCancel": true
                 },

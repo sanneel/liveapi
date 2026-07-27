@@ -1,0 +1,4805 @@
+{
+  "journeyName": "Copy of FTCL | CS | Torneo Universo Camino a la Gran Final 29.06-19.07",
+  "brand": "PMCL",
+  "currencyCodes": [
+    "CLP"
+  ],
+  "activities": [
+    {
+      "activityId": "8fb1e82f-ce36-4f18-86fb-f69833b6ca81",
+      "activityName": "dwh_source",
+      "activityDisplayName": "Custom Segment",
+      "events": [
+        {
+          "eventName": "PlayerAdded",
+          "eventDisplayName": "Players added to journey",
+          "eventType": "Activation",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "0764f9ca-6503-48f4-afb9-fd5af5e7a542",
+          "count": 18002,
+          "version": 1
+        }
+      ],
+      "eventsHistory": [],
+      "tcGroupEvents": [],
+      "dependencies": [],
+      "dataDependencies": [],
+      "dataKeys": [],
+      "initializationData": {
+        "displayData": [
+          "Activity customized"
+        ],
+        "filterDetails": {
+          "filtersTree": [
+            {
+              "nodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+              "children": [
+                "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                "c533abd1-3f64-4d58-9743-c0836bf21833"
+              ],
+              "nodeType": "Operator",
+              "isDeprecated": true,
+              "parentNodeId": null,
+              "groupOperator": "Exclude",
+              "filterConditionId": null
+            },
+            {
+              "nodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+              "children": [
+                "4c860762-e916-449d-a5af-30a3ff632aeb",
+                "872cc8f5-0db8-4f22-84f4-4b2f3ad0ad74"
+              ],
+              "nodeType": "Operator",
+              "isDeprecated": true,
+              "parentNodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+              "groupOperator": "And",
+              "filterConditionId": null
+            },
+            {
+              "name": "risk_business_segment",
+              "column": {
+                "name": "risk_business_segment",
+                "tableName": "agg_player_summary",
+                "filterName": "Multiple select",
+                "isRequired": false,
+                "description": "Risk segment related to business.",
+                "displayName": "risk_business_segment",
+                "valuesSource": null,
+                "filterConditions": [
+                  {
+                    "operator": "in",
+                    "conditionType": "MultiSelect"
+                  },
+                  {
+                    "operator": "notIn",
+                    "conditionType": "MultiSelect"
+                  }
+                ],
+                "isPredefinedValuesAvailable": true
+              },
+              "height": 42,
+              "nodeId": "4c860762-e916-449d-a5af-30a3ff632aeb",
+              "children": [],
+              "nodeType": "Filter",
+              "operator": "notIn",
+              "settings": {
+                "value": "",
+                "values": [
+                  "Negative",
+                  "Premium"
+                ],
+                "dateType": "days",
+                "hasEmptyState": false
+              },
+              "showForm": false,
+              "tableName": "agg_player_summary",
+              "filterName": "Multiple select",
+              "isRequired": false,
+              "description": "Risk segment related to business.",
+              "displayName": "risk_business_segment",
+              "databaseName": "dv_marts",
+              "isDeprecated": false,
+              "parentNodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+              "valuesSource": null,
+              "conditionType": "MultiSelect",
+              "groupOperator": null,
+              "filterConditions": [
+                {
+                  "operator": "in",
+                  "conditionType": "MultiSelect"
+                },
+                {
+                  "operator": "notIn",
+                  "conditionType": "MultiSelect"
+                }
+              ],
+              "filterConditionId": "c93400f7-9d2b-404c-9815-ccaa9ed34bf6",
+              "isPredefinedValuesAvailable": true
+            },
+            {
+              "name": "last_deposit",
+              "column": {
+                "name": "last_deposit",
+                "tableName": "agg_player_summary",
+                "filterName": "Date&time",
+                "isRequired": false,
+                "description": "Timestamp of the player's last deposit.",
+                "displayName": "last_deposit",
+                "valuesSource": null,
+                "filterConditions": [
+                  {
+                    "operator": "equal",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "notEqual",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "gte",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "lte",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "between",
+                    "conditionType": "DateTimeBetween"
+                  },
+                  {
+                    "operator": "equal",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "notEqual",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "gte",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "lte",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "between",
+                    "conditionType": "DateTimeRelativeBetween"
+                  }
+                ],
+                "isPredefinedValuesAvailable": false
+              },
+              "height": 42,
+              "nodeId": "872cc8f5-0db8-4f22-84f4-4b2f3ad0ad74",
+              "children": [],
+              "nodeType": "Filter",
+              "operator": "lte",
+              "settings": {
+                "amount": "30",
+                "values": [],
+                "dateType": "days",
+                "hasEmptyState": false
+              },
+              "showForm": false,
+              "tableName": "agg_player_summary",
+              "filterName": "Date&time",
+              "isRequired": false,
+              "description": "Timestamp of the player's last deposit.",
+              "displayName": "last_deposit",
+              "databaseName": "dv_marts",
+              "dateTimeMode": "Relative",
+              "isDeprecated": false,
+              "parentNodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+              "valuesSource": null,
+              "conditionType": "DateTimeRelative",
+              "groupOperator": null,
+              "filterConditions": [
+                {
+                  "operator": "equal",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "notEqual",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "gte",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "lte",
+                  "conditionType": "DateTime"
+                },
+                {
+                  "operator": "between",
+                  "conditionType": "DateTimeBetween"
+                },
+                {
+                  "operator": "equal",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "notEqual",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "gte",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "lte",
+                  "conditionType": "DateTimeRelative"
+                },
+                {
+                  "operator": "between",
+                  "conditionType": "DateTimeRelativeBetween"
+                }
+              ],
+              "filterConditionId": "4fdbdc55-81bb-4d7a-92e9-fa743f071e5f",
+              "isPredefinedValuesAvailable": false
+            },
+            {
+              "name": "restriction_name",
+              "column": {
+                "name": "restriction_name",
+                "tableName": "d_player_restriction",
+                "filterName": "Multiple select",
+                "isRequired": false,
+                "description": "The name of restriction",
+                "displayName": "restriction_name",
+                "valuesSource": null,
+                "filterConditions": [
+                  {
+                    "operator": "in",
+                    "conditionType": "MultiSelect"
+                  },
+                  {
+                    "operator": "notIn",
+                    "conditionType": "MultiSelect"
+                  }
+                ],
+                "isPredefinedValuesAvailable": true
+              },
+              "height": 42,
+              "nodeId": "c533abd1-3f64-4d58-9743-c0836bf21833",
+              "children": [],
+              "nodeType": "Filter",
+              "operator": "in",
+              "settings": {
+                "values": [
+                  "login",
+                  "deposit"
+                ],
+                "dateType": "days",
+                "hasEmptyState": false
+              },
+              "showForm": false,
+              "tableName": "d_player_restriction",
+              "filterName": "Multiple select",
+              "isRequired": false,
+              "description": "The name of restriction",
+              "displayName": "restriction_name",
+              "databaseName": "dv_marts",
+              "isDeprecated": false,
+              "parentNodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+              "valuesSource": null,
+              "conditionType": "MultiSelect",
+              "groupOperator": null,
+              "filterConditions": [
+                {
+                  "operator": "in",
+                  "conditionType": "MultiSelect"
+                },
+                {
+                  "operator": "notIn",
+                  "conditionType": "MultiSelect"
+                }
+              ],
+              "filterConditionId": "16c4ecdc-92b9-4c38-8b22-cf789288f24a",
+              "isPredefinedValuesAvailable": true
+            }
+          ],
+          "filterConditions": [
+            {
+              "id": "c93400f7-9d2b-404c-9815-ccaa9ed34bf6",
+              "values": [
+                "Negative",
+                "Premium"
+              ],
+              "nodeType": "Filter",
+              "operator": "notIn",
+              "fieldName": "risk_business_segment",
+              "tableName": "agg_player_summary",
+              "columnName": "risk_business_segment",
+              "databaseName": "dv_marts",
+              "conditionType": "MultiSelect",
+              "hasEmptyState": false
+            },
+            {
+              "id": "4fdbdc55-81bb-4d7a-92e9-fa743f071e5f",
+              "value": "P0Y0M30DT0H0M0S",
+              "nodeType": "Filter",
+              "operator": "lte",
+              "fieldName": "last_deposit",
+              "tableName": "agg_player_summary",
+              "columnName": "last_deposit",
+              "databaseName": "dv_marts",
+              "conditionType": "DateTimeRelative",
+              "hasEmptyState": false
+            },
+            {
+              "id": "16c4ecdc-92b9-4c38-8b22-cf789288f24a",
+              "values": [
+                "login",
+                "deposit"
+              ],
+              "nodeType": "Filter",
+              "operator": "in",
+              "fieldName": "restriction_name",
+              "tableName": "d_player_restriction",
+              "columnName": "restriction_name",
+              "databaseName": "dv_marts",
+              "conditionType": "MultiSelect",
+              "hasEmptyState": false
+            }
+          ]
+        },
+        "dataSourceName": "default",
+        "currentTemplate": {
+          "id": "d76840be-3916-4e4b-951b-4fbf540e0cea",
+          "name": "Fortunazo players last dep <=30d",
+          "brand": "PMCL",
+          "group": "myTeamFilterTemplates",
+          "createdBy": "e2d2d631-946c-4edc-96ed-2b243e32bc8b",
+          "currencyCodes": [
+            "CLP"
+          ],
+          "filterDetails": {
+            "filtersTree": [
+              {
+                "nodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+                "children": [
+                  "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                  "c533abd1-3f64-4d58-9743-c0836bf21833"
+                ],
+                "nodeType": "Operator",
+                "isDeprecated": true,
+                "parentNodeId": null,
+                "groupOperator": "Exclude",
+                "filterConditionId": null
+              },
+              {
+                "nodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                "children": [
+                  "4c860762-e916-449d-a5af-30a3ff632aeb",
+                  "872cc8f5-0db8-4f22-84f4-4b2f3ad0ad74"
+                ],
+                "nodeType": "Operator",
+                "isDeprecated": true,
+                "parentNodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+                "groupOperator": "And",
+                "filterConditionId": null
+              },
+              {
+                "name": "risk_business_segment",
+                "column": {
+                  "name": "risk_business_segment",
+                  "tableName": "agg_player_summary",
+                  "filterName": "Multiple select",
+                  "isRequired": false,
+                  "description": "Risk segment related to business.",
+                  "displayName": "risk_business_segment",
+                  "valuesSource": null,
+                  "filterConditions": [
+                    {
+                      "operator": "in",
+                      "conditionType": "MultiSelect"
+                    },
+                    {
+                      "operator": "notIn",
+                      "conditionType": "MultiSelect"
+                    }
+                  ],
+                  "isPredefinedValuesAvailable": true
+                },
+                "height": 41.66666793823242,
+                "nodeId": "4c860762-e916-449d-a5af-30a3ff632aeb",
+                "children": [],
+                "nodeType": "Filter",
+                "operator": "notIn",
+                "settings": {
+                  "value": "",
+                  "values": [
+                    "Negative",
+                    "Premium"
+                  ],
+                  "dateType": "days",
+                  "hasEmptyState": false
+                },
+                "showForm": false,
+                "tableName": "agg_player_summary",
+                "filterName": "Multiple select",
+                "isRequired": false,
+                "description": "Risk segment related to business.",
+                "displayName": "risk_business_segment",
+                "databaseName": "dv_marts",
+                "isDeprecated": false,
+                "parentNodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                "valuesSource": null,
+                "conditionType": "MultiSelect",
+                "groupOperator": null,
+                "filterConditions": [
+                  {
+                    "operator": "in",
+                    "conditionType": "MultiSelect"
+                  },
+                  {
+                    "operator": "notIn",
+                    "conditionType": "MultiSelect"
+                  }
+                ],
+                "filterConditionId": "c93400f7-9d2b-404c-9815-ccaa9ed34bf6",
+                "isPredefinedValuesAvailable": true
+              },
+              {
+                "name": "last_deposit",
+                "column": {
+                  "name": "last_deposit",
+                  "tableName": "agg_player_summary",
+                  "filterName": "Date&time",
+                  "isRequired": false,
+                  "description": "Timestamp of the player's last deposit.",
+                  "displayName": "last_deposit",
+                  "valuesSource": null,
+                  "filterConditions": [
+                    {
+                      "operator": "equal",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "notEqual",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "gte",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "lte",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "between",
+                      "conditionType": "DateTimeBetween"
+                    },
+                    {
+                      "operator": "equal",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "notEqual",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "gte",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "lte",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "between",
+                      "conditionType": "DateTimeRelativeBetween"
+                    }
+                  ],
+                  "isPredefinedValuesAvailable": false
+                },
+                "height": 41.66666793823242,
+                "nodeId": "872cc8f5-0db8-4f22-84f4-4b2f3ad0ad74",
+                "children": [],
+                "nodeType": "Filter",
+                "operator": "lte",
+                "settings": {
+                  "amount": "30",
+                  "values": [],
+                  "dateType": "days",
+                  "hasEmptyState": false
+                },
+                "showForm": false,
+                "tableName": "agg_player_summary",
+                "filterName": "Date&time",
+                "isRequired": false,
+                "description": "Timestamp of the player's last deposit.",
+                "displayName": "last_deposit",
+                "databaseName": "dv_marts",
+                "dateTimeMode": "Relative",
+                "isDeprecated": false,
+                "parentNodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                "valuesSource": null,
+                "conditionType": "DateTimeRelative",
+                "groupOperator": null,
+                "filterConditions": [
+                  {
+                    "operator": "equal",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "notEqual",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "gte",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "lte",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "between",
+                    "conditionType": "DateTimeBetween"
+                  },
+                  {
+                    "operator": "equal",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "notEqual",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "gte",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "lte",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "between",
+                    "conditionType": "DateTimeRelativeBetween"
+                  }
+                ],
+                "filterConditionId": "4fdbdc55-81bb-4d7a-92e9-fa743f071e5f",
+                "isPredefinedValuesAvailable": false
+              },
+              {
+                "name": "restriction_name",
+                "column": {
+                  "name": "restriction_name",
+                  "tableName": "d_player_restriction",
+                  "filterName": "Multiple select",
+                  "isRequired": false,
+                  "description": "The name of restriction",
+                  "displayName": "restriction_name",
+                  "valuesSource": null,
+                  "filterConditions": [
+                    {
+                      "operator": "in",
+                      "conditionType": "MultiSelect"
+                    },
+                    {
+                      "operator": "notIn",
+                      "conditionType": "MultiSelect"
+                    }
+                  ],
+                  "isPredefinedValuesAvailable": true
+                },
+                "height": 41.66666793823242,
+                "nodeId": "c533abd1-3f64-4d58-9743-c0836bf21833",
+                "children": [],
+                "nodeType": "Filter",
+                "operator": "in",
+                "settings": {
+                  "values": [
+                    "login",
+                    "deposit"
+                  ],
+                  "dateType": "days",
+                  "hasEmptyState": false
+                },
+                "showForm": false,
+                "tableName": "d_player_restriction",
+                "filterName": "Multiple select",
+                "isRequired": false,
+                "description": "The name of restriction",
+                "displayName": "restriction_name",
+                "databaseName": "dv_marts",
+                "isDeprecated": false,
+                "parentNodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+                "valuesSource": null,
+                "conditionType": "MultiSelect",
+                "groupOperator": null,
+                "filterConditions": [
+                  {
+                    "operator": "in",
+                    "conditionType": "MultiSelect"
+                  },
+                  {
+                    "operator": "notIn",
+                    "conditionType": "MultiSelect"
+                  }
+                ],
+                "filterConditionId": "16c4ecdc-92b9-4c38-8b22-cf789288f24a",
+                "isPredefinedValuesAvailable": true
+              }
+            ],
+            "filterConditions": [
+              {
+                "id": "c93400f7-9d2b-404c-9815-ccaa9ed34bf6",
+                "values": [
+                  "Negative",
+                  "Premium"
+                ],
+                "operator": "notIn",
+                "fieldName": "risk_business_segment",
+                "tableName": "agg_player_summary",
+                "databaseName": "dv_marts",
+                "conditionType": "MultiSelect",
+                "hasEmptyState": false
+              },
+              {
+                "id": "4fdbdc55-81bb-4d7a-92e9-fa743f071e5f",
+                "value": "P30D",
+                "operator": "lte",
+                "fieldName": "last_deposit",
+                "tableName": "agg_player_summary",
+                "databaseName": "dv_marts",
+                "conditionType": "DateTimeRelative",
+                "hasEmptyState": null
+              },
+              {
+                "id": "16c4ecdc-92b9-4c38-8b22-cf789288f24a",
+                "values": [
+                  "login",
+                  "deposit"
+                ],
+                "operator": "in",
+                "fieldName": "restriction_name",
+                "tableName": "d_player_restriction",
+                "databaseName": "dv_marts",
+                "conditionType": "MultiSelect",
+                "hasEmptyState": false
+              }
+            ]
+          }
+        },
+        "placements": []
+      },
+      "isEditable": true,
+      "changedBy": {
+        "authorId": "ba719889-4868-445d-9f9f-d94ddbfcd67c",
+        "authorName": "Sandro S"
+      },
+      "changedAt": "2026-06-24T13:08:40.1104280Z",
+      "version": 1
+    },
+    {
+      "activityId": "cc832e64-fe9d-4c12-84d0-d752626f9e14",
+      "activityName": "dextra_email",
+      "activityDisplayName": "Email 1",
+      "events": [
+        {
+          "eventName": "SuccessEmailSend",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "f0c312d2-0c84-427c-bd38-3148e56857ec",
+          "count": 15263,
+          "version": 1
+        },
+        {
+          "eventName": "FailedEmailSend",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "f0c312d2-0c84-427c-bd38-3148e56857ec",
+          "count": 2739,
+          "version": 1
+        }
+      ],
+      "eventsHistory": [],
+      "tcGroupEvents": [],
+      "dependencies": [],
+      "dataDependencies": [
+        {
+          "key": "BrandDomain"
+        }
+      ],
+      "dataKeys": [],
+      "initializationData": {
+        "displayData": [
+          "CSE-0-15017 FTCL Tournament 29.06 a la Gran Final"
+        ],
+        "emailSettings": {
+          "template": {
+            "id": "CSE-0-15017"
+          },
+          "emailSource": "Template",
+          "transportId": 1417,
+          "fromLineText": "Fortunazo",
+          "defaultVariables": [],
+          "newVariablesState": {
+            "es": {
+              "supportedVariablesEB": [
+                {
+                  "name": "BrandDomain",
+                  "isRequired": true,
+                  "defaultValue": ""
+                }
+              ],
+              "nonSupportedVariablesEB": []
+            }
+          },
+          "checkEmailVerified": true,
+          "localizedVariables": [
+            {
+              "variables": [
+                {
+                  "name": "BrandDomain",
+                  "isRequired": true,
+                  "defaultValue": ""
+                }
+              ],
+              "languageCode": "es"
+            }
+          ],
+          "playerAgreementName": "CasinoInfo"
+        },
+        "dataDependencies": [
+          {
+            "key": "BrandDomain"
+          }
+        ],
+        "placements": []
+      },
+      "isEditable": true,
+      "changedBy": {
+        "authorId": "ba719889-4868-445d-9f9f-d94ddbfcd67c",
+        "authorName": "Sandro S"
+      },
+      "changedAt": "2026-06-24T13:08:40.1105380Z",
+      "version": 1
+    },
+    {
+      "activityId": "1a7e2bf9-c43c-4bd8-b847-0e4fa26cd38b",
+      "activityName": "dextra_sms",
+      "activityDisplayName": "SMS",
+      "events": [
+        {
+          "eventName": "SuccessSmsSend",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "1d19a450-914e-46c6-843b-1cdf04978eb6",
+          "count": 0,
+          "version": 1
+        },
+        {
+          "eventName": "FailedSmsSend",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "751c77a5-6f69-4af4-bf56-52f28c8185e9",
+          "count": 0,
+          "version": 1
+        }
+      ],
+      "eventsHistory": [],
+      "tcGroupEvents": [],
+      "dependencies": [],
+      "dataDependencies": [
+        {
+          "key": "BrandDomain"
+        }
+      ],
+      "dataKeys": [],
+      "initializationData": {
+        "version": "v2",
+        "rawValues": {
+          "baseUrl": "https://frtnz.cl",
+          "variables": [
+            {
+              "name": "BrandDomain",
+              "activityId": "",
+              "dataSource": "dwh_source",
+              "isRequired": true,
+              "defaultValue": ""
+            }
+          ],
+          "messageText": "Fortunazo | Camino a la Gran Final. Apuesta ya y gana iPhone, dron, parlante y $5.050.000\nhttps://{{BrandDomain}}",
+          "transportId": "Default",
+          "languageCode": "es",
+          "useAutologin": true,
+          "validityPeriod": 48,
+          "checkPhoneVerified": true,
+          "deliveryTimeSettings": {
+            "to": "22:00:00",
+            "days": [
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday",
+              "Saturday",
+              "Sunday"
+            ],
+            "from": "09:00:00"
+          },
+          "validationPeriodType": "hours",
+          "localizedMessageTexts": {
+            "en": {
+              "variables": [
+                {
+                  "name": "BrandDomain",
+                  "activityId": "",
+                  "dataSource": "dwh_source",
+                  "isRequired": true,
+                  "defaultValue": ""
+                }
+              ],
+              "messageText": "Big Fortune | Road to the Grand Final. Bet now and win an iPhone, drone, speaker and $5,050,000 https://{{BrandDomain}}?%$utm_tags%#_smartico_dp=dp:gf_tournaments&id=5431",
+              "languageCode": "en"
+            },
+            "es": {
+              "variables": [
+                {
+                  "name": "BrandDomain",
+                  "activityId": "",
+                  "dataSource": "dwh_source",
+                  "isRequired": true,
+                  "defaultValue": ""
+                }
+              ],
+              "messageText": "Fortunazo | Camino a la Gran Final. Apuesta ya y gana iPhone, dron, parlante y $5.050.000 https://{{BrandDomain}}?%$utm_tags%#_smartico_dp=dp:gf_tournaments&id=5431",
+              "languageCode": "es"
+            }
+          }
+        },
+        "displayData": [
+          "Fortunazo | Camino a la Gran Final. Apuesta ya y gana iPhone, dron, parlante y $5.050.000 https://{{BrandDomain}}?%$utm_tags%#_smartico_dp=dp:gf_tournaments&id=5431"
+        ],
+        "smsSettings": {
+          "baseUrl": "https://frtnz.cl",
+          "variables": [
+            {
+              "name": "BrandDomain",
+              "activityId": "",
+              "dataSource": "dwh_source",
+              "isRequired": true,
+              "defaultValue": ""
+            }
+          ],
+          "messageText": "Fortunazo | Camino a la Gran Final. Apuesta ya y gana iPhone, dron, parlante y $5.050.000 https://{{BrandDomain}}?%$utm_tags%#_smartico_dp=dp:gf_tournaments&id=5431",
+          "transportId": null,
+          "languageCode": "es",
+          "useAutologin": true,
+          "validityPeriod": "P0Y0M0DT48H0M0S",
+          "checkPhoneVerified": true,
+          "deliveryTimeSettings": {
+            "to": {
+              "hours": 22,
+              "minutes": 0
+            },
+            "days": [
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday",
+              "Saturday",
+              "Sunday"
+            ],
+            "from": {
+              "hours": 9,
+              "minutes": 0
+            }
+          },
+          "validationPeriodType": "hours",
+          "localizedMessageTexts": [
+            {
+              "variables": [
+                {
+                  "name": "BrandDomain",
+                  "activityId": "",
+                  "dataSource": "dwh_source",
+                  "isRequired": true,
+                  "defaultValue": ""
+                }
+              ],
+              "messageText": "Fortunazo | Camino a la Gran Final. Apuesta ya y gana iPhone, dron, parlante y $5.050.000 https://{{BrandDomain}}?%$utm_tags%#_smartico_dp=dp:gf_tournaments&id=5431",
+              "languageCode": "es"
+            },
+            {
+              "variables": [
+                {
+                  "name": "BrandDomain",
+                  "activityId": "",
+                  "dataSource": "dwh_source",
+                  "isRequired": true,
+                  "defaultValue": ""
+                }
+              ],
+              "messageText": "Big Fortune | Road to the Grand Final. Bet now and win an iPhone, drone, speaker and $5,050,000 https://{{BrandDomain}}?%$utm_tags%#_smartico_dp=dp:gf_tournaments&id=5431",
+              "languageCode": "en"
+            }
+          ]
+        },
+        "dataDependencies": [
+          {
+            "key": "BrandDomain"
+          }
+        ],
+        "listOfUsedVariables": [
+          "BrandDomain"
+        ],
+        "placements": []
+      },
+      "isEditable": true,
+      "changedBy": {
+        "authorId": "ba719889-4868-445d-9f9f-d94ddbfcd67c",
+        "authorName": "Sandro S"
+      },
+      "changedAt": "2026-06-24T13:08:40.1105500Z",
+      "version": 1
+    },
+    {
+      "activityId": "651b2d3c-ee52-4d4d-80fe-b9e1bf32fcc1",
+      "activityName": "end_of_journey",
+      "events": [],
+      "eventsHistory": [],
+      "tcGroupEvents": [],
+      "dependencies": [],
+      "dataDependencies": [],
+      "dataKeys": [],
+      "isEditable": true,
+      "changedAt": "2026-06-24T13:08:40.1105170Z",
+      "version": 1,
+      "initializationData": {
+        "placements": []
+      }
+    },
+    {
+      "activityId": "0764f9ca-6503-48f4-afb9-fd5af5e7a542",
+      "activityName": "notification_center",
+      "activityDisplayName": "Notification Center",
+      "events": [
+        {
+          "eventName": "NotificationSent",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "4c717fb8-4e67-49f4-9d87-2696393fec6a",
+          "count": 18002,
+          "version": 1
+        },
+        {
+          "eventName": "NotificationNotSent",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "9a55a214-bd08-4b69-8357-382c38eae219",
+          "count": 0,
+          "version": 1
+        }
+      ],
+      "eventsHistory": [],
+      "tcGroupEvents": [],
+      "dependencies": [],
+      "dataDependencies": [
+        {
+          "key": "BrandDomain"
+        }
+      ],
+      "dataKeys": [],
+      "initializationData": {
+        "channel": 1,
+        "category": "2",
+        "contract": 1,
+        "accountId": "",
+        "languages": [
+          {
+            "languageCode": "es"
+          },
+          {
+            "languageCode": "en"
+          }
+        ],
+        "templates": 16001,
+        "displayData": [
+          "16001. PMCL Notification Center"
+        ],
+        "deliveryType": "singleChannel",
+        "validityType": "days",
+        "objectForSend": {
+          "metadata": {
+            "utm_source": "boris",
+            "journeyName": "FTCL | CS | Torneo Universo Camino a la Gran Final 29.06-19.07"
+          },
+          "variables": [
+            {
+              "name": "group",
+              "value": "regular"
+            },
+            {
+              "name": "title",
+              "value": "%title-en%"
+            },
+            {
+              "name": "layout",
+              "value": "1"
+            },
+            {
+              "name": "icon-src",
+              "value": "%icon-src%"
+            },
+            {
+              "name": "title-en",
+              "value": "⚽ The Road to the Grand Final has already begun!"
+            },
+            {
+              "name": "caption-en",
+              "value": "Join the tournament"
+            },
+            {
+              "name": "description",
+              "value": "%description-en%"
+            },
+            {
+              "name": "buttons_1_link",
+              "value": "%link%?%$utm_tags%"
+            },
+            {
+              "name": "description-en",
+              "value": "🏆 Bet, collect points and fight for $5,050,000"
+            },
+            {
+              "name": "buttons_1_caption",
+              "value": "%caption-en%"
+            },
+            {
+              "name": "buttons_1_deeplink",
+              "value": "%deeplink%?%$utm_tags%"
+            },
+            {
+              "name": "buttons_1_highlighted",
+              "value": "True"
+            },
+            {
+              "name": "group",
+              "value": "regular"
+            },
+            {
+              "name": "title",
+              "value": "%title-es%"
+            },
+            {
+              "name": "layout",
+              "value": "1"
+            },
+            {
+              "name": "icon-src",
+              "value": "%icon-src%"
+            },
+            {
+              "name": "title-es",
+              "value": "⚽ El Camino a la Gran Final ya empezo!"
+            },
+            {
+              "name": "caption-es",
+              "value": "Unirme al torneo"
+            },
+            {
+              "name": "description",
+              "value": "%description-es%"
+            },
+            {
+              "name": "buttons_1_link",
+              "value": "%link%?%$utm_tags%"
+            },
+            {
+              "name": "description-es",
+              "value": "🏆 Apuesta, suma puntos y pelea por $5.050.000"
+            },
+            {
+              "name": "buttons_1_caption",
+              "value": "%caption-es%"
+            },
+            {
+              "name": "buttons_1_deeplink",
+              "value": "%deeplink%?%$utm_tags%"
+            },
+            {
+              "name": "buttons_1_highlighted",
+              "value": "True"
+            },
+            {
+              "name": "link",
+              "value": "https://%#BrandDomain%?%$utm_tags%#_smartico_dp=dp:gf_tournaments&id=5431"
+            },
+            {
+              "name": "deeplink",
+              "value": "https://%#BrandDomain%?%$utm_tags%#_smartico_dp=dp:gf_tournaments&id=5431"
+            },
+            {
+              "name": "icon-src",
+              "value": "https://static.contentin.cloud/73b22051-b16d-46e3-90cb-eeb045f59eea/4f5a57d0-5f55-43eb-bc2d-f2034f4b52de.png"
+            },
+            {
+              "name": "group",
+              "value": "regular"
+            }
+          ],
+          "template_id": 16001,
+          "expire_after": "18.00:00:00.000",
+          "defaultVariables": [
+            {
+              "name": "BrandDomain",
+              "isRequired": true,
+              "defaultValue": ""
+            }
+          ],
+          "localizedVariables": []
+        },
+        "singleChannel": {
+          "accordion": {
+            "validList": {
+              "template1312": {
+                "en": true,
+                "es": true
+              },
+              "template16001": {
+                "en": true,
+                "es": true
+              }
+            }
+          },
+          "activityName": "PMCL Notification Center",
+          "localizedLanguagesTab": {
+            "en": {
+              "group": "regular",
+              "title": "%title-en%",
+              "layout": "1",
+              "icon-src": "%icon-src%",
+              "title-en": "⚽ The Road to the Grand Final has already begun!",
+              "caption-en": "Join the tournament",
+              "description": "%description-en%",
+              "buttons_1_link": "%link%?%$utm_tags%",
+              "description-en": "🏆 Bet, collect points and fight for $5,050,000",
+              "buttons_1_caption": "%caption-en%",
+              "buttons_1_deeplink": "%deeplink%?%$utm_tags%",
+              "buttons_1_highlighted": "True"
+            },
+            "es": {
+              "group": "regular",
+              "title": "%title-es%",
+              "layout": "1",
+              "icon-src": "%icon-src%",
+              "title-es": "⚽ El Camino a la Gran Final ya empezo!",
+              "caption-es": "Unirme al torneo",
+              "description": "%description-es%",
+              "buttons_1_link": "%link%?%$utm_tags%",
+              "description-es": "🏆 Apuesta, suma puntos y pelea por $5.050.000",
+              "buttons_1_caption": "%caption-es%",
+              "buttons_1_deeplink": "%deeplink%?%$utm_tags%",
+              "buttons_1_highlighted": "True"
+            },
+            "common": {
+              "link": "https://{{BrandDomain}}?%$utm_tags%#_smartico_dp=dp:gf_tournaments&amp;id=5431",
+              "deeplink": "https://{{BrandDomain}}?%$utm_tags%#_smartico_dp=dp:gf_tournaments&amp;id=5431",
+              "icon-src": "https://static.contentin.cloud/73b22051-b16d-46e3-90cb-eeb045f59eea/4f5a57d0-5f55-43eb-bc2d-f2034f4b52de.png"
+            },
+            "dwhVariables": {
+              "en": [],
+              "es": [],
+              "common": [
+                {
+                  "name": "BrandDomain",
+                  "isRequired": true,
+                  "defaultValue": ""
+                }
+              ]
+            }
+          }
+        },
+        "validityAmount": "18",
+        "dataDependencies": [
+          {
+            "key": "BrandDomain"
+          }
+        ],
+        "listOfUsedVariables": [],
+        "placements": []
+      },
+      "isEditable": true,
+      "changedBy": {
+        "authorId": "ba719889-4868-445d-9f9f-d94ddbfcd67c",
+        "authorName": "Sandro S"
+      },
+      "changedAt": "2026-06-24T13:08:40.1104510Z",
+      "version": 1
+    },
+    {
+      "activityId": "751c77a5-6f69-4af4-bf56-52f28c8185e9",
+      "activityName": "end_of_journey",
+      "events": [],
+      "eventsHistory": [],
+      "tcGroupEvents": [],
+      "dependencies": [],
+      "dataDependencies": [],
+      "dataKeys": [],
+      "isEditable": true,
+      "changedAt": "2026-06-24T13:08:40.1105510Z",
+      "version": 1,
+      "initializationData": {
+        "placements": []
+      }
+    },
+    {
+      "activityId": "9a55a214-bd08-4b69-8357-382c38eae219",
+      "activityName": "notification_center",
+      "activityDisplayName": "Notification Center",
+      "events": [
+        {
+          "eventName": "NotificationNotSent",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f",
+          "count": 0,
+          "version": 1
+        },
+        {
+          "eventName": "NotificationSent",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "277ef936-d56a-4d15-bfa0-ffdcf3fa2803",
+          "count": 17908,
+          "version": 1
+        }
+      ],
+      "eventsHistory": [],
+      "tcGroupEvents": [],
+      "dependencies": [],
+      "dataDependencies": [
+        {
+          "key": "BrandDomain"
+        }
+      ],
+      "dataKeys": [],
+      "initializationData": {
+        "channel": 3,
+        "category": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "contract": 5,
+        "accountId": "",
+        "languages": [
+          {
+            "languageCode": "es"
+          },
+          {
+            "languageCode": "en"
+          }
+        ],
+        "templates": 15999,
+        "displayData": [
+          "15999. PMCL Pop-up CatFish"
+        ],
+        "deliveryType": "singleChannel",
+        "validityType": "days",
+        "objectForSend": {
+          "metadata": {
+            "utm_source": "boris",
+            "journeyName": "FTCL | CS | Torneo Universo Camino a la Gran Final 29.06-19.07"
+          },
+          "variables": [
+            {
+              "name": "title",
+              "value": "%title_en%"
+            },
+            {
+              "name": "title_en",
+              "value": "🏆 Grand Final, now!"
+            },
+            {
+              "name": "caption_en",
+              "value": "Participate now"
+            },
+            {
+              "name": "description",
+              "value": "%description_en%"
+            },
+            {
+              "name": "buttons_1_link",
+              "value": "%link%?%$utm_tags%"
+            },
+            {
+              "name": "description_en",
+              "value": "🔥 Slots, live casino, sports betting. Win your share of $5,050,000 + physical prizes"
+            },
+            {
+              "name": "buttons_1_caption",
+              "value": "%caption_en%"
+            },
+            {
+              "name": "backgroundImageSrc",
+              "value": "%background_image_src%"
+            },
+            {
+              "name": "buttons_1_deeplink",
+              "value": "%deeplink%?%$utm_tags%"
+            },
+            {
+              "name": "title",
+              "value": "%title_es%"
+            },
+            {
+              "name": "title_es",
+              "value": "🏆 Gran Final, ya!"
+            },
+            {
+              "name": "caption_es",
+              "value": "Participar ya"
+            },
+            {
+              "name": "description",
+              "value": "%description_es%"
+            },
+            {
+              "name": "buttons_1_link",
+              "value": "%link%?%$utm_tags%"
+            },
+            {
+              "name": "description_es",
+              "value": "🔥 Slots, live casino, deportes. Gana tu parte de $5.050.000 + premios fisicos"
+            },
+            {
+              "name": "buttons_1_caption",
+              "value": "%caption_es%"
+            },
+            {
+              "name": "backgroundImageSrc",
+              "value": "%background_image_src%"
+            },
+            {
+              "name": "buttons_1_deeplink",
+              "value": "%deeplink%?%$utm_tags%"
+            },
+            {
+              "name": "link",
+              "value": "https://%#BrandDomain%?%$utm_tags%#_smartico_dp=dp:gf_tournaments&id=5431"
+            },
+            {
+              "name": "deeplink",
+              "value": "https://%#BrandDomain%?%$utm_tags%#_smartico_dp=dp:gf_tournaments&id=5431"
+            },
+            {
+              "name": "background_image_src",
+              "value": "https://static.contentin.cloud/73b22051-b16d-46e3-90cb-eeb045f59eea/2f0324a5-6a95-43f8-8805-895aa7876f6f.png"
+            },
+            {
+              "name": "group",
+              "value": "regular"
+            }
+          ],
+          "template_id": 15999,
+          "expire_after": "18.00:00:00.000",
+          "defaultVariables": [
+            {
+              "name": "BrandDomain",
+              "isRequired": true,
+              "defaultValue": ""
+            }
+          ],
+          "localizedVariables": []
+        },
+        "singleChannel": {
+          "accordion": {
+            "validList": {
+              "template1316": {
+                "en": true,
+                "es": true
+              },
+              "template15999": {
+                "en": true,
+                "es": true
+              }
+            }
+          },
+          "activityName": "PMCL Pop-up CatFish",
+          "localizedLanguagesTab": {
+            "en": {
+              "title": "%title_en%",
+              "title_en": "🏆 Grand Final, now!",
+              "caption_en": "Participate now",
+              "description": "%description_en%",
+              "buttons_1_link": "%link%?%$utm_tags%",
+              "description_en": "🔥 Slots, live casino, sports betting. Win your share of $5,050,000 + physical prizes",
+              "buttons_1_caption": "%caption_en%",
+              "backgroundImageSrc": "%background_image_src%",
+              "buttons_1_deeplink": "%deeplink%?%$utm_tags%"
+            },
+            "es": {
+              "title": "%title_es%",
+              "title_es": "🏆 Gran Final, ya!",
+              "caption_es": "Participar ya",
+              "description": "%description_es%",
+              "buttons_1_link": "%link%?%$utm_tags%",
+              "description_es": "🔥 Slots, live casino, deportes. Gana tu parte de $5.050.000 + premios fisicos",
+              "buttons_1_caption": "%caption_es%",
+              "backgroundImageSrc": "%background_image_src%",
+              "buttons_1_deeplink": "%deeplink%?%$utm_tags%"
+            },
+            "common": {
+              "link": "https://{{BrandDomain}}?%$utm_tags%#_smartico_dp=dp:gf_tournaments&amp;id=5431",
+              "deeplink": "https://{{BrandDomain}}?%$utm_tags%#_smartico_dp=dp:gf_tournaments&amp;id=5431",
+              "background_image_src": "https://static.contentin.cloud/73b22051-b16d-46e3-90cb-eeb045f59eea/2f0324a5-6a95-43f8-8805-895aa7876f6f.png"
+            },
+            "dwhVariables": {
+              "en": [],
+              "es": [],
+              "common": [
+                {
+                  "name": "BrandDomain",
+                  "isRequired": true,
+                  "defaultValue": ""
+                }
+              ]
+            }
+          }
+        },
+        "validityAmount": "18",
+        "dataDependencies": [
+          {
+            "key": "BrandDomain"
+          }
+        ],
+        "listOfUsedVariables": [],
+        "placements": []
+      },
+      "isEditable": true,
+      "changedBy": {
+        "authorId": "ba719889-4868-445d-9f9f-d94ddbfcd67c",
+        "authorName": "Sandro S"
+      },
+      "changedAt": "2026-06-24T13:08:40.1104910Z",
+      "version": 1
+    },
+    {
+      "activityId": "3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f",
+      "activityName": "wait_date",
+      "activityDisplayName": "Date",
+      "events": [
+        {
+          "eventName": "WaitTimeStarted",
+          "eventDisplayName": "Started",
+          "eventType": "Boundary",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "count": 18002,
+          "version": 1
+        },
+        {
+          "eventName": "WaitTimeCompleted",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "cc832e64-fe9d-4c12-84d0-d752626f9e14",
+          "count": 18002,
+          "version": 1
+        }
+      ],
+      "eventsHistory": [],
+      "tcGroupEvents": [],
+      "dependencies": [],
+      "dataDependencies": [],
+      "dataKeys": [],
+      "initializationData": {
+        "waitTo": "2026-07-05T16:00:00Z",
+        "displayData": [
+          "05.07.26"
+        ],
+        "exitCriteria": false,
+        "placements": []
+      },
+      "isEditable": true,
+      "changedBy": {
+        "authorId": "ba719889-4868-445d-9f9f-d94ddbfcd67c",
+        "authorName": "Sandro S"
+      },
+      "changedAt": "2026-06-24T13:08:40.1105260Z",
+      "version": 1
+    },
+    {
+      "activityId": "277ef936-d56a-4d15-bfa0-ffdcf3fa2803",
+      "activityName": "notification_center_engagement_split",
+      "activityDisplayName": "Messaging engagement split",
+      "events": [
+        {
+          "eventName": "NCEngagementSplitPassedPath03",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f",
+          "count": 17579,
+          "version": 1
+        },
+        {
+          "eventName": "NCEngagementSplitPassedPath04",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f",
+          "count": 0,
+          "version": 1
+        },
+        {
+          "eventName": "NCEngagementSplitPassedPath05",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f",
+          "count": 329,
+          "version": 1
+        },
+        {
+          "eventName": "NCEngagementSplitPassedPath01",
+          "eventDisplayName": "Clicked",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "651b2d3c-ee52-4d4d-80fe-b9e1bf32fcc1",
+          "count": 0,
+          "version": 1
+        },
+        {
+          "eventName": "NCEngagementSplitPassedPath02",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f",
+          "count": 0,
+          "version": 1
+        }
+      ],
+      "eventsHistory": [],
+      "tcGroupEvents": [],
+      "dependencies": [],
+      "dataDependencies": [],
+      "dataKeys": [],
+      "initializationData": {
+        "properties": {
+          "paths": [
+            {
+              "pathId": "path1",
+              "pathName": "Clicked",
+              "notificationCenterEngagementStatuses": [
+                "Clicked"
+              ]
+            },
+            {
+              "pathId": "other",
+              "pathName": "Other",
+              "notificationCenterEngagementStatuses": [
+                "NotSent",
+                "Sent",
+                "Shown",
+                "Read"
+              ]
+            }
+          ],
+          "DextraNotificationCenterActivityId": "0764f9ca-6503-48f4-afb9-fd5af5e7a542"
+        },
+        "displayData": [
+          "0764f9ca-6503-48f4-afb9-fd5af5e7a542"
+        ],
+        "pathesConfig": [
+          {
+            "events": [
+              {
+                "eventName": "NCEngagementSplitPassedPath01",
+                "eventType": "Completion",
+                "eventDisplayName": "Clicked"
+              }
+            ],
+            "pathId": "path1",
+            "pathName": "Clicked",
+            "nextActivityId": "651b2d3c-ee52-4d4d-80fe-b9e1bf32fcc1",
+            "notificationCenterEngagementStatuses": [
+              "Clicked"
+            ]
+          },
+          {
+            "events": [
+              {
+                "eventName": "NCEngagementSplitPassedPath02",
+                "eventType": "Completion"
+              },
+              {
+                "eventName": "NCEngagementSplitPassedPath03",
+                "eventType": "Completion"
+              },
+              {
+                "eventName": "NCEngagementSplitPassedPath04",
+                "eventType": "Completion"
+              },
+              {
+                "eventName": "NCEngagementSplitPassedPath05",
+                "eventType": "Completion"
+              }
+            ],
+            "pathId": "other",
+            "pathName": "Other",
+            "nextActivityId": "3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f"
+          }
+        ],
+        "placements": []
+      },
+      "isEditable": true,
+      "changedBy": {
+        "authorId": "ba719889-4868-445d-9f9f-d94ddbfcd67c",
+        "authorName": "Sandro S"
+      },
+      "changedAt": "2026-06-24T13:08:40.1105150Z",
+      "version": 1
+    },
+    {
+      "activityId": "f0c312d2-0c84-427c-bd38-3148e56857ec",
+      "activityName": "wait_date",
+      "activityDisplayName": "Date",
+      "events": [
+        {
+          "eventName": "WaitTimeStarted",
+          "eventDisplayName": "Started",
+          "eventType": "Boundary",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "count": 18002,
+          "version": 1
+        },
+        {
+          "eventName": "WaitTimeCompleted",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "1a7e2bf9-c43c-4bd8-b847-0e4fa26cd38b",
+          "count": 0,
+          "version": 1
+        }
+      ],
+      "eventsHistory": [],
+      "tcGroupEvents": [],
+      "dependencies": [],
+      "dataDependencies": [],
+      "dataKeys": [],
+      "initializationData": {
+        "waitTo": "2026-07-18T16:00:00Z",
+        "displayData": [
+          "18.07.26"
+        ],
+        "exitCriteria": false,
+        "placements": []
+      },
+      "isEditable": true,
+      "changedBy": {
+        "authorId": "ba719889-4868-445d-9f9f-d94ddbfcd67c",
+        "authorName": "Sandro S"
+      },
+      "changedAt": "2026-06-24T13:08:40.1105020Z",
+      "version": 1
+    },
+    {
+      "activityId": "875868a4-46c3-42e8-8c78-4771ffdfbf7f",
+      "activityName": "notification_center_engagement_split",
+      "activityDisplayName": "Messaging engagement split",
+      "events": [
+        {
+          "eventName": "NCEngagementSplitPassedPath03",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "9a55a214-bd08-4b69-8357-382c38eae219",
+          "count": 17579,
+          "version": 1
+        },
+        {
+          "eventName": "NCEngagementSplitPassedPath04",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "9a55a214-bd08-4b69-8357-382c38eae219",
+          "count": 0,
+          "version": 1
+        },
+        {
+          "eventName": "NCEngagementSplitPassedPath05",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "9a55a214-bd08-4b69-8357-382c38eae219",
+          "count": 329,
+          "version": 1
+        },
+        {
+          "eventName": "NCEngagementSplitPassedPath01",
+          "eventDisplayName": "Clicked",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f",
+          "count": 94,
+          "version": 1
+        },
+        {
+          "eventName": "NCEngagementSplitPassedPath02",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "9a55a214-bd08-4b69-8357-382c38eae219",
+          "count": 0,
+          "version": 1
+        }
+      ],
+      "eventsHistory": [],
+      "tcGroupEvents": [],
+      "dependencies": [],
+      "dataDependencies": [],
+      "dataKeys": [],
+      "initializationData": {
+        "properties": {
+          "paths": [
+            {
+              "pathId": "path1",
+              "pathName": "Clicked",
+              "notificationCenterEngagementStatuses": [
+                "Clicked"
+              ]
+            },
+            {
+              "pathId": "other",
+              "pathName": "Other",
+              "notificationCenterEngagementStatuses": [
+                "NotSent",
+                "Sent",
+                "Shown",
+                "Read"
+              ]
+            }
+          ],
+          "DextraNotificationCenterActivityId": "0764f9ca-6503-48f4-afb9-fd5af5e7a542"
+        },
+        "displayData": [
+          "0764f9ca-6503-48f4-afb9-fd5af5e7a542"
+        ],
+        "pathesConfig": [
+          {
+            "events": [
+              {
+                "eventName": "NCEngagementSplitPassedPath01",
+                "eventType": "Completion",
+                "eventDisplayName": "Clicked"
+              }
+            ],
+            "pathId": "path1",
+            "pathName": "Clicked",
+            "nextActivityId": "3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f",
+            "notificationCenterEngagementStatuses": [
+              "Clicked"
+            ]
+          },
+          {
+            "events": [
+              {
+                "eventName": "NCEngagementSplitPassedPath02",
+                "eventType": "Completion"
+              },
+              {
+                "eventName": "NCEngagementSplitPassedPath03",
+                "eventType": "Completion"
+              },
+              {
+                "eventName": "NCEngagementSplitPassedPath04",
+                "eventType": "Completion"
+              },
+              {
+                "eventName": "NCEngagementSplitPassedPath05",
+                "eventType": "Completion"
+              }
+            ],
+            "pathId": "other",
+            "pathName": "Other",
+            "nextActivityId": "9a55a214-bd08-4b69-8357-382c38eae219"
+          }
+        ],
+        "placements": []
+      },
+      "isEditable": true,
+      "changedBy": {
+        "authorId": "ba719889-4868-445d-9f9f-d94ddbfcd67c",
+        "authorName": "Sandro S"
+      },
+      "changedAt": "2026-06-24T13:08:40.1104800Z",
+      "version": 1
+    },
+    {
+      "activityId": "1d19a450-914e-46c6-843b-1cdf04978eb6",
+      "activityName": "end_of_journey",
+      "events": [],
+      "eventsHistory": [],
+      "tcGroupEvents": [],
+      "dependencies": [],
+      "dataDependencies": [],
+      "dataKeys": [],
+      "isEditable": true,
+      "changedAt": "2026-06-24T13:08:40.1105520Z",
+      "version": 1,
+      "initializationData": {
+        "placements": []
+      }
+    },
+    {
+      "activityId": "4c717fb8-4e67-49f4-9d87-2696393fec6a",
+      "activityName": "wait_interval",
+      "activityDisplayName": "Wait",
+      "events": [
+        {
+          "eventName": "WaitTimeStarted",
+          "eventDisplayName": "Started",
+          "eventType": "Boundary",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "count": 18002,
+          "version": 1
+        },
+        {
+          "eventName": "WaitTimeCompleted",
+          "eventType": "Completion",
+          "checkExitCriteria": false,
+          "isUsedInChoosableFlow": false,
+          "nextActivityId": "875868a4-46c3-42e8-8c78-4771ffdfbf7f",
+          "count": 18002,
+          "version": 1
+        }
+      ],
+      "eventsHistory": [],
+      "tcGroupEvents": [],
+      "dependencies": [],
+      "dataDependencies": [],
+      "dataKeys": [],
+      "initializationData": {
+        "waitPeriod": "P0Y0M0DT2H0M0S",
+        "displayData": [
+          "2 Hours"
+        ],
+        "exitCriteria": false,
+        "placements": []
+      },
+      "isEditable": true,
+      "changedBy": {
+        "authorId": "ba719889-4868-445d-9f9f-d94ddbfcd67c",
+        "authorName": "Sandro S"
+      },
+      "changedAt": "2026-06-24T13:08:40.1104640Z",
+      "version": 1
+    }
+  ],
+  "startAt": "2026-06-29T16:00:00.0000000Z",
+  "stopAt": "2026-06-29T23:00:00.0000000Z",
+  "changeHistory": {},
+  "metadata": {
+    "purpose": "Retention",
+    "category": "Marketing",
+    "priority": 2,
+    "productType": "Casino"
+  },
+  "reEntryRule": {
+    "reEntryMode": "Prohibited"
+  },
+  "timeZoneId": "Chile/Continental",
+  "testControlGroupParameters": {
+    "playersAddingStrategy": "IncludeAll",
+    "isEnabled": false
+  },
+  "activityEventConversionMetrics": [],
+  "areJourneyMetricsAvailable": true,
+  "allJourneyActivationsCount": 0,
+  "overJourneyActivationsCount": 0,
+  "journeySource": "UBO",
+  "isArchived": false,
+  "isUnlimited": false,
+  "isImmediatelyAfterPublish": false,
+  "rawJourneyData": {
+    "elements": [
+      {
+        "id": "8fb1e82f-ce36-4f18-86fb-f69833b6ca81",
+        "data": {
+          "name": "dwh_source",
+          "type": "source",
+          "order": 0,
+          "ports": [
+            {
+              "id": "PlayerAdded-8fb1e82f-ce36-4f18-86fb-f69833b6ca81"
+            }
+          ],
+          "events": [
+            {
+              "isHidden": false,
+              "eventName": "PlayerAdded",
+              "eventType": "Activation",
+              "eventDisplayName": "Players added to journey"
+            }
+          ],
+          "nodeType": "source",
+          "boundaryDefinition": false
+        },
+        "type": "source",
+        "style": {
+          "cursor": "pointer"
+        },
+        "width": 267,
+        "height": 64,
+        "zIndex": 5,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false,
+        "positionAbsolute": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "0764f9ca-6503-48f4-afb9-fd5af5e7a542",
+        "data": {
+          "name": "notification_center",
+          "type": "communication",
+          "order": 21,
+          "ports": [
+            {
+              "id": "input-0764f9ca-6503-48f4-afb9-fd5af5e7a542"
+            },
+            {
+              "id": "NotificationSent-0764f9ca-6503-48f4-afb9-fd5af5e7a542"
+            },
+            {
+              "id": "NotificationNotSent-0764f9ca-6503-48f4-afb9-fd5af5e7a542"
+            }
+          ],
+          "events": [
+            {
+              "isHidden": false,
+              "eventName": "NotificationSent",
+              "eventType": "Completion",
+              "eventDisplayName": "Sent"
+            },
+            {
+              "isHidden": false,
+              "eventName": "NotificationNotSent",
+              "eventType": "Completion",
+              "eventDisplayName": "Not Sent"
+            }
+          ],
+          "nodeType": "action",
+          "boundaryDefinition": false
+        },
+        "type": "action",
+        "style": {
+          "cursor": "pointer"
+        },
+        "width": 267,
+        "height": 64,
+        "hidden": false,
+        "zIndex": 5,
+        "position": {
+          "x": 0,
+          "y": 199
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false,
+        "positionAbsolute": {
+          "x": 0,
+          "y": 199
+        }
+      },
+      {
+        "id": "4c717fb8-4e67-49f4-9d87-2696393fec6a",
+        "data": {
+          "name": "wait_interval",
+          "ports": [
+            {
+              "id": "input-4c717fb8-4e67-49f4-9d87-2696393fec6a"
+            },
+            {
+              "id": "WaitTimeStarted-4c717fb8-4e67-49f4-9d87-2696393fec6a"
+            },
+            {
+              "id": "WaitTimeCompleted-4c717fb8-4e67-49f4-9d87-2696393fec6a"
+            }
+          ],
+          "events": [
+            {
+              "isHidden": false,
+              "eventName": "WaitTimeStarted",
+              "eventType": "Boundary",
+              "payloadKeys": [],
+              "eventDisplayName": "Started",
+              "canBeUsedInChoosableFlow": false
+            },
+            {
+              "isHidden": false,
+              "eventName": "WaitTimeCompleted",
+              "eventType": "Completion",
+              "payloadKeys": [],
+              "eventDisplayName": "Completed",
+              "canBeUsedInChoosableFlow": false
+            }
+          ],
+          "activityType": "triger",
+          "activityDisplayName": "Wait"
+        },
+        "type": "action",
+        "style": {
+          "cursor": "pointer"
+        },
+        "width": 267,
+        "height": 64,
+        "hidden": false,
+        "zIndex": 5,
+        "position": {
+          "x": -120,
+          "y": 463
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false,
+        "positionAbsolute": {
+          "x": -120,
+          "y": 463
+        }
+      },
+      {
+        "id": "875868a4-46c3-42e8-8c78-4771ffdfbf7f",
+        "data": {
+          "name": "notification_center_engagement_split",
+          "ports": [
+            {
+              "id": "input-875868a4-46c3-42e8-8c78-4771ffdfbf7f"
+            },
+            {
+              "id": "path1-875868a4-46c3-42e8-8c78-4771ffdfbf7f"
+            },
+            {
+              "id": "other-875868a4-46c3-42e8-8c78-4771ffdfbf7f"
+            }
+          ],
+          "events": [
+            {
+              "isHidden": false,
+              "eventName": "NCEngagementSplitPassedPath01",
+              "eventType": "Completion",
+              "payloadKeys": [],
+              "eventDisplayName": "Path 1",
+              "canBeUsedInChoosableFlow": false
+            },
+            {
+              "isHidden": false,
+              "eventName": "NCEngagementSplitPassedPath02",
+              "eventType": "Completion",
+              "payloadKeys": [],
+              "eventDisplayName": "Path 2",
+              "canBeUsedInChoosableFlow": false
+            },
+            {
+              "isHidden": false,
+              "eventName": "NCEngagementSplitPassedPath03",
+              "eventType": "Completion",
+              "payloadKeys": [],
+              "eventDisplayName": "Path 3",
+              "canBeUsedInChoosableFlow": false
+            },
+            {
+              "isHidden": false,
+              "eventName": "NCEngagementSplitPassedPath04",
+              "eventType": "Completion",
+              "payloadKeys": [],
+              "eventDisplayName": "Path 4",
+              "canBeUsedInChoosableFlow": false
+            },
+            {
+              "isHidden": false,
+              "eventName": "NCEngagementSplitPassedPath05",
+              "eventType": "Completion",
+              "payloadKeys": [],
+              "eventDisplayName": "Path 5",
+              "canBeUsedInChoosableFlow": false
+            }
+          ],
+          "pathes": [
+            {
+              "events": [
+                {
+                  "eventName": "NCEngagementSplitPassedPath01",
+                  "eventType": "Completion"
+                }
+              ],
+              "pathId": "path1",
+              "pathName": "Path 1"
+            },
+            {
+              "events": [
+                {
+                  "eventName": "NCEngagementSplitPassedPath02",
+                  "eventType": "Completion"
+                },
+                {
+                  "eventName": "NCEngagementSplitPassedPath03",
+                  "eventType": "Completion"
+                },
+                {
+                  "eventName": "NCEngagementSplitPassedPath04",
+                  "eventType": "Completion"
+                },
+                {
+                  "eventName": "NCEngagementSplitPassedPath05",
+                  "eventType": "Completion"
+                }
+              ],
+              "pathId": "other",
+              "pathName": "Other"
+            }
+          ],
+          "activityType": "flowControl",
+          "activityDisplayName": "Messaging engagement split"
+        },
+        "type": "action",
+        "style": {
+          "cursor": "pointer"
+        },
+        "width": 267,
+        "height": 64,
+        "hidden": false,
+        "zIndex": 5,
+        "position": {
+          "x": -120,
+          "y": 727
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false,
+        "positionAbsolute": {
+          "x": -120,
+          "y": 727
+        }
+      },
+      {
+        "id": "9a55a214-bd08-4b69-8357-382c38eae219",
+        "data": {
+          "name": "notification_center",
+          "ports": [
+            {
+              "id": "input-9a55a214-bd08-4b69-8357-382c38eae219"
+            },
+            {
+              "id": "NotificationSent-9a55a214-bd08-4b69-8357-382c38eae219"
+            },
+            {
+              "id": "NotificationNotSent-9a55a214-bd08-4b69-8357-382c38eae219"
+            }
+          ],
+          "events": [
+            {
+              "isHidden": false,
+              "eventName": "NotificationSent",
+              "eventType": "Completion",
+              "eventDisplayName": "Sent",
+              "canBeUsedInChoosableFlow": false
+            },
+            {
+              "isHidden": false,
+              "eventName": "NotificationNotSent",
+              "eventType": "Completion",
+              "eventDisplayName": "Not Sent",
+              "canBeUsedInChoosableFlow": false
+            }
+          ],
+          "activityType": "communication",
+          "activityDisplayName": "Notification Center",
+          "withoutSourceHandle": false
+        },
+        "type": "action",
+        "style": {
+          "cursor": "pointer"
+        },
+        "width": 267,
+        "height": 64,
+        "hidden": false,
+        "zIndex": 5,
+        "position": {
+          "x": 0,
+          "y": 991
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false,
+        "positionAbsolute": {
+          "x": 0,
+          "y": 991
+        }
+      },
+      {
+        "id": "f0c312d2-0c84-427c-bd38-3148e56857ec",
+        "data": {
+          "name": "wait_date",
+          "ports": [
+            {
+              "id": "input-f0c312d2-0c84-427c-bd38-3148e56857ec"
+            },
+            {
+              "id": "WaitTimeStarted-f0c312d2-0c84-427c-bd38-3148e56857ec"
+            },
+            {
+              "id": "WaitTimeCompleted-f0c312d2-0c84-427c-bd38-3148e56857ec"
+            }
+          ],
+          "events": [
+            {
+              "isHidden": false,
+              "eventName": "WaitTimeStarted",
+              "eventType": "Boundary",
+              "payloadKeys": [],
+              "payloadKeysV2": [],
+              "localizationKey": "wait_date.wait_time_started",
+              "eventDisplayName": "Started",
+              "canBeUsedInChoosableFlow": false
+            },
+            {
+              "isHidden": false,
+              "eventName": "WaitTimeCompleted",
+              "eventType": "Completion",
+              "payloadKeys": [],
+              "payloadKeysV2": [],
+              "localizationKey": "wait_date.wait_time_completed",
+              "eventDisplayName": "Completed",
+              "canBeUsedInChoosableFlow": false
+            }
+          ],
+          "activityType": "triger",
+          "activityDisplayName": "Date",
+          "withoutSourceHandle": false
+        },
+        "type": "action",
+        "style": {
+          "cursor": "pointer"
+        },
+        "width": 267,
+        "height": 64,
+        "hidden": false,
+        "zIndex": 5,
+        "position": {
+          "x": 0,
+          "y": 2047
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false,
+        "positionAbsolute": {
+          "x": 0,
+          "y": 2047
+        }
+      },
+      {
+        "id": "277ef936-d56a-4d15-bfa0-ffdcf3fa2803",
+        "data": {
+          "name": "notification_center_engagement_split",
+          "ports": [
+            {
+              "id": "input-277ef936-d56a-4d15-bfa0-ffdcf3fa2803"
+            },
+            {
+              "id": "path1-277ef936-d56a-4d15-bfa0-ffdcf3fa2803"
+            },
+            {
+              "id": "other-277ef936-d56a-4d15-bfa0-ffdcf3fa2803"
+            }
+          ],
+          "events": [
+            {
+              "isHidden": false,
+              "eventName": "NCEngagementSplitPassedPath01",
+              "eventType": "Completion",
+              "payloadKeys": [],
+              "eventDisplayName": "Path 1",
+              "canBeUsedInChoosableFlow": false
+            },
+            {
+              "isHidden": false,
+              "eventName": "NCEngagementSplitPassedPath02",
+              "eventType": "Completion",
+              "payloadKeys": [],
+              "eventDisplayName": "Path 2",
+              "canBeUsedInChoosableFlow": false
+            },
+            {
+              "isHidden": false,
+              "eventName": "NCEngagementSplitPassedPath03",
+              "eventType": "Completion",
+              "payloadKeys": [],
+              "eventDisplayName": "Path 3",
+              "canBeUsedInChoosableFlow": false
+            },
+            {
+              "isHidden": false,
+              "eventName": "NCEngagementSplitPassedPath04",
+              "eventType": "Completion",
+              "payloadKeys": [],
+              "eventDisplayName": "Path 4",
+              "canBeUsedInChoosableFlow": false
+            },
+            {
+              "isHidden": false,
+              "eventName": "NCEngagementSplitPassedPath05",
+              "eventType": "Completion",
+              "payloadKeys": [],
+              "eventDisplayName": "Path 5",
+              "canBeUsedInChoosableFlow": false
+            }
+          ],
+          "pathes": [
+            {
+              "events": [
+                {
+                  "eventName": "NCEngagementSplitPassedPath01",
+                  "eventType": "Completion"
+                }
+              ],
+              "pathId": "path1",
+              "pathName": "Path 1"
+            },
+            {
+              "events": [
+                {
+                  "eventName": "NCEngagementSplitPassedPath02",
+                  "eventType": "Completion"
+                },
+                {
+                  "eventName": "NCEngagementSplitPassedPath03",
+                  "eventType": "Completion"
+                },
+                {
+                  "eventName": "NCEngagementSplitPassedPath04",
+                  "eventType": "Completion"
+                },
+                {
+                  "eventName": "NCEngagementSplitPassedPath05",
+                  "eventType": "Completion"
+                }
+              ],
+              "pathId": "other",
+              "pathName": "Other"
+            }
+          ],
+          "activityType": "flowControl",
+          "activityDisplayName": "Messaging engagement split",
+          "withoutSourceHandle": false
+        },
+        "type": "action",
+        "style": {
+          "cursor": "pointer"
+        },
+        "width": 267,
+        "height": 64,
+        "hidden": false,
+        "zIndex": 5,
+        "position": {
+          "x": -120,
+          "y": 1255
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false,
+        "positionAbsolute": {
+          "x": -120,
+          "y": 1255
+        }
+      },
+      {
+        "id": "651b2d3c-ee52-4d4d-80fe-b9e1bf32fcc1",
+        "data": {
+          "name": "end_of_journey",
+          "ports": [
+            {
+              "id": "input-651b2d3c-ee52-4d4d-80fe-b9e1bf32fcc1"
+            }
+          ],
+          "width": 40,
+          "height": 40,
+          "activityName": "notification_center_engagement_split",
+          "joinedPathes": [
+            {
+              "pathId": "path1",
+              "pathName": "Path 1",
+              "activityName": "notification_center_engagement_split",
+              "isReconnectable": true,
+              "isDisconnectable": true
+            },
+            {
+              "pathId": "other",
+              "pathName": "Other",
+              "activityName": "notification_center_engagement_split",
+              "isReconnectable": false,
+              "isDisconnectable": false
+            }
+          ],
+          "isReconnectable": false,
+          "isDisconnectable": false
+        },
+        "type": "exit",
+        "style": {
+          "cursor": "default"
+        },
+        "width": 40,
+        "height": 40,
+        "hidden": false,
+        "zIndex": 5,
+        "position": {
+          "x": -240,
+          "y": 1519
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false,
+        "positionAbsolute": {
+          "x": -240,
+          "y": 1519
+        }
+      },
+      {
+        "id": "3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f",
+        "data": {
+          "name": "wait_date",
+          "ports": [
+            {
+              "id": "input-3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f"
+            },
+            {
+              "id": "WaitTimeStarted-3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f"
+            },
+            {
+              "id": "WaitTimeCompleted-3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f"
+            }
+          ],
+          "events": [
+            {
+              "isHidden": false,
+              "eventName": "WaitTimeStarted",
+              "eventType": "Boundary",
+              "payloadKeys": [],
+              "payloadKeysV2": [],
+              "localizationKey": "wait_date.wait_time_started",
+              "eventDisplayName": "Started",
+              "canBeUsedInChoosableFlow": false
+            },
+            {
+              "isHidden": false,
+              "eventName": "WaitTimeCompleted",
+              "eventType": "Completion",
+              "payloadKeys": [],
+              "payloadKeysV2": [],
+              "localizationKey": "wait_date.wait_time_completed",
+              "eventDisplayName": "Completed",
+              "canBeUsedInChoosableFlow": false
+            }
+          ],
+          "activityType": "triger",
+          "activityDisplayName": "Date",
+          "withoutSourceHandle": false
+        },
+        "type": "action",
+        "style": {
+          "cursor": "pointer"
+        },
+        "width": 267,
+        "height": 64,
+        "hidden": false,
+        "zIndex": 5,
+        "position": {
+          "x": 0,
+          "y": 1519
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false,
+        "positionAbsolute": {
+          "x": 0,
+          "y": 1519
+        }
+      },
+      {
+        "id": "cc832e64-fe9d-4c12-84d0-d752626f9e14",
+        "data": {
+          "name": "dextra_email",
+          "ports": [
+            {
+              "id": "input-cc832e64-fe9d-4c12-84d0-d752626f9e14"
+            },
+            {
+              "id": "FailedEmailSend-cc832e64-fe9d-4c12-84d0-d752626f9e14"
+            },
+            {
+              "id": "SuccessEmailSend-cc832e64-fe9d-4c12-84d0-d752626f9e14"
+            }
+          ],
+          "events": [
+            {
+              "isHidden": false,
+              "eventName": "FailedEmailSend",
+              "eventType": "Completion",
+              "payloadKeys": [],
+              "payloadKeysV2": [],
+              "eventDisplayName": "Not sent",
+              "canBeUsedInChoosableFlow": false
+            },
+            {
+              "isHidden": false,
+              "eventName": "SuccessEmailSend",
+              "eventType": "Completion",
+              "payloadKeys": [
+                "CommunicationId"
+              ],
+              "payloadKeysV2": [
+                {
+                  "key": "CommunicationId",
+                  "isHidden": true,
+                  "isOptional": false
+                }
+              ],
+              "eventDisplayName": "Sent to Dextra",
+              "canBeUsedInChoosableFlow": false
+            }
+          ],
+          "activityType": "communication",
+          "activityDisplayName": "Email",
+          "withoutSourceHandle": false
+        },
+        "type": "action",
+        "style": {
+          "cursor": "pointer"
+        },
+        "width": 267,
+        "height": 64,
+        "hidden": false,
+        "zIndex": 5,
+        "position": {
+          "x": 0,
+          "y": 1783
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false,
+        "positionAbsolute": {
+          "x": 0,
+          "y": 1783
+        }
+      },
+      {
+        "id": "1a7e2bf9-c43c-4bd8-b847-0e4fa26cd38b",
+        "data": {
+          "name": "dextra_sms",
+          "ports": [
+            {
+              "id": "input-1a7e2bf9-c43c-4bd8-b847-0e4fa26cd38b"
+            },
+            {
+              "id": "FailedSmsSend-1a7e2bf9-c43c-4bd8-b847-0e4fa26cd38b"
+            },
+            {
+              "id": "SuccessSmsSend-1a7e2bf9-c43c-4bd8-b847-0e4fa26cd38b"
+            }
+          ],
+          "events": [
+            {
+              "isHidden": false,
+              "eventName": "FailedSmsSend",
+              "eventType": "Completion",
+              "payloadKeys": [],
+              "isLabelHidden": false,
+              "payloadKeysV2": [],
+              "localizationKey": "dextra_sms.failed_sms_send",
+              "eventDisplayName": "Not sent",
+              "canBeUsedInChoosableFlow": false
+            },
+            {
+              "isHidden": false,
+              "eventName": "SuccessSmsSend",
+              "eventType": "Completion",
+              "payloadKeys": [],
+              "isLabelHidden": false,
+              "payloadKeysV2": [],
+              "localizationKey": "dextra_sms.success_sms_send",
+              "eventDisplayName": "Sent to Provider",
+              "canBeUsedInChoosableFlow": false
+            }
+          ],
+          "activityType": "communication",
+          "activityDisplayName": "SMS"
+        },
+        "type": "action",
+        "style": {
+          "cursor": "pointer"
+        },
+        "width": 267,
+        "height": 64,
+        "hidden": false,
+        "zIndex": 5,
+        "position": {
+          "x": 0,
+          "y": 2311
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false,
+        "positionAbsolute": {
+          "x": 0,
+          "y": 2311
+        }
+      },
+      {
+        "id": "751c77a5-6f69-4af4-bf56-52f28c8185e9",
+        "data": {
+          "name": "end_of_journey",
+          "ports": [
+            {
+              "id": "input-751c77a5-6f69-4af4-bf56-52f28c8185e9"
+            }
+          ],
+          "width": 40,
+          "height": 40,
+          "isHidden": false,
+          "eventName": "FailedSmsSend",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "isLabelHidden": false,
+          "payloadKeysV2": [],
+          "localizationKey": "dextra_sms.failed_sms_send",
+          "eventDisplayName": "Not sent",
+          "canBeUsedInChoosableFlow": false
+        },
+        "type": "exit",
+        "style": {
+          "cursor": "default"
+        },
+        "width": 40,
+        "height": 40,
+        "hidden": false,
+        "zIndex": 5,
+        "position": {
+          "x": -6.5,
+          "y": 2575
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false,
+        "positionAbsolute": {
+          "x": -6.5,
+          "y": 2575
+        }
+      },
+      {
+        "id": "1d19a450-914e-46c6-843b-1cdf04978eb6",
+        "data": {
+          "name": "end_of_journey",
+          "ports": [
+            {
+              "id": "input-1d19a450-914e-46c6-843b-1cdf04978eb6"
+            }
+          ],
+          "width": 40,
+          "height": 40,
+          "isHidden": false,
+          "eventName": "SuccessSmsSend",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "isLabelHidden": false,
+          "payloadKeysV2": [],
+          "localizationKey": "dextra_sms.success_sms_send",
+          "eventDisplayName": "Sent to Provider",
+          "canBeUsedInChoosableFlow": false
+        },
+        "type": "exit",
+        "style": {
+          "cursor": "default"
+        },
+        "width": 40,
+        "height": 40,
+        "hidden": false,
+        "zIndex": 5,
+        "position": {
+          "x": 233.5,
+          "y": 2575
+        },
+        "selected": false,
+        "draggable": false,
+        "connectable": false,
+        "positionAbsolute": {
+          "x": 233.5,
+          "y": 2575
+        }
+      },
+      {
+        "id": "c6668d02-296d-487d-b00c-aca1096e6426",
+        "data": {
+          "isHidden": false,
+          "eventName": "PlayerAdded",
+          "eventType": "Activation",
+          "activityName": "dwh_source",
+          "isLabelHidden": true,
+          "isReconnectable": true,
+          "eventDisplayName": "Players added to journey",
+          "isDisconnectable": true
+        },
+        "type": "default",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "8fb1e82f-ce36-4f18-86fb-f69833b6ca81",
+        "target": "0764f9ca-6503-48f4-afb9-fd5af5e7a542",
+        "zIndex": 6,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "PlayerAdded-8fb1e82f-ce36-4f18-86fb-f69833b6ca81",
+        "targetHandle": "input-0764f9ca-6503-48f4-afb9-fd5af5e7a542",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      },
+      {
+        "id": "3d386e55-8dbb-4c84-9138-7de8ce48276e",
+        "data": {
+          "eventName": "NotificationSent",
+          "eventType": "Completion",
+          "activityName": "notification_center",
+          "isReconnectable": false,
+          "isDisconnectable": false
+        },
+        "type": "default",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "0764f9ca-6503-48f4-afb9-fd5af5e7a542",
+        "target": "4c717fb8-4e67-49f4-9d87-2696393fec6a",
+        "zIndex": 1,
+        "selected": false,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "NotificationSent-0764f9ca-6503-48f4-afb9-fd5af5e7a542",
+        "targetHandle": "input-4c717fb8-4e67-49f4-9d87-2696393fec6a",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      },
+      {
+        "id": "f6736ac2-55ec-4a2c-8ff9-9c29d5a23272",
+        "data": {
+          "eventName": "WaitTimeCompleted",
+          "eventType": "Completion",
+          "activityName": "wait_interval",
+          "isReconnectable": false,
+          "isDisconnectable": false
+        },
+        "type": "default",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "4c717fb8-4e67-49f4-9d87-2696393fec6a",
+        "target": "875868a4-46c3-42e8-8c78-4771ffdfbf7f",
+        "zIndex": 1,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "WaitTimeCompleted-4c717fb8-4e67-49f4-9d87-2696393fec6a",
+        "targetHandle": "input-875868a4-46c3-42e8-8c78-4771ffdfbf7f",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      },
+      {
+        "id": "367d3d45-090c-405a-a3c2-aad195fd0a49",
+        "data": {
+          "eventName": "NotificationNotSent",
+          "eventType": "Completion",
+          "activityName": "notification_center",
+          "isReconnectable": false,
+          "isDisconnectable": false
+        },
+        "type": "joinEdge",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "0764f9ca-6503-48f4-afb9-fd5af5e7a542",
+        "target": "9a55a214-bd08-4b69-8357-382c38eae219",
+        "zIndex": 0,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "NotificationNotSent-0764f9ca-6503-48f4-afb9-fd5af5e7a542",
+        "targetHandle": "input-9a55a214-bd08-4b69-8357-382c38eae219",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      },
+      {
+        "id": "151993d3-64e5-4d5a-8af1-8e337fd2e405",
+        "data": {
+          "pathId": "other",
+          "pathName": "Other",
+          "activityName": "notification_center_engagement_split",
+          "isReconnectable": true,
+          "isDisconnectable": true
+        },
+        "type": "default",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "875868a4-46c3-42e8-8c78-4771ffdfbf7f",
+        "target": "9a55a214-bd08-4b69-8357-382c38eae219",
+        "zIndex": 6,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "other-875868a4-46c3-42e8-8c78-4771ffdfbf7f",
+        "targetHandle": "input-9a55a214-bd08-4b69-8357-382c38eae219",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      },
+      {
+        "id": "c306c3e5-4710-489d-8a26-27ee62890bda",
+        "data": {
+          "eventName": "NotificationSent",
+          "eventType": "Completion",
+          "activityName": "notification_center",
+          "isReconnectable": false,
+          "isDisconnectable": false
+        },
+        "type": "default",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "9a55a214-bd08-4b69-8357-382c38eae219",
+        "target": "277ef936-d56a-4d15-bfa0-ffdcf3fa2803",
+        "zIndex": 1,
+        "selected": false,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "NotificationSent-9a55a214-bd08-4b69-8357-382c38eae219",
+        "targetHandle": "input-277ef936-d56a-4d15-bfa0-ffdcf3fa2803",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      },
+      {
+        "id": "69334a1c-113d-4a4b-a906-32df862bfe2f",
+        "data": {
+          "pathId": "path1",
+          "pathName": "Path 1",
+          "activityName": "notification_center_engagement_split",
+          "isReconnectable": false,
+          "isDisconnectable": false
+        },
+        "type": "dropEdge",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "277ef936-d56a-4d15-bfa0-ffdcf3fa2803",
+        "target": "651b2d3c-ee52-4d4d-80fe-b9e1bf32fcc1",
+        "zIndex": 1,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "path1-277ef936-d56a-4d15-bfa0-ffdcf3fa2803",
+        "targetHandle": "input-651b2d3c-ee52-4d4d-80fe-b9e1bf32fcc1",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      },
+      {
+        "id": "fa7d62ac-823c-4e91-b8d2-de6880184cdb",
+        "data": {
+          "pathId": "other",
+          "pathName": "Other",
+          "activityName": "notification_center_engagement_split",
+          "isReconnectable": false,
+          "isDisconnectable": false
+        },
+        "type": "default",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "277ef936-d56a-4d15-bfa0-ffdcf3fa2803",
+        "target": "3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f",
+        "zIndex": 1,
+        "selected": false,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "path1-277ef936-d56a-4d15-bfa0-ffdcf3fa2803",
+        "targetHandle": "input-3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      },
+      {
+        "id": "c5490b77-7799-4823-89b1-6b8bda3fd03f",
+        "data": {
+          "eventName": "NotificationNotSent",
+          "eventType": "Completion",
+          "activityName": "notification_center",
+          "isReconnectable": false,
+          "isDisconnectable": false
+        },
+        "type": "joinEdge",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "9a55a214-bd08-4b69-8357-382c38eae219",
+        "target": "3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f",
+        "zIndex": 0,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "NotificationNotSent-9a55a214-bd08-4b69-8357-382c38eae219",
+        "targetHandle": "input-3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      },
+      {
+        "id": "c1715208-062e-433c-a3e8-c5e9fb86f567",
+        "data": {
+          "eventName": "WaitTimeCompleted",
+          "eventType": "Completion",
+          "activityName": "wait_date",
+          "isReconnectable": true,
+          "isDisconnectable": true
+        },
+        "type": "default",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f",
+        "target": "cc832e64-fe9d-4c12-84d0-d752626f9e14",
+        "zIndex": 6,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "WaitTimeCompleted-3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f",
+        "targetHandle": "input-cc832e64-fe9d-4c12-84d0-d752626f9e14",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      },
+      {
+        "id": "43cab2c1-8072-4ebc-a9d2-605aec65146b",
+        "data": {
+          "activityName": "dextra_email",
+          "joinedPathes": [
+            {
+              "eventName": "FailedEmailSend",
+              "eventType": "Completion",
+              "activityName": "dextra_email",
+              "isReconnectable": false,
+              "isDisconnectable": false
+            },
+            {
+              "eventName": "SuccessEmailSend",
+              "eventType": "Completion",
+              "activityName": "dextra_email",
+              "isReconnectable": false,
+              "isDisconnectable": false
+            }
+          ],
+          "isReconnectable": false,
+          "isDisconnectable": false
+        },
+        "type": "mergeEdge",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "cc832e64-fe9d-4c12-84d0-d752626f9e14",
+        "target": "f0c312d2-0c84-427c-bd38-3148e56857ec",
+        "zIndex": 1,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "FailedEmailSend-cc832e64-fe9d-4c12-84d0-d752626f9e14",
+        "targetHandle": "input-f0c312d2-0c84-427c-bd38-3148e56857ec",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      },
+      {
+        "id": "7f0732b0-af75-4a3f-9741-c562c16e9566",
+        "data": {
+          "eventName": "FailedSmsSend",
+          "eventType": "Completion",
+          "activityName": "dextra_sms",
+          "isReconnectable": false,
+          "isDisconnectable": false
+        },
+        "type": "dropEdge",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "1a7e2bf9-c43c-4bd8-b847-0e4fa26cd38b",
+        "target": "751c77a5-6f69-4af4-bf56-52f28c8185e9",
+        "zIndex": 1,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "FailedSmsSend-1a7e2bf9-c43c-4bd8-b847-0e4fa26cd38b",
+        "targetHandle": "input-751c77a5-6f69-4af4-bf56-52f28c8185e9",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      },
+      {
+        "id": "aea53764-47cb-4840-8b85-6006145ac83f",
+        "data": {
+          "eventName": "SuccessSmsSend",
+          "eventType": "Completion",
+          "activityName": "dextra_sms",
+          "isReconnectable": false,
+          "isDisconnectable": false
+        },
+        "type": "dropEdge",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "1a7e2bf9-c43c-4bd8-b847-0e4fa26cd38b",
+        "target": "1d19a450-914e-46c6-843b-1cdf04978eb6",
+        "zIndex": 1,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "SuccessSmsSend-1a7e2bf9-c43c-4bd8-b847-0e4fa26cd38b",
+        "targetHandle": "input-1d19a450-914e-46c6-843b-1cdf04978eb6",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      },
+      {
+        "id": "17e9f322-a26b-4db6-8003-273f646ada30",
+        "data": {
+          "eventName": "WaitTimeCompleted",
+          "eventType": "Completion",
+          "activityName": "wait_date",
+          "isReconnectable": false,
+          "isDisconnectable": true
+        },
+        "type": "default",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "f0c312d2-0c84-427c-bd38-3148e56857ec",
+        "target": "1a7e2bf9-c43c-4bd8-b847-0e4fa26cd38b",
+        "zIndex": 6,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "WaitTimeCompleted-f0c312d2-0c84-427c-bd38-3148e56857ec",
+        "targetHandle": "input-1a7e2bf9-c43c-4bd8-b847-0e4fa26cd38b",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      },
+      {
+        "id": "569f2081-2fbe-4139-92a0-e3a8d57cc65a",
+        "data": {
+          "pathId": "path1",
+          "pathName": "Path 1",
+          "activityName": "notification_center_engagement_split",
+          "isReconnectable": false,
+          "isDisconnectable": false
+        },
+        "type": "joinEdge",
+        "style": {
+          "strokeDasharray": "3"
+        },
+        "hidden": false,
+        "source": "875868a4-46c3-42e8-8c78-4771ffdfbf7f",
+        "target": "3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f",
+        "zIndex": 0,
+        "labelStyle": {
+          "color": "#000",
+          "fontSize": 14,
+          "fontWeight": 700
+        },
+        "labelBgStyle": {
+          "fill": "#D2D2D2"
+        },
+        "sourceHandle": "path1-875868a4-46c3-42e8-8c78-4771ffdfbf7f",
+        "targetHandle": "input-3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f",
+        "labelBgPadding": [
+          10,
+          3
+        ],
+        "labelBgBorderRadius": 4
+      }
+    ],
+    "infoValues": {
+      "brand": "PMCL",
+      "stopAt": "2026-06-29T23:00:00.0000000Z",
+      "startAt": "2026-06-29T16:00:00.0000000Z",
+      "metadata": {
+        "purpose": "Retention",
+        "category": "Marketing",
+        "priority": 2,
+        "productType": "Casino"
+      },
+      "timeZoneId": "Chile/Continental",
+      "isUnlimited": false,
+      "journeyName": "FTCL | CS | Torneo Universo Camino a la Gran Final 29.06-19.07",
+      "reEntryRule": {
+        "reEntryMode": "Prohibited",
+        "reEntryPeriod": null
+      },
+      "currencyCodes": [
+        "CLP"
+      ],
+      "isImmediatelyAfterPublish": false,
+      "testControlGroupParameters": {
+        "isEnabled": false,
+        "controlGroupPercent": null,
+        "playersAddingStrategy": "IncludeAll",
+        "daysToKeepInControlGroup": null
+      }
+    },
+    "pathesConfiguration": {
+      "277ef936-d56a-4d15-bfa0-ffdcf3fa2803": [
+        {
+          "events": [
+            {
+              "eventName": "NCEngagementSplitPassedPath01",
+              "eventType": "Completion",
+              "eventDisplayName": "Clicked"
+            }
+          ],
+          "pathId": "path1",
+          "pathName": "Clicked",
+          "notificationCenterEngagementStatuses": [
+            "Clicked"
+          ]
+        },
+        {
+          "events": [
+            {
+              "eventName": "NCEngagementSplitPassedPath02",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "NCEngagementSplitPassedPath03",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "NCEngagementSplitPassedPath04",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "NCEngagementSplitPassedPath05",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "other",
+          "pathName": "Other"
+        }
+      ],
+      "875868a4-46c3-42e8-8c78-4771ffdfbf7f": [
+        {
+          "events": [
+            {
+              "eventName": "NCEngagementSplitPassedPath01",
+              "eventType": "Completion",
+              "eventDisplayName": "Clicked"
+            }
+          ],
+          "pathId": "path1",
+          "pathName": "Clicked",
+          "notificationCenterEngagementStatuses": [
+            "Clicked"
+          ]
+        },
+        {
+          "events": [
+            {
+              "eventName": "NCEngagementSplitPassedPath02",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "NCEngagementSplitPassedPath03",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "NCEngagementSplitPassedPath04",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "NCEngagementSplitPassedPath05",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "other",
+          "pathName": "Other"
+        }
+      ]
+    },
+    "exitCriteriaSettings": null,
+    "boundaryConfiguration": {},
+    "activitiesConfiguration": {
+      "8fb1e82f-ce36-4f18-86fb-f69833b6ca81": {
+        "data": {
+          "filterDetails": {
+            "filtersTree": [
+              {
+                "nodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+                "children": [
+                  "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                  "c533abd1-3f64-4d58-9743-c0836bf21833"
+                ],
+                "nodeType": "Operator",
+                "isDeprecated": true,
+                "parentNodeId": null,
+                "groupOperator": "Exclude",
+                "filterConditionId": null
+              },
+              {
+                "nodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                "children": [
+                  "4c860762-e916-449d-a5af-30a3ff632aeb",
+                  "872cc8f5-0db8-4f22-84f4-4b2f3ad0ad74"
+                ],
+                "nodeType": "Operator",
+                "isDeprecated": true,
+                "parentNodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+                "groupOperator": "And",
+                "filterConditionId": null
+              },
+              {
+                "name": "risk_business_segment",
+                "column": {
+                  "name": "risk_business_segment",
+                  "tableName": "agg_player_summary",
+                  "filterName": "Multiple select",
+                  "isRequired": false,
+                  "description": "Risk segment related to business.",
+                  "displayName": "risk_business_segment",
+                  "valuesSource": null,
+                  "filterConditions": [
+                    {
+                      "operator": "in",
+                      "conditionType": "MultiSelect"
+                    },
+                    {
+                      "operator": "notIn",
+                      "conditionType": "MultiSelect"
+                    }
+                  ],
+                  "isPredefinedValuesAvailable": true
+                },
+                "height": 42,
+                "nodeId": "4c860762-e916-449d-a5af-30a3ff632aeb",
+                "children": [],
+                "nodeType": "Filter",
+                "operator": "notIn",
+                "settings": {
+                  "value": "",
+                  "values": [
+                    "Negative",
+                    "Premium"
+                  ],
+                  "dateType": "days",
+                  "hasEmptyState": false
+                },
+                "showForm": false,
+                "tableName": "agg_player_summary",
+                "filterName": "Multiple select",
+                "isRequired": false,
+                "description": "Risk segment related to business.",
+                "displayName": "risk_business_segment",
+                "databaseName": "dv_marts",
+                "isDeprecated": false,
+                "parentNodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                "valuesSource": null,
+                "conditionType": "MultiSelect",
+                "groupOperator": null,
+                "filterConditions": [
+                  {
+                    "operator": "in",
+                    "conditionType": "MultiSelect"
+                  },
+                  {
+                    "operator": "notIn",
+                    "conditionType": "MultiSelect"
+                  }
+                ],
+                "filterConditionId": "c93400f7-9d2b-404c-9815-ccaa9ed34bf6",
+                "isPredefinedValuesAvailable": true
+              },
+              {
+                "name": "last_deposit",
+                "column": {
+                  "name": "last_deposit",
+                  "tableName": "agg_player_summary",
+                  "filterName": "Date&time",
+                  "isRequired": false,
+                  "description": "Timestamp of the player's last deposit.",
+                  "displayName": "last_deposit",
+                  "valuesSource": null,
+                  "filterConditions": [
+                    {
+                      "operator": "equal",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "notEqual",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "gte",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "lte",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "between",
+                      "conditionType": "DateTimeBetween"
+                    },
+                    {
+                      "operator": "equal",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "notEqual",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "gte",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "lte",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "between",
+                      "conditionType": "DateTimeRelativeBetween"
+                    }
+                  ],
+                  "isPredefinedValuesAvailable": false
+                },
+                "height": 42,
+                "nodeId": "872cc8f5-0db8-4f22-84f4-4b2f3ad0ad74",
+                "children": [],
+                "nodeType": "Filter",
+                "operator": "lte",
+                "settings": {
+                  "amount": "30",
+                  "values": [],
+                  "dateType": "days",
+                  "hasEmptyState": false
+                },
+                "showForm": false,
+                "tableName": "agg_player_summary",
+                "filterName": "Date&time",
+                "isRequired": false,
+                "description": "Timestamp of the player's last deposit.",
+                "displayName": "last_deposit",
+                "databaseName": "dv_marts",
+                "dateTimeMode": "Relative",
+                "isDeprecated": false,
+                "parentNodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                "valuesSource": null,
+                "conditionType": "DateTimeRelative",
+                "groupOperator": null,
+                "filterConditions": [
+                  {
+                    "operator": "equal",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "notEqual",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "gte",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "lte",
+                    "conditionType": "DateTime"
+                  },
+                  {
+                    "operator": "between",
+                    "conditionType": "DateTimeBetween"
+                  },
+                  {
+                    "operator": "equal",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "notEqual",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "gte",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "lte",
+                    "conditionType": "DateTimeRelative"
+                  },
+                  {
+                    "operator": "between",
+                    "conditionType": "DateTimeRelativeBetween"
+                  }
+                ],
+                "filterConditionId": "4fdbdc55-81bb-4d7a-92e9-fa743f071e5f",
+                "isPredefinedValuesAvailable": false
+              },
+              {
+                "name": "restriction_name",
+                "column": {
+                  "name": "restriction_name",
+                  "tableName": "d_player_restriction",
+                  "filterName": "Multiple select",
+                  "isRequired": false,
+                  "description": "The name of restriction",
+                  "displayName": "restriction_name",
+                  "valuesSource": null,
+                  "filterConditions": [
+                    {
+                      "operator": "in",
+                      "conditionType": "MultiSelect"
+                    },
+                    {
+                      "operator": "notIn",
+                      "conditionType": "MultiSelect"
+                    }
+                  ],
+                  "isPredefinedValuesAvailable": true
+                },
+                "height": 42,
+                "nodeId": "c533abd1-3f64-4d58-9743-c0836bf21833",
+                "children": [],
+                "nodeType": "Filter",
+                "operator": "in",
+                "settings": {
+                  "values": [
+                    "login",
+                    "deposit"
+                  ],
+                  "dateType": "days",
+                  "hasEmptyState": false
+                },
+                "showForm": false,
+                "tableName": "d_player_restriction",
+                "filterName": "Multiple select",
+                "isRequired": false,
+                "description": "The name of restriction",
+                "displayName": "restriction_name",
+                "databaseName": "dv_marts",
+                "isDeprecated": false,
+                "parentNodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+                "valuesSource": null,
+                "conditionType": "MultiSelect",
+                "groupOperator": null,
+                "filterConditions": [
+                  {
+                    "operator": "in",
+                    "conditionType": "MultiSelect"
+                  },
+                  {
+                    "operator": "notIn",
+                    "conditionType": "MultiSelect"
+                  }
+                ],
+                "filterConditionId": "16c4ecdc-92b9-4c38-8b22-cf789288f24a",
+                "isPredefinedValuesAvailable": true
+              }
+            ],
+            "filterConditions": [
+              {
+                "id": "c93400f7-9d2b-404c-9815-ccaa9ed34bf6",
+                "values": [
+                  "Negative",
+                  "Premium"
+                ],
+                "nodeType": "Filter",
+                "operator": "notIn",
+                "fieldName": "risk_business_segment",
+                "tableName": "agg_player_summary",
+                "columnName": "risk_business_segment",
+                "databaseName": "dv_marts",
+                "conditionType": "MultiSelect",
+                "hasEmptyState": false
+              },
+              {
+                "id": "4fdbdc55-81bb-4d7a-92e9-fa743f071e5f",
+                "value": "P0Y0M30DT0H0M0S",
+                "nodeType": "Filter",
+                "operator": "lte",
+                "fieldName": "last_deposit",
+                "tableName": "agg_player_summary",
+                "columnName": "last_deposit",
+                "databaseName": "dv_marts",
+                "conditionType": "DateTimeRelative",
+                "hasEmptyState": false
+              },
+              {
+                "id": "16c4ecdc-92b9-4c38-8b22-cf789288f24a",
+                "values": [
+                  "login",
+                  "deposit"
+                ],
+                "nodeType": "Filter",
+                "operator": "in",
+                "fieldName": "restriction_name",
+                "tableName": "d_player_restriction",
+                "columnName": "restriction_name",
+                "databaseName": "dv_marts",
+                "conditionType": "MultiSelect",
+                "hasEmptyState": false
+              }
+            ]
+          },
+          "dataSourceName": "default",
+          "currentTemplate": {
+            "id": "d76840be-3916-4e4b-951b-4fbf540e0cea",
+            "name": "Fortunazo players last dep <=30d",
+            "brand": "PMCL",
+            "group": "myTeamFilterTemplates",
+            "createdBy": "e2d2d631-946c-4edc-96ed-2b243e32bc8b",
+            "currencyCodes": [
+              "CLP"
+            ],
+            "filterDetails": {
+              "filtersTree": [
+                {
+                  "nodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+                  "children": [
+                    "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                    "c533abd1-3f64-4d58-9743-c0836bf21833"
+                  ],
+                  "nodeType": "Operator",
+                  "isDeprecated": true,
+                  "parentNodeId": null,
+                  "groupOperator": "Exclude",
+                  "filterConditionId": null
+                },
+                {
+                  "nodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                  "children": [
+                    "4c860762-e916-449d-a5af-30a3ff632aeb",
+                    "872cc8f5-0db8-4f22-84f4-4b2f3ad0ad74"
+                  ],
+                  "nodeType": "Operator",
+                  "isDeprecated": true,
+                  "parentNodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+                  "groupOperator": "And",
+                  "filterConditionId": null
+                },
+                {
+                  "name": "risk_business_segment",
+                  "column": {
+                    "name": "risk_business_segment",
+                    "tableName": "agg_player_summary",
+                    "filterName": "Multiple select",
+                    "isRequired": false,
+                    "description": "Risk segment related to business.",
+                    "displayName": "risk_business_segment",
+                    "valuesSource": null,
+                    "filterConditions": [
+                      {
+                        "operator": "in",
+                        "conditionType": "MultiSelect"
+                      },
+                      {
+                        "operator": "notIn",
+                        "conditionType": "MultiSelect"
+                      }
+                    ],
+                    "isPredefinedValuesAvailable": true
+                  },
+                  "height": 41.66666793823242,
+                  "nodeId": "4c860762-e916-449d-a5af-30a3ff632aeb",
+                  "children": [],
+                  "nodeType": "Filter",
+                  "operator": "notIn",
+                  "settings": {
+                    "value": "",
+                    "values": [
+                      "Negative",
+                      "Premium"
+                    ],
+                    "dateType": "days",
+                    "hasEmptyState": false
+                  },
+                  "showForm": false,
+                  "tableName": "agg_player_summary",
+                  "filterName": "Multiple select",
+                  "isRequired": false,
+                  "description": "Risk segment related to business.",
+                  "displayName": "risk_business_segment",
+                  "databaseName": "dv_marts",
+                  "isDeprecated": false,
+                  "parentNodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                  "valuesSource": null,
+                  "conditionType": "MultiSelect",
+                  "groupOperator": null,
+                  "filterConditions": [
+                    {
+                      "operator": "in",
+                      "conditionType": "MultiSelect"
+                    },
+                    {
+                      "operator": "notIn",
+                      "conditionType": "MultiSelect"
+                    }
+                  ],
+                  "filterConditionId": "c93400f7-9d2b-404c-9815-ccaa9ed34bf6",
+                  "isPredefinedValuesAvailable": true
+                },
+                {
+                  "name": "last_deposit",
+                  "column": {
+                    "name": "last_deposit",
+                    "tableName": "agg_player_summary",
+                    "filterName": "Date&time",
+                    "isRequired": false,
+                    "description": "Timestamp of the player's last deposit.",
+                    "displayName": "last_deposit",
+                    "valuesSource": null,
+                    "filterConditions": [
+                      {
+                        "operator": "equal",
+                        "conditionType": "DateTime"
+                      },
+                      {
+                        "operator": "notEqual",
+                        "conditionType": "DateTime"
+                      },
+                      {
+                        "operator": "gte",
+                        "conditionType": "DateTime"
+                      },
+                      {
+                        "operator": "lte",
+                        "conditionType": "DateTime"
+                      },
+                      {
+                        "operator": "between",
+                        "conditionType": "DateTimeBetween"
+                      },
+                      {
+                        "operator": "equal",
+                        "conditionType": "DateTimeRelative"
+                      },
+                      {
+                        "operator": "notEqual",
+                        "conditionType": "DateTimeRelative"
+                      },
+                      {
+                        "operator": "gte",
+                        "conditionType": "DateTimeRelative"
+                      },
+                      {
+                        "operator": "lte",
+                        "conditionType": "DateTimeRelative"
+                      },
+                      {
+                        "operator": "between",
+                        "conditionType": "DateTimeRelativeBetween"
+                      }
+                    ],
+                    "isPredefinedValuesAvailable": false
+                  },
+                  "height": 41.66666793823242,
+                  "nodeId": "872cc8f5-0db8-4f22-84f4-4b2f3ad0ad74",
+                  "children": [],
+                  "nodeType": "Filter",
+                  "operator": "lte",
+                  "settings": {
+                    "amount": "30",
+                    "values": [],
+                    "dateType": "days",
+                    "hasEmptyState": false
+                  },
+                  "showForm": false,
+                  "tableName": "agg_player_summary",
+                  "filterName": "Date&time",
+                  "isRequired": false,
+                  "description": "Timestamp of the player's last deposit.",
+                  "displayName": "last_deposit",
+                  "databaseName": "dv_marts",
+                  "dateTimeMode": "Relative",
+                  "isDeprecated": false,
+                  "parentNodeId": "3f518333-1bb9-40fe-81d3-99bd129bcbc2",
+                  "valuesSource": null,
+                  "conditionType": "DateTimeRelative",
+                  "groupOperator": null,
+                  "filterConditions": [
+                    {
+                      "operator": "equal",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "notEqual",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "gte",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "lte",
+                      "conditionType": "DateTime"
+                    },
+                    {
+                      "operator": "between",
+                      "conditionType": "DateTimeBetween"
+                    },
+                    {
+                      "operator": "equal",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "notEqual",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "gte",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "lte",
+                      "conditionType": "DateTimeRelative"
+                    },
+                    {
+                      "operator": "between",
+                      "conditionType": "DateTimeRelativeBetween"
+                    }
+                  ],
+                  "filterConditionId": "4fdbdc55-81bb-4d7a-92e9-fa743f071e5f",
+                  "isPredefinedValuesAvailable": false
+                },
+                {
+                  "name": "restriction_name",
+                  "column": {
+                    "name": "restriction_name",
+                    "tableName": "d_player_restriction",
+                    "filterName": "Multiple select",
+                    "isRequired": false,
+                    "description": "The name of restriction",
+                    "displayName": "restriction_name",
+                    "valuesSource": null,
+                    "filterConditions": [
+                      {
+                        "operator": "in",
+                        "conditionType": "MultiSelect"
+                      },
+                      {
+                        "operator": "notIn",
+                        "conditionType": "MultiSelect"
+                      }
+                    ],
+                    "isPredefinedValuesAvailable": true
+                  },
+                  "height": 41.66666793823242,
+                  "nodeId": "c533abd1-3f64-4d58-9743-c0836bf21833",
+                  "children": [],
+                  "nodeType": "Filter",
+                  "operator": "in",
+                  "settings": {
+                    "values": [
+                      "login",
+                      "deposit"
+                    ],
+                    "dateType": "days",
+                    "hasEmptyState": false
+                  },
+                  "showForm": false,
+                  "tableName": "d_player_restriction",
+                  "filterName": "Multiple select",
+                  "isRequired": false,
+                  "description": "The name of restriction",
+                  "displayName": "restriction_name",
+                  "databaseName": "dv_marts",
+                  "isDeprecated": false,
+                  "parentNodeId": "86939bcd-7e9d-4a7c-805d-a62c6224d064",
+                  "valuesSource": null,
+                  "conditionType": "MultiSelect",
+                  "groupOperator": null,
+                  "filterConditions": [
+                    {
+                      "operator": "in",
+                      "conditionType": "MultiSelect"
+                    },
+                    {
+                      "operator": "notIn",
+                      "conditionType": "MultiSelect"
+                    }
+                  ],
+                  "filterConditionId": "16c4ecdc-92b9-4c38-8b22-cf789288f24a",
+                  "isPredefinedValuesAvailable": true
+                }
+              ],
+              "filterConditions": [
+                {
+                  "id": "c93400f7-9d2b-404c-9815-ccaa9ed34bf6",
+                  "values": [
+                    "Negative",
+                    "Premium"
+                  ],
+                  "operator": "notIn",
+                  "fieldName": "risk_business_segment",
+                  "tableName": "agg_player_summary",
+                  "databaseName": "dv_marts",
+                  "conditionType": "MultiSelect",
+                  "hasEmptyState": false
+                },
+                {
+                  "id": "4fdbdc55-81bb-4d7a-92e9-fa743f071e5f",
+                  "value": "P30D",
+                  "operator": "lte",
+                  "fieldName": "last_deposit",
+                  "tableName": "agg_player_summary",
+                  "databaseName": "dv_marts",
+                  "conditionType": "DateTimeRelative",
+                  "hasEmptyState": null
+                },
+                {
+                  "id": "16c4ecdc-92b9-4c38-8b22-cf789288f24a",
+                  "values": [
+                    "login",
+                    "deposit"
+                  ],
+                  "operator": "in",
+                  "fieldName": "restriction_name",
+                  "tableName": "d_player_restriction",
+                  "databaseName": "dv_marts",
+                  "conditionType": "MultiSelect",
+                  "hasEmptyState": false
+                }
+              ]
+            }
+          }
+        },
+        "error": false,
+        "displayData": [
+          "Activity customized"
+        ],
+        "displayName": "Custom Segment"
+      },
+      "cc832e64-fe9d-4c12-84d0-d752626f9e14": {
+        "data": {
+          "emailSettings": {
+            "template": {
+              "id": "CSE-0-15017"
+            },
+            "emailSource": "Template",
+            "transportId": 1417,
+            "fromLineText": "Fortunazo",
+            "defaultVariables": [],
+            "newVariablesState": {
+              "es": {
+                "supportedVariablesEB": [
+                  {
+                    "name": "BrandDomain",
+                    "isRequired": true,
+                    "defaultValue": ""
+                  }
+                ],
+                "nonSupportedVariablesEB": []
+              }
+            },
+            "checkEmailVerified": true,
+            "localizedVariables": [
+              {
+                "variables": [
+                  {
+                    "name": "BrandDomain",
+                    "isRequired": true,
+                    "defaultValue": ""
+                  }
+                ],
+                "languageCode": "es"
+              }
+            ],
+            "playerAgreementName": "CasinoInfo"
+          },
+          "dataDependencies": [
+            {
+              "key": "BrandDomain"
+            }
+          ]
+        },
+        "error": false,
+        "displayData": [
+          "CSE-0-15017 FTCL Tournament 29.06 a la Gran Final"
+        ],
+        "displayName": "Email 1"
+      },
+      "1a7e2bf9-c43c-4bd8-b847-0e4fa26cd38b": {
+        "data": {
+          "version": "v2",
+          "rawValues": {
+            "baseUrl": "https://frtnz.cl",
+            "variables": [
+              {
+                "name": "BrandDomain",
+                "activityId": "",
+                "dataSource": "dwh_source",
+                "isRequired": true,
+                "defaultValue": ""
+              }
+            ],
+            "messageText": "Fortunazo | Camino a la Gran Final. Apuesta ya y gana iPhone, dron, parlante y $5.050.000\nhttps://{{BrandDomain}}",
+            "transportId": "Default",
+            "languageCode": "es",
+            "useAutologin": true,
+            "validityPeriod": 48,
+            "checkPhoneVerified": true,
+            "deliveryTimeSettings": {
+              "to": "22:00:00",
+              "days": [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+                "Sunday"
+              ],
+              "from": "09:00:00"
+            },
+            "validationPeriodType": "hours",
+            "localizedMessageTexts": {
+              "en": {
+                "variables": [
+                  {
+                    "name": "BrandDomain",
+                    "activityId": "",
+                    "dataSource": "dwh_source",
+                    "isRequired": true,
+                    "defaultValue": ""
+                  }
+                ],
+                "messageText": "Big Fortune | Road to the Grand Final. Bet now and win an iPhone, drone, speaker and $5,050,000 https://{{BrandDomain}}?%$utm_tags%#_smartico_dp=dp:gf_tournaments&id=5431",
+                "languageCode": "en"
+              },
+              "es": {
+                "variables": [
+                  {
+                    "name": "BrandDomain",
+                    "activityId": "",
+                    "dataSource": "dwh_source",
+                    "isRequired": true,
+                    "defaultValue": ""
+                  }
+                ],
+                "messageText": "Fortunazo | Camino a la Gran Final. Apuesta ya y gana iPhone, dron, parlante y $5.050.000 https://{{BrandDomain}}?%$utm_tags%#_smartico_dp=dp:gf_tournaments&id=5431",
+                "languageCode": "es"
+              }
+            }
+          },
+          "smsSettings": {
+            "baseUrl": "https://frtnz.cl",
+            "variables": [
+              {
+                "name": "BrandDomain",
+                "activityId": "",
+                "dataSource": "dwh_source",
+                "isRequired": true,
+                "defaultValue": ""
+              }
+            ],
+            "messageText": "Fortunazo | Camino a la Gran Final. Apuesta ya y gana iPhone, dron, parlante y $5.050.000 https://{{BrandDomain}}?%$utm_tags%#_smartico_dp=dp:gf_tournaments&id=5431",
+            "transportId": null,
+            "languageCode": "es",
+            "useAutologin": true,
+            "validityPeriod": "P0Y0M0DT48H0M0S",
+            "checkPhoneVerified": true,
+            "deliveryTimeSettings": {
+              "to": {
+                "hours": 22,
+                "minutes": 0
+              },
+              "days": [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+                "Sunday"
+              ],
+              "from": {
+                "hours": 9,
+                "minutes": 0
+              }
+            },
+            "validationPeriodType": "hours",
+            "localizedMessageTexts": [
+              {
+                "variables": [
+                  {
+                    "name": "BrandDomain",
+                    "activityId": "",
+                    "dataSource": "dwh_source",
+                    "isRequired": true,
+                    "defaultValue": ""
+                  }
+                ],
+                "messageText": "Fortunazo | Camino a la Gran Final. Apuesta ya y gana iPhone, dron, parlante y $5.050.000 https://{{BrandDomain}}?%$utm_tags%#_smartico_dp=dp:gf_tournaments&id=5431",
+                "languageCode": "es"
+              },
+              {
+                "variables": [
+                  {
+                    "name": "BrandDomain",
+                    "activityId": "",
+                    "dataSource": "dwh_source",
+                    "isRequired": true,
+                    "defaultValue": ""
+                  }
+                ],
+                "messageText": "Big Fortune | Road to the Grand Final. Bet now and win an iPhone, drone, speaker and $5,050,000 https://{{BrandDomain}}?%$utm_tags%#_smartico_dp=dp:gf_tournaments&id=5431",
+                "languageCode": "en"
+              }
+            ]
+          },
+          "dataDependencies": [
+            {
+              "key": "BrandDomain"
+            }
+          ],
+          "listOfUsedVariables": [
+            "BrandDomain"
+          ]
+        },
+        "error": false,
+        "displayData": [
+          "Fortunazo | Camino a la Gran Final. Apuesta ya y gana iPhone, dron, parlante y $5.050.000 https://{{BrandDomain}}?%$utm_tags%#_smartico_dp=dp:gf_tournaments&id=5431"
+        ],
+        "displayName": "SMS"
+      },
+      "0764f9ca-6503-48f4-afb9-fd5af5e7a542": {
+        "data": {
+          "channel": 1,
+          "category": "2",
+          "contract": 1,
+          "accountId": "",
+          "languages": [
+            {
+              "languageCode": "es"
+            },
+            {
+              "languageCode": "en"
+            }
+          ],
+          "templates": 16001,
+          "deliveryType": "singleChannel",
+          "validityType": "days",
+          "objectForSend": {
+            "metadata": {
+              "utm_source": "boris",
+              "journeyName": "FTCL | CS | Torneo Universo Camino a la Gran Final 29.06-19.07"
+            },
+            "variables": [
+              {
+                "name": "group",
+                "value": "regular"
+              },
+              {
+                "name": "title",
+                "value": "%title-en%"
+              },
+              {
+                "name": "layout",
+                "value": "1"
+              },
+              {
+                "name": "icon-src",
+                "value": "%icon-src%"
+              },
+              {
+                "name": "title-en",
+                "value": "⚽ The Road to the Grand Final has already begun!"
+              },
+              {
+                "name": "caption-en",
+                "value": "Join the tournament"
+              },
+              {
+                "name": "description",
+                "value": "%description-en%"
+              },
+              {
+                "name": "buttons_1_link",
+                "value": "%link%?%$utm_tags%"
+              },
+              {
+                "name": "description-en",
+                "value": "🏆 Bet, collect points and fight for $5,050,000"
+              },
+              {
+                "name": "buttons_1_caption",
+                "value": "%caption-en%"
+              },
+              {
+                "name": "buttons_1_deeplink",
+                "value": "%deeplink%?%$utm_tags%"
+              },
+              {
+                "name": "buttons_1_highlighted",
+                "value": "True"
+              },
+              {
+                "name": "group",
+                "value": "regular"
+              },
+              {
+                "name": "title",
+                "value": "%title-es%"
+              },
+              {
+                "name": "layout",
+                "value": "1"
+              },
+              {
+                "name": "icon-src",
+                "value": "%icon-src%"
+              },
+              {
+                "name": "title-es",
+                "value": "⚽ El Camino a la Gran Final ya empezo!"
+              },
+              {
+                "name": "caption-es",
+                "value": "Unirme al torneo"
+              },
+              {
+                "name": "description",
+                "value": "%description-es%"
+              },
+              {
+                "name": "buttons_1_link",
+                "value": "%link%?%$utm_tags%"
+              },
+              {
+                "name": "description-es",
+                "value": "🏆 Apuesta, suma puntos y pelea por $5.050.000"
+              },
+              {
+                "name": "buttons_1_caption",
+                "value": "%caption-es%"
+              },
+              {
+                "name": "buttons_1_deeplink",
+                "value": "%deeplink%?%$utm_tags%"
+              },
+              {
+                "name": "buttons_1_highlighted",
+                "value": "True"
+              },
+              {
+                "name": "link",
+                "value": "https://%#BrandDomain%?%$utm_tags%#_smartico_dp=dp:gf_tournaments&id=5431"
+              },
+              {
+                "name": "deeplink",
+                "value": "https://%#BrandDomain%?%$utm_tags%#_smartico_dp=dp:gf_tournaments&id=5431"
+              },
+              {
+                "name": "icon-src",
+                "value": "https://static.contentin.cloud/73b22051-b16d-46e3-90cb-eeb045f59eea/4f5a57d0-5f55-43eb-bc2d-f2034f4b52de.png"
+              },
+              {
+                "name": "group",
+                "value": "regular"
+              }
+            ],
+            "template_id": 16001,
+            "expire_after": "18.00:00:00.000",
+            "defaultVariables": [
+              {
+                "name": "BrandDomain",
+                "isRequired": true,
+                "defaultValue": ""
+              }
+            ],
+            "localizedVariables": []
+          },
+          "singleChannel": {
+            "accordion": {
+              "validList": {
+                "template1312": {
+                  "en": true,
+                  "es": true
+                },
+                "template16001": {
+                  "en": true,
+                  "es": true
+                }
+              }
+            },
+            "activityName": "PMCL Notification Center",
+            "localizedLanguagesTab": {
+              "en": {
+                "group": "regular",
+                "title": "%title-en%",
+                "layout": "1",
+                "icon-src": "%icon-src%",
+                "title-en": "⚽ The Road to the Grand Final has already begun!",
+                "caption-en": "Join the tournament",
+                "description": "%description-en%",
+                "buttons_1_link": "%link%?%$utm_tags%",
+                "description-en": "🏆 Bet, collect points and fight for $5,050,000",
+                "buttons_1_caption": "%caption-en%",
+                "buttons_1_deeplink": "%deeplink%?%$utm_tags%",
+                "buttons_1_highlighted": "True"
+              },
+              "es": {
+                "group": "regular",
+                "title": "%title-es%",
+                "layout": "1",
+                "icon-src": "%icon-src%",
+                "title-es": "⚽ El Camino a la Gran Final ya empezo!",
+                "caption-es": "Unirme al torneo",
+                "description": "%description-es%",
+                "buttons_1_link": "%link%?%$utm_tags%",
+                "description-es": "🏆 Apuesta, suma puntos y pelea por $5.050.000",
+                "buttons_1_caption": "%caption-es%",
+                "buttons_1_deeplink": "%deeplink%?%$utm_tags%",
+                "buttons_1_highlighted": "True"
+              },
+              "common": {
+                "link": "https://{{BrandDomain}}?%$utm_tags%#_smartico_dp=dp:gf_tournaments&amp;id=5431",
+                "deeplink": "https://{{BrandDomain}}?%$utm_tags%#_smartico_dp=dp:gf_tournaments&amp;id=5431",
+                "icon-src": "https://static.contentin.cloud/73b22051-b16d-46e3-90cb-eeb045f59eea/4f5a57d0-5f55-43eb-bc2d-f2034f4b52de.png"
+              },
+              "dwhVariables": {
+                "en": [],
+                "es": [],
+                "common": [
+                  {
+                    "name": "BrandDomain",
+                    "isRequired": true,
+                    "defaultValue": ""
+                  }
+                ]
+              }
+            }
+          },
+          "validityAmount": "18",
+          "dataDependencies": [
+            {
+              "key": "BrandDomain"
+            }
+          ],
+          "listOfUsedVariables": []
+        },
+        "error": false,
+        "isTouched": true,
+        "displayData": [
+          "16001. PMCL Notification Center"
+        ],
+        "displayName": "Notification Center"
+      },
+      "9a55a214-bd08-4b69-8357-382c38eae219": {
+        "data": {
+          "channel": 3,
+          "category": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "contract": 5,
+          "accountId": "",
+          "languages": [
+            {
+              "languageCode": "es"
+            },
+            {
+              "languageCode": "en"
+            }
+          ],
+          "templates": 15999,
+          "deliveryType": "singleChannel",
+          "validityType": "days",
+          "objectForSend": {
+            "metadata": {
+              "utm_source": "boris",
+              "journeyName": "FTCL | CS | Torneo Universo Camino a la Gran Final 29.06-19.07"
+            },
+            "variables": [
+              {
+                "name": "title",
+                "value": "%title_en%"
+              },
+              {
+                "name": "title_en",
+                "value": "🏆 Grand Final, now!"
+              },
+              {
+                "name": "caption_en",
+                "value": "Participate now"
+              },
+              {
+                "name": "description",
+                "value": "%description_en%"
+              },
+              {
+                "name": "buttons_1_link",
+                "value": "%link%?%$utm_tags%"
+              },
+              {
+                "name": "description_en",
+                "value": "🔥 Slots, live casino, sports betting. Win your share of $5,050,000 + physical prizes"
+              },
+              {
+                "name": "buttons_1_caption",
+                "value": "%caption_en%"
+              },
+              {
+                "name": "backgroundImageSrc",
+                "value": "%background_image_src%"
+              },
+              {
+                "name": "buttons_1_deeplink",
+                "value": "%deeplink%?%$utm_tags%"
+              },
+              {
+                "name": "title",
+                "value": "%title_es%"
+              },
+              {
+                "name": "title_es",
+                "value": "🏆 Gran Final, ya!"
+              },
+              {
+                "name": "caption_es",
+                "value": "Participar ya"
+              },
+              {
+                "name": "description",
+                "value": "%description_es%"
+              },
+              {
+                "name": "buttons_1_link",
+                "value": "%link%?%$utm_tags%"
+              },
+              {
+                "name": "description_es",
+                "value": "🔥 Slots, live casino, deportes. Gana tu parte de $5.050.000 + premios fisicos"
+              },
+              {
+                "name": "buttons_1_caption",
+                "value": "%caption_es%"
+              },
+              {
+                "name": "backgroundImageSrc",
+                "value": "%background_image_src%"
+              },
+              {
+                "name": "buttons_1_deeplink",
+                "value": "%deeplink%?%$utm_tags%"
+              },
+              {
+                "name": "link",
+                "value": "https://%#BrandDomain%?%$utm_tags%#_smartico_dp=dp:gf_tournaments&id=5431"
+              },
+              {
+                "name": "deeplink",
+                "value": "https://%#BrandDomain%?%$utm_tags%#_smartico_dp=dp:gf_tournaments&id=5431"
+              },
+              {
+                "name": "background_image_src",
+                "value": "https://static.contentin.cloud/73b22051-b16d-46e3-90cb-eeb045f59eea/2f0324a5-6a95-43f8-8805-895aa7876f6f.png"
+              },
+              {
+                "name": "group",
+                "value": "regular"
+              }
+            ],
+            "template_id": 15999,
+            "expire_after": "18.00:00:00.000",
+            "defaultVariables": [
+              {
+                "name": "BrandDomain",
+                "isRequired": true,
+                "defaultValue": ""
+              }
+            ],
+            "localizedVariables": []
+          },
+          "singleChannel": {
+            "accordion": {
+              "validList": {
+                "template1316": {
+                  "en": true,
+                  "es": true
+                },
+                "template15999": {
+                  "en": true,
+                  "es": true
+                }
+              }
+            },
+            "activityName": "PMCL Pop-up CatFish",
+            "localizedLanguagesTab": {
+              "en": {
+                "title": "%title_en%",
+                "title_en": "🏆 Grand Final, now!",
+                "caption_en": "Participate now",
+                "description": "%description_en%",
+                "buttons_1_link": "%link%?%$utm_tags%",
+                "description_en": "🔥 Slots, live casino, sports betting. Win your share of $5,050,000 + physical prizes",
+                "buttons_1_caption": "%caption_en%",
+                "backgroundImageSrc": "%background_image_src%",
+                "buttons_1_deeplink": "%deeplink%?%$utm_tags%"
+              },
+              "es": {
+                "title": "%title_es%",
+                "title_es": "🏆 Gran Final, ya!",
+                "caption_es": "Participar ya",
+                "description": "%description_es%",
+                "buttons_1_link": "%link%?%$utm_tags%",
+                "description_es": "🔥 Slots, live casino, deportes. Gana tu parte de $5.050.000 + premios fisicos",
+                "buttons_1_caption": "%caption_es%",
+                "backgroundImageSrc": "%background_image_src%",
+                "buttons_1_deeplink": "%deeplink%?%$utm_tags%"
+              },
+              "common": {
+                "link": "https://{{BrandDomain}}?%$utm_tags%#_smartico_dp=dp:gf_tournaments&amp;id=5431",
+                "deeplink": "https://{{BrandDomain}}?%$utm_tags%#_smartico_dp=dp:gf_tournaments&amp;id=5431",
+                "background_image_src": "https://static.contentin.cloud/73b22051-b16d-46e3-90cb-eeb045f59eea/2f0324a5-6a95-43f8-8805-895aa7876f6f.png"
+              },
+              "dwhVariables": {
+                "en": [],
+                "es": [],
+                "common": [
+                  {
+                    "name": "BrandDomain",
+                    "isRequired": true,
+                    "defaultValue": ""
+                  }
+                ]
+              }
+            }
+          },
+          "validityAmount": "18",
+          "dataDependencies": [
+            {
+              "key": "BrandDomain"
+            }
+          ],
+          "listOfUsedVariables": []
+        },
+        "error": false,
+        "isTouched": true,
+        "displayData": [
+          "15999. PMCL Pop-up CatFish"
+        ],
+        "displayName": "Notification Center"
+      },
+      "3e5f3bbe-38c5-4cc2-8a4e-b699fdf35b4f": {
+        "data": {
+          "waitTo": "2026-07-05T16:00:00Z",
+          "exitCriteria": false
+        },
+        "error": false,
+        "displayData": [
+          "05.07.26"
+        ],
+        "displayName": "Date"
+      },
+      "277ef936-d56a-4d15-bfa0-ffdcf3fa2803": {
+        "data": {
+          "properties": {
+            "paths": [
+              {
+                "pathId": "path1",
+                "pathName": "Clicked",
+                "notificationCenterEngagementStatuses": [
+                  "Clicked"
+                ]
+              },
+              {
+                "pathId": "other",
+                "pathName": "Other",
+                "notificationCenterEngagementStatuses": [
+                  "NotSent",
+                  "Sent",
+                  "Shown",
+                  "Read"
+                ]
+              }
+            ],
+            "DextraNotificationCenterActivityId": "0764f9ca-6503-48f4-afb9-fd5af5e7a542"
+          },
+          "pathesConfig": [
+            {
+              "events": [
+                {
+                  "eventName": "NCEngagementSplitPassedPath01",
+                  "eventType": "Completion",
+                  "eventDisplayName": "Clicked"
+                }
+              ],
+              "pathId": "path1",
+              "pathName": "Clicked",
+              "notificationCenterEngagementStatuses": [
+                "Clicked"
+              ]
+            },
+            {
+              "events": [
+                {
+                  "eventName": "NCEngagementSplitPassedPath02",
+                  "eventType": "Completion"
+                },
+                {
+                  "eventName": "NCEngagementSplitPassedPath03",
+                  "eventType": "Completion"
+                },
+                {
+                  "eventName": "NCEngagementSplitPassedPath04",
+                  "eventType": "Completion"
+                },
+                {
+                  "eventName": "NCEngagementSplitPassedPath05",
+                  "eventType": "Completion"
+                }
+              ],
+              "pathId": "other",
+              "pathName": "Other"
+            }
+          ]
+        },
+        "error": false,
+        "displayData": [
+          "0764f9ca-6503-48f4-afb9-fd5af5e7a542"
+        ],
+        "displayName": "Messaging engagement split"
+      },
+      "f0c312d2-0c84-427c-bd38-3148e56857ec": {
+        "data": {
+          "waitTo": "2026-07-18T16:00:00Z",
+          "exitCriteria": false
+        },
+        "error": false,
+        "displayData": [
+          "18.07.26"
+        ],
+        "displayName": "Date"
+      },
+      "875868a4-46c3-42e8-8c78-4771ffdfbf7f": {
+        "data": {
+          "properties": {
+            "paths": [
+              {
+                "pathId": "path1",
+                "pathName": "Clicked",
+                "notificationCenterEngagementStatuses": [
+                  "Clicked"
+                ]
+              },
+              {
+                "pathId": "other",
+                "pathName": "Other",
+                "notificationCenterEngagementStatuses": [
+                  "NotSent",
+                  "Sent",
+                  "Shown",
+                  "Read"
+                ]
+              }
+            ],
+            "DextraNotificationCenterActivityId": "0764f9ca-6503-48f4-afb9-fd5af5e7a542"
+          },
+          "pathesConfig": [
+            {
+              "events": [
+                {
+                  "eventName": "NCEngagementSplitPassedPath01",
+                  "eventType": "Completion",
+                  "eventDisplayName": "Clicked"
+                }
+              ],
+              "pathId": "path1",
+              "pathName": "Clicked",
+              "notificationCenterEngagementStatuses": [
+                "Clicked"
+              ]
+            },
+            {
+              "events": [
+                {
+                  "eventName": "NCEngagementSplitPassedPath02",
+                  "eventType": "Completion"
+                },
+                {
+                  "eventName": "NCEngagementSplitPassedPath03",
+                  "eventType": "Completion"
+                },
+                {
+                  "eventName": "NCEngagementSplitPassedPath04",
+                  "eventType": "Completion"
+                },
+                {
+                  "eventName": "NCEngagementSplitPassedPath05",
+                  "eventType": "Completion"
+                }
+              ],
+              "pathId": "other",
+              "pathName": "Other"
+            }
+          ]
+        },
+        "error": false,
+        "displayData": [
+          "0764f9ca-6503-48f4-afb9-fd5af5e7a542"
+        ],
+        "displayName": "Messaging engagement split"
+      },
+      "4c717fb8-4e67-49f4-9d87-2696393fec6a": {
+        "data": {
+          "waitPeriod": "P0Y0M0DT2H0M0S",
+          "exitCriteria": false
+        },
+        "error": false,
+        "displayData": [
+          "2 Hours"
+        ],
+        "displayName": "Wait"
+      }
+    }
+  },
+  "duplicatedFromVersion": 6,
+  "duplicatedFromId": "JRN-0-592203",
+  "reservedJourneyId": "JRN-0-620007"
+}
