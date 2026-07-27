@@ -157,8 +157,7 @@
         },
         "spin_provider": {
           "wire_unit": "raw",
-          "desc": "game provider id (e.g. pragmatic) — from games registry",
-          "required": true
+          "desc": "game provider id (e.g. pragmatic) — from games registry"
         },
         "spin_game_lobby": {
           "wire_unit": "raw",
@@ -167,13 +166,11 @@
         },
         "spin_game_wallet": {
           "wire_unit": "raw",
-          "desc": "walletGameId — from games registry",
-          "required": true
+          "desc": "walletGameId — from games registry"
         },
         "spin_game_external": {
           "wire_unit": "raw",
-          "desc": "externalGameId — from games registry",
-          "required": true
+          "desc": "externalGameId — from games registry"
         }
       }
     }

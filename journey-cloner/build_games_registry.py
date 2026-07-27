@@ -129,27 +129,30 @@ def write_compact_index(games: dict) -> None:
         `@provider` suffix.
     Format per line:  Name | lobbyGameId | walletGameId[ @provider]
     """
+    # The live catalog is ~4,900 games across ~48 providers. Listing them would
+    # be roughly 300 KB in every single prompt — 15x the whole rest of it — so
+    # the index is now a SUMMARY, and the composer resolves names itself
+    # (compose._games_by_name / journey_composer.resolve_game index the full
+    # games.json by id, display name and alias). The planner writes the game the
+    # way the brief says it; an unresolvable name is refused with near matches.
+    by_provider: dict[str, int] = {}
+    for g in games.values():
+        by_provider[str(g.get("provider") or "?")] = by_provider.get(str(g.get("provider") or "?"), 0) + 1
     lines = [
-        "# Games registry (compact) — resolve a brief's game NAME to these ids.",
-        "# Never guess an id; if a game isn't listed, flag ⛔ RESOLVE_AT_BUILD_TIME.",
-        f"# Name | lobbyGameId | walletGameId    (provider is '{DEFAULT_PROVIDER}'",
-        "# unless the row adds | provider=<x>; externalGameId always == walletGameId)",
+        f"# Games registry — {len(games)} games across {len(by_provider)} providers.",
+        "#",
+        "# The full table is NOT inlined here: it is ~300KB. Write the game the way",
+        "# the brief names it — \"Big Bass Bonanza 1000\", \"Wanted Dead or a Wild\" —",
+        "# in the game field. The composer resolves the name to the real",
+        "# lobby/wallet/external/provider tuple against library/games.json, and",
+        "# REFUSES with near matches if it cannot. Do NOT invent an id, and do NOT",
+        "# flag ⛔ merely because you cannot see the game listed here — you cannot",
+        "# see any of them. Flag ⛔ only if the brief names no game at all.",
+        "#",
+        "# Games per provider:",
     ]
-    for g in sorted(games.values(), key=lambda x: (x.get("gameTranslationKey") or "").lower()):
-        name = g.get("gameTranslationKey") or g.get("lobbyGameId")
-        wallet = str(g.get("walletGameId") or "")
-        external = str(g.get("externalGameId") or "")
-        provider = str(g.get("provider") or "")
-        row = f"{name} | {g.get('lobbyGameId') or ''} | {wallet}"
-        # A bare "@provider" suffix would be ambiguous: some wallet ids already
-        # contain '@' (amigo_1000OlympusRivals@AMIGO). Name the field instead.
-        if provider and provider != DEFAULT_PROVIDER:
-            row += f" | provider={provider}"
-        # Only 0 games break the wallet==external rule today; if one ever does,
-        # spell it out rather than let the header's promise silently lie.
-        if external and external != wallet:
-            row += f" | external={external}"
-        lines.append(row)
+    for prov, count in sorted(by_provider.items(), key=lambda kv: (-kv[1], kv[0])):
+        lines.append(f"#   {prov} ({count})")
     INDEX.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 

@@ -309,12 +309,24 @@ difference: recipe knobs take major CLP, chain settings take minor units.
 
 Real `lobbyGameId`/`walletGameId` values are opaque and provider-prefixed
 (`pragmatic-sweet-bonanza-super-scatter`, wallet `vs20swbonsup`) — they CANNOT
-be guessed. When a brief names a casino game, match it (by name or alias) to an
-entry below and use that entry's exact ids. If the game is NOT listed, you MUST
-flag it — never invent an id:
-  ⛔ RESOLVE_AT_BUILD_TIME — game "<name>" not in games registry.
-Put that literal string in the spec's game field so the composer refuses to build
-until it's resolved.
+be guessed, so DO NOT invent one.
+
+You do not need to. Write the game the way the BRIEF names it — "Big Bass
+Bonanza 1000", "Wanted Dead or a Wild" — as the value of the game field
+(`spin_game_lobby` in MODE 3, `game` in MODE 5). The composer resolves that name
+against the full registry by name, alias or id and fills in the whole
+lobby/wallet/external/provider tuple itself. Send ONLY the game field; the other
+three are derived, and anything you put in them is overwritten.
+
+The registry is far too large to list here, so the section below is a summary
+only. Two consequences:
+  * NEVER flag ⛔ just because you cannot see a game listed — you cannot see any
+    of them. If the brief names a game, pass the name through.
+  * ⛔ RESOLVE_AT_BUILD_TIME belongs in the game field only when the brief names
+    NO game at all and one is required.
+If a name does not resolve, the composer refuses and suggests near matches, and
+that refusal comes back to you to correct — so a wrong guess is caught, but a
+missing name cannot be.
 
 <GAMES_REGISTRY>
 </GAMES_REGISTRY>

@@ -224,19 +224,17 @@ RECIPES: dict[str, Recipe] = {
             "spin_provider": Knob(
                 "freespin_bonus", "initializationData.freespinActivity.provider",
                 "raw", "game provider id (e.g. pragmatic) — from games registry",
-                required=True, also=(("promotion", PROMO_FS + "provider"),)),
+                also=(("promotion", PROMO_FS + "provider"),)),
             "spin_game_lobby": Knob(
                 "freespin_bonus", "initializationData.freespinActivity.lobbyGameId",
                 "raw", "lobbyGameId — from games registry, never guessed",
                 required=True, also=(("promotion", PROMO_FS + "lobbyGameId"),)),
             "spin_game_wallet": Knob(
                 "freespin_bonus", "initializationData.freespinActivity.walletGameId",
-                "raw", "walletGameId — from games registry", required=True,
-                also=(("promotion", PROMO_FS + "walletGameId"),)),
+                "raw", "walletGameId — from games registry", also=(("promotion", PROMO_FS + "walletGameId"),)),
             "spin_game_external": Knob(
                 "freespin_bonus", "initializationData.freespinActivity.externalGameId",
-                "raw", "externalGameId — from games registry", required=True,
-                also=(("promotion", PROMO_FS + "externalGameId"),)),
+                "raw", "externalGameId — from games registry", also=(("promotion", PROMO_FS + "externalGameId"),)),
         },
     ),
 }
@@ -591,6 +589,28 @@ def _games_registry() -> dict:
     return _games_registry._cache
 
 
+def _norm_name(s) -> str:
+    """Loose key for game-name matching: 'Big Bass Bonanza 1000' -> 'bigbassbonanza1000'."""
+    return "".join(ch for ch in str(s).lower() if ch.isalnum())
+
+
+def _games_by_name() -> dict:
+    """Every way a brief might name a game -> its lobbyGameId.
+
+    Indexes the id itself, the display name and every alias. This is what lets a
+    spec say "Big Bass Bonanza 1000" instead of an opaque id: with ~4,900 games
+    the registry can no longer be inlined into the prompt, so the model names the
+    game in plain language and the composer does the lookup."""
+    if not hasattr(_games_by_name, "_cache"):
+        idx: dict[str, str] = {}
+        for lobby_id, entry in _games_registry().items():
+            for key in (lobby_id, entry.get("gameTranslationKey"), *(entry.get("aliases") or [])):
+                if key:
+                    idx.setdefault(_norm_name(key), lobby_id)
+        _games_by_name._cache = idx
+    return _games_by_name._cache
+
+
 def _check_games(recipe: Recipe, knobs: dict) -> None:
     """Refuse a spec whose game ids are not in the registry, or that mixes ids
     from different games. `never guessed` in the knob descriptions was a request;
@@ -605,12 +625,36 @@ def _check_games(recipe: Recipe, knobs: dict) -> None:
     if not given:
         return
     import difflib
+    # A game may be named rather than identified. Resolve the lobby knob first —
+    # every other game field is then derived from that registry row below, so a
+    # spec only ever has to get ONE of them right.
+    lobby_knob_early = next((k for k, f in fields.items() if f == "lobbyGameId"), None)
+    if lobby_knob_early and lobby_knob_early in given:
+        raw_value = given[lobby_knob_early]
+        if raw_value not in games:
+            resolved = _games_by_name().get(_norm_name(raw_value))
+            if resolved:
+                knobs[lobby_knob_early] = resolved
+                given[lobby_knob_early] = resolved
+
     valid = {f: {e.get(f) for e in games.values() if e.get(f)} for f in GAME_FIELDS}
     bad = []
     for kname, value in given.items():
         field_name = fields[kname]
+        # Non-lobby fields are coerced from the lobby row further down, so a
+        # mismatch there is not an error worth reporting.
+        if field_name != "lobbyGameId" and lobby_knob_early in given and given[lobby_knob_early] in games:
+            continue
         if value not in valid[field_name]:
-            near = difflib.get_close_matches(str(value), sorted(map(str, valid[field_name])), n=3, cutoff=0.5)
+            if field_name == "lobbyGameId":
+                # Suggest by display NAME, which is what a brief actually says.
+                names = {e.get("gameTranslationKey") or k: k for k, e in games.items()}
+                near = difflib.get_close_matches(str(value), sorted(names), n=3, cutoff=0.5)
+                if not near and len(str(value)) >= 4:
+                    q = _norm_name(value)
+                    near = [n for n in sorted(names) if q in _norm_name(n)][:3]
+            else:
+                near = difflib.get_close_matches(str(value), sorted(map(str, valid[field_name])), n=3, cutoff=0.5)
             bad.append(f"{kname} = {value!r} is not a known {field_name}"
                        + (f" — did you mean {near}?" if near else ""))
     if bad:
@@ -632,12 +676,15 @@ def _check_games(recipe: Recipe, knobs: dict) -> None:
     lobby = given.get(lobby_knob)
     entry = games.get(lobby) if lobby else None
     if entry:
-        for kname, value in given.items():
-            field_name = fields[kname]
+        # Fill EVERY game field from the lobby row, whether or not the spec sent
+        # it. Only correcting supplied values left the omitted ones at the
+        # reference template's game — a spec naming a 3oaks title shipped its
+        # lobby id beside Sweet Bonanza's wallet id and provider.
+        for kname, field_name in fields.items():
             if field_name == "lobbyGameId":
                 continue
             correct = entry.get(field_name)
-            if correct and value != correct:
+            if correct and knobs.get(kname) != correct:
                 knobs[kname] = correct
 
 

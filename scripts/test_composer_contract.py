@@ -122,7 +122,34 @@ refuses("an invented knob name", mutate(spin_game_id="pragmatic-big-bass-bonanza
 refuses("an omitted required knob", mutate(spin_game_lobby=None))
 refuses("a blocker sentinel", mutate(spin_game_lobby="⛔ RESOLVE_AT_BUILD_TIME"))
 refuses("a fabricated game id", mutate(spin_game_lobby="pragmatic-mega-dragon-fortune-deluxe"))
-refuses("a placeholder token", mutate(spin_provider="TBD"))
+refuses("a placeholder in the identifying game field", mutate(spin_game_lobby="TBD"))
+# A placeholder in a DERIVED field is corrected, not refused — provider/wallet/
+# external all come from the lobby row, so the right value is already known.
+# What matters is that the placeholder never reaches the journey.
+try:
+    _r, tbd_body, _n, _u = C.compose_from_spec(mutate(spin_provider="TBD"))
+    check("a placeholder in a derived field never reaches the journey",
+          "TBD" not in json.dumps(tbd_body))
+except Exception as exc:
+    check("a placeholder in a derived field is handled", False, f"{type(exc).__name__}: {exc}")
+
+# Games are named in plain language now — the registry is far too large to inline.
+print("\ngame names resolve to the full id tuple")
+for label, name, want_lobby in [
+    ("display name", "Big Bass Bonanza 1000", "pragmatic-big-bass-bonanza-1000"),
+    ("raw lobby id", "pragmatic-big-bass-bonanza-1000", "pragmatic-big-bass-bonanza-1000"),
+]:
+    try:
+        _r, nb, _n, _u = C.compose_from_spec(mutate(spin_game_lobby=name))
+        fa = next(a for a in nb["activities"]
+                  if a["activityName"] == "freespin_bonus")["initializationData"]["freespinActivity"]
+        entry = C._games_registry().get(want_lobby, {})
+        check(f"{label} -> correct tuple",
+              fa["lobbyGameId"] == want_lobby and fa["walletGameId"] == entry.get("walletGameId")
+              and fa["provider"] == entry.get("provider"),
+              f"got {fa['lobbyGameId']}/{fa['walletGameId']}/{fa['provider']}")
+    except Exception as exc:
+        check(f"{label} -> correct tuple", False, f"{type(exc).__name__}: {exc}")
 
 # A mixed tuple is COERCED, not refused: lobbyGameId is the registry's primary
 # key, so the correct wallet/external/provider are already determined. The model
