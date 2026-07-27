@@ -113,24 +113,43 @@ def _auto_alias(g: dict) -> list[str]:
 INDEX = HERE / "library" / "games_index.md"
 
 
+DEFAULT_PROVIDER = "pragmatic"
+
+
 def write_compact_index(games: dict) -> None:
     """Write a terse name→ids table for the planner PROMPT. The full games.json
     (with metadata) is authoritative; this compact view is what gets injected so
-    the system prompt stays small (~1 line/game vs ~11). Format per line:
-      Name | provider | lobbyGameId | walletGameId | externalGameId
+    the system prompt stays small.
+
+    Two redundancies are factored out of every row, because this table is re-sent
+    on every single call:
+      * externalGameId is identical to walletGameId for 106/106 captured games,
+        so it is stated once in the header instead of 106 times.
+      * the provider is `pragmatic` for 102/106, so only the exceptions carry a
+        `@provider` suffix.
+    Format per line:  Name | lobbyGameId | walletGameId[ @provider]
     """
     lines = [
         "# Games registry (compact) — resolve a brief's game NAME to these ids.",
         "# Never guess an id; if a game isn't listed, flag ⛔ RESOLVE_AT_BUILD_TIME.",
-        "# Name | provider | lobbyGameId | walletGameId | externalGameId",
+        f"# Name | lobbyGameId | walletGameId    (provider is '{DEFAULT_PROVIDER}'",
+        "# unless the row adds | provider=<x>; externalGameId always == walletGameId)",
     ]
     for g in sorted(games.values(), key=lambda x: (x.get("gameTranslationKey") or "").lower()):
         name = g.get("gameTranslationKey") or g.get("lobbyGameId")
-        lines.append(" | ".join([
-            str(name), str(g.get("provider") or ""),
-            str(g.get("lobbyGameId") or ""), str(g.get("walletGameId") or ""),
-            str(g.get("externalGameId") or ""),
-        ]))
+        wallet = str(g.get("walletGameId") or "")
+        external = str(g.get("externalGameId") or "")
+        provider = str(g.get("provider") or "")
+        row = f"{name} | {g.get('lobbyGameId') or ''} | {wallet}"
+        # A bare "@provider" suffix would be ambiguous: some wallet ids already
+        # contain '@' (amigo_1000OlympusRivals@AMIGO). Name the field instead.
+        if provider and provider != DEFAULT_PROVIDER:
+            row += f" | provider={provider}"
+        # Only 0 games break the wallet==external rule today; if one ever does,
+        # spell it out rather than let the header's promise silently lie.
+        if external and external != wallet:
+            row += f" | external={external}"
+        lines.append(row)
     INDEX.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 

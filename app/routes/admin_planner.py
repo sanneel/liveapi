@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from pathlib import Path
 
 import requests
@@ -44,6 +45,39 @@ MAX_COMPOSE_REPAIRS = 2
 MAX_CHARS = 20000          # per-message guard
 
 router = APIRouter()
+
+
+# Upstream statuses worth retrying: rate limit and the transient 5xx family.
+# Gemini returns 503 "experiencing high demand" routinely under load, and a
+# single one used to surface to the operator as a hard failure — during a
+# measured 8-brief run it killed two otherwise-recoverable auto-repairs.
+RETRY_STATUSES = (429, 500, 502, 503, 504)
+RETRY_ATTEMPTS = 3
+RETRY_BACKOFF_SECONDS = (1.5, 4.0)
+
+
+def _with_retry(call, *args):
+    """Retry a provider call on transient upstream errors.
+
+    `call` returns (text, error) and never raises; a retryable failure is
+    detected from the error string it produced, which is why the callers embed
+    the status code there. Non-retryable errors (a bad key, a safety block, a
+    malformed request) return immediately — retrying those just burns time.
+    """
+    last = (None, "no attempt made")
+    for attempt in range(RETRY_ATTEMPTS):
+        text, error = call(*args)
+        if not error:
+            return text, None
+        last = (text, error)
+        if not any(f" {code}:" in error for code in RETRY_STATUSES):
+            return last
+        if attempt == RETRY_ATTEMPTS - 1:
+            break
+        delay = RETRY_BACKOFF_SECONDS[min(attempt, len(RETRY_BACKOFF_SECONDS) - 1)]
+        logger.info("upstream transient error (%s) — retrying in %.1fs", error[:80], delay)
+        time.sleep(delay)
+    return last
 
 
 def _resolve_provider(settings) -> str:
@@ -297,8 +331,8 @@ def _repair_spec(settings, spec_text: str, refusal: str, mode: str) -> str | Non
         provider = _resolve_provider(settings)
         system_prompt = _build_system_prompt(lean=(provider == "groq"))
         caller = _call_groq if provider == "groq" else _call_gemini
-        text, error = caller(settings, system_prompt,
-                             [{"role": "user", "text": instruction}], 0.0)
+        text, error = _with_retry(caller, settings, system_prompt,
+                                  [{"role": "user", "text": instruction}], 0.0)
     except Exception as exc:
         logger.warning("spec repair call failed: %s", exc)
         return None
@@ -420,10 +454,8 @@ async def planner_api(
             status_code=200,
         )
 
-    if provider == "groq":
-        text, error = _call_groq(settings, system_prompt, messages, temperature)
-    else:
-        text, error = _call_gemini(settings, system_prompt, messages, temperature)
+    caller = _call_groq if provider == "groq" else _call_gemini
+    text, error = _with_retry(caller, settings, system_prompt, messages, temperature)
 
     if error:
         return JSONResponse({"error": error}, status_code=200)
