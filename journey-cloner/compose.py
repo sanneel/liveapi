@@ -560,6 +560,99 @@ GAME_FIELDS = ("provider", "lobbyGameId", "walletGameId", "externalGameId")
 GAMES_FILE = HERE / "library" / "games.json"
 
 
+# Fields that identify WHOSE campaign a journey is. A composed journey that
+# still carries the reference's values here is not a new campaign — it is the
+# old one wearing a new name, and it will message real players with the old
+# copy and the old links.
+CONTENT_KEYS = (
+    "messageText", "localizedMessageTexts",     # SMS body
+    "emailSettings",                            # email template id
+    "promocodeSettings",                        # entry promocode
+    "objectForSend", "localizedLanguagesTab",   # notification-centre copy + links
+)
+# Values that legitimately repeat across campaigns — matching these is not a leak.
+_CONTENT_NOISE = {"", "link", "regular", "1", "True", "%icon%", "%deeplink%"}
+
+
+def _collect_content(obj, out: list, path: str = "") -> None:
+    """Every campaign-identifying string in a journey body, with its path."""
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            here = f"{path}.{key}" if path else key
+            if key in CONTENT_KEYS:
+                flat: list = []
+                _flatten_strings(value, flat)
+                for s in flat:
+                    out.append((here, s))
+            else:
+                _collect_content(value, out, here)
+    elif isinstance(obj, list):
+        for i, value in enumerate(obj):
+            _collect_content(value, out, f"{path}[{i}]")
+
+
+def _is_content(s: str) -> bool:
+    """Player-visible copy or a campaign-specific identifier, as opposed to the
+    structural vocabulary these blobs are full of (variable names like 'group',
+    'title', 'layout', which repeat across every campaign and mean nothing)."""
+    s = s.strip()
+    if len(s) < 8 or s in _CONTENT_NOISE:
+        return False
+    # Template placeholders (%link-es%, %$utm_tags%) are plumbing that every
+    # campaign shares — they are how the platform substitutes values, not the
+    # values themselves.
+    if "%" in s or "{{" in s:
+        return False
+    if "://" in s:                      # a real link
+        return True
+    if " " in s:                        # a sentence of player-visible copy
+        return True
+    # Campaign-specific identifiers: CSE-0-14458, promocodes, template ids.
+    # Deliberately NOT "any long string" — snake_case field names like
+    # buttons_1_highlighted are structural vocabulary, not content.
+    return bool(re.fullmatch(r"[A-Z0-9][A-Z0-9._-]{7,}", s))
+
+
+def _flatten_strings(obj, out: list) -> None:
+    if isinstance(obj, str):
+        if _is_content(obj):
+            out.append(obj.strip())
+    elif isinstance(obj, dict):
+        for v in obj.values():
+            _flatten_strings(v, out)
+    elif isinstance(obj, list):
+        for v in obj:
+            _flatten_strings(v, out)
+
+
+def audit_inherited_content(body: dict, reference: dict) -> list[str]:
+    """Campaign content the composed journey still shares with its reference.
+
+    This is the generalisable version of the failures that actually shipped: a
+    "Physical Prize" journey carrying the Game of the Week SMS, email template
+    and promo link, and a wheel-prize freebet carrying promocode VAMOSBULLA.
+    Every value-level gate passed those, because the spec was well-formed — the
+    journey was simply still the old campaign underneath.
+
+    Returns one line per distinct leaked value. Empty list means the composed
+    journey shares no message copy, template id, promocode or link with the
+    journey it was cloned from.
+    """
+    ref_content: list = []
+    _collect_content(reference, ref_content)
+    ref_values = {s for _, s in ref_content}
+    if not ref_values:
+        return []
+    new_content: list = []
+    _collect_content(body, new_content)
+    leaked: dict[str, str] = {}
+    for path, value in new_content:
+        if value in ref_values:
+            leaked.setdefault(value, path)
+    return [f"{path} still carries {value[:88]!r}"
+            for value, path in sorted(leaked.items(), key=lambda kv: kv[1])]
+
+
 def _check_recipe_fit(recipe: Recipe, knobs: dict) -> None:
     """Refuse a recipe that cannot express the journey being asked for.
 
@@ -809,10 +902,32 @@ def validate_spec(spec: dict) -> Recipe:
     return recipe
 
 
+def _refuse_inherited(body: dict, reference: str) -> None:
+    """Refuse a spec-built journey that still carries its reference's campaign.
+
+    Deliberately NOT applied to `python compose.py <recipe>` with no spec —
+    that path exists to clone a reference as-is. A spec, by contrast, describes
+    a NEW campaign, and a new campaign that shares the old one's SMS body,
+    email template or promo link is the failure this whole gate exists for.
+    """
+    leaks = audit_inherited_content(body, _load(reference))
+    if not leaks:
+        return
+    shown = "\n    ".join(leaks[:8])
+    more = f"\n    ...and {len(leaks) - 8} more" if len(leaks) > 8 else ""
+    raise SpecError(
+        f"the composed journey still carries {len(leaks)} piece(s) of "
+        f"{reference}'s own campaign content — it would message real players "
+        f"with the wrong copy and the wrong links:\n    {shown}{more}\n"
+        f"  Set this content explicitly, or build a chain (MODE 5) containing "
+        f"only the activities you actually want.")
+
+
 def compose_from_spec(spec: dict) -> tuple[Recipe, dict, str, list[str]]:
     recipe = validate_spec(spec)
     values, unknown = spec_to_values(recipe, spec)
     body, name, _ = compose(recipe, values)
+    _refuse_inherited(body, recipe.reference)
     return recipe, body, name, unknown
 
 

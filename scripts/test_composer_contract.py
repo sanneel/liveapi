@@ -185,6 +185,27 @@ try:
 finally:
     knob.path = original
 
+print("\ninherited campaign content is detected")
+# The failure this guard exists for: a journey that composes cleanly but still
+# carries the reference campaign's SMS body, email template and promo links.
+comms_body, _n, _ = C.compose(C.RECIPES["comms"])
+comms_leaks = C.audit_inherited_content(comms_body, C._load("casino/gow_comms.json"))
+check("a verbatim comms clone is flagged", len(comms_leaks) > 0, "no leaks reported")
+check("the leaked SMS body is named",
+      any("Gran Copa" in leak for leak in comms_leaks), str(comms_leaks[:2]))
+check("the leaked email template id is named",
+      any("CSE-0-14458" in leak for leak in comms_leaks), str(comms_leaks[:2]))
+# ...and a reward journey with no communication nodes is clean, so the check is
+# not simply flagging everything.
+_r, fs_body, _n, _u = C.compose_from_spec(GOOD)
+check("a journey with no comms nodes is clean",
+      not C.audit_inherited_content(fs_body, C._load("casino/instfs.json")))
+# Template placeholders and field names are plumbing, not content.
+check("template placeholders are not content", not C._is_content("%link-es%?%$utm_tags%"))
+check("field names are not content", not C._is_content("buttons_1_highlighted"))
+check("real copy IS content", C._is_content("Elige tu deposito y gana 50 giros"))
+check("a real link IS content", C._is_content("https://win.jugabet.cl/promocion/x"))
+
 print("\nthe planner's real output shapes parse")
 payload = json.dumps(GOOD)
 for label, raw in [

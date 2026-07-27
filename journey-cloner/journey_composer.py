@@ -355,7 +355,10 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
         # (contract1 keys: title-en/des-en/caption-en; contract5: title_en/description_en/caption_en)
         vars_ = (init.get("objectForSend") or {}).get("variables") or []
         tabs = (init.get("singleChannel") or {}).get("localizedLanguagesTab") or {}
-        keymap = {"title": "title", "desc": "des", "caption": "caption"}
+        # `link` matters as much as the copy: a captured card carries the OLD
+        # campaign's promo-page URL, so a new journey silently linked players to
+        # the previous promotion.
+        keymap = {"title": "title", "desc": "des", "caption": "caption", "link": "link"}
         for skey, stem in keymap.items():
             for lang in ("en", "es"):
                 val = s.get(f"{skey}_{lang}")
@@ -375,6 +378,19 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
                             tab[tk] = val; hit = True
                 if not hit:
                     warnings.append(f"{kind}: no captured variable matched {skey}_{lang}")
+        # Language-independent fields, held once in the `common` tab.
+        for skey, stems in (("icon", ("icon",)), ("deeplink", ("deeplink",))):
+            val = s.get(skey)
+            if val is None:
+                continue
+            for v in vars_:
+                if (v.get("name") or "").lower() in stems:
+                    note(v["name"], v.get("value"), val); v["value"] = val
+            for tab in tabs.values():
+                if isinstance(tab, dict):
+                    for tk in list(tab):
+                        if tk.lower() in stems:
+                            tab[tk] = val
     elif kind == "dextra_sms":
         for lang in ("en", "es"):
             val = s.get(f"text_{lang}")
@@ -426,6 +442,16 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
         report.append(f"dwh_source: segment <- {frag_path.name} "
                       f"({(frag.get('currentTemplate') or {}).get('name')!r})")
 
+    # DUAL STORAGE: the editor mirror keeps its own copy of the activity config,
+    # and the setters above edit only initializationData. Without this sync the
+    # journey RUNS with the new copy while the builder still SHOWS the captured
+    # campaign's — the notification content set on a wheel-prize journey landed
+    # on the activity and left "🏆 La Gran Copa JugaBet" in the mirror.
+    if cfg is not None:
+        for mirror_key in list(cfg.keys()):
+            if mirror_key in init:
+                cfg[mirror_key] = copy.deepcopy(init[mirror_key])
+
     # Unknown keys are REFUSED, not warned about. A warning here meant a spec
     # that nested its values under "settings", or used a recipe knob name like
     # spin_bet_clp instead of bet_amount, composed cleanly and shipped the
@@ -435,8 +461,8 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
         "deposit": {"min_deposit", "timeout"},
         "freespin_bonus": {"spins", "game", "bet_amount", "with_wagering"},
         "casino_bonus_v2": {"bonus_percent", "wagering", "release_multiplier", "expiration_ms"},
-        "notification_center#contract1": {f"{a}_{l}" for a in ("title", "desc", "caption") for l in ("en", "es")},
-        "notification_center#contract5": {f"{a}_{l}" for a in ("title", "desc", "caption") for l in ("en", "es")},
+        "notification_center#contract1": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "deeplink"},
+        "notification_center#contract5": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "deeplink"},
         "dextra_sms": {"text_en", "text_es"},
         "wait_interval": {"wait"},
         "external_system_source": {"description"},
@@ -893,9 +919,33 @@ def emit_console_script(body: dict, out_path: Path) -> str:
     return str(out_path)
 
 
+def _inherited_content_errors(body: dict) -> list[str]:
+    """Campaign content this chain still shares with the templates it was cloned
+    from. A chain picks its own activities, but a communication node is copied
+    whole — so an SMS node the spec gave no text to still carries the captured
+    campaign's message, links and email template."""
+    try:
+        from compose import audit_inherited_content
+    except Exception:
+        return []
+    leaks: dict[str, None] = {}
+    for path in (GOW, COMMS):
+        try:
+            ref = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError):
+            continue
+        for line in audit_inherited_content(body, ref):
+            leaks.setdefault(line, None)
+    return list(leaks)
+
+
 def cmd_compose(spec: dict, as_json: bool, script: bool, basename: str | None = None) -> int:
     res = compose(spec)
     errs = verify(res["body"])
+    # Treat leaked campaign content as a verification failure: a journey that
+    # messages players with another campaign's copy is not a usable draft, and
+    # "VERIFIED OK" on one is exactly how the wrong SMS reached a real draft.
+    errs = errs + [f"inherited content — {line}" for line in _inherited_content_errors(res["body"])]
     OUT.mkdir(exist_ok=True)
     slug = re.sub(r"[^\w]+", "_", res["name"].lower()).strip("_")[:60]
     out_path = OUT / f"{slug}.journey.json"
