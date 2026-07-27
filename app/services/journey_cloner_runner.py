@@ -601,12 +601,15 @@ def generate_composed_console_script(
                           repeated activities, choosable flows, branches)
           "randomizer" -> randomizer_campaign.py       (MODE 6 wheel / scratch
                           card; flag-driven, so the spec becomes argv)
+          "batch"      -> compose.py --batch            (many recipe specs into
+                          ONE script: one token capture, one paste, N drafts)
 
     Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
     """
-    if mode not in ("spec", "graph", "chain", "randomizer"):
+    if mode not in ("spec", "graph", "chain", "randomizer", "batch"):
         raise ValueError(
-            f"mode must be 'spec', 'graph', 'chain' or 'randomizer', got {mode!r}")
+            f"mode must be 'spec', 'graph', 'chain', 'randomizer' or "
+            f"'batch', got {mode!r}")
     # Date the artifact so console_scripts/ stays browsable; _unique_basename's
     # uuid suffix keeps concurrent requests from reading each other's file.
     basename = _unique_basename("planner", datetime.date.today().isoformat())
@@ -635,6 +638,19 @@ def generate_composed_console_script(
         if spec.get("url_short"):
             cmd += ["--url-short", str(spec["url_short"])]
         return _run_gow_cli(cmd, basename=basename)
+    if mode == "batch":
+        # Many recipe specs -> ONE console script. Exit 4 means PARTIAL: some
+        # composed, some refused, and the script still carries the ones that
+        # worked — worth returning, since _run_gow_cli only reads the file on 0.
+        cmd = [python_executable(), str(COMPOSE_SCRIPT_PATH), "--batch",
+               "--name", basename]
+        code, log, display_cmd, js, js_name = _run_gow_cli(
+            cmd, spec_text=spec_text, basename=basename)
+        if code == 4 and js is None:
+            js_path = CLONER_DIR / "console_scripts" / f"{basename}_console.js"
+            if js_path.exists():
+                js = js_path.read_text(encoding="utf-8")
+        return code, log, display_cmd, js, js_name
     if mode == "chain":
         cmd = [python_executable(), str(CHAIN_COMPOSER_SCRIPT_PATH), "compose", "-",
                "--script", "--name", basename]

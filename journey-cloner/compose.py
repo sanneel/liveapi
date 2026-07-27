@@ -485,6 +485,33 @@ def _find_blockers(obj, prefix: str = "") -> list[str]:
     return hits
 
 
+def _extract_json_any(raw: str):
+    """Like _extract_json but also accepts a top-level ARRAY, and stitches
+    several separate fenced objects into one list — which is how the planner
+    actually answers "give me the spec for every journey"."""
+    text = (raw or "").strip()
+    fences = [f.strip() for f in re.findall(r"```(?:json|JSON)?\s*(.*?)```", text, re.S)]
+    objs = []
+    for fence in fences:
+        try:
+            parsed = json.loads(fence)
+        except ValueError:
+            continue
+        objs.extend(parsed if isinstance(parsed, list) else [parsed])
+    if len(objs) > 1:
+        return objs
+    for candidate in ([text] + fences):
+        try:
+            parsed = json.loads(candidate)
+        except ValueError:
+            continue
+        if isinstance(parsed, (list, dict)):
+            return parsed
+    if objs:
+        return objs
+    return _extract_json(text)          # raises SpecError with the usual message
+
+
 def _extract_json(raw: str) -> dict:
     """Parse a spec out of whatever the planner actually produced.
 
@@ -1147,6 +1174,110 @@ JS_TEMPLATE = r'''// Composed journey — generated @GENERATED_AT@
 '''
 
 
+BATCH_JS_TEMPLATE = r'''// Composed CAMPAIGN — @COUNT@ journeys, generated @GENERATED_AT@
+@MANIFEST@//
+// Paste ONCE into a logged-in Journey Builder backoffice console (F12). It
+// captures the token once, then reserves an id and POSTs a draft for each
+// journey in order, pausing between them. A failure stops the run and reports
+// which journeys were already created, so a re-run can start from there.
+(async () => {
+  const BASE = @BASE@;
+  const BRAND = @BRAND@;
+  const BODIES = @BODIES@;          // [{name, body}, ...] in creation order
+  const PAUSE_MS = 600;             // be kind to the backoffice between POSTs
+
+  function decodeJwt(t){ try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); } catch(e){ return null; } }
+  function usableAuth(v){ if(!v || !/^Bearer\s+\S+/i.test(v)) return null; const p=decodeJwt(v.replace(/^Bearer\s+/i,'')); if(!p||p.typ!=='Bearer') return null; return 'Bearer '+v.replace(/^Bearer\s+/i,''); }
+  function obtainAuth(){ return new Promise((resolve,reject)=>{
+    let settled=false; const of=window.fetch; const os=XMLHttpRequest.prototype.setRequestHeader;
+    const cleanup=()=>{ window.fetch=of; XMLHttpRequest.prototype.setRequestHeader=os; };
+    const consider=(v)=>{ const a=usableAuth(v); if(a&&!settled){ settled=true; cleanup(); clearTimeout(t); console.log('%cToken captured.','color:#22c55e;font-weight:bold'); resolve(a); } };
+    window.fetch=function(input,init){ try{ const h=(init&&init.headers)||(input&&input.headers); if(h){ if(typeof h.get==='function') consider(h.get('authorization')); else consider(h.authorization||h.Authorization); } }catch(e){} return of.apply(this,arguments); };
+    XMLHttpRequest.prototype.setRequestHeader=function(n,v){ try{ if(/^authorization$/i.test(n)) consider(v); }catch(e){} return os.apply(this,arguments); };
+    const t=setTimeout(()=>{ if(!settled){ settled=true; cleanup(); reject(new Error('No token in 3 min. Click around and re-run.')); } },180000);
+    console.log('%cWaiting for a token — click anything in the backoffice UI.','color:#eab308;font-weight:bold');
+  }); }
+
+  const auth = await obtainAuth();
+  const headers=(ct)=>({ accept:'application/json, text/plain, */*', authorization:auth, 'content-type':ct, 'x-brand':BRAND });
+  const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
+  const newUuid=()=> (crypto&&crypto.randomUUID)? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,(c)=>{ const r=(Math.random()*16)|0; return (c==='x'?r:(r&0x3)|0x8).toString(16); });
+  const UUID_RE=/"(?:activityId|id)"\s*:\s*"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"/g;
+  // Regenerated PER JOURNEY: two drafts sharing an activityId would collide.
+  const regen=(txt)=>{ const olds=new Set(); let m; UUID_RE.lastIndex=0; while((m=UUID_RE.exec(txt))!==null) olds.add(m[1]); let t=txt; for(const o of olds) t=t.split(o).join(newUuid()); return t; };
+
+  async function reserveId(){
+    const r=await fetch(BASE+'/journeys/identifier',{ method:'POST', headers:headers('application/x-www-form-urlencoded'), credentials:'include' });
+    const raw=(await r.text()).trim(); let id=raw.replace(/^"+|"+$/g,'');
+    try{ const d=JSON.parse(raw); if(typeof d==='string') id=d.trim(); else if(d&&typeof d==='object') id=String(d.identifier||d.journeyId||d.id||d.value||'').trim(); }catch(e){}
+    if(!r.ok||!id.startsWith('JRN-')) throw new Error('reserve failed HTTP '+r.status+' '+raw);
+    return id;
+  }
+
+  const created = [];
+  console.log('%cCreating '+BODIES.length+' journeys...','color:#60a5fa;font-weight:bold');
+  for (let i = 0; i < BODIES.length; i++) {
+    const item = BODIES[i];
+    const label = `[${i+1}/${BODIES.length}] ${item.name}`;
+    try {
+      const rid = await reserveId();
+      let text = JSON.stringify(item.body).split('DRY-RUN-JOURNEY').join(rid);
+      text = regen(text);
+      const body = JSON.parse(text);
+      const r = await fetch(BASE+'/journey-drafts',{ method:'POST', headers:headers('application/json'), credentials:'include', body:JSON.stringify(body) });
+      const respText = await r.text();
+      if(!r.ok){
+        console.error('%c'+label+' FAILED HTTP '+r.status,'color:#ef4444;font-weight:bold', respText);
+        console.log('%cStopped. Already created: '+(created.map(c=>c.id).join(', ')||'none'),'color:#eab308');
+        console.log('Fix the cause, then re-run with the first '+created.length+' entries removed from BODIES.');
+        window.__createdJourneys = created;
+        return;
+      }
+      created.push({ id: rid, name: item.name });
+      console.log('%c'+label+' -> '+rid,'color:#22c55e');
+    } catch (e) {
+      console.error('%c'+label+' ERROR','color:#ef4444;font-weight:bold', e.message);
+      console.log('%cStopped. Already created: '+(created.map(c=>c.id).join(', ')||'none'),'color:#eab308');
+      window.__createdJourneys = created;
+      return;
+    }
+    if (i < BODIES.length - 1) await sleep(PAUSE_MS);
+  }
+  console.log('%cALL '+created.length+' DRAFTS CREATED','color:#22c55e;font-weight:bold');
+  console.table(created);
+  // Wheel prizes route to journeys by id, so this mapping is what you feed the
+  // randomizer spec's `journeys` list.
+  console.log('journeyIds in order:', created.map(c=>c.id));
+  window.__createdJourneys = created;
+})();
+'''
+
+
+def emit_batch(items: list[tuple[str, dict]], basename: str,
+               brand: str = DEFAULT_BRAND) -> Path:
+    """One console script that creates MANY journeys from a single paste.
+
+    A campaign is a dozen-plus journeys, and one script per journey means one
+    token capture and one paste each. This captures once and loops, stopping at
+    the first failure with the ids already created so a re-run can resume. It
+    also prints the created ids in order, which is exactly the list a wheel's
+    `journeys` routing needs.
+    """
+    manifest = "".join(f"//   {i + 1}. {name}\n" for i, (name, _) in enumerate(items))
+    js = (BATCH_JS_TEMPLATE
+          .replace("@GENERATED_AT@", datetime.datetime.utcnow().isoformat() + "Z")
+          .replace("@COUNT@", str(len(items)))
+          .replace("@MANIFEST@", manifest)
+          .replace("@BASE@", json.dumps(BASE_URL))
+          .replace("@BRAND@", json.dumps(brand))
+          .replace("@BODIES@", json.dumps(
+              [{"name": n, "body": b} for n, b in items], ensure_ascii=False)))
+    OUT.mkdir(parents=True, exist_ok=True)
+    out = OUT / f"{basename}_console.js"
+    out.write_text(js, encoding="utf-8")
+    return out
+
+
 def emit(recipe: Recipe, body: dict, name: str, basename: str | None = None) -> Path:
     js = (JS_TEMPLATE
           .replace("@GENERATED_AT@", datetime.datetime.utcnow().isoformat() + "Z")
@@ -1197,6 +1328,46 @@ def main() -> int:
             return 2
         basename = args[i + 1]
         args = args[:i] + args[i + 2:]
+
+    # --batch: many specs -> ONE console script. A campaign is a dozen journeys,
+    # and one script each means one token capture and one paste each.
+    if args[0] == "--batch":
+        raw = (Path(args[1]).read_text(encoding="utf-8") if len(args) > 1
+               else sys.stdin.read())
+        try:
+            payload = _extract_json_any(raw)
+        except SpecError as exc:
+            print(f"⛔ REFUSED — {exc}")
+            return 3
+        specs = payload if isinstance(payload, list) else (
+            payload.get("journeys") or payload.get("specs") or [payload])
+        if not isinstance(specs, list) or not specs:
+            print("⛔ REFUSED — --batch wants a JSON array of specs, or "
+                  "{\"journeys\": [ ... ]}.")
+            return 3
+        items, failures = [], []
+        for i, spec in enumerate(specs, 1):
+            label = (spec or {}).get("journey_name") or f"object {i}"
+            try:
+                recipe, body, name, _ = compose_from_spec(spec)
+            except SpecError as exc:
+                failures.append(f"{i}. {label}: {str(exc).splitlines()[0]}")
+                continue
+            bad = [m for good, m in verify(body) if not good]
+            if bad:
+                failures.append(f"{i}. {label}: verification failed — {'; '.join(bad)}")
+                continue
+            items.append((name, body))
+            print(f"  [{i}/{len(specs)}] {name}: {len(body['activities'])} activities OK")
+        for f in failures:
+            print(f"  ⛔ {f}")
+        if not items:
+            print("\nNothing composed — not emitting.")
+            return 3
+        out = emit_batch(items, basename or "composed_campaign")
+        print(f"\n{len(items)}/{len(specs)} composed. Console script: {out}")
+        # Exit 4 = partial, so a caller can tell "all good" from "some missing".
+        return 0 if not failures else 4
 
     unknown_knobs = []
     if args[0] in ("--spec", "--graph"):

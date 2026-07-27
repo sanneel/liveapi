@@ -446,8 +446,33 @@ def planner_compose(
                      "journey, one JSON block each\"."})
     if len(specs) > 1:
         results = []
-        for i, spec in enumerate(specs, 1):
+        # Recipe specs collapse into ONE script — one token capture, one paste,
+        # every draft. Chains and wheels use different engines (and the wheel a
+        # different API entirely), so those stay individual.
+        recipe_specs = [s for s in specs if _spec_mode(s) == "spec"]
+        other_specs = [s for s in specs if _spec_mode(s) != "spec"]
+        if len(recipe_specs) > 1:
+            names = [s.get("journey_name") or "journey" for s in recipe_specs]
+            try:
+                code, log, cmd, js, filename = generate_composed_console_script(
+                    json.dumps(recipe_specs), mode="batch")
+            except Exception as exc:
+                logger.warning("planner batch compose failed: %s", exc)
+                code, log, js, filename = 1, f"Composer failed to run: {exc}", None, ""
+            results.append({
+                "index": 1, "batch": True, "count": len(recipe_specs),
+                "name": f"{len(recipe_specs)} journeys in one script",
+                "detail": names, "mode": "batch",
+                # exit 4 = partial: fewer drafts than asked for, but a usable script.
+                "ok": code in (0, 4) and bool(js), "partial": code == 4,
+                "returncode": code, "log": log, "js": js, "filename": filename,
+            })
+        else:
+            other_specs = recipe_specs + other_specs
+
+        for spec in other_specs:
             spec_mode = _spec_mode(spec)
+            i = len(results) + 1
             try:
                 code, log, cmd, js, filename = generate_composed_console_script(
                     json.dumps(spec), mode=spec_mode)
@@ -456,7 +481,8 @@ def planner_compose(
                 code, log, js, filename = 1, f"Composer failed to run: {exc}", None, ""
             results.append({
                 "index": i,
-                "name": spec.get("journey_name") or spec.get("name") or f"object {i}",
+                "name": spec.get("journey_name") or spec.get("name")
+                        or spec.get("kind") or f"object {i}",
                 "mode": spec_mode, "ok": code == 0 and bool(js),
                 "returncode": code, "log": log, "js": js, "filename": filename,
             })

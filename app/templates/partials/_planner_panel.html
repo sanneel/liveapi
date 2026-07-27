@@ -239,7 +239,25 @@ NOTES
         list.style.cssText = "display:flex;flex-direction:column;gap:6px";
         for(const r of data.results){
           const row = document.createElement("div");
-          if(r.ok){
+          if(r.ok && r.batch){
+            // One script, N drafts — the whole campaign in a single paste.
+            row.append(dlLink(r.js, r.filename,
+              `⬇ ${r.name}${r.partial ? " (partial)" : ""} — ONE paste`));
+            const names = document.createElement("div");
+            names.style.cssText = "font-size:12px;opacity:.7;margin:4px 0 0 4px";
+            names.textContent = (r.detail || []).map((n,i) => `${i+1}. ${n}`).join("  ·  ");
+            row.append(names);
+            if(r.partial){
+              const warn = document.createElement("div");
+              warn.style.cssText = "font-size:12px;color:#b45309;margin-left:4px";
+              warn.textContent = "Some objects were refused — see the log below; the script has the rest.";
+              row.append(warn);
+              const pre = document.createElement("pre");
+              pre.style.cssText = "font-size:11px;max-height:140px;overflow:auto";
+              pre.textContent = r.log || "";
+              row.append(pre);
+            }
+          } else if(r.ok){
             row.append(dlLink(r.js, r.filename, `⬇ ${r.index}. ${r.name} (${r.mode})`));
           } else {
             const why = (r.log || "").trim().split("\n").filter(Boolean).pop() || "refused";
