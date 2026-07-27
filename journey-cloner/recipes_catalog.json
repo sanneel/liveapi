@@ -31,7 +31,7 @@
           "wire_unit": "minor",
           "desc": "minimum deposit to unlock the offer, in CLP",
           "range": [
-            100,
+            0,
             1000000
           ]
         },
@@ -80,7 +80,7 @@
           "wire_unit": "minor",
           "desc": "minimum deposit to unlock, in CLP",
           "range": [
-            100,
+            0,
             1000000
           ]
         },
@@ -104,7 +104,7 @@
           "wire_unit": "raw",
           "desc": "deposit-match percent (100 = 100%)",
           "range": [
-            1,
+            0,
             1000
           ]
         },
@@ -112,7 +112,7 @@
           "wire_unit": "raw",
           "desc": "wagering multiplier (e.g. 30 = x30)",
           "range": [
-            1,
+            0,
             100
           ]
         },
@@ -124,7 +124,7 @@
           "wire_unit": "raw",
           "desc": "max cashout as a multiple of the bonus",
           "range": [
-            1,
+            0,
             100
           ]
         }

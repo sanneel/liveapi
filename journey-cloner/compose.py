@@ -125,7 +125,7 @@ RECIPES: dict[str, Recipe] = {
             "deposit_min_clp": Knob(
                 "deposit", "initializationData.depositConditions.minDepositAmounts.0.amount",
                 "minor", "minimum deposit to unlock the offer, in CLP",
-                min_major=100, max_major=1_000_000),
+                min_major=0, max_major=1_000_000),
             "freebet_amount_clp": Knob(
                 "freebet", "initializationData.properties.freeBetAmount.CLP",
                 "minor", "free-bet value in CLP",
@@ -160,7 +160,7 @@ RECIPES: dict[str, Recipe] = {
             "deposit_min_clp": Knob(
                 "deposit", "initializationData.depositConditions.minDepositAmounts.0.amount",
                 "minor", "minimum deposit to unlock, in CLP",
-                min_major=100, max_major=1_000_000),
+                min_major=0, max_major=1_000_000),
             "spins": Knob(
                 "freespin_bonus", "initializationData.freespinActivity.spins",
                 "raw", "number of free spins granted",
@@ -172,18 +172,18 @@ RECIPES: dict[str, Recipe] = {
             "bonus_percent": Knob(
                 "casino_bonus_v2", "initializationData.bonusPercent",
                 "raw", "deposit-match percent (100 = 100%)",
-                min_major=1, max_major=1_000),
+                min_major=0, max_major=1_000),
             "wagering_x": Knob(
                 "casino_bonus_v2", "initializationData.wageringRequirement",
                 "raw", "wagering multiplier (e.g. 30 = x30)",
-                min_major=1, max_major=100),
+                min_major=0, max_major=100),
             "bonus_expiry_ms": Knob(
                 "casino_bonus_v2", "initializationData.bonusExpirationTime",
                 "raw", "bonus validity in milliseconds (172800000 = 48h)"),
             "release_limit_x": Knob(
                 "casino_bonus_v2", "initializationData.releaseLimitMultiplier",
                 "raw", "max cashout as a multiple of the bonus",
-                min_major=1, max_major=100),
+                min_major=0, max_major=100),
         },
     ),
     # An INSTANT bonus — a promotion-gated freespin with NO wagering follow-up
