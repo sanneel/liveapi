@@ -478,11 +478,18 @@ def prepare_comms(
         if len(wait_acts) >= 2:
             update_wait_date(wait_acts[0], tournament_start_date)
             update_wait_date(wait_acts[1], tournament_end_date)
+            for act in wait_acts[:2]:
+                mirror_into_raw_journey_data(body, act)
             report.append(f"Wait/Date activities: updated to tournament window {tournament_start_date} → {tournament_end_date}")
+        else:
+            report.append(f"⚠ expected 2 Wait/Date activities, found {len(wait_acts)} — left untouched")
 
         # Update notification revoke period based on tournament duration
         tournament_days = calc_tournament_days(tournament_start_date, tournament_end_date)
         update_notification_revoke(notif_act, tournament_days)
+        # Re-mirror the notification: the revoke edit lands after the copy mirror
+        # above, so without this the editor copy would drift out of sync.
+        mirror_into_raw_journey_data(body, notif_act)
         report.append(f"Notification revoke: set to {tournament_days} days (tournament duration)")
     else:
         report.append("⚠ Tournament start/end dates not provided — Wait/Date activities and notification revoke use template defaults")
@@ -806,6 +813,8 @@ def main() -> int:
     p.add_argument("--spec", required=True, help="Path to the pasted spec blob, or '-' to read it from stdin")
     p.add_argument("--tournament-id", default="", help="Smartico tournament id for the deeplink (default: keep the template's)")
     p.add_argument("--journey-name", default="", help="Override the journey name (default: reuse template name, minus 'Copy of ')")
+    p.add_argument("--tournament-start", default="", help="Tournament start date YYYY-MM-DD. Overrides the spec's 'Start date' row. Drives the first Wait/Date activity and the notification revoke period.")
+    p.add_argument("--tournament-end", default="", help="Tournament end date YYYY-MM-DD. Overrides the spec's 'End date' row. Drives the second Wait/Date activity and the notification revoke period.")
     p.add_argument("--folder-id", default="", help="PMCL media-library folder UUID. When set, the script uploads the NC icon + Pop-up background; when blank the template's existing images are kept.")
     p.add_argument("--name", default="tournament_pmcl", help="Output file basename (default: tournament_pmcl)")
     p.add_argument("--dry-run", action="store_true", help="Write prepared payload to out/ instead of a console script")
@@ -819,6 +828,21 @@ def main() -> int:
         print("\nspec is missing Notification/Pop-up/Sms copy — nothing written.", file=sys.stderr)
         return 1
 
+    # Explicit flags win over whatever the pasted spec carried, so the web form
+    # can supply the window even when the paste is only the channels table.
+    t_start = args.tournament_start.strip() or spec.tournament_start_date
+    t_end = args.tournament_end.strip() or spec.tournament_end_date
+    for label, value in (("--tournament-start", t_start), ("--tournament-end", t_end)):
+        if value and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            print(f"\n{label} must be YYYY-MM-DD, got {value!r}.", file=sys.stderr)
+            return 1
+    if t_start and t_end and t_end < t_start:
+        print(f"\nTournament end date {t_end} is before the start date {t_start}.", file=sys.stderr)
+        return 1
+    if bool(t_start) != bool(t_end):
+        print("\nTournament start and end dates must be given together.", file=sys.stderr)
+        return 1
+
     upload_photos = bool(args.folder_id.strip())
     body, report, start_local, stop_local, email_content = prepare_comms(
         date_str=args.date,
@@ -828,8 +852,8 @@ def main() -> int:
         popup=popup_dict_from_spec(spec.popup),
         sms=sms_dict_from_spec(spec.sms),
         upload_photos=upload_photos,
-        tournament_start_date=spec.tournament_start_date,
-        tournament_end_date=spec.tournament_end_date,
+        tournament_start_date=t_start,
+        tournament_end_date=t_end,
         email=email_dict_from_spec(spec),
     )
 

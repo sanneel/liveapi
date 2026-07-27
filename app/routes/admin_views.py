@@ -1047,6 +1047,8 @@ def promotions_tournament_pmcl(
     tournament_id: str = Form(""),
     folder_id: str = Form(""),
     journey_name: str = Form(""),
+    tournament_start: str = Form(""),
+    tournament_end: str = Form(""),
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
     """Generate the PMCL (Fortunazo) Tournament comms console script — the same
@@ -1058,6 +1060,8 @@ def promotions_tournament_pmcl(
         "tournament_id": tournament_id,
         "folder_id": folder_id,
         "journey_name": journey_name,
+        "tournament_start": tournament_start,
+        "tournament_end": tournament_end,
     }
     error = ""
     result = None
@@ -1067,12 +1071,16 @@ def promotions_tournament_pmcl(
             raise ValueError("Date is required.")
         if not spec.strip():
             raise ValueError("Paste the spec blob (Communication channels table from the sheet).")
+        if bool(tournament_start.strip()) != bool(tournament_end.strip()):
+            raise ValueError("Tournament start and end dates must be filled in together (or both left blank).")
         exit_code, output, display_cmd, js_text, js_name = generate_tournament_pmcl_console_script(
             date=date,
             spec_text=spec,
             tournament_id=tournament_id,
             folder_id=folder_id,
             journey_name=journey_name,
+            tournament_start=tournament_start,
+            tournament_end=tournament_end,
         )
         result = {
             "exit_code": exit_code,

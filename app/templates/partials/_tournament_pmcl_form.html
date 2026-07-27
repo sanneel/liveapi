@@ -25,6 +25,18 @@
       </div>
     </div>
 
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+      <div class="field">
+        <span class="lbl">Tournament start</span>
+        <input class="input" name="tournament_start" type="date" value="{{ form.tournament_start or '' }}"/>
+      </div>
+      <div class="field">
+        <span class="lbl">Tournament end</span>
+        <input class="input" name="tournament_end" type="date" value="{{ form.tournament_end or '' }}"/>
+      </div>
+    </div>
+    <p class="help" style="margin:-4px 0 0">The tournament's own run window (not the comms send day). Sets both <b>Wait / Date</b> activities and the <b>notification revoke period</b> to the exact number of days the tournament lasts. Fill both or leave both blank — blank falls back to the <span class="mono">Start date</span> / <span class="mono">End date</span> rows if your paste includes the Specifications block, otherwise the template's defaults are kept.</p>
+
     <div class="field">
       <span class="lbl">Journey name <span style="color:var(--t-faint)">(optional)</span></span>
       <input class="input" name="journey_name" value="{{ form.journey_name or '' }}" placeholder="FTCL | CS | Torneo ..."/>
@@ -34,7 +46,7 @@
     <div class="field">
       <span class="lbl">Media Library Folder ID <span style="color:var(--t-faint)">(optional)</span></span>
       <input class="input mono" name="folder_id" value="{{ form.folder_id or '' }}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"/>
-      <p class="help" style="margin-top:6px">When set, the script pops file pickers to upload a fresh NC icon + Pop-up background into this PMCL folder (open Media Library in the PMCL backoffice → copy the UUID from <span class="mono">/media-library/folders/&lt;uuid&gt;</span>). Leave blank to keep the template's existing images.</p>
+      <p class="help" style="margin-top:6px">When set, the script pops file pickers to upload a fresh NC icon, Pop-up background and — when the paste includes an Email — the Email hero image into this PMCL folder (open Media Library in the PMCL backoffice → copy the UUID from <span class="mono">/media-library/folders/&lt;uuid&gt;</span>). Leave blank to keep the template's existing images.</p>
     </div>
 
     <div class="field">
@@ -61,8 +73,8 @@
           <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
             <li>Click <b>Copy script</b> above.</li>
             <li>Open the <b>PMCL</b> backoffice in Chrome (logged in). Press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
-            <li>Paste the script and press Enter. If a Folder ID was set, pick the NC icon then the Pop-up background when the pickers pop up.</li>
-            <li>Watch for the green <b>DONE</b> with the created JRN id. Email is left untouched — edit it by hand.</li>
+            <li>Paste the script and press Enter. If a Folder ID was set, pick the NC icon, then the Pop-up background, then the Email hero image as each picker pops up.</li>
+            <li>Watch for the green <b>DONE</b> with the created JRN id (and the published email content id, when the paste included an Email).</li>
           </ol>
           <textarea id="tournament-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ console_script.text }}</textarea>
         </div>
