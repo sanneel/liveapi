@@ -421,6 +421,7 @@ def generate_tournament_pmcl_console_script(
     journey_name: str = "",
     tournament_start: str = "",
     tournament_end: str = "",
+    no_photos: bool = False,
 ) -> Tuple[int, str, str, str | None, str]:
     """Generate the paste-into-DevTools console script for the PMCL (Fortunazo)
     tournament communications journey (Notification Center + Pop-up + SMS; email
@@ -456,6 +457,8 @@ def generate_tournament_pmcl_console_script(
         cmd += ["--tournament-start", tournament_start.strip()]
     if tournament_end.strip():
         cmd += ["--tournament-end", tournament_end.strip()]
+    if no_photos:
+        cmd += ["--no-photos"]
     return _run_gow_cli(cmd, spec_text=spec_text, basename=basename)
 
 

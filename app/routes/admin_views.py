@@ -1118,6 +1118,7 @@ def promotions_tournament_pmcl(
     journey_name: str = Form(""),
     tournament_start: str = Form(""),
     tournament_end: str = Form(""),
+    no_photos: str = Form(""),
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
     """Generate the PMCL (Fortunazo) Tournament comms console script — the same
@@ -1131,6 +1132,7 @@ def promotions_tournament_pmcl(
         "journey_name": journey_name,
         "tournament_start": tournament_start,
         "tournament_end": tournament_end,
+        "no_photos": bool(no_photos),
     }
     error = ""
     result = None
@@ -1150,6 +1152,7 @@ def promotions_tournament_pmcl(
             journey_name=journey_name,
             tournament_start=tournament_start,
             tournament_end=tournament_end,
+            no_photos=bool(no_photos),
         )
         result = {
             "exit_code": exit_code,

@@ -67,6 +67,11 @@ TEMPLATE_PATH = Path(__file__).resolve().parent / "templates" / "casino" / "tour
 BASE_URL = "https://pmi.rea-backoffice.gr8.tech/api/ubo/api/v0/crm/journey-builder/v0"
 BRAND = "PMCL"
 
+# PMCL media-library folder the comms photos are uploaded into. Baked in so a
+# run gets the three file pickers without anyone having to look the UUID up;
+# --folder-id still overrides it, and --no-photos opts out entirely.
+DEFAULT_FOLDER_ID = "67e37e66-3532-47d7-b574-195ede915ff4"
+
 # Paste-time placeholders, swapped for the real upload's absolute_link once the
 # console script has uploaded the chosen photo for that slot (only when a
 # --folder-id is given; otherwise the template's existing URLs are kept).
@@ -378,6 +383,18 @@ def mirror_into_raw_journey_data(body: dict, activity: dict) -> bool:
     if display is not None and "displayData" in cfg:
         cfg["displayData"] = copy.deepcopy(display)
     return True
+
+
+def tournament_journey_name(event_name: str, start_date: str, end_date: str) -> str:
+    """Journey name in the captured template's shape, from the sheet's Event
+    row and tournament window: "FTCL | CS | <Event> <DD.MM>-<DD.MM>".
+    Returns "" when the sheet lacks either piece, so the caller keeps the
+    template's own name."""
+    if not event_name.strip() or not (start_date and end_date):
+        return ""
+    s = datetime.strptime(start_date, "%Y-%m-%d")
+    e = datetime.strptime(end_date, "%Y-%m-%d")
+    return f"FTCL | CS | {event_name.strip()} {s:%d.%m}-{e:%d.%m}"
 
 
 def set_comms_name(body: dict, start_local: datetime, name_override: str = "") -> str:
@@ -839,23 +856,28 @@ def main() -> int:
     p.add_argument("--journey-name", default="", help="Override the journey name (default: reuse template name, minus 'Copy of ')")
     p.add_argument("--tournament-start", default="", help="Tournament start date YYYY-MM-DD. Overrides the spec's 'Start date' row. Drives the first Wait/Date activity and the notification revoke period.")
     p.add_argument("--tournament-end", default="", help="Tournament end date YYYY-MM-DD. Overrides the spec's 'End date' row. Drives the second Wait/Date activity and the notification revoke period.")
-    p.add_argument("--folder-id", default="", help="PMCL media-library folder UUID. When set, the script uploads the NC icon + Pop-up background; when blank the template's existing images are kept.")
+    p.add_argument("--folder-id", default="", help=f"PMCL media-library folder UUID for the photo uploads (default: {DEFAULT_FOLDER_ID}).")
+    p.add_argument("--no-photos", action="store_true", help="Skip the file pickers and keep the template's existing image URLs.")
     p.add_argument("--name", default="tournament_pmcl", help="Output file basename (default: tournament_pmcl)")
     p.add_argument("--dry-run", action="store_true", help="Write prepared payload to out/ instead of a console script")
     args = p.parse_args()
 
     spec_text = sys.stdin.read() if args.spec == "-" else Path(args.spec).read_text(encoding="utf-8")
-    spec = parse_spec(spec_text)
+    # A tournament sheet's Offer is a prize amount, not a "Game | Provider"
+    # line with bet tiers, so the GOW offer warnings don't apply.
+    spec = parse_spec(spec_text, expect_game_offer=False)
     for w in spec.warnings:
         print(f"  WARN  {w}", file=sys.stderr)
     if not spec.nc.title_en or not spec.popup.title_en or not spec.sms.text_en:
         print("\nspec is missing Notification/Pop-up/Sms copy — nothing written.", file=sys.stderr)
         return 1
 
-    # Explicit flags win over whatever the pasted spec carried, so the web form
-    # can supply the window even when the paste is only the channels table.
-    t_start = args.tournament_start.strip() or spec.tournament_start_date
-    t_end = args.tournament_end.strip() or spec.tournament_end_date
+    # The pasted sheet is the source of truth: its Start/End date rows win, and
+    # the flags are only a fallback for a paste that omits the Specifications
+    # block. (Previously the flags won, so a stale date left in the web form
+    # silently overrode the sheet.)
+    t_start = spec.tournament_start_date or args.tournament_start.strip()
+    t_end = spec.tournament_end_date or args.tournament_end.strip()
     for label, value in (("--tournament-start", t_start), ("--tournament-end", t_end)):
         if value and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
             print(f"\n{label} must be YYYY-MM-DD, got {value!r}.", file=sys.stderr)
@@ -867,11 +889,24 @@ def main() -> int:
         print("\nTournament start and end dates must be given together.", file=sys.stderr)
         return 1
 
-    upload_photos = bool(args.folder_id.strip())
+    # Sheet-driven too: the Event row names the journey and the Link row
+    # carries the deeplink id. Flags stay available as an explicit override.
+    journey_name = args.journey_name.strip() or tournament_journey_name(
+        spec.event_name, t_start, t_end
+    )
+    tournament_id = args.tournament_id.strip() or spec.tournament_id
+    folder_id = "" if args.no_photos else (args.folder_id.strip() or DEFAULT_FOLDER_ID)
+
+    if spec.event_name:
+        print(f"  from sheet: event {spec.event_name!r}")
+    if spec.tournament_id:
+        print(f"  from sheet: tournament id {spec.tournament_id}")
+
+    upload_photos = bool(folder_id)
     body, report, start_local, stop_local, email_content = prepare_comms(
         date_str=args.date,
-        journey_name=args.journey_name,
-        tournament_id=args.tournament_id,
+        journey_name=journey_name,
+        tournament_id=tournament_id,
         nc=nc_dict_from_spec(spec.nc),
         popup=popup_dict_from_spec(spec.popup),
         sms=sms_dict_from_spec(spec.sms),
@@ -887,7 +922,7 @@ def main() -> int:
 
     print("Verification:")
     all_ok = True
-    for ok, msg in verify(body, args.tournament_id, upload_photos, email_content):
+    for ok, msg in verify(body, tournament_id, upload_photos, email_content):
         print(f"  {'OK  ' if ok else 'FAIL'} {msg}")
         all_ok = all_ok and ok
     if not all_ok:
@@ -906,7 +941,7 @@ def main() -> int:
             print(f"Dry run — email content written: {epath}")
         return 0
 
-    js = build_js(body, folder_id=args.folder_id.strip(), email_content=email_content)
+    js = build_js(body, folder_id=folder_id, email_content=email_content)
     out = Path("console_scripts")
     out.mkdir(exist_ok=True)
     path = out / f"{args.name}_console.js"

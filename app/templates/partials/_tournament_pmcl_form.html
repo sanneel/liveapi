@@ -19,38 +19,42 @@
         <p class="help" style="margin-top:6px">Comms runs this day, 12:00 → 19:00 Chile.</p>
       </div>
       <div class="field">
-        <span class="lbl">Tournament ID <span style="color:var(--t-faint)">(optional)</span></span>
+        <span class="lbl">Tournament ID <span style="color:var(--t-faint)">(optional override)</span></span>
         <input class="input mono" name="tournament_id" value="{{ form.tournament_id or '' }}" placeholder="5431"/>
-        <p class="help" style="margin-top:6px">Smartico tournament id for the deeplink (<span class="mono">#_smartico_dp=dp:gf_tournaments&amp;id=…</span>). Leave blank to keep the template's.</p>
+        <p class="help" style="margin-top:6px">Leave blank — it's read from the sheet's <span class="mono">Link</span> row (<span class="mono">…&amp;id=5555</span>).</p>
       </div>
     </div>
 
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
       <div class="field">
-        <span class="lbl">Tournament start</span>
+        <span class="lbl">Tournament start <span style="color:var(--t-faint)">(fallback)</span></span>
         <input class="input" name="tournament_start" type="date" value="{{ form.tournament_start or '' }}"/>
       </div>
       <div class="field">
-        <span class="lbl">Tournament end</span>
+        <span class="lbl">Tournament end <span style="color:var(--t-faint)">(fallback)</span></span>
         <input class="input" name="tournament_end" type="date" value="{{ form.tournament_end or '' }}"/>
       </div>
     </div>
-    <p class="help" style="margin:-4px 0 0">The tournament's own run window (not the comms send day). Sets both <b>Wait / Date</b> activities and the <b>notification revoke period</b> to the exact number of days the tournament lasts. Fill both or leave both blank — blank falls back to the <span class="mono">Start date</span> / <span class="mono">End date</span> rows if your paste includes the Specifications block, otherwise the template's defaults are kept.</p>
+    <p class="help" style="margin:-4px 0 0"><b>Leave these blank normally.</b> The pasted sheet's <span class="mono">Start date</span> / <span class="mono">End date</span> rows win and set both <b>Wait / Date</b> activities plus the <b>notification revoke period</b> to the exact tournament length. These fields are only used when your paste omits the Specifications block.</p>
 
     <div class="field">
-      <span class="lbl">Journey name <span style="color:var(--t-faint)">(optional)</span></span>
+      <span class="lbl">Journey name <span style="color:var(--t-faint)">(optional override)</span></span>
       <input class="input" name="journey_name" value="{{ form.journey_name or '' }}" placeholder="FTCL | CS | Torneo ..."/>
-      <p class="help" style="margin-top:6px">Defaults to the template name (with any “Copy of ” prefix stripped).</p>
+      <p class="help" style="margin-top:6px">Leave blank — it's built from the sheet's <span class="mono">Event</span> row and tournament dates, e.g. <span class="mono">FTCL | CS | Torneo Ola de Dinero 27.07-02.08</span>.</p>
     </div>
 
     <div class="field">
-      <span class="lbl">Media Library Folder ID <span style="color:var(--t-faint)">(optional)</span></span>
-      <input class="input mono" name="folder_id" value="{{ form.folder_id or '' }}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"/>
-      <p class="help" style="margin-top:6px">When set, the script pops file pickers to upload a fresh NC icon, Pop-up background and — when the paste includes an Email — the Email hero image into this PMCL folder (open Media Library in the PMCL backoffice → copy the UUID from <span class="mono">/media-library/folders/&lt;uuid&gt;</span>). Leave blank to keep the template's existing images.</p>
+      <span class="lbl">Media Library Folder ID</span>
+      <input class="input mono" name="folder_id" value="{{ form.folder_id or '67e37e66-3532-47d7-b574-195ede915ff4' }}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"/>
+      <p class="help" style="margin-top:6px">Pre-filled with the PMCL comms folder. The script pops file pickers to upload a fresh NC icon, Pop-up background and — when the paste includes an Email — the Email hero image into this folder.</p>
+      <label class="help" style="display:flex; align-items:center; gap:7px; margin-top:8px; cursor:pointer">
+        <input type="checkbox" name="no_photos" value="1" {% if form.no_photos %}checked{% endif %}/>
+        Skip the file pickers and keep the template's existing images
+      </label>
     </div>
 
     <div class="field">
-      <span class="lbl">Spec (sheet content)</span>
+      <span class="lbl">Spec (paste the whole sheet — Specifications <i>and</i> Communication channels)</span>
       <textarea class="input mono" name="spec" required rows="16" spellcheck="false" style="font-size:12px" placeholder="Paste the Communication channels table here (tab-separated, as copied from the sheet): Notification, Notification pop-up (Cat-fish), Sms — each with a TRUE/FALSE flag and EN/ES copy (Title / Description / Button).">{{ form.spec or '' }}</textarea>
       <p class="help" style="margin-top:6px">Paste the Communication channels section: <b>Notification</b>, <b>Notification pop-up (Cat-fish)</b>, <b>Email</b> and <b>Sms</b> rows with their EN/ES copy. When the paste includes an Email (Title + Pre-header + Description), the email content is created + published and the journey's email activity is repointed to it; otherwise the email is left untouched.</p>
     </div>

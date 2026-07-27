@@ -22,7 +22,11 @@ from dataclasses import dataclass, field
 
 
 _BOOL_RE = re.compile(r"^(true|false)$", re.IGNORECASE)
-_NUM_RE = re.compile(r"^[\d.,]+$")
+# Signed, because the sheet's "Left symb" counter goes negative when the copy
+# is over its limit. Without the sign a "-1" cell survived the filter and was
+# picked up as the ES value, so an over-length EN row silently shipped "-1" as
+# its Spanish translation.
+_NUM_RE = re.compile(r"^[+-]?[\d.,]+$")
 _BET_RE = re.compile(r"bet\s*\$\s*([\d.,]+)", re.IGNORECASE)
 _TRADEMARK_RE = re.compile(r"[™®©]")
 
@@ -84,6 +88,8 @@ class ParsedSpec:
     offer_text: str = ""
     tournament_start_date: str = ""  # ISO format YYYY-MM-DD, or empty if not in spec
     tournament_end_date: str = ""    # ISO format YYYY-MM-DD, or empty if not in spec
+    event_name: str = ""             # Specifications "Event" row, quotes/parens stripped
+    tournament_id: str = ""          # id=... from the Specifications "Link" row
     nc: ChannelCopy = field(default_factory=ChannelCopy)
     popup: ChannelCopy = field(default_factory=ChannelCopy)
     sms: SmsCopy = field(default_factory=SmsCopy)
@@ -140,7 +146,20 @@ def _parse_date(date_str: str) -> str:
     return ""
 
 
-def _parse_offer(offer_text: str, spec: ParsedSpec) -> None:
+_EVENT_RE = re.compile(r'^\s*"([^"]+)"')
+_LINK_ID_RE = re.compile(r"[?&]id=(\d+)")
+
+
+def _parse_event_name(raw: str) -> str:
+    """The Event cell reads: "Torneo Ola de Dinero" (TaDa, Smartico).
+    Keep the quoted title; fall back to the text before the provider parens."""
+    m = _EVENT_RE.match(raw)
+    if m:
+        return m.group(1).strip()
+    return re.sub(r"\s*\([^)]*\)\s*$", "", raw).strip().strip('"')
+
+
+def _parse_offer(offer_text: str, spec: ParsedSpec, *, warn: bool = True) -> None:
     spec.offer_text = offer_text
     lines = [l.strip() for l in offer_text.splitlines() if l.strip()]
     game_line = next((l for l in reversed(lines) if "|" in l), "")
@@ -151,7 +170,7 @@ def _parse_offer(offer_text: str, spec: ParsedSpec) -> None:
         spec.game_name = game_name
         spec.provider_name = provider_name
         spec.provider = provider_name.lower()
-    else:
+    elif warn:
         spec.warnings.append("Offer text has no \"Game | Provider\" line.")
 
     bets = []
@@ -160,14 +179,27 @@ def _parse_offer(offer_text: str, spec: ParsedSpec) -> None:
         if raw.isdigit():
             bets.append(int(raw))
     spec.bets = bets
-    if not bets:
+    if not bets and warn:
         spec.warnings.append("No \"bet $...\" values found in the Offer text.")
 
 
-def parse_spec(text: str) -> ParsedSpec:
+def parse_spec(text: str, *, expect_game_offer: bool = True) -> ParsedSpec:
+    """Parse the pasted sheet.
+
+    ``expect_game_offer`` is for the GOW-style sheets whose Offer cell carries a
+    "Game | Provider" line and "bet $..." tiers. A tournament sheet's Offer is
+    just a prize amount, so the tournament generators pass False to skip the
+    two warnings that would otherwise always fire.
+    """
     spec = ParsedSpec()
     reader = csv.reader(io.StringIO(text), delimiter="\t", quotechar='"')
     rows = [row for row in reader if any((c or "").strip() for c in row)]
+
+    def _first_value(row: list) -> str:
+        for cell in row[1:]:
+            if (cell or "").strip():
+                return cell
+        return ""
 
     current_channel = ""
     field_rows: dict = {}  # channel -> list[(label, en, es)]
@@ -178,30 +210,27 @@ def parse_spec(text: str) -> ParsedSpec:
             continue
 
         if label.lower() == "offer":
-            offer_value = ""
-            for cell in row[1:]:
-                if (cell or "").strip():
-                    offer_value = cell
-                    break
-            _parse_offer(offer_value, spec)
+            _parse_offer(_first_value(row), spec, warn=expect_game_offer)
+            continue
+
+        if label.lower() == "event":
+            spec.event_name = _parse_event_name(_first_value(row))
+            continue
+
+        if label.lower().startswith("link"):
+            # "Link (Other)" carries the canonical deeplink; don't let a later
+            # blank/odd Link row clobber an id already found.
+            m = _LINK_ID_RE.search(_first_value(row))
+            if m and not spec.tournament_id:
+                spec.tournament_id = m.group(1)
             continue
 
         if label.lower() == "start date":
-            date_value = ""
-            for cell in row[1:]:
-                if (cell or "").strip():
-                    date_value = cell
-                    break
-            spec.tournament_start_date = _parse_date(date_value)
+            spec.tournament_start_date = _parse_date(_first_value(row))
             continue
 
         if label.lower() == "end date":
-            date_value = ""
-            for cell in row[1:]:
-                if (cell or "").strip():
-                    date_value = cell
-                    break
-            spec.tournament_end_date = _parse_date(date_value)
+            spec.tournament_end_date = _parse_date(_first_value(row))
             continue
 
         channel = _channel_key(label)
