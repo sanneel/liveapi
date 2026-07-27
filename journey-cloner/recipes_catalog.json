@@ -1,0 +1,173 @@
+{
+  "_legend": {
+    "wire_unit": "Unit of the DESTINATION field on the platform, NOT the unit you send. ALWAYS send amounts in major CLP — the composer converts where wire_unit is 'minor'. Sending minor units yields a 100x value.",
+    "required": "A spec that omits this knob is REFUSED, because omitting it would silently ship the reference template's own value."
+  },
+  "recipes": {
+    "comms": {
+      "reference": "casino/gow_comms.json",
+      "chain": [
+        "dwh_source",
+        "notification_center",
+        "notification_center",
+        "dextra_sms",
+        "dextra_email",
+        "end_of_journey"
+      ],
+      "knobs": {}
+    },
+    "sport_deposit_freebet": {
+      "reference": "udch/two_hours.json",
+      "chain": [
+        "registration",
+        "deposit",
+        "promotion",
+        "freebet",
+        "end_of_journey"
+      ],
+      "knobs": {
+        "deposit_min_clp": {
+          "wire_unit": "minor",
+          "desc": "minimum deposit to unlock the offer, in CLP"
+        },
+        "freebet_amount_clp": {
+          "wire_unit": "minor",
+          "desc": "free-bet value in CLP"
+        },
+        "freebet_expire_days": {
+          "wire_unit": "raw",
+          "desc": "days the free bet stays valid"
+        },
+        "freebet_max_odd": {
+          "wire_unit": "raw",
+          "desc": "maximum odds the free bet can be used at"
+        },
+        "promocode": {
+          "wire_unit": "raw",
+          "desc": "entry promocode players redeem"
+        }
+      }
+    },
+    "casino_deposit_freespins": {
+      "reference": "casino/gow.json",
+      "chain": [
+        "external_system_source",
+        "deposit",
+        "promotion",
+        "freespin_bonus",
+        "casino_bonus_v2",
+        "end_of_journey"
+      ],
+      "knobs": {
+        "deposit_min_clp": {
+          "wire_unit": "minor",
+          "desc": "minimum deposit to unlock, in CLP"
+        },
+        "spins": {
+          "wire_unit": "raw",
+          "desc": "number of free spins granted"
+        },
+        "spin_bet_clp": {
+          "wire_unit": "minor",
+          "desc": "bet value per spin, in CLP"
+        },
+        "bonus_percent": {
+          "wire_unit": "raw",
+          "desc": "deposit-match percent (100 = 100%)"
+        },
+        "wagering_x": {
+          "wire_unit": "raw",
+          "desc": "wagering multiplier (e.g. 30 = x30)"
+        },
+        "bonus_expiry_ms": {
+          "wire_unit": "raw",
+          "desc": "bonus validity in milliseconds (172800000 = 48h)"
+        },
+        "release_limit_x": {
+          "wire_unit": "raw",
+          "desc": "max cashout as a multiple of the bonus"
+        }
+      }
+    },
+    "casino_instant_freespin": {
+      "reference": "casino/instfs.json",
+      "chain": [
+        "external_system_source",
+        "promotion",
+        "freespin_bonus",
+        "end_of_journey"
+      ],
+      "knobs": {
+        "spins": {
+          "wire_unit": "raw",
+          "desc": "number of free spins granted"
+        },
+        "spin_bet_clp": {
+          "wire_unit": "minor",
+          "desc": "bet value per spin, in CLP"
+        },
+        "spin_provider": {
+          "wire_unit": "raw",
+          "desc": "game provider id (e.g. pragmatic) — from games registry",
+          "required": true
+        },
+        "spin_game_lobby": {
+          "wire_unit": "raw",
+          "desc": "lobbyGameId — from games registry, never guessed",
+          "required": true
+        },
+        "spin_game_wallet": {
+          "wire_unit": "raw",
+          "desc": "walletGameId — from games registry",
+          "required": true
+        },
+        "spin_game_external": {
+          "wire_unit": "raw",
+          "desc": "externalGameId — from games registry",
+          "required": true
+        }
+      }
+    }
+  },
+  "references": {
+    "casino/gow_comms.json": [
+      "ams_decision_split",
+      "dextra_email",
+      "dextra_sms",
+      "dwh_source",
+      "email_engagement_split",
+      "end_of_path",
+      "event_detector",
+      "notification_center",
+      "notification_center_engagement_split",
+      "wait_interval"
+    ],
+    "udch/two_hours.json": [
+      "ams_decision_split",
+      "campaign_connector",
+      "deposit",
+      "end_of_journey",
+      "freebet",
+      "promotion",
+      "random_split",
+      "registration",
+      "sport_bonus"
+    ],
+    "casino/gow.json": [
+      "casino_bonus_v2",
+      "deposit",
+      "end_of_path",
+      "event_detector",
+      "external_system_source",
+      "freespin_bonus",
+      "multipurpose_promotion",
+      "promotion"
+    ],
+    "casino/instfs.json": [
+      "end_of_journey",
+      "external_system_source",
+      "freespin_bonus",
+      "promotion"
+    ]
+  }
+}

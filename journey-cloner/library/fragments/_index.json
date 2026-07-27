@@ -1,0 +1,156 @@
+[
+  {
+    "activityName": "ams_decision_split",
+    "source_template": "casino/gow_comms.json",
+    "has_config": true,
+    "has_node": true,
+    "port_count": 3
+  },
+  {
+    "activityName": "campaign_connector",
+    "source_template": "colocolo/two_hours.json",
+    "has_config": true,
+    "has_node": true,
+    "port_count": 3
+  },
+  {
+    "activityName": "casino_bonus_v2",
+    "source_template": "casino/gow.json",
+    "has_config": true,
+    "has_node": true,
+    "port_count": 18
+  },
+  {
+    "activityName": "deposit",
+    "source_template": "colocolo/followup.json",
+    "has_config": true,
+    "has_node": true,
+    "port_count": 5
+  },
+  {
+    "activityName": "dextra_email",
+    "source_template": "casino/gow_comms.json",
+    "has_config": true,
+    "has_node": true,
+    "port_count": 3
+  },
+  {
+    "activityName": "dextra_sms",
+    "source_template": "casino/gow_comms.json",
+    "has_config": true,
+    "has_node": true,
+    "port_count": 3
+  },
+  {
+    "activityName": "dwh_source",
+    "source_template": "casino/nc_discount.json",
+    "has_config": true,
+    "has_node": true,
+    "port_count": 1
+  },
+  {
+    "activityName": "email_engagement_split",
+    "source_template": "casino/gow_comms.json",
+    "has_config": true,
+    "has_node": true,
+    "port_count": 3
+  },
+  {
+    "activityName": "end_of_journey",
+    "source_template": "casino/gow.json",
+    "has_config": false,
+    "has_node": false,
+    "port_count": 0
+  },
+  {
+    "activityName": "end_of_path",
+    "source_template": "casino/gow.json",
+    "has_config": false,
+    "has_node": true,
+    "port_count": 1
+  },
+  {
+    "activityName": "event_detector",
+    "source_template": "casino/gow_comms.json",
+    "has_config": true,
+    "has_node": true,
+    "port_count": 6
+  },
+  {
+    "activityName": "external_system_source",
+    "source_template": "colocolo/followup.json",
+    "has_config": true,
+    "has_node": true,
+    "port_count": 1
+  },
+  {
+    "activityName": "freebet",
+    "source_template": "colocolo/followup.json",
+    "has_config": true,
+    "has_node": true,
+    "port_count": 6
+  },
+  {
+    "activityName": "freespin_bonus",
+    "source_template": "casino/gow.json",
+    "has_config": true,
+    "has_node": true,
+    "port_count": 15
+  },
+  {
+    "activityName": "multipurpose_promotion",
+    "source_template": "colocolo/followup.json",
+    "has_config": true,
+    "has_node": true,
+    "port_count": 4
+  },
+  {
+    "activityName": "notification_center",
+    "source_template": "casino/nc_discount.json",
+    "has_config": true,
+    "has_node": true,
+    "port_count": 3
+  },
+  {
+    "activityName": "notification_center_engagement_split",
+    "source_template": "casino/gow_comms.json",
+    "has_config": true,
+    "has_node": true,
+    "port_count": 3
+  },
+  {
+    "activityName": "promotion",
+    "source_template": "colocolo/followup.json",
+    "has_config": true,
+    "has_node": true,
+    "port_count": 4
+  },
+  {
+    "activityName": "random_split",
+    "source_template": "colocolo/two_hours.json",
+    "has_config": true,
+    "has_node": true,
+    "port_count": 4
+  },
+  {
+    "activityName": "registration",
+    "source_template": "udch/aft.json",
+    "has_config": true,
+    "has_node": true,
+    "port_count": 1
+  },
+  {
+    "activityName": "sport_bonus",
+    "source_template": "colocolo/two_hours.json",
+    "has_config": true,
+    "has_node": true,
+    "port_count": 9
+  },
+  {
+    "activityName": "wait_interval",
+    "source_template": "casino/gow_comms.json",
+    "has_config": true,
+    "has_node": true,
+    "port_count": 3
+  }
+]

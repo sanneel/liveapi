@@ -55,13 +55,13 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
-from weights_chile_first import FORCED_TIMEZONE
-from hot_scoring import pick_hot as pick_hot_football
-from hot_scoring_tennis import pick_hot as pick_hot_tennis
-from hot_scoring_basketball import pick_hot as pick_hot_basketball
-from hot_scoring_cybersport import pick_hot as pick_hot_cybersport
-from hot_scoring_fights import pick_hot as pick_hot_fights
-import manual_store
+from scoring.weights_chile_first import FORCED_TIMEZONE
+from scoring.hot_scoring import pick_hot as pick_hot_football
+from scoring.hot_scoring_tennis import pick_hot as pick_hot_tennis
+from scoring.hot_scoring_basketball import pick_hot as pick_hot_basketball
+from scoring.hot_scoring_cybersport import pick_hot as pick_hot_cybersport
+from scoring.hot_scoring_fights import pick_hot as pick_hot_fights
+from scoring import manual_store
 
 # New v2 admin (Phase 2+)
 from app.routes.admin_views import router as admin_views_router
@@ -73,6 +73,7 @@ from app.routes.admin_slot_cards import router as admin_slot_cards_router
 from app.routes.admin_hot import router as admin_hot_router
 from app.routes.admin_hot_override import router as admin_hot_override_router
 from app.routes.admin_logs import router as admin_logs_router
+from app.routes.admin_planner import router as admin_planner_router
 from app.routes.admin_tutorials import router as admin_tutorials_router
 from app.routes.admin_weights import router as admin_weights_router
 from app.routes.public_club import router as public_club_router
@@ -190,6 +191,7 @@ app.include_router(admin_weights_router)     # /admin/weights + weights CRUD + l
 app.include_router(admin_cube_router)        # /admin/cube + /api/admin/cube/* override APIs
 app.include_router(admin_slot_cards_router)  # /admin/slot-cards + generate (photo -> card GIF)
 app.include_router(admin_tutorials_router)   # /admin/tutorials + /api/tutorials (help library)
+app.include_router(admin_planner_router)     # /admin/planner + Gemini proxy (journey planner chat)
 app.include_router(admin_views_router)       # /admin (dashboard), /admin/matches
 app.include_router(admin_api_router)
 app.include_router(public_hot_router)        # /hot, /hot/{sport}, /hot/{sport}.png

@@ -1,18 +1,41 @@
 {% extends "base.html" %}
-{% block title %}Promotions · Jugabet Admin{% endblock %}
+{% block title %}Optimization · Jugabet Admin{% endblock %}
 {% block content_theme %}content-light{% endblock %}
-{% block page_title %}Promotions{% endblock %}
-{% block page_subtitle %}One place for every promo automation — the GOW generator, the Journey Cloner, the automation graph, and all the scripts.{% endblock %}
+{% block page_title %}Optimization{% endblock %}
+{% block page_subtitle %}One place for every promo automation — GOW, Promo Codes, Prediction, Randomizers, Discount NC, AI and Slot Cards.{% endblock %}
 
 {% block content %}
 
 <div class="tabs" id="promo-tabs" data-active="{{ active_tab or 'overview' }}">
-  <button type="button" class="tab" data-tab="overview">Overview</button>
-  <button type="button" class="tab" data-tab="gow">GOW</button>
-  <button type="button" class="tab" data-tab="journey_cloner">Journey Cloner</button>
-  <button type="button" class="tab" data-tab="randomizers">Randomizers</button>
-  <button type="button" class="tab" data-tab="nc_discount">Discount NC</button>
-  <button type="button" class="tab" data-tab="scripts">All scripts</button>
+  <div class="tab-group">
+    <span class="tab-group-label">Plan</span>
+    <div class="tab-group-btns">
+      <button type="button" class="tab" data-tab="overview">Overview</button>
+      <button type="button" class="tab" data-tab="planner">AI</button>
+    </div>
+  </div>
+  <div class="tab-group">
+    <span class="tab-group-label">Generate</span>
+    <div class="tab-group-btns">
+      <button type="button" class="tab" data-tab="gow">GOW</button>
+      <button type="button" class="tab" data-tab="journey_cloner">Promo Codes</button>
+      <button type="button" class="tab" data-tab="prediction">Prediction</button>
+      <button type="button" class="tab" data-tab="randomizers">Randomizers</button>
+      <button type="button" class="tab" data-tab="nc_discount">Discount NC</button>
+    </div>
+  </div>
+  <div class="tab-group">
+    <span class="tab-group-label">Assets</span>
+    <div class="tab-group-btns">
+      <button type="button" class="tab" data-tab="slot_cards">Slot Cards</button>
+    </div>
+  </div>
+  <div class="tab-group tab-group-end">
+    <span class="tab-group-label">&nbsp;</span>
+    <div class="tab-group-btns">
+      <button type="button" class="tab" data-tab="scripts">All scripts</button>
+    </div>
+  </div>
 </div>
 
 {# ── OVERVIEW: automation graph ──────────────────────────────────────── #}
@@ -88,6 +111,14 @@
   </div>
 </section>
 
+{# ── Planner (journey-planner chat) ──────────────────────────────────── #}
+<section data-panel="planner" hidden>
+  {% with docs_present=pl.docs_present, key_configured=pl.key_configured, provider=pl.provider,
+          key_env=pl.key_env, model=pl.model %}
+    {% include "partials/_planner_panel.html" %}
+  {% endwith %}
+</section>
+
 {# ── GOW generator ───────────────────────────────────────────────────── #}
 <section data-panel="gow" hidden>
   {% with form=gow.form, error=gow.error, result=gow.result, console_script=gow.console_script, warn=gow.warn %}
@@ -103,6 +134,116 @@
           template_saved=jc.template_saved, template_error=jc.template_error %}
     {% include "partials/_journey_cloner_form.html" %}
   {% endwith %}
+</section>
+
+{# ── Prediction (Multi Number Prediction promo, from a pasted sheet) ─── #}
+<section data-panel="prediction" hidden>
+  {% if pred.error %}<div class="alert err">{{ pred.error }}</div>{% endif %}
+  {% if pred.result %}
+    <div class="alert {% if pred.result.ok %}ok{% else %}err{% endif %}">
+      {% if pred.result.ok %}{% if pred.dry_run %}Dry run complete — see the request plan below.{% else %}Console script generated.{% endif %}{% else %}Generation exited with code {{ pred.result.exit_code }}.{% endif %}
+    </div>
+  {% endif %}
+
+  <div class="row-flex">
+    <form method="post" action="/admin/promotions/prediction" class="card card-pad col-rail" style="display:flex; flex-direction:column; gap:14px">
+      <div>
+        <h2 class="card-title">Update a Prediction promo</h2>
+        <p class="card-sub">Paste the sheet (top-level fields, a blank line, then the questions table) copied straight from Google Sheets. Uploads SPA + widget content, both manifests, both settings.json, then saves the draft.</p>
+      </div>
+
+      <div class="field">
+        <span class="lbl">Sheet (TSV/CSV pasted from Google Sheets)</span>
+        <textarea class="input mono" name="sheet" rows="10" spellcheck="false" placeholder="internalName&#9;urlShortName&#9;brand&#9;currency&#9;languages&#9;showDate&#9;...&#10;JBCL|PR|... &#9;...&#10;&#10;order&#9;question_en&#9;question_es&#9;answer1_en&#9;...&#10;1&#9;Who scores first?&#9;...">{{ pred.sheet or '' }}</textarea>
+      </div>
+
+      <div class="field">
+        <span class="lbl">Draft id</span>
+        <input class="input mono" name="draft_id" value="{{ pred.draft_id or '' }}" placeholder="35352" required/>
+      </div>
+      <div class="field">
+        <span class="lbl">Content id</span>
+        <input class="input mono" name="content_id" value="{{ pred.content_id or '' }}" placeholder="9b5b9fe4-abb8-44b3-bdb8-73355946508b" required/>
+      </div>
+      <div class="field">
+        <span class="lbl">Front id</span>
+        <input class="input mono" name="front_id" value="{{ pred.front_id or '' }}" placeholder="c7b5e12f-fea1-4320-b33d-c5c503c00154" required/>
+      </div>
+      <div class="field">
+        <span class="lbl">Base body path <span style="color:var(--t-faint); text-transform:none">(optional, advanced)</span></span>
+        <input class="input mono" name="base_body" value="{{ pred.base_body or '' }}" placeholder="journey-cloner/out/some-capture.json"/>
+        <p class="help" style="margin-top:6px">Server-side path to a fresh DevTools capture of THIS draft's PUT body. Leave blank to use the packaged template (its createDate/filterConditions/betsSettings belong to a different promo).</p>
+      </div>
+
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:2px">
+        <input type="checkbox" name="dry_run" {% if pred.dry_run %}checked{% endif %}/>
+        <span class="lbl" style="margin:0">Dry run <span style="color:var(--t-faint)">(write the 9 request bodies + a request plan to out/ instead of a console script)</span></span>
+      </label>
+
+      <button class="btn primary" style="justify-content:center">Generate console script</button>
+      <p class="help">Live mode writes <span class="mono">console_scripts/&lt;name&gt;_console.js</span> — paste it into DevTools on a logged-in backoffice tab.</p>
+    </form>
+
+    <div class="col-main stack">
+      {% if pred.console_script %}
+        <section class="card" style="overflow:hidden">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Console Script Ready</h2>
+              <p class="card-sub">{{ pred.console_script.name }}</p>
+            </div>
+            <button type="button" id="pred-copy" class="btn primary">Copy script</button>
+          </div>
+          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+            <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
+              <li>Click <b>Copy script</b> above.</li>
+              <li>Open the backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
+              <li>Paste and press Enter. If it says "Waiting for a token", click anything in the UI.</li>
+              <li>Watch for the green confirmation that the draft was saved.</li>
+            </ol>
+            <textarea id="pred-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ pred.console_script.text }}</textarea>
+          </div>
+        </section>
+        <script>
+          (function () {
+            var btn = document.getElementById('pred-copy');
+            var area = document.getElementById('pred-script-text');
+            if (!btn || !area) return;
+            btn.addEventListener('click', function () {
+              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
+              if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); });
+              } else { area.select(); document.execCommand('copy'); done(); }
+            });
+          })();
+        </script>
+      {% endif %}
+
+      {% if pred.result %}
+        <section class="card" style="overflow:hidden">
+          <div class="card-head"><h2 class="card-title">Run Output</h2></div>
+          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+            <div>
+              <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Command</div>
+              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0">{{ pred.result.command }}</pre>
+            </div>
+            <div>
+              <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Output</div>
+              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:32rem; margin:0">{{ pred.result.output }}</pre>
+            </div>
+          </div>
+        </section>
+      {% else %}
+        <section class="card card-pad">
+          <h2 class="card-title" style="margin-bottom:8px">How it works</h2>
+          <div class="help" style="line-height:1.7">
+            <p style="margin:0 0 8px">Wraps <span class="mono">journey-cloner/prediction_campaign.py</span>: uploads SPA + widget content (en/es), both manifests, both settings.json, then PUTs the promo draft — the exact sequence captured from a manual edit, matched field-for-field against the HAR.</p>
+            <p style="margin:0">Each question gets a fresh uuid, a <span class="mono">predictionValidationRule</span> entry (maxValue 2 if it has a 3rd answer, else 1 for Yes/No), and a <span class="mono">forecastMultiTitleKey</span> built from the sheet row.</p>
+          </div>
+        </section>
+      {% endif %}
+    </div>
+  </div>
 </section>
 
 {# ── Randomizers (Sport WOF / Casino WOF / Scratch card) ─────────────── #}
@@ -462,6 +603,13 @@
   </div>
 </section>
 
+{# ── Slot Cards ───────────────────────────────────────────────────────── #}
+<section data-panel="slot_cards" hidden>
+  {% with suits=sc.suits %}
+    {% include "partials/_slot_cards_panel.html" %}
+  {% endwith %}
+</section>
+
 {# ── All scripts ─────────────────────────────────────────────────────── #}
 <section data-panel="scripts" hidden>
   {% if all_scripts %}
@@ -487,10 +635,22 @@
 </section>
 
 <style>
-  .tabs { display:flex; gap:4px; border-bottom:2px solid var(--border-in,#e6e6ee); margin-bottom:18px; flex-wrap:wrap; }
-  .tabs .tab { background:none; border:none; padding:10px 16px; font-size:14px; font-weight:600; color:var(--t-faint,#889); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; }
-  .tabs .tab:hover { color:var(--t,#223); }
+  .tabs { display:flex; align-items:flex-end; gap:0; border-bottom:2px solid var(--border-in,#e6e6ee); margin-bottom:18px; flex-wrap:wrap; }
+  .tab-group { display:flex; flex-direction:column; gap:5px; padding:0 14px; position:relative; }
+  .tab-group + .tab-group::before { content:""; position:absolute; left:0; top:6px; bottom:8px; width:1px; background:var(--border-in,#e6e6ee); }
+  .tab-group:first-child { padding-left:0; }
+  .tab-group-end { margin-left:auto; }
+  .tab-group-end::before { display:none; }
+  .tab-group-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--t-faint,#98a1b3); padding-left:14px; }
+  .tab-group-btns { display:flex; gap:2px; flex-wrap:wrap; }
+  .tabs .tab { background:none; border:none; padding:9px 14px; font-size:14px; font-weight:600; color:var(--t-faint,#889); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; border-radius:6px 6px 0 0; white-space:nowrap; }
+  .tabs .tab:hover { color:var(--t,#223); background:var(--bg-faint,#f5f6fa); }
   .tabs .tab.active { color:var(--t,#223); border-bottom-color:#4a6cf7; }
+  @media(max-width:900px){
+    .tab-group { padding:0 8px; }
+    .tab-group + .tab-group::before { display:none; }
+    .tab-group-end { margin-left:0; }
+  }
   .chip { display:inline-block; padding:2px 8px; border:1px solid var(--border,#dcdce4); border-radius:999px; font-size:11px; background:#f6f6fa; }
   .badge { display:inline-block; padding:4px 10px; border-radius:6px; font-size:12px; background:#eef; color:#446; }
   .file-pill { display:inline-flex; align-items:center; gap:8px; padding:4px 10px; border:1px solid var(--border,#dcdce4); border-radius:6px; background:#fafafe; }

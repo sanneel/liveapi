@@ -180,6 +180,7 @@ COMBINED_SCRIPT_PATH = CLONER_DIR / "gow_combined.py"
 RANDOMIZER_SCRIPT_PATH = CLONER_DIR / "randomizer_campaign.py"
 NC_DISCOUNT_SCRIPT_PATH = CLONER_DIR / "nc_discount_campaign.py"
 NC_DISCOUNT_PMCL_SCRIPT_PATH = CLONER_DIR / "nc_discount_pmcl_campaign.py"
+PREDICTION_SCRIPT_PATH = CLONER_DIR / "prediction_campaign.py"
 
 # Randomizer promos (weighted prize wheels / scratch cards). Keys must match
 # randomizer_campaign.py --kind.
@@ -416,6 +417,80 @@ def generate_nc_discount_pmcl_console_script(folder_id: str) -> Tuple[int, str, 
     cmd = [python_executable(), str(NC_DISCOUNT_PMCL_SCRIPT_PATH),
            "--name", basename, "--folder-id", folder_id]
     return _run_gow_cli(cmd, basename=basename)
+
+
+def generate_prediction_console_script(
+    *,
+    sheet_text: str,
+    draft_id: str,
+    content_id: str,
+    front_id: str,
+    base_body_path: str = "",
+    name: str = "",
+    dry_run: bool = False,
+) -> Tuple[int, str, str, str | None, str]:
+    """Generate (or dry-run) a Multi Number Prediction promo update from a
+    pasted Google Sheets table, via prediction_campaign.py. sheet_text is
+    piped via stdin (--sheet -), same as the gow/comms spec textareas.
+
+    Returns (returncode, output_log, display_cmd, js_text or None, basename).
+    When dry_run is True, js_text is always None -- prediction_campaign.py
+    writes the 9 request bodies + a request plan to out/<basename>/ instead
+    of a console script, and that request plan is appended to output_log so
+    it's still visible without pasting anything.
+    """
+    if not draft_id.strip() or not content_id.strip() or not front_id.strip():
+        raise ValueError("Draft id, Content id, and Front id are all required.")
+    basename = name.strip() or _unique_basename("prediction", draft_id.strip())
+    cmd = [
+        python_executable(),
+        str(PREDICTION_SCRIPT_PATH),
+        "--sheet", "-",
+        "--draft-id", draft_id.strip(),
+        "--content-id", content_id.strip(),
+        "--front-id", front_id.strip(),
+        "--name", basename,
+    ]
+    if base_body_path.strip():
+        cmd += ["--base-body", base_body_path.strip()]
+    if dry_run:
+        cmd.append("--dry-run")
+
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    display_cmd = " ".join(
+        part if " " not in part else repr(part) for part in cmd
+    ) + "  < (pasted sheet piped via stdin)"
+
+    proc = subprocess.run(
+        cmd,
+        cwd=CLONER_DIR,
+        env=env,
+        text=True,
+        encoding="utf-8",
+        capture_output=True,
+        timeout=120,
+        input=sheet_text,
+    )
+    output = proc.stdout
+    if proc.stderr:
+        output += "\nSTDERR:\n" + proc.stderr
+
+    if dry_run:
+        plan_path = CLONER_DIR / "out" / basename / "00_request_plan.txt"
+        if proc.returncode == 0 and plan_path.exists():
+            output += "\n\n" + plan_path.read_text(encoding="utf-8")
+        return proc.returncode, output, display_cmd, None, basename
+
+    js_filename = f"{basename}_console.js"
+    js_text = None
+    if proc.returncode == 0:
+        js_path = CLONER_DIR / "console_scripts" / js_filename
+        if js_path.exists():
+            js_text = js_path.read_text(encoding="utf-8")
+        else:
+            output += f"\nERROR: expected script file not found: {js_path}"
+    return proc.returncode, output, display_cmd, js_text, js_filename
 
 
 def git_pull() -> Tuple[int, str]:

@@ -1,0 +1,19 @@
+{
+  "activityName": "end_of_journey",
+  "source_template": "casino/gow.json",
+  "journey_size": 95,
+  "activity": {
+    "activityId": "bdaa61d7-7c0b-4cc7-bf90-ddf9dd521553",
+    "activityName": "end_of_journey",
+    "events": [],
+    "dependencies": [],
+    "dataDependencies": [],
+    "initializationData": {
+      "placements": []
+    }
+  },
+  "config": null,
+  "node": null,
+  "has_config": false,
+  "has_node": false
+}

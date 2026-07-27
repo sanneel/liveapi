@@ -1,0 +1,1474 @@
+{
+ "journeyName": "Copy of FTCL | CS | Card | Una ronda de bono instantáneo NEW",
+ "brand": "PMCL",
+ "currencyCodes": [
+  "CLP"
+ ],
+ "activities": [
+  {
+   "activityId": "b86c512f-46f8-41f7-ad8a-c2b1f83d057e",
+   "activityName": "end_of_journey",
+   "events": [],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "isEditable": true,
+   "changedAt": "2026-07-01T08:53:44.3983480Z",
+   "version": 1,
+   "initializationData": {
+    "placements": []
+   }
+  },
+  {
+   "activityId": "8b2393a7-ada8-4ac4-97a9-400281429942",
+   "activityName": "end_of_journey",
+   "events": [],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "isEditable": true,
+   "changedAt": "2026-07-01T08:53:44.3983870Z",
+   "version": 1,
+   "initializationData": {
+    "placements": []
+   }
+  },
+  {
+   "activityId": "1c4cc571-b103-4619-8f8b-94aaf20a25ec",
+   "activityName": "promotion",
+   "activityDisplayName": "Promotion",
+   "events": [
+    {
+     "eventName": "PromotionAccepted",
+     "eventType": "Completion",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "nextActivityId": "bee93b4a-0245-4874-bd41-6d88e7090ca7",
+     "count": 246,
+     "version": 1
+    },
+    {
+     "eventName": "PromotionExpired",
+     "eventType": "Completion",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "nextActivityId": "9192ff7e-38a2-4dc5-902f-aa49082fd983",
+     "count": 1,
+     "version": 1
+    },
+    {
+     "eventName": "PromotionOffered",
+     "eventDisplayName": "Offered",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 247,
+     "version": 1
+    },
+    {
+     "eventName": "PromotionUpcoming",
+     "eventDisplayName": "Upcoming",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 0,
+     "version": 1
+    }
+   ],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [
+    {
+     "journeyActivityId": "699ac1f7-bcf4-4fa6-93b6-238dace68d32",
+     "key": "CurrencyCode",
+     "isOptional": true
+    },
+    {
+     "journeyActivityId": "699ac1f7-bcf4-4fa6-93b6-238dace68d32",
+     "key": "SelectedCurrencyCode",
+     "isOptional": true
+    },
+    {
+     "journeyActivityId": "699ac1f7-bcf4-4fa6-93b6-238dace68d32",
+     "key": "PromotionLinkId",
+     "isOptional": true
+    }
+   ],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "initializationData": {
+    "languages": [
+     "es",
+     "en"
+    ],
+    "autoAccept": false,
+    "placements": [
+     {
+      "data": {
+       "FrontId": "f455eaee-4c1d-44b1-a5bc-19f5ea93af82",
+       "ContentId": "cf61797a-3f83-4916-b64b-ad1029dff3b0",
+       "bonusType": null,
+       "condition": "Accept",
+       "campaignId": "bee93b4a-0245-4874-bd41-6d88e7090ca7",
+       "moduleType": "FreeSpinBonus",
+       "mechanicName": "FreeSpin",
+       "freespinActivity": {
+        "spins": 1,
+        "stopAt": "2026-07-21T12:54:59Z",
+        "startAt": null,
+        "provider": "pragmatic",
+        "allowReject": false,
+        "lobbyGameId": "pragmatic-sweet-bonanza-super-scatter",
+        "productType": "slots",
+        "subcategory": "instantFreeSpin",
+        "walletGameId": "vs20swbonsup",
+        "withWagering": false,
+        "externalGameId": "vs20swbonsup",
+        "currenciesConfig": {
+         "CLP": {
+          "betAmount": 10000,
+          "maxBonusAmount": 5000000,
+          "minBonusAmount": 10000,
+          "betAmount_majorUnits": 100,
+          "maxBonusAmount_majorUnits": 50000,
+          "minBonusAmount_majorUnits": 100
+         }
+        },
+        "gameTranslationKey": "Sweet Bonanza Super Scatter",
+        "providerTranslationKey": "Pragmatic Play",
+        "spinsExpirationDuration": 86400000
+       },
+       "isActivityCurrencies": false,
+       "cancelDuringWageringPeriodSettings": {
+        "isEnabled": true,
+        "defaultValue": true
+       }
+      },
+      "dataSources": [
+       {
+        "keys": [],
+        "type": "Sync",
+        "journeyActivityId": "bee93b4a-0245-4874-bd41-6d88e7090ca7"
+       }
+      ],
+      "placementType": "PromoLobby"
+     }
+    ],
+    "displayData": [
+     "Offered within 1d 0h 0m"
+    ],
+    "promotionId": "12f1ad93-6be5-4049-974d-34e811e45edc",
+    "timeToAccept": "P0Y0M1DT0H0M0S",
+    "promotionLinkId": "ff4d70b1-0711-43f6-b32f-7a756b623d29",
+    "promotionStatus": "Offered",
+    "channelsCondition": {
+     "values": [],
+     "isEnabled": false
+    },
+    "promotionDisplayId": "744127"
+   },
+   "isEditable": true,
+   "changedBy": {
+    "authorId": "d676e6ae-dd0d-4057-99ee-afe57d38e239",
+    "authorName": "Erik A"
+   },
+   "changedAt": "2026-07-01T08:53:44.3983190Z",
+   "version": 1
+  },
+  {
+   "activityId": "eb1603f9-a4c5-4bc9-b045-a92d543695a3",
+   "activityName": "end_of_journey",
+   "events": [],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "isEditable": true,
+   "changedAt": "2026-07-01T08:53:44.3983450Z",
+   "version": 1,
+   "initializationData": {
+    "placements": []
+   }
+  },
+  {
+   "activityId": "699ac1f7-bcf4-4fa6-93b6-238dace68d32",
+   "activityName": "external_system_source",
+   "activityDisplayName": "API",
+   "events": [
+    {
+     "eventName": "PlayerAdded",
+     "eventDisplayName": "Players added to journey",
+     "eventType": "Activation",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "nextActivityId": "1c4cc571-b103-4619-8f8b-94aaf20a25ec",
+     "count": 247,
+     "version": 1
+    }
+   ],
+   "eventsHistory": [],
+   "tcGroupEvents": [
+    {
+     "eventName": "ExcludedFromJourney",
+     "count": 1
+    }
+   ],
+   "dependencies": [],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "initializationData": {
+    "description": "FTCL | CS | Card | Una ronda de bono instantáneo NEW",
+    "displayData": [
+     "Randomizer"
+    ],
+    "targetSystem": "Randomizer",
+    "isWebhookUrlHidden": false,
+    "placements": []
+   },
+   "isEditable": true,
+   "changedBy": {
+    "authorId": "d676e6ae-dd0d-4057-99ee-afe57d38e239",
+    "authorName": "Erik A"
+   },
+   "changedAt": "2026-07-01T08:53:44.3983440Z",
+   "version": 1
+  },
+  {
+   "activityId": "bee93b4a-0245-4874-bd41-6d88e7090ca7",
+   "activityName": "freespin_bonus",
+   "activityType": "instantFreeSpin",
+   "activityDisplayName": "Casino FreeSpin",
+   "events": [
+    {
+     "eventName": "FreespinBonusCollectingFinished",
+     "eventType": "Completion",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "nextActivityId": "5e5c99f5-84ed-4e96-b771-477cb970b221",
+     "count": 245,
+     "version": 1
+    },
+    {
+     "eventName": "FreespinBonusCollectingStarted",
+     "eventDisplayName": "Collecting started",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 245,
+     "version": 1
+    },
+    {
+     "eventName": "FreespinBonusNotUsed",
+     "eventType": "Completion",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "nextActivityId": "8b2393a7-ada8-4ac4-97a9-400281429942",
+     "count": 1,
+     "version": 1
+    },
+    {
+     "eventName": "FreespinBonusRejectConfirmed",
+     "eventDisplayName": "Canceled",
+     "eventType": "Completion",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "nextActivityId": "f2ae2a5c-3f94-4ce4-b029-1340b287a2c3",
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "FreespinBonusRejected",
+     "eventDisplayName": "Cancelation initiated",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "FreespinBonusRejectFailed",
+     "eventDisplayName": "Cancelation error",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "FreespinBonusStatusReverted",
+     "eventDisplayName": "Freespin Bonus status was reverted",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "FreeSpinsBonusTermsNotComplied",
+     "eventDisplayName": "Not complied",
+     "eventType": "Completion",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "nextActivityId": "9318b0fe-c35a-4192-8530-16dcffd0ae76",
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "FreespinBonusAwardAborted",
+     "eventDisplayName": "Issuing error",
+     "eventType": "Completion",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "nextActivityId": "5b119ae7-d6ba-4e27-b087-c9224ab4e7dd",
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "FreespinBonusAwardConfirmed",
+     "eventDisplayName": "Issued",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 246,
+     "version": 1
+    },
+    {
+     "eventName": "FreespinBonusAwarded",
+     "eventDisplayName": "Issuing initiated",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 246,
+     "version": 1
+    },
+    {
+     "eventName": "FreespinBonusAwardFailed",
+     "eventDisplayName": "Issuing error",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "FreespinBonusCancelConfirmed",
+     "eventDisplayName": "Terminated",
+     "eventType": "Completion",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "nextActivityId": "eb1603f9-a4c5-4bc9-b045-a92d543695a3",
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "FreespinBonusCancelFailed",
+     "eventDisplayName": "Termination error",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "FreespinBonusCancelled",
+     "eventDisplayName": "Termination initiated",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "FreespinBonusCancelledByWithdrawalConfirmed",
+     "eventDisplayName": "Canceled by withdrawal",
+     "eventType": "Completion",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "nextActivityId": "b86c512f-46f8-41f7-ad8a-c2b1f83d057e",
+     "count": 0,
+     "version": 1
+    }
+   ],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [
+    {
+     "journeyActivityId": "699ac1f7-bcf4-4fa6-93b6-238dace68d32",
+     "key": "CurrencyCode",
+     "isOptional": false
+    },
+    {
+     "journeyActivityId": "1c4cc571-b103-4619-8f8b-94aaf20a25ec",
+     "key": "PromotionId",
+     "isOptional": false
+    }
+   ],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "initializationData": {
+    "allowReject": true,
+    "displayData": [
+     "Activity customized"
+    ],
+    "pathesConfig": [
+     {
+      "empty": true,
+      "events": [
+       {
+        "eventName": "FreespinBonusCollectingFinished",
+        "eventType": "Completion"
+       }
+      ],
+      "pathId": "FreespinBonusCollectingFinished",
+      "pathName": "Collecting finished",
+      "nextActivityId": "5e5c99f5-84ed-4e96-b771-477cb970b221"
+     },
+     {
+      "empty": true,
+      "events": [
+       {
+        "eventName": "FreespinBonusNotUsed",
+        "eventType": "Completion"
+       }
+      ],
+      "pathId": "FreespinBonusNotUsed",
+      "pathName": "Not used",
+      "nextActivityId": "8b2393a7-ada8-4ac4-97a9-400281429942"
+     }
+    ],
+    "freespinActivity": {
+     "spins": 1,
+     "stopAt": "2026-07-21T08:53:43Z",
+     "startAt": "2026-07-01T08:53:43Z",
+     "provider": "pragmatic",
+     "allowReject": false,
+     "lobbyGameId": "pragmatic-sweet-bonanza-super-scatter",
+     "productType": "slots",
+     "subcategory": "instantFreeSpin",
+     "walletGameId": "vs20swbonsup",
+     "withWagering": false,
+     "externalGameId": "vs20swbonsup",
+     "currenciesConfig": {
+      "CLP": {
+       "betAmount": 10000,
+       "maxBonusAmount": 5000000,
+       "minBonusAmount": 10000,
+       "betAmount_majorUnits": 100,
+       "maxBonusAmount_majorUnits": 50000,
+       "minBonusAmount_majorUnits": 100
+      }
+     },
+     "gameTranslationKey": "Sweet Bonanza Super Scatter",
+     "providerTranslationKey": "Pragmatic Play",
+     "spinsExpirationDuration": 86400000
+    },
+    "placements": []
+   },
+   "isEditable": false,
+   "changedBy": {
+    "authorId": "d676e6ae-dd0d-4057-99ee-afe57d38e239",
+    "authorName": "Erik A"
+   },
+   "changedAt": "2026-07-01T08:53:44.3983850Z",
+   "version": 1
+  },
+  {
+   "activityId": "f2ae2a5c-3f94-4ce4-b029-1340b287a2c3",
+   "activityName": "end_of_journey",
+   "events": [],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "isEditable": true,
+   "changedAt": "2026-07-01T08:53:44.3983490Z",
+   "version": 1,
+   "initializationData": {
+    "placements": []
+   }
+  },
+  {
+   "activityId": "5b119ae7-d6ba-4e27-b087-c9224ab4e7dd",
+   "activityName": "end_of_journey",
+   "events": [],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "isEditable": true,
+   "changedAt": "2026-07-01T08:53:44.3983470Z",
+   "version": 1,
+   "initializationData": {
+    "placements": []
+   }
+  },
+  {
+   "activityId": "9192ff7e-38a2-4dc5-902f-aa49082fd983",
+   "activityName": "end_of_journey",
+   "events": [],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "isEditable": true,
+   "changedAt": "2026-07-01T08:53:44.3983220Z",
+   "version": 1,
+   "initializationData": {
+    "placements": []
+   }
+  },
+  {
+   "activityId": "5e5c99f5-84ed-4e96-b771-477cb970b221",
+   "activityName": "end_of_journey",
+   "events": [],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "isEditable": true,
+   "changedAt": "2026-07-01T08:53:44.3983880Z",
+   "version": 1,
+   "initializationData": {
+    "placements": []
+   }
+  },
+  {
+   "activityId": "9318b0fe-c35a-4192-8530-16dcffd0ae76",
+   "activityName": "end_of_journey",
+   "events": [],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "isEditable": true,
+   "changedAt": "2026-07-01T08:53:44.3983460Z",
+   "version": 1,
+   "initializationData": {
+    "placements": []
+   }
+  }
+ ],
+ "changeHistory": {},
+ "metadata": {
+  "purpose": "Reactivation",
+  "category": "Marketing",
+  "priority": 2,
+  "productType": "Casino"
+ },
+ "reEntryRule": {
+  "reEntryMode": "Prohibited"
+ },
+ "timeZoneId": "Chile/Continental",
+ "testControlGroupParameters": {
+  "playersAddingStrategy": "ExcludeAll",
+  "isEnabled": false
+ },
+ "activityEventConversionMetrics": [],
+ "areJourneyMetricsAvailable": true,
+ "allJourneyActivationsCount": 0,
+ "overJourneyActivationsCount": 0,
+ "journeySource": "UBO",
+ "isArchived": false,
+ "isUnlimited": false,
+ "isImmediatelyAfterPublish": true,
+ "rawJourneyData": {
+  "elements": [
+   {
+    "id": "1c4cc571-b103-4619-8f8b-94aaf20a25ec",
+    "data": {
+     "name": "promotion",
+     "ports": [
+      {
+       "id": "input-1c4cc571-b103-4619-8f8b-94aaf20a25ec"
+      },
+      {
+       "id": "PromotionOffered-1c4cc571-b103-4619-8f8b-94aaf20a25ec"
+      },
+      {
+       "id": "PromotionAccepted-1c4cc571-b103-4619-8f8b-94aaf20a25ec"
+      },
+      {
+       "id": "PromotionExpired-1c4cc571-b103-4619-8f8b-94aaf20a25ec"
+      }
+     ],
+     "events": [
+      {
+       "isHidden": false,
+       "eventName": "PromotionOffered",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "payloadKeysV2": [],
+       "localizationKey": "promotion.promotion_offered",
+       "eventDisplayName": "Offered",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": false,
+       "eventName": "PromotionAccepted",
+       "eventType": "Completion",
+       "payloadKeys": [
+        "CurrencyCode",
+        "PromotionId",
+        "PromotionAcceptedAt"
+       ],
+       "payloadKeysV2": [
+        {
+         "key": "CurrencyCode",
+         "isHidden": true,
+         "isOptional": false
+        },
+        {
+         "key": "PromotionId",
+         "isHidden": true,
+         "isOptional": false
+        },
+        {
+         "key": "PromotionAcceptedAt",
+         "isHidden": true,
+         "isOptional": false
+        }
+       ],
+       "localizationKey": "promotion.promotion_accepted",
+       "eventDisplayName": "Accepted",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": false,
+       "eventName": "PromotionExpired",
+       "eventType": "Completion",
+       "payloadKeys": [],
+       "payloadKeysV2": [],
+       "localizationKey": "promotion.promotion_expired",
+       "eventDisplayName": "Expired",
+       "canBeUsedInChoosableFlow": false
+      }
+     ],
+     "activityType": "promotion",
+     "activityDisplayName": "Promotion"
+    },
+    "type": "action",
+    "style": {
+     "cursor": "pointer"
+    },
+    "width": 267,
+    "height": 64,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+     "x": 0,
+     "y": 199
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false,
+    "positionAbsolute": {
+     "x": 0,
+     "y": 199
+    }
+   },
+   {
+    "id": "9192ff7e-38a2-4dc5-902f-aa49082fd983",
+    "data": {
+     "name": "end_of_journey",
+     "ports": [
+      {
+       "id": "input-9192ff7e-38a2-4dc5-902f-aa49082fd983"
+      }
+     ],
+     "width": 40,
+     "height": 40,
+     "pathId": "PromotionExpired",
+     "isHidden": false,
+     "eventName": "PromotionExpired",
+     "eventType": "Completion",
+     "payloadKeys": [],
+     "payloadKeysV2": [],
+     "localizationKey": "promotion.promotion_expired",
+     "eventDisplayName": "Expired",
+     "canBeUsedInChoosableFlow": false
+    },
+    "type": "exit",
+    "style": {
+     "cursor": "default"
+    },
+    "width": 40,
+    "height": 40,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+     "x": 347,
+     "y": 463
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false,
+    "positionAbsolute": {
+     "x": 347,
+     "y": 463
+    }
+   },
+   {
+    "id": "699ac1f7-bcf4-4fa6-93b6-238dace68d32",
+    "data": {
+     "name": "external_system_source",
+     "type": "source",
+     "order": 3,
+     "ports": [
+      {
+       "id": "PlayerAdded-699ac1f7-bcf4-4fa6-93b6-238dace68d32"
+      }
+     ],
+     "events": [
+      {
+       "isHidden": false,
+       "eventName": "PlayerAdded",
+       "eventType": "Activation",
+       "payloadKeys": [
+        "CurrencyCode"
+       ],
+       "isLabelHidden": true,
+       "payloadKeysV2": [
+        {
+         "key": "CurrencyCode",
+         "isHidden": true,
+         "isOptional": false,
+         "optionalPolicies": []
+        }
+       ],
+       "localizationKey": "external_system_source.player_added",
+       "eventDisplayName": "Players added to journey",
+       "canBeUsedInChoosableFlow": false
+      }
+     ],
+     "nodeType": "source",
+     "boundaryDefinition": false,
+     "activityDisplayName": "API"
+    },
+    "type": "source",
+    "style": {
+     "cursor": "pointer"
+    },
+    "width": 267,
+    "height": 64,
+    "zIndex": 5,
+    "position": {
+     "x": 0,
+     "y": 0
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false,
+    "positionAbsolute": {
+     "x": 0,
+     "y": 0
+    }
+   },
+   {
+    "id": "bee93b4a-0245-4874-bd41-6d88e7090ca7",
+    "data": {
+     "name": "freespin_bonus",
+     "ports": [
+      {
+       "id": "input-bee93b4a-0245-4874-bd41-6d88e7090ca7"
+      },
+      {
+       "id": "FreespinBonusAwarded-bee93b4a-0245-4874-bd41-6d88e7090ca7"
+      },
+      {
+       "id": "FreespinBonusAwardConfirmed-bee93b4a-0245-4874-bd41-6d88e7090ca7"
+      },
+      {
+       "id": "FreespinBonusAwardFailed-bee93b4a-0245-4874-bd41-6d88e7090ca7"
+      },
+      {
+       "id": "FreespinBonusCancelled-bee93b4a-0245-4874-bd41-6d88e7090ca7"
+      },
+      {
+       "id": "FreespinBonusCancelFailed-bee93b4a-0245-4874-bd41-6d88e7090ca7"
+      },
+      {
+       "id": "FreespinBonusRejected-bee93b4a-0245-4874-bd41-6d88e7090ca7"
+      },
+      {
+       "id": "FreespinBonusRejectFailed-bee93b4a-0245-4874-bd41-6d88e7090ca7"
+      },
+      {
+       "id": "FreespinBonusCollectingStarted-bee93b4a-0245-4874-bd41-6d88e7090ca7"
+      },
+      {
+       "id": "FreespinBonusStatusReverted-bee93b4a-0245-4874-bd41-6d88e7090ca7"
+      },
+      {
+       "id": "FreespinBonusCancelConfirmed-bee93b4a-0245-4874-bd41-6d88e7090ca7"
+      },
+      {
+       "id": "FreespinBonusCollectingFinished-bee93b4a-0245-4874-bd41-6d88e7090ca7"
+      },
+      {
+       "id": "FreespinBonusNotUsed-bee93b4a-0245-4874-bd41-6d88e7090ca7"
+      },
+      {
+       "id": "FreespinBonusAwardAborted-bee93b4a-0245-4874-bd41-6d88e7090ca7"
+      }
+     ],
+     "events": [
+      {
+       "isHidden": true,
+       "eventName": "FreespinBonusAwarded",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "payloadKeysV2": [],
+       "localizationKey": "freespin_bonus.freespin_bonus_awarded",
+       "eventDisplayName": "Issuing initiated",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": false,
+       "eventName": "FreespinBonusAwardConfirmed",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "payloadKeysV2": [],
+       "localizationKey": "freespin_bonus.freespin_bonus_award_confirmed",
+       "eventDisplayName": "Issued",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": true,
+       "eventName": "FreespinBonusAwardFailed",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "payloadKeysV2": [],
+       "localizationKey": "freespin_bonus.freespin_bonus_award_failed",
+       "eventDisplayName": "Issuing error",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": true,
+       "eventName": "FreespinBonusCancelled",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "payloadKeysV2": [],
+       "localizationKey": "freespin_bonus.freespin_bonus_cancelled",
+       "eventDisplayName": "Termination initiated",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": true,
+       "eventName": "FreespinBonusCancelFailed",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "payloadKeysV2": [],
+       "localizationKey": "freespin_bonus.freespin_bonus_cancel_failed",
+       "eventDisplayName": "Termination error",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": true,
+       "eventName": "FreespinBonusRejected",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "payloadKeysV2": [],
+       "localizationKey": "freespin_bonus.freespin_bonus_rejected",
+       "eventDisplayName": "Cancelation initiated",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": true,
+       "eventName": "FreespinBonusRejectFailed",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "payloadKeysV2": [],
+       "localizationKey": "freespin_bonus.freespin_bonus_reject_failed",
+       "eventDisplayName": "Cancelation error",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": true,
+       "eventName": "FreespinBonusCollectingStarted",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "payloadKeysV2": [],
+       "localizationKey": "freespin_bonus.freespin_bonus_collecting_started",
+       "eventDisplayName": "Collecting started",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": true,
+       "eventName": "FreespinBonusStatusReverted",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "payloadKeysV2": [],
+       "localizationKey": "freespin_bonus.freespin_bonus_status_reverted",
+       "eventDisplayName": "Freespin Bonus status was reverted",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": true,
+       "eventName": "FreespinBonusCancelConfirmed",
+       "eventType": "Completion",
+       "payloadKeys": [],
+       "payloadKeysV2": [],
+       "localizationKey": "freespin_bonus.freespin_bonus_cancel_confirmed",
+       "eventDisplayName": "Terminated",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": false,
+       "eventName": "FreespinBonusCollectingFinished",
+       "eventType": "Completion",
+       "payloadKeys": [
+        "bonusAmountCollected"
+       ],
+       "payloadKeysV2": [
+        {
+         "key": "bonusAmountCollected",
+         "isHidden": true,
+         "isOptional": false
+        }
+       ],
+       "localizationKey": "freespin_bonus.freespin_bonus_collecting_finished",
+       "eventDisplayName": "Collecting finished",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": false,
+       "eventName": "FreespinBonusNotUsed",
+       "eventType": "Completion",
+       "payloadKeys": [],
+       "payloadKeysV2": [],
+       "localizationKey": "freespin_bonus.freespin_bonus_not_used",
+       "eventDisplayName": "Not used",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": false,
+       "eventName": "FreeSpinsBonusTermsNotComplied",
+       "eventType": "Completion",
+       "payloadKeys": [],
+       "payloadKeysV2": [],
+       "localizationKey": "freespin_bonus.free_spins_bonus_terms_not_complied",
+       "eventDisplayName": "Not complied",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": true,
+       "eventName": "FreespinBonusAwardAborted",
+       "eventType": "Completion",
+       "payloadKeys": [],
+       "payloadKeysV2": [],
+       "localizationKey": "freespin_bonus.freespin_bonus_award_aborted",
+       "eventDisplayName": "Issuing error",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": false,
+       "eventName": "FreespinBonusRejectConfirmed",
+       "eventType": "Completion",
+       "payloadKeys": [],
+       "payloadKeysV2": [],
+       "localizationKey": "freespin_bonus.freespin_bonus_reject_confirmed",
+       "eventDisplayName": "Canceled",
+       "canBeUsedInChoosableFlow": false
+      }
+     ],
+     "pathes": [
+      {
+       "events": [
+        {
+         "eventName": "FreespinBonusCollectingFinished",
+         "eventType": "Completion"
+        }
+       ],
+       "pathId": "FreespinBonusCollectingFinished",
+       "pathName": "Collecting finished"
+      },
+      {
+       "events": [
+        {
+         "eventName": "FreespinBonusNotUsed",
+         "eventType": "Completion"
+        }
+       ],
+       "pathId": "FreespinBonusNotUsed",
+       "pathName": "Not used"
+      }
+     ],
+     "activityType": "mechanic",
+     "activityDisplayName": "Casino FreeSpin",
+     "withoutSourceHandle": false
+    },
+    "type": "action",
+    "style": {
+     "cursor": "pointer"
+    },
+    "width": 267,
+    "height": 64,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+     "x": -120,
+     "y": 463
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false,
+    "positionAbsolute": {
+     "x": -120,
+     "y": 463
+    }
+   },
+   {
+    "id": "8b2393a7-ada8-4ac4-97a9-400281429942",
+    "data": {
+     "name": "end_of_journey",
+     "ports": [
+      {
+       "id": "input-8b2393a7-ada8-4ac4-97a9-400281429942"
+      }
+     ],
+     "width": 40,
+     "height": 40,
+     "pathId": "FreespinBonusNotUsed",
+     "isHidden": false,
+     "eventName": "FreespinBonusNotUsed",
+     "eventType": "Completion",
+     "payloadKeys": [],
+     "payloadKeysV2": [],
+     "localizationKey": "freespin_bonus.freespin_bonus_not_used",
+     "eventDisplayName": "Not used",
+     "canBeUsedInChoosableFlow": false
+    },
+    "type": "exit",
+    "style": {
+     "cursor": "default"
+    },
+    "width": 40,
+    "height": 40,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+     "x": 113.5,
+     "y": 727
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false,
+    "positionAbsolute": {
+     "x": 113.5,
+     "y": 727
+    }
+   },
+   {
+    "id": "5e5c99f5-84ed-4e96-b771-477cb970b221",
+    "data": {
+     "name": "end_of_journey",
+     "ports": [
+      {
+       "id": "input-5e5c99f5-84ed-4e96-b771-477cb970b221"
+      }
+     ],
+     "width": 40,
+     "height": 40
+    },
+    "type": "exit",
+    "style": {
+     "cursor": "default"
+    },
+    "width": 40,
+    "height": 40,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+     "x": -126.5,
+     "y": 727
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false,
+    "positionAbsolute": {
+     "x": -126.5,
+     "y": 727
+    }
+   },
+   {
+    "id": "962abd51-0ee0-4ed0-bedd-fb3769adaea6",
+    "data": {
+     "eventName": "PromotionExpired",
+     "eventType": "Completion",
+     "activityName": "promotion",
+     "isReconnectable": false,
+     "isDisconnectable": false
+    },
+    "type": "dropEdge",
+    "style": {
+     "strokeDasharray": "3"
+    },
+    "hidden": false,
+    "source": "1c4cc571-b103-4619-8f8b-94aaf20a25ec",
+    "target": "9192ff7e-38a2-4dc5-902f-aa49082fd983",
+    "zIndex": 1,
+    "labelStyle": {
+     "color": "#000",
+     "fontSize": 14,
+     "fontWeight": 700
+    },
+    "labelBgStyle": {
+     "fill": "#D2D2D2"
+    },
+    "sourceHandle": "PromotionExpired-1c4cc571-b103-4619-8f8b-94aaf20a25ec",
+    "targetHandle": "input-9192ff7e-38a2-4dc5-902f-aa49082fd983",
+    "labelBgPadding": [
+     10,
+     3
+    ],
+    "labelBgBorderRadius": 4
+   },
+   {
+    "id": "66d2650e-e630-44d2-805a-1c47651ea887",
+    "data": {
+     "isHidden": false,
+     "eventName": "PlayerAdded",
+     "eventType": "Activation",
+     "payloadKeys": [
+      "CurrencyCode"
+     ],
+     "activityName": "external_system_source",
+     "isLabelHidden": true,
+     "payloadKeysV2": [
+      {
+       "key": "CurrencyCode",
+       "isHidden": true,
+       "isOptional": false,
+       "optionalPolicies": []
+      }
+     ],
+     "isReconnectable": false,
+     "localizationKey": "external_system_source.player_added",
+     "eventDisplayName": "Players added to journey",
+     "isDisconnectable": false,
+     "canBeUsedInChoosableFlow": false
+    },
+    "type": "default",
+    "style": {
+     "strokeDasharray": "3"
+    },
+    "hidden": false,
+    "source": "699ac1f7-bcf4-4fa6-93b6-238dace68d32",
+    "target": "1c4cc571-b103-4619-8f8b-94aaf20a25ec",
+    "zIndex": 1,
+    "labelStyle": {
+     "color": "#000",
+     "fontSize": 14,
+     "fontWeight": 700
+    },
+    "labelBgStyle": {
+     "fill": "#D2D2D2"
+    },
+    "sourceHandle": "PlayerAdded-699ac1f7-bcf4-4fa6-93b6-238dace68d32",
+    "targetHandle": "input-1c4cc571-b103-4619-8f8b-94aaf20a25ec",
+    "labelBgPadding": [
+     10,
+     3
+    ],
+    "labelBgBorderRadius": 4
+   },
+   {
+    "id": "cd87a7d6-dcb8-4f61-8fe2-4891daca85d9",
+    "data": {
+     "pathId": "FreespinBonusNotUsed",
+     "eventName": "FreespinBonusNotUsed",
+     "eventType": "Completion",
+     "activityName": "freespin_bonus",
+     "isReconnectable": false,
+     "isDisconnectable": false
+    },
+    "type": "dropEdge",
+    "style": {
+     "strokeDasharray": "3"
+    },
+    "hidden": false,
+    "source": "bee93b4a-0245-4874-bd41-6d88e7090ca7",
+    "target": "8b2393a7-ada8-4ac4-97a9-400281429942",
+    "zIndex": 1,
+    "labelStyle": {
+     "color": "#000",
+     "fontSize": 14,
+     "fontWeight": 700
+    },
+    "labelBgStyle": {
+     "fill": "#D2D2D2"
+    },
+    "sourceHandle": "FreespinBonusNotUsed-bee93b4a-0245-4874-bd41-6d88e7090ca7",
+    "targetHandle": "input-8b2393a7-ada8-4ac4-97a9-400281429942",
+    "labelBgPadding": [
+     10,
+     3
+    ],
+    "labelBgBorderRadius": 4
+   },
+   {
+    "id": "248ab604-a535-42fd-b24e-8bf46b1e6890",
+    "data": {
+     "eventName": "PromotionAccepted",
+     "eventType": "Completion",
+     "activityName": "promotion",
+     "isReconnectable": false,
+     "isDisconnectable": false
+    },
+    "type": "default",
+    "style": {
+     "strokeDasharray": "3"
+    },
+    "hidden": false,
+    "source": "1c4cc571-b103-4619-8f8b-94aaf20a25ec",
+    "target": "bee93b4a-0245-4874-bd41-6d88e7090ca7",
+    "zIndex": 1,
+    "labelStyle": {
+     "color": "#000",
+     "fontSize": 14,
+     "fontWeight": 700
+    },
+    "labelBgStyle": {
+     "fill": "#D2D2D2"
+    },
+    "sourceHandle": "PromotionAccepted-1c4cc571-b103-4619-8f8b-94aaf20a25ec",
+    "targetHandle": "input-bee93b4a-0245-4874-bd41-6d88e7090ca7",
+    "labelBgPadding": [
+     10,
+     3
+    ],
+    "labelBgBorderRadius": 4
+   },
+   {
+    "id": "35f612ff-8eee-42ab-bb70-db4366dd284e",
+    "data": {
+     "pathId": "FreespinBonusCollectingFinished",
+     "eventName": "FreespinBonusCollectingFinished",
+     "eventType": "Completion",
+     "activityName": "freespin_bonus",
+     "isReconnectable": false,
+     "isDisconnectable": false
+    },
+    "type": "dropEdge",
+    "style": {
+     "strokeDasharray": "3"
+    },
+    "hidden": false,
+    "source": "bee93b4a-0245-4874-bd41-6d88e7090ca7",
+    "target": "5e5c99f5-84ed-4e96-b771-477cb970b221",
+    "zIndex": 1,
+    "labelStyle": {
+     "color": "#000",
+     "fontSize": 14,
+     "fontWeight": 700
+    },
+    "labelBgStyle": {
+     "fill": "#D2D2D2"
+    },
+    "sourceHandle": "FreespinBonusCollectingFinished-bee93b4a-0245-4874-bd41-6d88e7090ca7",
+    "targetHandle": "input-5e5c99f5-84ed-4e96-b771-477cb970b221",
+    "labelBgPadding": [
+     10,
+     3
+    ],
+    "labelBgBorderRadius": 4
+   }
+  ],
+  "infoValues": {
+   "brand": "PMCL",
+   "stopAt": "2026-07-20T04:00:00.0000000Z",
+   "metadata": {
+    "purpose": "Reactivation",
+    "category": "Marketing",
+    "priority": 2,
+    "productType": "Casino"
+   },
+   "timeZoneId": "Chile/Continental",
+   "isUnlimited": false,
+   "journeyName": "FTCL | CS | Card | Una ronda de bono instantáneo NEW",
+   "reEntryRule": {
+    "reEntryMode": "Prohibited",
+    "reEntryPeriod": null
+   },
+   "currencyCodes": [
+    "CLP"
+   ],
+   "isImmediatelyAfterPublish": true,
+   "testControlGroupParameters": {
+    "isEnabled": false,
+    "controlGroupPercent": null,
+    "playersAddingStrategy": "ExcludeAll",
+    "daysToKeepInControlGroup": null
+   }
+  },
+  "pathesConfiguration": {
+   "bee93b4a-0245-4874-bd41-6d88e7090ca7": [
+    {
+     "empty": true,
+     "events": [
+      {
+       "eventName": "FreespinBonusCollectingFinished",
+       "eventType": "Completion"
+      }
+     ],
+     "pathId": "FreespinBonusCollectingFinished",
+     "pathName": "Collecting finished"
+    },
+    {
+     "empty": true,
+     "events": [
+      {
+       "eventName": "FreespinBonusNotUsed",
+       "eventType": "Completion"
+      }
+     ],
+     "pathId": "FreespinBonusNotUsed",
+     "pathName": "Not used"
+    }
+   ]
+  },
+  "exitCriteriaSettings": null,
+  "boundaryConfiguration": {},
+  "activitiesConfiguration": {
+   "1c4cc571-b103-4619-8f8b-94aaf20a25ec": {
+    "data": {
+     "autoAccept": false,
+     "promotionId": "12f1ad93-6be5-4049-974d-34e811e45edc",
+     "timeToAccept": "P0Y0M1DT0H0M0S",
+     "promotionLinkId": "ff4d70b1-0711-43f6-b32f-7a756b623d29",
+     "promotionStatus": "Offered",
+     "channelsCondition": {
+      "values": [],
+      "isEnabled": false
+     },
+     "promotionDisplayId": "713411"
+    },
+    "error": false,
+    "metadata": {
+     "frontId": "f455eaee-4c1d-44b1-a5bc-19f5ea93af82",
+     "contentId": "cf61797a-3f83-4916-b64b-ad1029dff3b0"
+    },
+    "properties": {
+     "placements": [
+      {
+       "data": {
+        "FrontId": "f455eaee-4c1d-44b1-a5bc-19f5ea93af82",
+        "ContentId": "cf61797a-3f83-4916-b64b-ad1029dff3b0",
+        "bonusType": null,
+        "condition": "Accept",
+        "campaignId": "bee93b4a-0245-4874-bd41-6d88e7090ca7",
+        "moduleType": "FreeSpinBonus",
+        "mechanicName": "FreeSpin",
+        "freespinActivity": {
+         "spins": 1,
+         "stopAt": "2026-07-21T12:53:06Z",
+         "startAt": null,
+         "provider": "pragmatic",
+         "allowReject": false,
+         "lobbyGameId": "pragmatic-sweet-bonanza-super-scatter",
+         "productType": "slots",
+         "subcategory": "instantFreeSpin",
+         "walletGameId": "vs20swbonsup",
+         "withWagering": false,
+         "externalGameId": "vs20swbonsup",
+         "currenciesConfig": {
+          "CLP": {
+           "betAmount": 10000,
+           "maxBonusAmount": 5000000,
+           "minBonusAmount": 10000,
+           "betAmount_majorUnits": 100,
+           "maxBonusAmount_majorUnits": 50000,
+           "minBonusAmount_majorUnits": 100
+          }
+         },
+         "gameTranslationKey": "Sweet Bonanza Super Scatter",
+         "providerTranslationKey": "Pragmatic Play",
+         "spinsExpirationDuration": 86400000
+        },
+        "isActivityCurrencies": false,
+        "cancelDuringWageringPeriodSettings": {
+         "isEnabled": true,
+         "defaultValue": true
+        }
+       },
+       "dataSources": [
+        {
+         "keys": [],
+         "type": "Sync",
+         "journeyActivityId": "bee93b4a-0245-4874-bd41-6d88e7090ca7"
+        }
+       ],
+       "placementType": "PromoLobby"
+      }
+     ],
+     "isBoundaryEventDisabled": false
+    },
+    "displayData": [
+     "Offered within 1d 0h 0m"
+    ],
+    "displayName": "Promotion"
+   },
+   "699ac1f7-bcf4-4fa6-93b6-238dace68d32": {
+    "data": {
+     "dataKeys": [],
+     "description": "FTCL | CS | Card | Una ronda de bono instantáneo NEW",
+     "targetSystem": "Randomizer",
+     "isWebhookUrlHidden": false
+    },
+    "error": false,
+    "displayData": [
+     "Randomizer"
+    ],
+    "displayName": "API"
+   },
+   "bee93b4a-0245-4874-bd41-6d88e7090ca7": {
+    "data": {
+     "allowReject": true,
+     "freespinActivity": {
+      "spins": 1,
+      "stopAt": "2026-07-21T08:53:43Z",
+      "provider": "pragmatic",
+      "allowReject": true,
+      "lobbyGameId": "pragmatic-sweet-bonanza-super-scatter",
+      "productType": "slots",
+      "subcategory": "instantFreeSpin",
+      "walletGameId": "vs20swbonsup",
+      "externalGameId": "vs20swbonsup",
+      "currenciesConfig": {
+       "CLP": {
+        "betAmount": 10000,
+        "maxBonusAmount": 5000000,
+        "minBonusAmount": 10000,
+        "betAmount_majorUnits": 100,
+        "maxBonusAmount_majorUnits": 50000,
+        "minBonusAmount_majorUnits": 100
+       }
+      },
+      "gameTranslationKey": "Sweet Bonanza Super Scatter",
+      "providerTranslationKey": "Pragmatic Play",
+      "spinsExpirationDuration": 86400000
+     }
+    },
+    "error": false,
+    "displayData": [
+     "Activity customized"
+    ],
+    "displayName": "Casino FreeSpin",
+    "promotionId": "1c4cc571-b103-4619-8f8b-94aaf20a25ec"
+   }
+  }
+ },
+ "duplicatedFromVersion": 7,
+ "duplicatedFromId": "JRN-0-601517",
+ "reservedJourneyId": "JRN-0-623198"
+}

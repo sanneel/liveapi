@@ -1,0 +1,245 @@
+{
+  "activityName": "multipurpose_promotion",
+  "source_template": "colocolo/followup.json",
+  "journey_size": 48,
+  "activity": {
+    "activityId": "fb19f0b1-caeb-475b-bb62-18719a3dde16",
+    "activityName": "multipurpose_promotion",
+    "events": [
+      {
+        "eventName": "PromotionExpired",
+        "eventType": "Completion",
+        "nextActivityId": "9365d6d5-0833-4e79-9983-44b7ad88f0f6",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "PromotionAccepted",
+        "eventType": "Completion",
+        "split": {
+          "paths": [
+            {
+              "flowId": "08232958-8abd-42ff-9f1a-61892430d44c",
+              "pathId": 1,
+              "pathName": "Flow 1",
+              "nextActivityId": "a27459bd-fa42-4d7f-91ac-170bdd51bc52"
+            },
+            {
+              "flowId": "7d5c6198-663c-4ab1-a24b-31011590620f",
+              "pathId": 2,
+              "pathName": "Flow 2",
+              "nextActivityId": "bdf92a79-9022-4ee0-8ce1-c58608d40bef"
+            },
+            {
+              "flowId": "75407dd6-b1bc-4b50-8f83-d9301ea367ad",
+              "pathId": 3,
+              "pathName": "Flow 3",
+              "nextActivityId": "2b1317b9-d267-4347-b55a-c731cbd0d782"
+            }
+          ],
+          "numberOfPathsToChoose": 1
+        },
+        "isUsedInChoosableFlow": true
+      },
+      {
+        "eventName": "PromotionOffered",
+        "eventType": "Boundary",
+        "eventDisplayName": "Offered",
+        "nextActivityId": "97acd64e-4508-47fc-9797-141d6d1bef0b"
+      },
+      {
+        "eventName": "PromotionUpcoming",
+        "eventType": "Boundary",
+        "eventDisplayName": "Upcoming",
+        "nextActivityId": null
+      }
+    ],
+    "dependentSplitWithChoice": {
+      "journeyActivityId": "fb19f0b1-caeb-475b-bb62-18719a3dde16",
+      "activityEventName": "PromotionAccepted"
+    },
+    "initializationData": {
+      "autoAccept": false,
+      "promotionId": "179f3eb7-ea92-4a74-91b7-42f32c36a83a",
+      "timeToAccept": "P0Y0M1DT0H0M0S",
+      "promotionLinkId": "8799355a-4320-4f2f-9d11-8e5c5c115c2b",
+      "promotionStatus": "Offered",
+      "channelsCondition": {
+        "values": [],
+        "isEnabled": false
+      },
+      "promotionDisplayId": "702876",
+      "displayData": [
+        "Offered within 1d 0h 0m"
+      ],
+      "placements": [
+        {
+          "placementType": "PromoLobby",
+          "dataSources": [],
+          "data": {
+            "ContentId": "af83d8ff-c7ad-463f-b1c0-3d1ea63ac335",
+            "FrontId": "0f5104b6-4984-465d-80fe-0ce15fc418c4",
+            "moduleType": "WelcomeOffer",
+            "actions": [],
+            "flowsData": [
+              {
+                "contentId": "f7538801-7854-446f-b2e4-f87ea9f497b2",
+                "id": "08232958-8abd-42ff-9f1a-61892430d44c",
+                "order": 1
+              },
+              {
+                "contentId": "bd50958a-0335-4949-88cc-3dae4bfd775f",
+                "id": "7d5c6198-663c-4ab1-a24b-31011590620f",
+                "order": 2
+              },
+              {
+                "contentId": "ff4769b6-3389-4cfb-9ff6-bad7e0606401",
+                "id": "75407dd6-b1bc-4b50-8f83-d9301ea367ad",
+                "order": 3
+              }
+            ],
+            "isActivityCurrencies": false
+          }
+        }
+      ],
+      "languages": [
+        "es",
+        "en"
+      ]
+    },
+    "activityDisplayName": "Active Multipurpose Promotion",
+    "dataDependencies": [],
+    "dependencies": [
+      {
+        "key": "CurrencyCode",
+        "journeyActivityId": "b3ec0d6e-f20d-4bda-ac83-0940db11a47d"
+      },
+      {
+        "key": "PromotionLinkId",
+        "journeyActivityId": "b3ec0d6e-f20d-4bda-ac83-0940db11a47d",
+        "isOptional": true
+      }
+    ]
+  },
+  "config": {
+    "data": {
+      "autoAccept": false,
+      "promotionId": "179f3eb7-ea92-4a74-91b7-42f32c36a83a",
+      "timeToAccept": "P0Y0M1DT0H0M0S",
+      "promotionLinkId": "8799355a-4320-4f2f-9d11-8e5c5c115c2b",
+      "promotionStatus": "Offered",
+      "channelsCondition": {
+        "values": [],
+        "isEnabled": false
+      },
+      "promotionDisplayId": "676481"
+    },
+    "error": false,
+    "metadata": {
+      "frontId": "0f5104b6-4984-465d-80fe-0ce15fc418c4",
+      "contentId": "af83d8ff-c7ad-463f-b1c0-3d1ea63ac335"
+    },
+    "properties": {
+      "placements": [
+        {
+          "data": {
+            "FrontId": "0f5104b6-4984-465d-80fe-0ce15fc418c4",
+            "actions": [],
+            "ContentId": "af83d8ff-c7ad-463f-b1c0-3d1ea63ac335",
+            "flowsData": [
+              {
+                "id": "08232958-8abd-42ff-9f1a-61892430d44c",
+                "order": 1,
+                "contentId": "f7538801-7854-446f-b2e4-f87ea9f497b2"
+              },
+              {
+                "id": "7d5c6198-663c-4ab1-a24b-31011590620f",
+                "order": 2,
+                "contentId": "bd50958a-0335-4949-88cc-3dae4bfd775f"
+              },
+              {
+                "id": "75407dd6-b1bc-4b50-8f83-d9301ea367ad",
+                "order": 3,
+                "contentId": "ff4769b6-3389-4cfb-9ff6-bad7e0606401"
+              }
+            ],
+            "moduleType": "WelcomeOffer",
+            "isActivityCurrencies": false
+          },
+          "dataSources": [],
+          "placementType": "PromoLobby"
+        }
+      ],
+      "isBoundaryEventDisabled": false
+    },
+    "displayData": [
+      "Offered within 1d 0h 0m"
+    ],
+    "displayName": "Active Multipurpose Promotion"
+  },
+  "node": {
+    "id": "fb19f0b1-caeb-475b-bb62-18719a3dde16",
+    "data": {
+      "name": "multipurpose_promotion",
+      "type": "promotion",
+      "order": 27,
+      "ports": [
+        {
+          "id": "input-fb19f0b1-caeb-475b-bb62-18719a3dde16"
+        },
+        {
+          "id": "PromotionOffered-fb19f0b1-caeb-475b-bb62-18719a3dde16"
+        },
+        {
+          "id": "PromotionAccepted-fb19f0b1-caeb-475b-bb62-18719a3dde16"
+        },
+        {
+          "id": "PromotionExpired-fb19f0b1-caeb-475b-bb62-18719a3dde16"
+        }
+      ],
+      "events": [
+        {
+          "isHidden": false,
+          "eventName": "PromotionOffered",
+          "eventType": "Boundary",
+          "eventDisplayName": "Offered"
+        },
+        {
+          "isHidden": false,
+          "eventName": "PromotionAccepted",
+          "eventType": "Completion",
+          "eventDisplayName": "Accepted"
+        },
+        {
+          "isHidden": false,
+          "eventName": "PromotionExpired",
+          "eventType": "Completion",
+          "eventDisplayName": "Expired"
+        }
+      ],
+      "nodeType": "action",
+      "boundaryDefinition": false,
+      "activityDisplayName": "Multipurpose Promotion"
+    },
+    "type": "action",
+    "style": {
+      "cursor": "pointer"
+    },
+    "width": 267,
+    "height": 64,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+      "x": 0,
+      "y": 199
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false,
+    "positionAbsolute": {
+      "x": -120,
+      "y": 528
+    }
+  },
+  "has_config": true,
+  "has_node": true
+}

@@ -1,0 +1,698 @@
+{
+  "activityName": "ams_decision_split",
+  "source_template": "casino/gow_comms.json",
+  "journey_size": 39,
+  "activity": {
+    "activityId": "61a7bd6e-bca3-4acd-b743-2a0e96bc2092",
+    "activityName": "ams_decision_split",
+    "events": [
+      {
+        "eventName": "DecisionSplitPassedPath01",
+        "eventType": "Completion",
+        "eventDisplayName": "Emails Opened",
+        "nextActivityId": "00eecb41-2540-46c0-a193-664938d0ef81",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DecisionSplitPassedRemainderPath",
+        "eventType": "Completion",
+        "nextActivityId": "0b1248f7-d22b-47d1-ad2f-2b8edaa24c3f",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DecisionSplitPassedPath02",
+        "eventDisplayName": "Path 2",
+        "eventType": "Completion",
+        "localizationKey": "ams_decision_split.decision_split_passed_path02",
+        "isHidden": false,
+        "canBeUsedInChoosableFlow": false,
+        "payloadKeys": [],
+        "payloadKeysV2": [],
+        "isLabelHidden": false,
+        "nextActivityId": "8b6edb45-2076-49cf-9697-f7e7a8ee15b8",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DecisionSplitPassedPath03",
+        "eventDisplayName": "Path 3",
+        "eventType": "Completion",
+        "localizationKey": "ams_decision_split.decision_split_passed_path03",
+        "isHidden": false,
+        "canBeUsedInChoosableFlow": false,
+        "payloadKeys": [],
+        "payloadKeysV2": [],
+        "isLabelHidden": false,
+        "nextActivityId": "39c9c233-a76a-422c-9ebf-649016a9ffb5",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DecisionSplitPassedPath04",
+        "eventDisplayName": "Path 4",
+        "eventType": "Completion",
+        "localizationKey": "ams_decision_split.decision_split_passed_path04",
+        "isHidden": false,
+        "canBeUsedInChoosableFlow": false,
+        "payloadKeys": [],
+        "payloadKeysV2": [],
+        "isLabelHidden": false,
+        "nextActivityId": "596f7bd1-12f8-44f4-a23f-29d0f07e2651",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DecisionSplitPassedPath05",
+        "eventDisplayName": "Path 5",
+        "eventType": "Completion",
+        "localizationKey": "ams_decision_split.decision_split_passed_path05",
+        "isHidden": false,
+        "canBeUsedInChoosableFlow": false,
+        "payloadKeys": [],
+        "payloadKeysV2": [],
+        "isLabelHidden": false,
+        "nextActivityId": "33c34bc1-3a9f-4876-b649-fda8dda184a9",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DecisionSplitPassedPath06",
+        "eventDisplayName": "Path 6",
+        "eventType": "Completion",
+        "localizationKey": "ams_decision_split.decision_split_passed_path06",
+        "isHidden": false,
+        "canBeUsedInChoosableFlow": false,
+        "payloadKeys": [],
+        "payloadKeysV2": [],
+        "isLabelHidden": false,
+        "nextActivityId": "cdae94f0-8652-4182-be16-eeb800aff01f",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DecisionSplitPassedPath07",
+        "eventDisplayName": "Path 7",
+        "eventType": "Completion",
+        "localizationKey": "ams_decision_split.decision_split_passed_path07",
+        "isHidden": false,
+        "canBeUsedInChoosableFlow": false,
+        "payloadKeys": [],
+        "payloadKeysV2": [],
+        "isLabelHidden": false,
+        "nextActivityId": "6874b78a-7fb6-4801-905b-4583d048cb71",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DecisionSplitPassedPath08",
+        "eventDisplayName": "Path 8",
+        "eventType": "Completion",
+        "localizationKey": "ams_decision_split.decision_split_passed_path08",
+        "isHidden": false,
+        "canBeUsedInChoosableFlow": false,
+        "payloadKeys": [],
+        "payloadKeysV2": [],
+        "isLabelHidden": false,
+        "nextActivityId": "491dbc6c-ffcd-46d2-b41c-286f6d0f4bcd",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DecisionSplitPassedPath09",
+        "eventDisplayName": "Path 9",
+        "eventType": "Completion",
+        "localizationKey": "ams_decision_split.decision_split_passed_path09",
+        "isHidden": false,
+        "canBeUsedInChoosableFlow": false,
+        "payloadKeys": [],
+        "payloadKeysV2": [],
+        "isLabelHidden": false,
+        "nextActivityId": "6f4c3fcd-77d6-491c-9f93-911c32d0a0b0",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DecisionSplitPassedPath10",
+        "eventDisplayName": "Path 10",
+        "eventType": "Completion",
+        "localizationKey": "ams_decision_split.decision_split_passed_path10",
+        "isHidden": false,
+        "canBeUsedInChoosableFlow": false,
+        "payloadKeys": [],
+        "payloadKeysV2": [],
+        "isLabelHidden": false,
+        "nextActivityId": "7e013f66-5080-4244-8b63-56a13b6991d3",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DecisionSplitPassedPath11",
+        "eventDisplayName": "Path 11",
+        "eventType": "Completion",
+        "localizationKey": "ams_decision_split.decision_split_passed_path11",
+        "isHidden": false,
+        "canBeUsedInChoosableFlow": false,
+        "payloadKeys": [],
+        "payloadKeysV2": [],
+        "isLabelHidden": false,
+        "nextActivityId": "1e3638b5-a8f4-42d8-bbf4-ff3b34530458",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DecisionSplitPassedPath12",
+        "eventDisplayName": "Path 12",
+        "eventType": "Completion",
+        "localizationKey": "ams_decision_split.decision_split_passed_path12",
+        "isHidden": false,
+        "canBeUsedInChoosableFlow": false,
+        "payloadKeys": [],
+        "payloadKeysV2": [],
+        "isLabelHidden": false,
+        "nextActivityId": "e6caa907-f856-4676-a9c3-055d2b496c9a",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DecisionSplitPassedPath13",
+        "eventDisplayName": "Path 13",
+        "eventType": "Completion",
+        "localizationKey": "ams_decision_split.decision_split_passed_path13",
+        "isHidden": false,
+        "canBeUsedInChoosableFlow": false,
+        "payloadKeys": [],
+        "payloadKeysV2": [],
+        "isLabelHidden": false,
+        "nextActivityId": "5573eb6a-6a3d-4cfa-9352-c0b0755666f8",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DecisionSplitPassedPath14",
+        "eventDisplayName": "Path 14",
+        "eventType": "Completion",
+        "localizationKey": "ams_decision_split.decision_split_passed_path14",
+        "isHidden": false,
+        "canBeUsedInChoosableFlow": false,
+        "payloadKeys": [],
+        "payloadKeysV2": [],
+        "isLabelHidden": false,
+        "nextActivityId": "286b15f2-6098-4921-9f8d-7841d6c23deb",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DecisionSplitPassedPath15",
+        "eventDisplayName": "Path 15",
+        "eventType": "Completion",
+        "localizationKey": "ams_decision_split.decision_split_passed_path15",
+        "isHidden": false,
+        "canBeUsedInChoosableFlow": false,
+        "payloadKeys": [],
+        "payloadKeysV2": [],
+        "isLabelHidden": false,
+        "nextActivityId": "56c837a9-b065-4e7f-b4aa-0e452651aaea",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DecisionSplitPassedPath16",
+        "eventDisplayName": "Path 16",
+        "eventType": "Completion",
+        "localizationKey": "ams_decision_split.decision_split_passed_path16",
+        "isHidden": false,
+        "canBeUsedInChoosableFlow": false,
+        "payloadKeys": [],
+        "payloadKeysV2": [],
+        "isLabelHidden": false,
+        "nextActivityId": "532ea622-099a-4dfe-98b2-8c77f20d7a24",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DecisionSplitPassedPath17",
+        "eventDisplayName": "Path 17",
+        "eventType": "Completion",
+        "localizationKey": "ams_decision_split.decision_split_passed_path17",
+        "isHidden": false,
+        "canBeUsedInChoosableFlow": false,
+        "payloadKeys": [],
+        "payloadKeysV2": [],
+        "isLabelHidden": false,
+        "nextActivityId": "2c665bcc-0923-425e-92d2-2bc10b2360f0",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DecisionSplitPassedPath18",
+        "eventDisplayName": "Path 18",
+        "eventType": "Completion",
+        "localizationKey": "ams_decision_split.decision_split_passed_path18",
+        "isHidden": false,
+        "canBeUsedInChoosableFlow": false,
+        "payloadKeys": [],
+        "payloadKeysV2": [],
+        "isLabelHidden": false,
+        "nextActivityId": "5951ca69-c960-4557-992b-7e0acf2347f2",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DecisionSplitPassedPath19",
+        "eventDisplayName": "Path 19",
+        "eventType": "Completion",
+        "localizationKey": "ams_decision_split.decision_split_passed_path19",
+        "isHidden": false,
+        "canBeUsedInChoosableFlow": false,
+        "payloadKeys": [],
+        "payloadKeysV2": [],
+        "isLabelHidden": false,
+        "nextActivityId": "642acd2e-c811-414c-a90f-437b7a8a22b5",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DecisionSplitPassedPath20",
+        "eventDisplayName": "Path 20",
+        "eventType": "Completion",
+        "localizationKey": "ams_decision_split.decision_split_passed_path20",
+        "isHidden": false,
+        "canBeUsedInChoosableFlow": false,
+        "payloadKeys": [],
+        "payloadKeysV2": [],
+        "isLabelHidden": false,
+        "nextActivityId": "2fd6d9b2-2b03-42da-b2ce-05cfbf8e8a0f",
+        "isUsedInChoosableFlow": false
+      }
+    ],
+    "initializationData": {
+      "rules": [
+        {
+          "name": "Emails Opened",
+          "filter": {
+            "property": {
+              "name": "playerCommunicationResponse.emailOpenedCnt3M",
+              "type": "number",
+              "value": "1",
+              "operator": "gte"
+            },
+            "variables": []
+          }
+        }
+      ],
+      "remainder": "other",
+      "usedSourceVariables": [],
+      "displayData": [
+        "1 paths"
+      ],
+      "pathesConfig": [
+        {
+          "events": [
+            {
+              "eventName": "DecisionSplitPassedPath01",
+              "eventType": "Completion",
+              "eventDisplayName": "Emails Opened"
+            }
+          ],
+          "pathId": "path1",
+          "pathName": "Emails Opened",
+          "nextActivityId": "00eecb41-2540-46c0-a193-664938d0ef81"
+        },
+        {
+          "events": [
+            {
+              "eventName": "DecisionSplitPassedRemainderPath",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "other",
+          "pathName": "Other",
+          "nextActivityId": "0b1248f7-d22b-47d1-ad2f-2b8edaa24c3f"
+        }
+      ]
+    },
+    "activityDisplayName": "Decision split",
+    "dataDependencies": [],
+    "dependencies": [
+      {
+        "key": "CurrencyCode",
+        "journeyActivityId": "f3a38b0f-d7b6-45c8-b0cc-d89cee1efe97"
+      }
+    ]
+  },
+  "config": {
+    "data": {
+      "rules": [
+        {
+          "name": "Emails Opened",
+          "filter": {
+            "property": {
+              "name": "playerCommunicationResponse.emailOpenedCnt3M",
+              "type": "number",
+              "value": "1",
+              "operator": "gte"
+            },
+            "variables": []
+          }
+        }
+      ],
+      "remainder": "other",
+      "usedSourceVariables": []
+    },
+    "error": false,
+    "displayData": [
+      "1 paths"
+    ],
+    "displayName": "Decision split"
+  },
+  "node": {
+    "id": "61a7bd6e-bca3-4acd-b743-2a0e96bc2092",
+    "data": {
+      "name": "ams_decision_split",
+      "ports": [
+        {
+          "id": "input-61a7bd6e-bca3-4acd-b743-2a0e96bc2092"
+        },
+        {
+          "id": "path1-61a7bd6e-bca3-4acd-b743-2a0e96bc2092"
+        },
+        {
+          "id": "other-61a7bd6e-bca3-4acd-b743-2a0e96bc2092"
+        }
+      ],
+      "events": [
+        {
+          "isHidden": false,
+          "eventName": "DecisionSplitPassedPath01",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "localizationKey": "ams_decision_split.decision_split_passed_path01",
+          "eventDisplayName": "Path 1",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DecisionSplitPassedPath02",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "localizationKey": "ams_decision_split.decision_split_passed_path02",
+          "eventDisplayName": "Path 2",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DecisionSplitPassedPath03",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "localizationKey": "ams_decision_split.decision_split_passed_path03",
+          "eventDisplayName": "Path 3",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DecisionSplitPassedPath04",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "localizationKey": "ams_decision_split.decision_split_passed_path04",
+          "eventDisplayName": "Path 4",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DecisionSplitPassedPath05",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "localizationKey": "ams_decision_split.decision_split_passed_path05",
+          "eventDisplayName": "Path 5",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DecisionSplitPassedPath06",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "localizationKey": "ams_decision_split.decision_split_passed_path06",
+          "eventDisplayName": "Path 6",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DecisionSplitPassedPath07",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "localizationKey": "ams_decision_split.decision_split_passed_path07",
+          "eventDisplayName": "Path 7",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DecisionSplitPassedPath08",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "localizationKey": "ams_decision_split.decision_split_passed_path08",
+          "eventDisplayName": "Path 8",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DecisionSplitPassedPath09",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "localizationKey": "ams_decision_split.decision_split_passed_path09",
+          "eventDisplayName": "Path 9",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DecisionSplitPassedPath10",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "localizationKey": "ams_decision_split.decision_split_passed_path10",
+          "eventDisplayName": "Path 10",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DecisionSplitPassedPath11",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "localizationKey": "ams_decision_split.decision_split_passed_path11",
+          "eventDisplayName": "Path 11",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DecisionSplitPassedPath12",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "localizationKey": "ams_decision_split.decision_split_passed_path12",
+          "eventDisplayName": "Path 12",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DecisionSplitPassedPath13",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "localizationKey": "ams_decision_split.decision_split_passed_path13",
+          "eventDisplayName": "Path 13",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DecisionSplitPassedPath14",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "localizationKey": "ams_decision_split.decision_split_passed_path14",
+          "eventDisplayName": "Path 14",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DecisionSplitPassedPath15",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "localizationKey": "ams_decision_split.decision_split_passed_path15",
+          "eventDisplayName": "Path 15",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DecisionSplitPassedPath16",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "localizationKey": "ams_decision_split.decision_split_passed_path16",
+          "eventDisplayName": "Path 16",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DecisionSplitPassedPath17",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "localizationKey": "ams_decision_split.decision_split_passed_path17",
+          "eventDisplayName": "Path 17",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DecisionSplitPassedPath18",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "localizationKey": "ams_decision_split.decision_split_passed_path18",
+          "eventDisplayName": "Path 18",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DecisionSplitPassedPath19",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "localizationKey": "ams_decision_split.decision_split_passed_path19",
+          "eventDisplayName": "Path 19",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DecisionSplitPassedPath20",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "localizationKey": "ams_decision_split.decision_split_passed_path20",
+          "eventDisplayName": "Path 20",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DecisionSplitPassedRemainderPath",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "localizationKey": "ams_decision_split.decision_split_passed_remainder_path",
+          "eventDisplayName": "Other",
+          "canBeUsedInChoosableFlow": false
+        }
+      ],
+      "pathes": [
+        {
+          "events": [
+            {
+              "eventName": "DecisionSplitPassedPath01",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "path1",
+          "pathName": "Path 1"
+        },
+        {
+          "events": [
+            {
+              "eventName": "DecisionSplitPassedPath02",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "DecisionSplitPassedPath03",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "DecisionSplitPassedPath04",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "DecisionSplitPassedPath05",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "DecisionSplitPassedPath06",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "DecisionSplitPassedPath07",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "DecisionSplitPassedPath08",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "DecisionSplitPassedPath09",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "DecisionSplitPassedPath10",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "DecisionSplitPassedPath11",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "DecisionSplitPassedPath12",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "DecisionSplitPassedPath13",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "DecisionSplitPassedPath14",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "DecisionSplitPassedPath15",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "DecisionSplitPassedPath16",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "DecisionSplitPassedPath17",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "DecisionSplitPassedPath18",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "DecisionSplitPassedPath19",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "DecisionSplitPassedPath20",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "other",
+          "pathName": "Other"
+        }
+      ],
+      "activityType": "flowControl",
+      "activityDisplayName": "Decision split"
+    },
+    "type": "action",
+    "style": {
+      "cursor": "pointer"
+    },
+    "width": 267,
+    "extent": "parent",
+    "height": 64,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+      "x": 690,
+      "y": 1264
+    },
+    "selected": false,
+    "draggable": false,
+    "parentNode": "cea0b018-d734-4d84-80fc-7c2a7c7e12a1",
+    "connectable": false,
+    "positionAbsolute": {
+      "x": -230.25,
+      "y": 1463
+    }
+  },
+  "has_config": true,
+  "has_node": true
+}

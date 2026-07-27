@@ -1,0 +1,460 @@
+{
+  "activityName": "casino_bonus_v2",
+  "source_template": "casino/gow.json",
+  "journey_size": 95,
+  "activity": {
+    "activityId": "150cab1c-2094-4c39-8265-27db31f4bd5e",
+    "activityName": "casino_bonus_v2",
+    "activityDisplayName": "Casino bonus",
+    "events": [
+      {
+        "eventName": "WageringBonusCancelConfirmed",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "3e06da15-ca43-4489-a53f-8e68e275f221"
+      },
+      {
+        "eventName": "WageringBonusRejectConfirmed",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "3eb86411-a1ab-40b4-8c9a-032057f85b90"
+      },
+      {
+        "eventName": "WageringBonusFinished",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "34fc1a02-ddd6-4797-bcfe-e22666e5f00a"
+      },
+      {
+        "eventName": "WageringBonusLost",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "d6c37b0f-8396-4c4b-a5cf-19cb2e29983d"
+      },
+      {
+        "eventName": "WageringBonusForfeited",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "29417ae6-d9c9-433a-8cef-fd1c19ddfb82"
+      },
+      {
+        "eventName": "WageringBonusExpired",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "3d10074f-540a-4fda-b472-17fa65e4ef8c"
+      },
+      {
+        "eventName": "WageringBonusCancelledByWithdrawalConfirmed",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "e2afc708-0cf9-494e-97b1-890d68fa7484"
+      },
+      {
+        "eventName": "WageringBonusAwarded",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "WageringBonusAwardConfirmed",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "WageringBonusAwardFailed",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "WageringBonusCancelled",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "WageringBonusCancelFailed",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "WageringBonusRejected",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "WageringBonusRejectFailed",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "WageringBonusStarted",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "WageringBonusExpirationFailed",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "WageringBonusLoseFailed",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "WageringBonusFinishFailed",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "WageringBonusAwardAborted",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "28c9fb06-651d-4950-9bb6-b4dca08c93e5"
+      }
+    ],
+    "dependencies": [
+      {
+        "journeyActivityId": "2cde0455-5d55-4435-aa23-8715c95f5ff0",
+        "key": "CurrencyCode"
+      },
+      {
+        "journeyActivityId": "51883c3a-6981-4e80-bd5b-e145ae1fd4bd",
+        "key": "PromotionId"
+      },
+      {
+        "journeyActivityId": "1c81aa30-7ac8-43cb-a32f-26ce4782e58e",
+        "key": "DepositAmount"
+      },
+      {
+        "journeyActivityId": "1c81aa30-7ac8-43cb-a32f-26ce4782e58e",
+        "key": "DepositPaidAmount"
+      },
+      {
+        "journeyActivityId": "0e6cef63-f783-4b0d-b5d0-459c29eedd5a",
+        "key": "bonusAmountCollected"
+      }
+    ],
+    "dataDependencies": [],
+    "initializationData": {
+      "limitType": "multiplier",
+      "allowReject": true,
+      "displayData": [
+        "Activity customized"
+      ],
+      "productType": "slots",
+      "bonusPercent": 100,
+      "activitySubtype": "deposit",
+      "currenciesConfig": {
+        "CLP": {
+          "maxBonusAmount": 20000000,
+          "releaseLimitAmount": 0,
+          "maxBonusAmount_majorUnits": 200000,
+          "releaseLimitAmount_majorUnits": 0
+        }
+      },
+      "wageringActivity": {
+        "limitType": "multiplier",
+        "allowReject": true,
+        "productType": "slots",
+        "bonusPercent": 100,
+        "activitySubtype": "deposit",
+        "currenciesConfig": {
+          "CLP": {
+            "maxBonusAmount": 20000000,
+            "releaseLimitAmount": 0,
+            "maxBonusAmount_majorUnits": 200000,
+            "releaseLimitAmount_majorUnits": 0
+          }
+        },
+        "dependencyMechanic": "FreeSpin",
+        "withoutLockBalance": false,
+        "bonusExpirationTime": 172800000,
+        "wageringRequirement": 30,
+        "releaseLimitMultiplier": 15
+      },
+      "withoutLockBalance": false,
+      "bonusExpirationTime": 172800000,
+      "wageringRequirement": 30,
+      "releaseLimitMultiplier": 15,
+      "placements": []
+    }
+  },
+  "config": {
+    "data": {
+      "limitType": "multiplier",
+      "allowReject": true,
+      "productType": "slots",
+      "bonusPercent": 100,
+      "activitySubtype": "deposit",
+      "currenciesConfig": {
+        "CLP": {
+          "maxBonusAmount": 20000000,
+          "releaseLimitAmount": 0,
+          "maxBonusAmount_majorUnits": 200000,
+          "releaseLimitAmount_majorUnits": 0
+        }
+      },
+      "wageringActivity": {
+        "limitType": "multiplier",
+        "allowReject": true,
+        "productType": "slots",
+        "bonusPercent": 100,
+        "activitySubtype": "deposit",
+        "currenciesConfig": {
+          "CLP": {
+            "maxBonusAmount": 20000000,
+            "releaseLimitAmount": 0,
+            "maxBonusAmount_majorUnits": 200000,
+            "releaseLimitAmount_majorUnits": 0
+          }
+        },
+        "withoutLockBalance": false,
+        "bonusExpirationTime": 172800000,
+        "wageringRequirement": 30,
+        "releaseLimitMultiplier": 15
+      },
+      "withoutLockBalance": false,
+      "bonusExpirationTime": 172800000,
+      "wageringRequirement": 30,
+      "releaseLimitMultiplier": 15
+    },
+    "error": false,
+    "isTouched": true,
+    "displayData": [
+      "Activity customized"
+    ],
+    "displayName": "Casino bonus",
+    "promotionId": "51883c3a-6981-4e80-bd5b-e145ae1fd4bd"
+  },
+  "node": {
+    "id": "150cab1c-2094-4c39-8265-27db31f4bd5e",
+    "data": {
+      "name": "casino_bonus_v2",
+      "ports": [
+        {
+          "id": "input-150cab1c-2094-4c39-8265-27db31f4bd5e"
+        },
+        {
+          "id": "WageringBonusAwarded-150cab1c-2094-4c39-8265-27db31f4bd5e"
+        },
+        {
+          "id": "WageringBonusAwardConfirmed-150cab1c-2094-4c39-8265-27db31f4bd5e"
+        },
+        {
+          "id": "WageringBonusAwardFailed-150cab1c-2094-4c39-8265-27db31f4bd5e"
+        },
+        {
+          "id": "WageringBonusCancelled-150cab1c-2094-4c39-8265-27db31f4bd5e"
+        },
+        {
+          "id": "WageringBonusCancelConfirmed-150cab1c-2094-4c39-8265-27db31f4bd5e"
+        },
+        {
+          "id": "WageringBonusCancelFailed-150cab1c-2094-4c39-8265-27db31f4bd5e"
+        },
+        {
+          "id": "WageringBonusRejected-150cab1c-2094-4c39-8265-27db31f4bd5e"
+        },
+        {
+          "id": "WageringBonusRejectConfirmed-150cab1c-2094-4c39-8265-27db31f4bd5e"
+        },
+        {
+          "id": "WageringBonusRejectFailed-150cab1c-2094-4c39-8265-27db31f4bd5e"
+        },
+        {
+          "id": "WageringBonusStarted-150cab1c-2094-4c39-8265-27db31f4bd5e"
+        },
+        {
+          "id": "WageringBonusFinished-150cab1c-2094-4c39-8265-27db31f4bd5e"
+        },
+        {
+          "id": "WageringBonusLost-150cab1c-2094-4c39-8265-27db31f4bd5e"
+        },
+        {
+          "id": "WageringBonusForfeited-150cab1c-2094-4c39-8265-27db31f4bd5e"
+        },
+        {
+          "id": "WageringBonusExpired-150cab1c-2094-4c39-8265-27db31f4bd5e"
+        },
+        {
+          "id": "WageringBonusExpirationFailed-150cab1c-2094-4c39-8265-27db31f4bd5e"
+        },
+        {
+          "id": "WageringBonusLoseFailed-150cab1c-2094-4c39-8265-27db31f4bd5e"
+        },
+        {
+          "id": "WageringBonusCancelledByWithdrawalConfirmed-150cab1c-2094-4c39-8265-27db31f4bd5e"
+        }
+      ],
+      "events": [
+        {
+          "isHidden": false,
+          "eventName": "WageringBonusAwarded",
+          "eventType": "Boundary",
+          "eventDisplayName": "Bonus created on Casino side",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "WageringBonusAwardConfirmed",
+          "eventType": "Boundary",
+          "eventDisplayName": "Bonus added to Casino wallet",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "WageringBonusAwardFailed",
+          "eventType": "Boundary",
+          "eventDisplayName": "Error: bonus not added to Casino wallet",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": true,
+          "eventName": "WageringBonusCancelled",
+          "eventType": "Boundary",
+          "eventDisplayName": "Bonus was cancelled in Back-office",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": true,
+          "eventName": "WageringBonusCancelConfirmed",
+          "eventType": "Completion",
+          "eventDisplayName": "Casino confirmed bonus cancelation from Back-office",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "WageringBonusCancelFailed",
+          "eventType": "Boundary",
+          "eventDisplayName": "Error: bonus not cancelled on Casino side",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "WageringBonusRejected",
+          "eventType": "Boundary",
+          "eventDisplayName": "Bonus rejected by player",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": true,
+          "eventName": "WageringBonusRejectConfirmed",
+          "eventType": "Completion",
+          "eventDisplayName": "Casino confirmed bonus rejection",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "WageringBonusRejectFailed",
+          "eventType": "Boundary",
+          "eventDisplayName": "Error: Casino cannot reject bonus",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "WageringBonusStarted",
+          "eventType": "Boundary",
+          "eventDisplayName": "Bonus wagering has started",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "WageringBonusFinished",
+          "eventType": "Completion",
+          "eventDisplayName": "Wagered",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "WageringBonusLost",
+          "eventType": "Completion",
+          "eventDisplayName": "Lost",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "WageringBonusForfeited",
+          "eventType": "Completion",
+          "eventDisplayName": "Forfeited",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "WageringBonusExpired",
+          "eventType": "Completion",
+          "eventDisplayName": "Expired",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": true,
+          "eventName": "WageringBonusExpirationFailed",
+          "eventType": "Boundary",
+          "eventDisplayName": "Error during wager expiration",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": true,
+          "eventName": "WageringBonusLoseFailed",
+          "eventType": "Boundary",
+          "eventDisplayName": "Error during bonus losing",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "WageringBonusCancelledByWithdrawalConfirmed",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "isLabelHidden": false,
+          "payloadKeysV2": [],
+          "localizationKey": "casino_bonus_v2.wagering_bonus_cancelled_by_withdrawal_confirmed",
+          "eventDisplayName": "Canceled by withdrawal",
+          "canBeUsedInChoosableFlow": false
+        }
+      ],
+      "activityType": "mechanic",
+      "activityDisplayName": "Casino bonus",
+      "withoutSourceHandle": false
+    },
+    "type": "action",
+    "style": {
+      "cursor": "pointer"
+    },
+    "width": 267,
+    "extent": "parent",
+    "height": 64,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+      "x": 2349.75,
+      "y": 1000
+    },
+    "selected": false,
+    "draggable": false,
+    "parentNode": "70dab14f-c81e-43a4-81cd-750624e42194",
+    "connectable": false,
+    "positionAbsolute": {
+      "x": -2072,
+      "y": 1463
+    }
+  },
+  "has_config": true,
+  "has_node": true
+}

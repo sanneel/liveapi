@@ -1,0 +1,340 @@
+{
+  "activityName": "sport_bonus",
+  "source_template": "colocolo/two_hours.json",
+  "journey_size": 137,
+  "activity": {
+    "activityId": "7327f8eb-6fd7-499f-a989-c075121f1d4f",
+    "activityName": "sport_bonus",
+    "activityDisplayName": "Sport Bonus",
+    "events": [
+      {
+        "eventName": "Canceled",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "90630fc9-b646-40c8-915b-c15ad83480b8",
+        "count": 2,
+        "version": 1
+      },
+      {
+        "eventName": "Completed",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "11d86c2f-9e92-48a1-9174-09bc797f092f",
+        "count": 6,
+        "version": 1
+      },
+      {
+        "eventName": "Expired",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "405e2909-def6-489e-bb6f-e5dbbdc470c7",
+        "count": 0,
+        "version": 1
+      },
+      {
+        "eventName": "Issued",
+        "eventDisplayName": "Issued",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "count": 50,
+        "version": 1
+      },
+      {
+        "eventName": "Lost",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "86f34042-dfdb-460f-9fbc-a13bdbdadca4",
+        "count": 42,
+        "version": 1
+      },
+      {
+        "eventName": "NotIssued",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "836e9e5f-08e7-4499-a24a-4aa1e982a459",
+        "count": 0,
+        "version": 1
+      },
+      {
+        "eventName": "Terminated",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "c982622e-da29-4acc-b85b-4ca77c6476f8",
+        "count": 0,
+        "version": 1
+      },
+      {
+        "eventName": "WageringStarted",
+        "eventDisplayName": "Wageringstarted",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "count": 49,
+        "version": 1
+      }
+    ],
+    "eventsHistory": [],
+    "tcGroupEvents": [],
+    "dependencies": [
+      {
+        "journeyActivityId": "08a7c658-9622-477d-936e-7bb4ed4630aa",
+        "key": "CurrencyCode",
+        "isOptional": false
+      },
+      {
+        "journeyActivityId": "14630378-1940-44e5-a6d9-6c9bdfa169f5",
+        "key": "PromotionId",
+        "isOptional": false
+      },
+      {
+        "journeyActivityId": "14630378-1940-44e5-a6d9-6c9bdfa169f5",
+        "key": "PromotionAcceptedAt",
+        "isOptional": false
+      }
+    ],
+    "dataDependencies": [],
+    "dataKeys": [],
+    "initializationData": {
+      "properties": {
+        "title": "Sport Bonus ",
+        "bonusAmount": {
+          "CLP": 1000
+        },
+        "wageringInfo": {
+          "minOdd": 2,
+          "betTypes": [
+            "ordinar",
+            "express"
+          ],
+          "channels": [
+            "ALL"
+          ],
+          "minItems": 2,
+          "lineTypes": [
+            "live",
+            "prematch"
+          ],
+          "wagerFactor": 10,
+          "minOddParlay": 1.8,
+          "wageringDays": 7,
+          "itemsCheckType": "All",
+          "maxBonusRelease": {
+            "CLP": 10000
+          },
+          "minOddItemParlay": 1.8,
+          "prolongationDays": 7,
+          "isAllowedToCancel": true
+        },
+        "isSportBonusLockEnabled": true
+      },
+      "displayData": [
+        "7 days"
+      ],
+      "placements": []
+    },
+    "isEditable": true,
+    "changedBy": {
+      "authorId": "f3e368ad-ac99-4858-a335-33de23759deb",
+      "authorName": "Nikolaos L"
+    },
+    "changedAt": "2026-06-07T13:43:46.1500500Z",
+    "version": 1
+  },
+  "config": {
+    "data": {
+      "properties": {
+        "title": "Sport Bonus ",
+        "bonusAmount": {
+          "CLP": 1000
+        },
+        "wageringInfo": {
+          "minOdd": 2,
+          "betTypes": [
+            "ordinar",
+            "express"
+          ],
+          "channels": [
+            "ALL"
+          ],
+          "minItems": 2,
+          "lineTypes": [
+            "live",
+            "prematch"
+          ],
+          "wagerFactor": 10,
+          "minOddParlay": 1.8,
+          "wageringDays": 7,
+          "itemsCheckType": "All",
+          "maxBonusRelease": {
+            "CLP": 10000
+          },
+          "minOddItemParlay": 1.8,
+          "prolongationDays": 7,
+          "isAllowedToCancel": true
+        },
+        "isSportBonusLockEnabled": true
+      }
+    },
+    "error": false,
+    "displayData": [
+      "7 days"
+    ],
+    "displayName": "Sport Bonus",
+    "promotionId": "14630378-1940-44e5-a6d9-6c9bdfa169f5"
+  },
+  "node": {
+    "id": "7327f8eb-6fd7-499f-a989-c075121f1d4f",
+    "data": {
+      "name": "sport_bonus",
+      "ports": [
+        {
+          "id": "input-7327f8eb-6fd7-499f-a989-c075121f1d4f"
+        },
+        {
+          "id": "Issued-7327f8eb-6fd7-499f-a989-c075121f1d4f"
+        },
+        {
+          "id": "WageringStarted-7327f8eb-6fd7-499f-a989-c075121f1d4f"
+        },
+        {
+          "id": "Completed-7327f8eb-6fd7-499f-a989-c075121f1d4f"
+        },
+        {
+          "id": "Expired-7327f8eb-6fd7-499f-a989-c075121f1d4f"
+        },
+        {
+          "id": "Terminated-7327f8eb-6fd7-499f-a989-c075121f1d4f"
+        },
+        {
+          "id": "Lost-7327f8eb-6fd7-499f-a989-c075121f1d4f"
+        },
+        {
+          "id": "NotIssued-7327f8eb-6fd7-499f-a989-c075121f1d4f"
+        },
+        {
+          "id": "Canceled-7327f8eb-6fd7-499f-a989-c075121f1d4f"
+        }
+      ],
+      "events": [
+        {
+          "isHidden": false,
+          "eventName": "Issued",
+          "eventType": "Boundary",
+          "payloadKeys": [],
+          "isLabelHidden": false,
+          "payloadKeysV2": [],
+          "localizationKey": "sport_bonus.issued",
+          "eventDisplayName": "Issued",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "WageringStarted",
+          "eventType": "Boundary",
+          "payloadKeys": [],
+          "isLabelHidden": false,
+          "payloadKeysV2": [],
+          "localizationKey": "sport_bonus.wagering_started",
+          "eventDisplayName": "Wageringstarted",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "Completed",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "isLabelHidden": false,
+          "payloadKeysV2": [],
+          "localizationKey": "sport_bonus.completed",
+          "eventDisplayName": "Wagered",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "Expired",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "isLabelHidden": false,
+          "payloadKeysV2": [],
+          "localizationKey": "sport_bonus.expired",
+          "eventDisplayName": "Expired",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": true,
+          "eventName": "Terminated",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "isLabelHidden": false,
+          "payloadKeysV2": [],
+          "localizationKey": "sport_bonus.terminated",
+          "eventDisplayName": "Terminated",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "Lost",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "isLabelHidden": false,
+          "payloadKeysV2": [],
+          "localizationKey": "sport_bonus.lost",
+          "eventDisplayName": "Lost",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": true,
+          "eventName": "NotIssued",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "isLabelHidden": false,
+          "payloadKeysV2": [],
+          "localizationKey": "sport_bonus.not_issued",
+          "eventDisplayName": "Not issued",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "Canceled",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "isLabelHidden": false,
+          "payloadKeysV2": [],
+          "localizationKey": "sport_bonus.canceled",
+          "eventDisplayName": "Canceled",
+          "canBeUsedInChoosableFlow": false
+        }
+      ],
+      "activityType": "mechanic",
+      "activityDisplayName": "Sport Bonus"
+    },
+    "type": "action",
+    "style": {
+      "cursor": "pointer"
+    },
+    "width": 267,
+    "height": 64,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+      "x": 353.5,
+      "y": 991
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false,
+    "positionAbsolute": {
+      "x": 353.5,
+      "y": 991
+    }
+  },
+  "has_config": true,
+  "has_node": true
+}

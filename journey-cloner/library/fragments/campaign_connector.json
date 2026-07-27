@@ -1,0 +1,142 @@
+{
+  "activityName": "campaign_connector",
+  "source_template": "colocolo/two_hours.json",
+  "journey_size": 137,
+  "activity": {
+    "activityId": "3ba53b33-d0a5-4d5c-b33f-e6a22b1c411b",
+    "activityName": "campaign_connector",
+    "activityDisplayName": "Campaign Connector",
+    "events": [
+      {
+        "eventName": "PlayerNotAddedToCampaign",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "5655833f-4773-4c67-94f7-1f8ee7721ff8",
+        "count": 0,
+        "version": 1
+      },
+      {
+        "eventName": "PlayerAddedToCampaign",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "fc612248-44de-44f4-a552-eae2f5083402",
+        "count": 1007,
+        "version": 1
+      }
+    ],
+    "eventsHistory": [],
+    "tcGroupEvents": [],
+    "dependencies": [
+      {
+        "journeyActivityId": "08a7c658-9622-477d-936e-7bb4ed4630aa",
+        "key": "CurrencyCode",
+        "isOptional": true
+      },
+      {
+        "journeyActivityId": "08a7c658-9622-477d-936e-7bb4ed4630aa",
+        "key": "SelectedCurrencyCode",
+        "isOptional": true
+      }
+    ],
+    "dataDependencies": [],
+    "dataKeys": [],
+    "initializationData": {
+      "displayData": [
+        "JRN-0-575239 • JBCL|SP| CC vs Huachipato | PromoCode COLOCOLO2026| FollowUp 07.06"
+      ],
+      "campaignConnectorConditions": {
+        "campaignId": "4c0767a4-36de-4a3d-93ce-248c13ebde43",
+        "activityData": {
+          "HostJourneyId": "JRN-0-575239"
+        },
+        "campaignProductType": "Journey",
+        "campaignSubProductType": ""
+      },
+      "placements": []
+    },
+    "isEditable": true,
+    "changedBy": {
+      "authorId": "f3e368ad-ac99-4858-a335-33de23759deb",
+      "authorName": "Nikolaos L"
+    },
+    "changedAt": "2026-06-07T13:43:46.1499640Z",
+    "version": 1
+  },
+  "config": {
+    "data": {
+      "campaignConnectorConditions": {
+        "campaignId": "",
+        "activityData": {
+          "HostJourneyId": "JRN-0-575239"
+        },
+        "campaignProductType": "Journey",
+        "campaignSubProductType": ""
+      }
+    },
+    "error": false,
+    "displayData": [],
+    "displayName": "Campaign Connector"
+  },
+  "node": {
+    "id": "3ba53b33-d0a5-4d5c-b33f-e6a22b1c411b",
+    "data": {
+      "name": "campaign_connector",
+      "ports": [
+        {
+          "id": "input-3ba53b33-d0a5-4d5c-b33f-e6a22b1c411b"
+        },
+        {
+          "id": "PlayerAddedToCampaign-3ba53b33-d0a5-4d5c-b33f-e6a22b1c411b"
+        },
+        {
+          "id": "PlayerNotAddedToCampaign-3ba53b33-d0a5-4d5c-b33f-e6a22b1c411b"
+        }
+      ],
+      "events": [
+        {
+          "isHidden": false,
+          "eventName": "PlayerAddedToCampaign",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "eventDisplayName": "Added",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "PlayerNotAddedToCampaign",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "eventDisplayName": "Not added",
+          "canBeUsedInChoosableFlow": false
+        }
+      ],
+      "activityType": "promotion",
+      "activityDisplayName": "Campaign Connector"
+    },
+    "type": "action",
+    "style": {
+      "cursor": "pointer"
+    },
+    "width": 267,
+    "height": 64,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+      "x": -5020.5,
+      "y": 1783
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false,
+    "positionAbsolute": {
+      "x": -5020.5,
+      "y": 1783
+    }
+  },
+  "has_config": true,
+  "has_node": true
+}

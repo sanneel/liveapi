@@ -1,0 +1,147 @@
+{
+  "activityName": "registration",
+  "source_template": "udch/aft.json",
+  "journey_size": 4,
+  "activity": {
+    "activityId": "11f9ce73-2b34-44f3-83d0-b06e9b6f2998",
+    "activityName": "registration",
+    "activityDisplayName": "Reference codes",
+    "events": [
+      {
+        "eventName": "PlayerAdded",
+        "eventDisplayName": "Players added to journey",
+        "eventType": "Activation",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "5711de9d-3538-4482-a5a2-3d89d0b85766",
+        "count": 0,
+        "version": 1
+      }
+    ],
+    "eventsHistory": [],
+    "tcGroupEvents": [],
+    "dependencies": [],
+    "dataDependencies": [],
+    "dataKeys": [],
+    "initializationData": {
+      "version": "v2",
+      "displayData": [
+        "Promo codes: VAMOSBULLA"
+      ],
+      "refCodeTypes": [
+        "Promocode"
+      ],
+      "promocodeSettings": {
+        "fileId": null,
+        "values": [
+          "VAMOSBULLA"
+        ],
+        "purpose": "Crm",
+        "availability": [
+          "ExistingUser"
+        ],
+        "progressData": {
+          "fileId": null,
+          "status": "",
+          "fileName": "",
+          "totalCount": 0,
+          "failedCount": 0,
+          "successCount": 0,
+          "validationProgress": 0
+        },
+        "promocodeSource": "manual"
+      },
+      "placements": []
+    },
+    "isEditable": true,
+    "changedBy": {
+      "authorId": "ba719889-4868-445d-9f9f-d94ddbfcd67c",
+      "authorName": "Sandro S"
+    },
+    "changedAt": "2026-06-08T07:20:07.6738830Z",
+    "version": 1
+  },
+  "config": {
+    "data": {
+      "version": "v2",
+      "refCodeTypes": [
+        "Promocode"
+      ],
+      "promocodeSettings": {
+        "fileId": null,
+        "values": [
+          "VAMOSBULLA"
+        ],
+        "purpose": "Crm",
+        "availability": [
+          "ExistingUser"
+        ],
+        "progressData": {
+          "fileId": null,
+          "status": "",
+          "fileName": "",
+          "totalCount": 0,
+          "failedCount": 0,
+          "successCount": 0,
+          "validationProgress": 0
+        },
+        "promocodeSource": "manual"
+      }
+    },
+    "error": false,
+    "isTouched": true,
+    "displayData": [
+      "Promo codes: VAMOSBULLA"
+    ],
+    "displayName": "Reference codes"
+  },
+  "node": {
+    "id": "11f9ce73-2b34-44f3-83d0-b06e9b6f2998",
+    "data": {
+      "name": "registration",
+      "type": "source",
+      "order": 1,
+      "ports": [
+        {
+          "id": "PlayerAdded-11f9ce73-2b34-44f3-83d0-b06e9b6f2998"
+        }
+      ],
+      "events": [
+        {
+          "isHidden": false,
+          "eventName": "PlayerAdded",
+          "eventType": "Activation",
+          "payloadKeys": [
+            "Brand",
+            "CurrencyCode"
+          ],
+          "eventDisplayName": "Players added to journey",
+          "canBeUsedInChoosableFlow": false
+        }
+      ],
+      "nodeType": "source",
+      "boundaryDefinition": false,
+      "activityDisplayName": "Reference codes"
+    },
+    "type": "source",
+    "style": {
+      "cursor": "pointer"
+    },
+    "width": 267,
+    "height": 64,
+    "zIndex": 5,
+    "position": {
+      "x": 0,
+      "y": 0
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false,
+    "positionAbsolute": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "has_config": true,
+  "has_node": true
+}

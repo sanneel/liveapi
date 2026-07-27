@@ -1,0 +1,59 @@
+{
+  "activityName": "end_of_path",
+  "source_template": "casino/gow.json",
+  "journey_size": 95,
+  "activity": {
+    "activityId": "36e27725-680b-463c-a728-b3b3995c93d3",
+    "activityName": "end_of_path",
+    "events": [],
+    "dependencies": [],
+    "dataDependencies": [],
+    "initializationData": {
+      "placements": []
+    }
+  },
+  "config": null,
+  "node": {
+    "id": "36e27725-680b-463c-a728-b3b3995c93d3",
+    "data": {
+      "name": "end_of_path",
+      "ports": [
+        {
+          "id": "input-36e27725-680b-463c-a728-b3b3995c93d3"
+        }
+      ],
+      "width": 40,
+      "height": 40,
+      "pathId": "PromotionExpired",
+      "subtype": "END_OF_PARALLEL_FLOW",
+      "isHidden": false,
+      "eventName": "PromotionExpired",
+      "eventType": "Completion",
+      "eventDisplayName": "Expired",
+      "canBeUsedInChoosableFlow": false
+    },
+    "type": "exit",
+    "style": {
+      "cursor": "default"
+    },
+    "width": 40,
+    "extent": "parent",
+    "height": 40,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+      "x": 1283.5,
+      "y": 472
+    },
+    "selected": false,
+    "draggable": false,
+    "parentNode": "70dab14f-c81e-43a4-81cd-750624e42194",
+    "connectable": false,
+    "positionAbsolute": {
+      "x": -3138.25,
+      "y": 935
+    }
+  },
+  "has_config": false,
+  "has_node": true
+}

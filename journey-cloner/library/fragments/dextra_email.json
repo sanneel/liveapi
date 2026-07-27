@@ -1,0 +1,144 @@
+{
+  "activityName": "dextra_email",
+  "source_template": "casino/gow_comms.json",
+  "journey_size": 39,
+  "activity": {
+    "activityId": "00eecb41-2540-46c0-a193-664938d0ef81",
+    "activityName": "dextra_email",
+    "events": [
+      {
+        "eventName": "SuccessEmailSend",
+        "eventType": "Completion",
+        "nextActivityId": "0b1248f7-d22b-47d1-ad2f-2b8edaa24c3f",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "FailedEmailSend",
+        "eventType": "Completion",
+        "nextActivityId": "7a23be85-4680-4538-acd4-d135b7c2838b",
+        "isUsedInChoosableFlow": false
+      }
+    ],
+    "initializationData": {
+      "emailSettings": {
+        "template": {
+          "id": "CSE-0-14458"
+        },
+        "emailSource": "Template",
+        "transportId": null,
+        "fromLineText": "JugaBet",
+        "defaultVariables": [],
+        "newVariablesState": {
+          "es": {}
+        },
+        "checkEmailVerified": true,
+        "localizedVariables": [
+          {
+            "variables": [],
+            "languageCode": "es"
+          }
+        ],
+        "playerAgreementName": "CasinoPromo"
+      },
+      "dataDependencies": [],
+      "displayData": [
+        "CSE-0-14458 JBCL CS - GOW 24.06.2026"
+      ]
+    },
+    "activityDisplayName": "Email",
+    "dataDependencies": [],
+    "dependencies": []
+  },
+  "config": {
+    "data": {
+      "emailSettings": {
+        "template": {
+          "id": "CSE-0-14458"
+        },
+        "emailSource": "Template",
+        "transportId": null,
+        "fromLineText": "JugaBet",
+        "defaultVariables": [],
+        "newVariablesState": {
+          "es": {}
+        },
+        "checkEmailVerified": true,
+        "localizedVariables": [
+          {
+            "variables": [],
+            "languageCode": "es"
+          }
+        ],
+        "playerAgreementName": "CasinoPromo"
+      },
+      "dataDependencies": []
+    },
+    "error": false,
+    "isTouched": true,
+    "displayData": [
+      "CSE-0-14458 JBCL CS - GOW 24.06.2026"
+    ],
+    "displayName": "Email"
+  },
+  "node": {
+    "id": "00eecb41-2540-46c0-a193-664938d0ef81",
+    "data": {
+      "name": "dextra_email",
+      "ports": [
+        {
+          "id": "input-00eecb41-2540-46c0-a193-664938d0ef81"
+        },
+        {
+          "id": "FailedEmailSend-00eecb41-2540-46c0-a193-664938d0ef81"
+        },
+        {
+          "id": "SuccessEmailSend-00eecb41-2540-46c0-a193-664938d0ef81"
+        }
+      ],
+      "events": [
+        {
+          "isHidden": false,
+          "eventName": "FailedEmailSend",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Not sent",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "SuccessEmailSend",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Sent to Dextra",
+          "canBeUsedInChoosableFlow": false
+        }
+      ],
+      "activityType": "communication",
+      "activityDisplayName": "Email",
+      "withoutSourceHandle": false
+    },
+    "type": "action",
+    "style": {
+      "cursor": "pointer"
+    },
+    "width": 267,
+    "extent": "parent",
+    "height": 64,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+      "x": 570,
+      "y": 1528
+    },
+    "selected": false,
+    "draggable": false,
+    "parentNode": "cea0b018-d734-4d84-80fc-7c2a7c7e12a1",
+    "connectable": false,
+    "positionAbsolute": {
+      "x": -350.25,
+      "y": 1727
+    }
+  },
+  "has_config": true,
+  "has_node": true
+}

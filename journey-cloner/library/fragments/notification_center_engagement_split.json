@@ -1,0 +1,300 @@
+{
+  "activityName": "notification_center_engagement_split",
+  "source_template": "casino/gow_comms.json",
+  "journey_size": 39,
+  "activity": {
+    "activityId": "955d1016-29cd-4b37-b4fc-7981767b5006",
+    "activityName": "notification_center_engagement_split",
+    "events": [
+      {
+        "eventName": "NCEngagementSplitPassedPath01",
+        "eventType": "Completion",
+        "eventDisplayName": "Clicked",
+        "nextActivityId": "1d15614f-51c8-4255-8f2e-772b36d9ff50",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "NCEngagementSplitPassedPath02",
+        "eventType": "Completion",
+        "nextActivityId": "b7dbd452-401f-4633-a095-d09beab3fbe0",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "NCEngagementSplitPassedPath03",
+        "eventType": "Completion",
+        "nextActivityId": "b7dbd452-401f-4633-a095-d09beab3fbe0",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "NCEngagementSplitPassedPath04",
+        "eventType": "Completion",
+        "nextActivityId": "b7dbd452-401f-4633-a095-d09beab3fbe0",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "NCEngagementSplitPassedPath05",
+        "eventType": "Completion",
+        "nextActivityId": "b7dbd452-401f-4633-a095-d09beab3fbe0",
+        "isUsedInChoosableFlow": false
+      }
+    ],
+    "initializationData": {
+      "properties": {
+        "paths": [
+          {
+            "pathId": "path1",
+            "pathName": "Clicked",
+            "notificationCenterEngagementStatuses": [
+              "Clicked"
+            ]
+          },
+          {
+            "pathId": "other",
+            "pathName": "Other",
+            "notificationCenterEngagementStatuses": [
+              "NotSent",
+              "Sent",
+              "Shown",
+              "Read"
+            ]
+          }
+        ],
+        "DextraNotificationCenterActivityId": "0ce9782f-174b-44f4-a283-8e04b461e716"
+      },
+      "pathesConfig": [
+        {
+          "events": [
+            {
+              "eventName": "NCEngagementSplitPassedPath01",
+              "eventType": "Completion",
+              "eventDisplayName": "Clicked"
+            }
+          ],
+          "pathId": "path1",
+          "pathName": "Clicked",
+          "notificationCenterEngagementStatuses": [
+            "Clicked"
+          ],
+          "nextActivityId": "1d15614f-51c8-4255-8f2e-772b36d9ff50"
+        },
+        {
+          "events": [
+            {
+              "eventName": "NCEngagementSplitPassedPath02",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "NCEngagementSplitPassedPath03",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "NCEngagementSplitPassedPath04",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "NCEngagementSplitPassedPath05",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "other",
+          "pathName": "Other",
+          "nextActivityId": "b7dbd452-401f-4633-a095-d09beab3fbe0"
+        }
+      ],
+      "displayData": [
+        "0ce9782f-174b-44f4-a283-8e04b461e716"
+      ]
+    },
+    "activityDisplayName": "Messaging engagement split",
+    "dataDependencies": [],
+    "dependencies": []
+  },
+  "config": {
+    "data": {
+      "properties": {
+        "paths": [
+          {
+            "pathId": "path1",
+            "pathName": "Clicked",
+            "notificationCenterEngagementStatuses": [
+              "Clicked"
+            ]
+          },
+          {
+            "pathId": "other",
+            "pathName": "Other",
+            "notificationCenterEngagementStatuses": [
+              "NotSent",
+              "Sent",
+              "Shown",
+              "Read"
+            ]
+          }
+        ],
+        "DextraNotificationCenterActivityId": "0ce9782f-174b-44f4-a283-8e04b461e716"
+      },
+      "pathesConfig": [
+        {
+          "events": [
+            {
+              "eventName": "NCEngagementSplitPassedPath01",
+              "eventType": "Completion",
+              "eventDisplayName": "Clicked"
+            }
+          ],
+          "pathId": "path1",
+          "pathName": "Clicked",
+          "notificationCenterEngagementStatuses": [
+            "Clicked"
+          ]
+        },
+        {
+          "events": [
+            {
+              "eventName": "NCEngagementSplitPassedPath02",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "NCEngagementSplitPassedPath03",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "NCEngagementSplitPassedPath04",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "NCEngagementSplitPassedPath05",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "other",
+          "pathName": "Other"
+        }
+      ]
+    },
+    "error": false,
+    "isTouched": true,
+    "displayData": [
+      "0ce9782f-174b-44f4-a283-8e04b461e716"
+    ],
+    "displayName": "Messaging engagement split"
+  },
+  "node": {
+    "id": "955d1016-29cd-4b37-b4fc-7981767b5006",
+    "data": {
+      "name": "notification_center_engagement_split",
+      "ports": [
+        {
+          "id": "input-955d1016-29cd-4b37-b4fc-7981767b5006"
+        },
+        {
+          "id": "path1-955d1016-29cd-4b37-b4fc-7981767b5006"
+        },
+        {
+          "id": "other-955d1016-29cd-4b37-b4fc-7981767b5006"
+        }
+      ],
+      "events": [
+        {
+          "isHidden": false,
+          "eventName": "NCEngagementSplitPassedPath01",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Path 1",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "NCEngagementSplitPassedPath02",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Path 2",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "NCEngagementSplitPassedPath03",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Path 3",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "NCEngagementSplitPassedPath04",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Path 4",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "NCEngagementSplitPassedPath05",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "eventDisplayName": "Path 5",
+          "canBeUsedInChoosableFlow": false
+        }
+      ],
+      "pathes": [
+        {
+          "events": [
+            {
+              "eventName": "NCEngagementSplitPassedPath01",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "path1",
+          "pathName": "Path 1"
+        },
+        {
+          "events": [
+            {
+              "eventName": "NCEngagementSplitPassedPath02",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "NCEngagementSplitPassedPath03",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "NCEngagementSplitPassedPath04",
+              "eventType": "Completion"
+            },
+            {
+              "eventName": "NCEngagementSplitPassedPath05",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "other",
+          "pathName": "Other"
+        }
+      ],
+      "activityType": "flowControl",
+      "activityDisplayName": "Messaging engagement split"
+    },
+    "type": "action",
+    "style": {
+      "cursor": "pointer"
+    },
+    "width": 267,
+    "extent": "parent",
+    "height": 64,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+      "x": 96.5,
+      "y": 736
+    },
+    "selected": false,
+    "draggable": false,
+    "parentNode": "cea0b018-d734-4d84-80fc-7c2a7c7e12a1",
+    "connectable": false,
+    "positionAbsolute": {
+      "x": -823.75,
+      "y": 935
+    }
+  },
+  "has_config": true,
+  "has_node": true
+}

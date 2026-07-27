@@ -1,0 +1,481 @@
+{
+  "activityName": "freespin_bonus",
+  "source_template": "casino/gow.json",
+  "journey_size": 95,
+  "activity": {
+    "activityId": "7bb838bb-1cfe-4c9b-bcfb-2ee2696d8e4d",
+    "activityName": "freespin_bonus",
+    "activityType": "freeSpin",
+    "activityDisplayName": "Jugabet Games | La gran copa",
+    "events": [
+      {
+        "eventName": "FreespinBonusCollectingFinished",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "7986d99a-5f5e-4897-b9cb-bebd48144b8b"
+      },
+      {
+        "eventName": "FreespinBonusNotUsed",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "e08b92e5-f728-45d2-be1b-f9bc664aecb2"
+      },
+      {
+        "eventName": "FreeSpinsBonusTermsNotComplied",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "74840660-f0a4-4657-9502-fa34215167e2"
+      },
+      {
+        "eventName": "FreespinBonusRejectConfirmed",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "e570aced-b8ef-4c8b-9b2e-8f232a6cf295"
+      },
+      {
+        "eventName": "FreespinBonusAwarded",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "FreespinBonusAwardConfirmed",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "FreespinBonusAwardFailed",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "FreespinBonusCancelled",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "FreespinBonusCancelFailed",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "FreespinBonusRejected",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "FreespinBonusRejectFailed",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "FreespinBonusCollectingStarted",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "FreespinBonusStatusReverted",
+        "eventType": "Boundary",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "FreespinBonusCancelConfirmed",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "84f7f8f8-2e9a-43c9-8638-e0a7c9a6071e"
+      },
+      {
+        "eventName": "FreespinBonusAwardAborted",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "c2f7ce47-2a4d-479c-a05b-039286ed4a8a"
+      },
+      {
+        "eventName": "FreespinBonusCancelledByWithdrawalConfirmed",
+        "eventType": "Completion",
+        "checkExitCriteria": false,
+        "isUsedInChoosableFlow": false,
+        "nextActivityId": "c9f32c41-4b40-4fbe-b009-9adc4a947a3d"
+      }
+    ],
+    "dependencies": [
+      {
+        "journeyActivityId": "2cde0455-5d55-4435-aa23-8715c95f5ff0",
+        "key": "CurrencyCode"
+      },
+      {
+        "journeyActivityId": "b6c72dd0-ff4e-4f25-9eee-d71b505b3ba1",
+        "key": "PromotionId"
+      },
+      {
+        "journeyActivityId": "d5de9852-866b-4423-8182-41d4543c0ebb",
+        "key": "DepositAmount"
+      },
+      {
+        "journeyActivityId": "d5de9852-866b-4423-8182-41d4543c0ebb",
+        "key": "DepositPaidAmount"
+      }
+    ],
+    "dataDependencies": [],
+    "initializationData": {
+      "allowReject": true,
+      "displayData": [
+        "Activity customized"
+      ],
+      "pathesConfig": [
+        {
+          "events": [
+            {
+              "eventName": "FreespinBonusCollectingFinished",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "FreespinBonusCollectingFinished",
+          "pathName": "Collecting finished",
+          "nextActivityId": "7986d99a-5f5e-4897-b9cb-bebd48144b8b"
+        },
+        {
+          "events": [
+            {
+              "eventName": "FreespinBonusNotUsed",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "FreespinBonusNotUsed",
+          "pathName": "Not used",
+          "nextActivityId": "e08b92e5-f728-45d2-be1b-f9bc664aecb2"
+        },
+        {
+          "events": [
+            {
+              "eventName": "FreeSpinsBonusTermsNotComplied",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "FreeSpinsBonusTermsNotComplied",
+          "pathName": "Not complied",
+          "nextActivityId": "74840660-f0a4-4657-9502-fa34215167e2"
+        },
+        {
+          "events": [
+            {
+              "eventName": "FreespinBonusRejectConfirmed",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "FreespinBonusRejectConfirmed",
+          "pathName": "Canceled",
+          "nextActivityId": "e570aced-b8ef-4c8b-9b2e-8f232a6cf295"
+        }
+      ],
+      "freespinActivity": {
+        "spins": 50,
+        "stopAt": "2026-07-04T08:36:41Z",
+        "startAt": "2026-06-29T08:36:41Z",
+        "provider": "jugabet-games",
+        "allowReject": true,
+        "lobbyGameId": "jugabet-games-la-gran-copa-jugabet",
+        "productType": "slots",
+        "subcategory": "freeSpin",
+        "walletGameId": "gg_la_gran_copa_jugabet",
+        "withWagering": true,
+        "externalGameId": "gg_la_gran_copa_jugabet",
+        "currenciesConfig": {
+          "CLP": {
+            "betAmount": 12000,
+            "maxBonusAmount": 20000000,
+            "minBonusAmount": 10000,
+            "betAmount_majorUnits": 120,
+            "maxBonusAmount_majorUnits": 200000,
+            "minBonusAmount_majorUnits": 100
+          }
+        },
+        "gameTranslationKey": "La Gran Copa Jugabet",
+        "providerTranslationKey": "Jugabet Games",
+        "spinsExpirationDuration": 86400000
+      },
+      "placements": []
+    }
+  },
+  "config": {
+    "data": {
+      "allowReject": true,
+      "freespinActivity": {
+        "spins": 50,
+        "stopAt": "2026-07-01T04:00:00Z",
+        "provider": "jugabet-games",
+        "allowReject": true,
+        "lobbyGameId": "jugabet-games-la-gran-copa-jugabet",
+        "productType": "slots",
+        "subcategory": "freeSpin",
+        "walletGameId": "gg_la_gran_copa_jugabet",
+        "externalGameId": "gg_la_gran_copa_jugabet",
+        "currenciesConfig": {
+          "CLP": {
+            "betAmount": 12000,
+            "maxBonusAmount": 20000000,
+            "minBonusAmount": 10000,
+            "betAmount_majorUnits": 120,
+            "maxBonusAmount_majorUnits": 200000,
+            "minBonusAmount_majorUnits": 100
+          }
+        },
+        "gameTranslationKey": "La Gran Copa Jugabet",
+        "providerTranslationKey": "Jugabet Games",
+        "spinsExpirationDuration": 86400000
+      }
+    },
+    "error": false,
+    "isTouched": true,
+    "displayData": [
+      "Activity customized"
+    ],
+    "displayName": "Jugabet Games | La gran copa",
+    "promotionId": "b6c72dd0-ff4e-4f25-9eee-d71b505b3ba1"
+  },
+  "node": {
+    "id": "7bb838bb-1cfe-4c9b-bcfb-2ee2696d8e4d",
+    "data": {
+      "name": "freespin_bonus",
+      "ports": [
+        {
+          "id": "input-7bb838bb-1cfe-4c9b-bcfb-2ee2696d8e4d"
+        },
+        {
+          "id": "FreespinBonusAwarded-7bb838bb-1cfe-4c9b-bcfb-2ee2696d8e4d"
+        },
+        {
+          "id": "FreespinBonusAwardConfirmed-7bb838bb-1cfe-4c9b-bcfb-2ee2696d8e4d"
+        },
+        {
+          "id": "FreespinBonusAwardFailed-7bb838bb-1cfe-4c9b-bcfb-2ee2696d8e4d"
+        },
+        {
+          "id": "FreespinBonusCancelled-7bb838bb-1cfe-4c9b-bcfb-2ee2696d8e4d"
+        },
+        {
+          "id": "FreespinBonusCancelFailed-7bb838bb-1cfe-4c9b-bcfb-2ee2696d8e4d"
+        },
+        {
+          "id": "FreespinBonusRejected-7bb838bb-1cfe-4c9b-bcfb-2ee2696d8e4d"
+        },
+        {
+          "id": "FreespinBonusRejectFailed-7bb838bb-1cfe-4c9b-bcfb-2ee2696d8e4d"
+        },
+        {
+          "id": "FreespinBonusCollectingStarted-7bb838bb-1cfe-4c9b-bcfb-2ee2696d8e4d"
+        },
+        {
+          "id": "FreespinBonusStatusReverted-7bb838bb-1cfe-4c9b-bcfb-2ee2696d8e4d"
+        },
+        {
+          "id": "FreespinBonusCancelConfirmed-7bb838bb-1cfe-4c9b-bcfb-2ee2696d8e4d"
+        },
+        {
+          "id": "FreespinBonusRejectConfirmed-7bb838bb-1cfe-4c9b-bcfb-2ee2696d8e4d"
+        },
+        {
+          "id": "FreespinBonusCollectingFinished-7bb838bb-1cfe-4c9b-bcfb-2ee2696d8e4d"
+        },
+        {
+          "id": "FreespinBonusNotUsed-7bb838bb-1cfe-4c9b-bcfb-2ee2696d8e4d"
+        },
+        {
+          "id": "FreeSpinsBonusTermsNotComplied-7bb838bb-1cfe-4c9b-bcfb-2ee2696d8e4d"
+        }
+      ],
+      "events": [
+        {
+          "isHidden": true,
+          "eventName": "FreespinBonusAwarded",
+          "eventType": "Boundary",
+          "eventDisplayName": "Freespin Bonus created on Casino side",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "FreespinBonusAwardConfirmed",
+          "eventType": "Boundary",
+          "eventDisplayName": "Freespin Bonus added to Casino wallet",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": true,
+          "eventName": "FreespinBonusAwardFailed",
+          "eventType": "Boundary",
+          "eventDisplayName": "Error: Freespin bonus not added to Casino wallet",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": true,
+          "eventName": "FreespinBonusCancelled",
+          "eventType": "Boundary",
+          "eventDisplayName": "Freespin Bonus was cancelled in Back-office",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": true,
+          "eventName": "FreespinBonusCancelFailed",
+          "eventType": "Boundary",
+          "eventDisplayName": "Error: Freespin bonus not rejected on Casino side",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": true,
+          "eventName": "FreespinBonusRejected",
+          "eventType": "Boundary",
+          "eventDisplayName": "Freespin Bonus rejected by player",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": true,
+          "eventName": "FreespinBonusRejectFailed",
+          "eventType": "Boundary",
+          "eventDisplayName": "Error: Casino cannot reject Freespin bonus",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": true,
+          "eventName": "FreespinBonusCollectingStarted",
+          "eventType": "Boundary",
+          "eventDisplayName": "Freespin Bonus collecting has started",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": true,
+          "eventName": "FreespinBonusStatusReverted",
+          "eventType": "Boundary",
+          "eventDisplayName": "Freespin Bonus status was reverted",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": true,
+          "eventName": "FreespinBonusCancelConfirmed",
+          "eventType": "Completion",
+          "eventDisplayName": "Casino confirmed Freespin bonus cancellation from Back-office",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": true,
+          "eventName": "FreespinBonusRejectConfirmed",
+          "eventType": "Completion",
+          "eventDisplayName": "Casino confirmed Freespin bonus rejection",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "FreespinBonusCollectingFinished",
+          "eventType": "Completion",
+          "eventDisplayName": "Used",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "FreespinBonusNotUsed",
+          "eventType": "Completion",
+          "eventDisplayName": "Expired",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "FreeSpinsBonusTermsNotComplied",
+          "eventType": "Completion",
+          "eventDisplayName": "Not complied",
+          "canBeUsedInChoosableFlow": false
+        }
+      ],
+      "pathes": [
+        {
+          "events": [
+            {
+              "eventName": "FreespinBonusCancelledByWithdrawalConfirmed",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "FreespinBonusCancelledByWithdrawalConfirmed",
+          "pathName": "Canceled by withdrawal"
+        },
+        {
+          "events": [
+            {
+              "eventName": "FreespinBonusCollectingFinished",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "FreespinBonusCollectingFinished",
+          "pathName": "Collecting finished"
+        },
+        {
+          "events": [
+            {
+              "eventName": "FreespinBonusNotUsed",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "FreespinBonusNotUsed",
+          "pathName": "Not used"
+        },
+        {
+          "events": [
+            {
+              "eventName": "FreeSpinsBonusTermsNotComplied",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "FreeSpinsBonusTermsNotComplied",
+          "pathName": "Not complied"
+        },
+        {
+          "events": [
+            {
+              "eventName": "FreespinBonusRejectConfirmed",
+              "eventType": "Completion"
+            }
+          ],
+          "pathId": "FreespinBonusRejectConfirmed",
+          "pathName": "Canceled"
+        }
+      ],
+      "activityType": "mechanic",
+      "activityDisplayName": "Casino FreeSpin",
+      "withoutSourceHandle": false
+    },
+    "type": "action",
+    "style": {
+      "cursor": "pointer"
+    },
+    "width": 267,
+    "extent": "parent",
+    "height": 64,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+      "x": 696.5,
+      "y": 736
+    },
+    "selected": false,
+    "draggable": false,
+    "parentNode": "70dab14f-c81e-43a4-81cd-750624e42194",
+    "connectable": false,
+    "positionAbsolute": {
+      "x": -3725.25,
+      "y": 1199
+    }
+  },
+  "has_config": true,
+  "has_node": true
+}

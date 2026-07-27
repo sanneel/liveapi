@@ -1,0 +1,1445 @@
+{
+  "configs": {
+    "ams_decision_split": {
+      "count": 9,
+      "templates": [
+        "casino/gow_comms.json",
+        "colocolo/two_hours.json",
+        "udch/two_hours.json"
+      ],
+      "emits_events": [
+        "DecisionSplitPassedPath01 (Completion)",
+        "DecisionSplitPassedPath02 (Completion)",
+        "DecisionSplitPassedPath03 (Completion)",
+        "DecisionSplitPassedPath04 (Completion)",
+        "DecisionSplitPassedPath05 (Completion)",
+        "DecisionSplitPassedPath06 (Completion)",
+        "DecisionSplitPassedPath07 (Completion)",
+        "DecisionSplitPassedPath08 (Completion)",
+        "DecisionSplitPassedPath09 (Completion)",
+        "DecisionSplitPassedPath10 (Completion)",
+        "DecisionSplitPassedPath11 (Completion)",
+        "DecisionSplitPassedPath12 (Completion)",
+        "DecisionSplitPassedPath13 (Completion)",
+        "DecisionSplitPassedPath14 (Completion)",
+        "DecisionSplitPassedPath15 (Completion)",
+        "DecisionSplitPassedPath16 (Completion)",
+        "DecisionSplitPassedPath17 (Completion)",
+        "DecisionSplitPassedPath18 (Completion)",
+        "DecisionSplitPassedPath19 (Completion)",
+        "DecisionSplitPassedPath20 (Completion)",
+        "DecisionSplitPassedRemainderPath (Completion)"
+      ]
+    },
+    "campaign_connector": {
+      "count": 2,
+      "templates": [
+        "colocolo/two_hours.json",
+        "udch/two_hours.json"
+      ],
+      "emits_events": [
+        "PlayerAddedToCampaign (Completion)",
+        "PlayerNotAddedToCampaign (Completion)"
+      ]
+    },
+    "casino_bonus_v2": {
+      "count": 4,
+      "templates": [
+        "casino/gow.json"
+      ],
+      "emits_events": [
+        "WageringBonusAwardAborted (Completion)",
+        "WageringBonusAwardConfirmed (Boundary)",
+        "WageringBonusAwardFailed (Boundary)",
+        "WageringBonusAwarded (Boundary)",
+        "WageringBonusCancelConfirmed (Completion)",
+        "WageringBonusCancelFailed (Boundary)",
+        "WageringBonusCancelled (Boundary)",
+        "WageringBonusCancelledByWithdrawalConfirmed (Completion)",
+        "WageringBonusExpirationFailed (Boundary)",
+        "WageringBonusExpired (Completion)",
+        "WageringBonusFinishFailed (Boundary)",
+        "WageringBonusFinished (Completion)",
+        "WageringBonusForfeited (Completion)",
+        "WageringBonusLoseFailed (Boundary)",
+        "WageringBonusLost (Completion)",
+        "WageringBonusRejectConfirmed (Completion)",
+        "WageringBonusRejectFailed (Boundary)",
+        "WageringBonusRejected (Boundary)",
+        "WageringBonusStarted (Boundary)"
+      ]
+    },
+    "deposit": {
+      "count": 12,
+      "templates": [
+        "casino/gow.json",
+        "colocolo/followup.json",
+        "colocolo/two_hours.json",
+        "udch/followup.json",
+        "udch/two_hours.json"
+      ],
+      "emits_events": [
+        "DepositConditionAccepted (Boundary)",
+        "DepositConditionCanceled (Completion)",
+        "DepositConditionSatisfied (Completion)",
+        "DepositConditionUnsatisfied (Completion)"
+      ]
+    },
+    "dextra_email": {
+      "count": 1,
+      "templates": [
+        "casino/gow_comms.json"
+      ],
+      "emits_events": [
+        "FailedEmailSend (Completion)",
+        "SuccessEmailSend (Completion)"
+      ]
+    },
+    "dextra_sms": {
+      "count": 1,
+      "templates": [
+        "casino/gow_comms.json"
+      ],
+      "emits_events": [
+        "FailedSmsSend (Completion)",
+        "SuccessSmsSend (Completion)"
+      ]
+    },
+    "dwh_source": {
+      "count": 3,
+      "templates": [
+        "casino/gow_comms.json",
+        "casino/nc_discount.json",
+        "casino/nc_discount_pmcl.json"
+      ],
+      "emits_events": [
+        "PlayerAdded (Activation)"
+      ]
+    },
+    "email_engagement_split": {
+      "count": 1,
+      "templates": [
+        "casino/gow_comms.json"
+      ],
+      "emits_events": [
+        "Path1 (Completion)",
+        "Path2 (Completion)",
+        "Path3 (Completion)",
+        "Path4 (Completion)",
+        "Path5 (Completion)",
+        "Path6 (Completion)"
+      ]
+    },
+    "end_of_journey": {
+      "count": 275,
+      "templates": [
+        "casino/gow.json",
+        "casino/gow_comms.json",
+        "casino/nc_discount.json",
+        "casino/nc_discount_pmcl.json",
+        "colocolo/followup.json",
+        "colocolo/two_hours.json",
+        "udch/aft.json",
+        "udch/bfr.json",
+        "udch/followup.json",
+        "udch/two_hours.json"
+      ],
+      "emits_events": []
+    },
+    "end_of_path": {
+      "count": 126,
+      "templates": [
+        "casino/gow.json",
+        "casino/gow_comms.json",
+        "colocolo/followup.json",
+        "colocolo/two_hours.json",
+        "udch/followup.json",
+        "udch/two_hours.json"
+      ],
+      "emits_events": []
+    },
+    "event_detector": {
+      "count": 3,
+      "templates": [
+        "casino/gow.json",
+        "casino/gow_comms.json"
+      ],
+      "emits_events": [
+        "DetectorFailed (Completion)",
+        "DetectorStarted (Boundary)",
+        "DetectorSuccess (Completion)",
+        "EventNotReceived (Boundary)",
+        "EventReceived (Boundary)"
+      ]
+    },
+    "external_system_source": {
+      "count": 3,
+      "templates": [
+        "casino/gow.json",
+        "colocolo/followup.json",
+        "udch/followup.json"
+      ],
+      "emits_events": [
+        "PlayerAdded (Activation)"
+      ]
+    },
+    "freebet": {
+      "count": 16,
+      "templates": [
+        "colocolo/followup.json",
+        "colocolo/two_hours.json",
+        "udch/followup.json",
+        "udch/two_hours.json"
+      ],
+      "emits_events": [
+        "FreebetIssued (Boundary)",
+        "FreebetNotIssued (Completion)",
+        "PlayerFreebetCanceled (Completion)",
+        "PlayerFreebetExpired (Completion)",
+        "PlayerFreebetUsed (Completion)"
+      ]
+    },
+    "freespin_bonus": {
+      "count": 4,
+      "templates": [
+        "casino/gow.json"
+      ],
+      "emits_events": [
+        "FreeSpinsBonusTermsNotComplied (Completion)",
+        "FreespinBonusAwardAborted (Completion)",
+        "FreespinBonusAwardConfirmed (Boundary)",
+        "FreespinBonusAwardFailed (Boundary)",
+        "FreespinBonusAwarded (Boundary)",
+        "FreespinBonusCancelConfirmed (Completion)",
+        "FreespinBonusCancelFailed (Boundary)",
+        "FreespinBonusCancelled (Boundary)",
+        "FreespinBonusCancelledByWithdrawalConfirmed (Completion)",
+        "FreespinBonusCollectingFinished (Completion)",
+        "FreespinBonusCollectingStarted (Boundary)",
+        "FreespinBonusNotUsed (Completion)",
+        "FreespinBonusRejectConfirmed (Completion)",
+        "FreespinBonusRejectFailed (Boundary)",
+        "FreespinBonusRejected (Boundary)",
+        "FreespinBonusStatusReverted (Boundary)"
+      ]
+    },
+    "multipurpose_promotion": {
+      "count": 3,
+      "templates": [
+        "casino/gow.json",
+        "colocolo/followup.json",
+        "udch/followup.json"
+      ],
+      "emits_events": [
+        "PromotionAccepted (Completion)",
+        "PromotionExpired (Completion)",
+        "PromotionOffered (Boundary)",
+        "PromotionUpcoming (Boundary)"
+      ]
+    },
+    "notification_center": {
+      "count": 18,
+      "templates": [
+        "casino/gow_comms.json",
+        "casino/nc_discount.json",
+        "casino/nc_discount_pmcl.json",
+        "colocolo/followup.json",
+        "colocolo/two_hours.json",
+        "udch/aft.json",
+        "udch/bfr.json",
+        "udch/followup.json",
+        "udch/two_hours.json"
+      ],
+      "emits_events": [
+        "NotificationNotSent (Completion)",
+        "NotificationSent (Completion)"
+      ]
+    },
+    "notification_center_engagement_split": {
+      "count": 2,
+      "templates": [
+        "casino/gow_comms.json"
+      ],
+      "emits_events": [
+        "NCEngagementSplitPassedPath01 (Completion)",
+        "NCEngagementSplitPassedPath02 (Completion)",
+        "NCEngagementSplitPassedPath03 (Completion)",
+        "NCEngagementSplitPassedPath04 (Completion)",
+        "NCEngagementSplitPassedPath05 (Completion)"
+      ]
+    },
+    "promotion": {
+      "count": 22,
+      "templates": [
+        "casino/gow.json",
+        "colocolo/followup.json",
+        "colocolo/two_hours.json",
+        "udch/followup.json",
+        "udch/two_hours.json"
+      ],
+      "emits_events": [
+        "PromotionAccepted (Completion)",
+        "PromotionExpired (Completion)",
+        "PromotionOffered (Boundary)",
+        "PromotionUpcoming (Boundary)"
+      ]
+    },
+    "random_split": {
+      "count": 2,
+      "templates": [
+        "colocolo/two_hours.json",
+        "udch/two_hours.json"
+      ],
+      "emits_events": [
+        "RandomSplitPassedPath1 (Completion)",
+        "RandomSplitPassedPath10 (Completion)",
+        "RandomSplitPassedPath2 (Completion)",
+        "RandomSplitPassedPath3 (Completion)",
+        "RandomSplitPassedPath4 (Completion)",
+        "RandomSplitPassedPath5 (Completion)",
+        "RandomSplitPassedPath6 (Completion)",
+        "RandomSplitPassedPath7 (Completion)",
+        "RandomSplitPassedPath8 (Completion)",
+        "RandomSplitPassedPath9 (Completion)"
+      ]
+    },
+    "registration": {
+      "count": 4,
+      "templates": [
+        "colocolo/two_hours.json",
+        "udch/aft.json",
+        "udch/bfr.json",
+        "udch/two_hours.json"
+      ],
+      "emits_events": [
+        "PlayerAdded (Activation)"
+      ]
+    },
+    "sport_bonus": {
+      "count": 2,
+      "templates": [
+        "colocolo/two_hours.json",
+        "udch/two_hours.json"
+      ],
+      "emits_events": [
+        "Canceled (Completion)",
+        "Completed (Completion)",
+        "Expired (Completion)",
+        "Issued (Boundary)",
+        "Lost (Completion)",
+        "NotIssued (Completion)",
+        "Terminated (Completion)",
+        "WageringStarted (Boundary)"
+      ]
+    },
+    "wait_interval": {
+      "count": 7,
+      "templates": [
+        "casino/gow_comms.json",
+        "colocolo/followup.json",
+        "udch/followup.json"
+      ],
+      "emits_events": [
+        "WaitTimeCompleted (Completion)",
+        "WaitTimeStarted (Boundary)"
+      ]
+    }
+  },
+  "flows": [
+    {
+      "template": "casino/gow.json",
+      "journeyName": "Copy of Copy of Copy of JBCL | CS | Game of the week | 50 FS | 24.06",
+      "entry": "external_system_source",
+      "activity_count": 95,
+      "flow": [
+        "external_system_source",
+        "multipurpose_promotion"
+      ],
+      "types": [
+        "casino_bonus_v2",
+        "deposit",
+        "end_of_journey",
+        "end_of_path",
+        "event_detector",
+        "external_system_source",
+        "freespin_bonus",
+        "multipurpose_promotion",
+        "promotion"
+      ]
+    },
+    {
+      "template": "casino/gow_comms.json",
+      "journeyName": "JBCL | CS&SP | RB - Game of the week | 50 FS |24.06.26 | dep <50 comm",
+      "entry": "dwh_source",
+      "activity_count": 39,
+      "flow": [
+        "dwh_source"
+      ],
+      "types": [
+        "ams_decision_split",
+        "dextra_email",
+        "dextra_sms",
+        "dwh_source",
+        "email_engagement_split",
+        "end_of_journey",
+        "end_of_path",
+        "event_detector",
+        "notification_center",
+        "notification_center_engagement_split",
+        "wait_interval"
+      ]
+    },
+    {
+      "template": "casino/nc_discount.json",
+      "journeyName": "Copy of JBCL | CS | NC For Discount 29.06",
+      "entry": "dwh_source",
+      "activity_count": 4,
+      "flow": [
+        "dwh_source",
+        "notification_center",
+        "end_of_journey",
+        "end_of_journey"
+      ],
+      "types": [
+        "dwh_source",
+        "end_of_journey",
+        "notification_center"
+      ]
+    },
+    {
+      "template": "casino/nc_discount_pmcl.json",
+      "journeyName": "PMCL | CS | NC For Discount 18.07",
+      "entry": "dwh_source",
+      "activity_count": 4,
+      "flow": [
+        "dwh_source",
+        "notification_center",
+        "end_of_journey",
+        "end_of_journey"
+      ],
+      "types": [
+        "dwh_source",
+        "end_of_journey",
+        "notification_center"
+      ]
+    },
+    {
+      "template": "colocolo/followup.json",
+      "journeyName": "|SP| CC vs Huachipato | PromoCode COLOCOLO2026| FollowUp 07.06",
+      "entry": "external_system_source",
+      "activity_count": 48,
+      "flow": [
+        "external_system_source",
+        "multipurpose_promotion",
+        "end_of_journey",
+        "wait_interval",
+        "notification_center",
+        "wait_interval",
+        "notification_center",
+        "end_of_path",
+        "end_of_path"
+      ],
+      "types": [
+        "deposit",
+        "end_of_journey",
+        "end_of_path",
+        "external_system_source",
+        "freebet",
+        "multipurpose_promotion",
+        "notification_center",
+        "promotion",
+        "wait_interval"
+      ]
+    },
+    {
+      "template": "colocolo/two_hours.json",
+      "journeyName": "Copy of JBCL | SP | CC vs Huachipato | PromoCode COLOCOLO2026 | 2H | 07.06",
+      "entry": "registration",
+      "activity_count": 137,
+      "flow": [
+        "registration",
+        "ams_decision_split",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "ams_decision_split",
+        "ams_decision_split",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "promotion",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "ams_decision_split",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "promotion",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "notification_center",
+        "deposit",
+        "end_of_journey",
+        "random_split",
+        "promotion",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "sport_bonus",
+        "end_of_journey",
+        "end_of_path",
+        "end_of_path",
+        "freebet",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "promotion",
+        "promotion",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "promotion",
+        "end_of_journey",
+        "freebet",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "campaign_connector",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "freebet",
+        "end_of_journey",
+        "end_of_journey",
+        "freebet",
+        "end_of_journey",
+        "freebet",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey"
+      ],
+      "types": [
+        "ams_decision_split",
+        "campaign_connector",
+        "deposit",
+        "end_of_journey",
+        "end_of_path",
+        "freebet",
+        "notification_center",
+        "promotion",
+        "random_split",
+        "registration",
+        "sport_bonus"
+      ]
+    },
+    {
+      "template": "udch/aft.json",
+      "journeyName": "Copy of JBCL | SP | UDCH vs O'higgin | Promocode - VAMOSBULLA | AFT | 10.06",
+      "entry": "registration",
+      "activity_count": 4,
+      "flow": [
+        "registration",
+        "notification_center",
+        "end_of_journey",
+        "end_of_journey"
+      ],
+      "types": [
+        "end_of_journey",
+        "notification_center",
+        "registration"
+      ]
+    },
+    {
+      "template": "udch/bfr.json",
+      "journeyName": "Copy of JBCL | SP | UDCH vs O'higgins | Promocode -VAMOSBULLA | BFR | 10.06",
+      "entry": "registration",
+      "activity_count": 4,
+      "flow": [
+        "registration",
+        "notification_center",
+        "end_of_journey",
+        "end_of_journey"
+      ],
+      "types": [
+        "end_of_journey",
+        "notification_center",
+        "registration"
+      ]
+    },
+    {
+      "template": "udch/followup.json",
+      "journeyName": "Copy of JBCL|SP|UDCH vs O'higgins|PrmCode-VAMOSBULLA|FollowUp | 10.06",
+      "entry": "external_system_source",
+      "activity_count": 48,
+      "flow": [
+        "external_system_source",
+        "multipurpose_promotion",
+        "end_of_journey",
+        "wait_interval",
+        "notification_center",
+        "wait_interval",
+        "notification_center",
+        "end_of_path",
+        "end_of_path"
+      ],
+      "types": [
+        "deposit",
+        "end_of_journey",
+        "end_of_path",
+        "external_system_source",
+        "freebet",
+        "multipurpose_promotion",
+        "notification_center",
+        "promotion",
+        "wait_interval"
+      ]
+    },
+    {
+      "template": "udch/two_hours.json",
+      "journeyName": "Copy of JBCL | SP | UDCH vs O'higgins | Promocode -VAMOSBULLA | 2H | 10.06",
+      "entry": "registration",
+      "activity_count": 137,
+      "flow": [
+        "registration",
+        "ams_decision_split",
+        "ams_decision_split",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "ams_decision_split",
+        "promotion",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "ams_decision_split",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "promotion",
+        "end_of_journey",
+        "sport_bonus",
+        "random_split",
+        "promotion",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "notification_center",
+        "deposit",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "promotion",
+        "end_of_journey",
+        "promotion",
+        "promotion",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "freebet",
+        "end_of_path",
+        "end_of_path",
+        "end_of_journey",
+        "end_of_journey",
+        "freebet",
+        "end_of_journey",
+        "freebet",
+        "end_of_journey",
+        "freebet",
+        "end_of_journey",
+        "freebet",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "campaign_connector",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey",
+        "end_of_journey"
+      ],
+      "types": [
+        "ams_decision_split",
+        "campaign_connector",
+        "deposit",
+        "end_of_journey",
+        "end_of_path",
+        "freebet",
+        "notification_center",
+        "promotion",
+        "random_split",
+        "registration",
+        "sport_bonus"
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath01",
+      "to": "ams_decision_split"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath01",
+      "to": "dextra_email"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath01",
+      "to": "promotion"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath01",
+      "to": "random_split"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath02",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath02",
+      "to": "promotion"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath03",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath04",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath05",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath06",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath07",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath08",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath09",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath10",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath11",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath12",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath13",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath14",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath15",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath16",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath17",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath18",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath19",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedPath20",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedRemainderPath",
+      "to": "ams_decision_split"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedRemainderPath",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedRemainderPath",
+      "to": "promotion"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedRemainderPath",
+      "to": "random_split"
+    },
+    {
+      "from": "ams_decision_split",
+      "on_event": "DecisionSplitPassedRemainderPath",
+      "to": "wait_interval"
+    },
+    {
+      "from": "campaign_connector",
+      "on_event": "PlayerAddedToCampaign",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "campaign_connector",
+      "on_event": "PlayerNotAddedToCampaign",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "casino_bonus_v2",
+      "on_event": "WageringBonusAwardAborted",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "casino_bonus_v2",
+      "on_event": "WageringBonusAwardAborted",
+      "to": "end_of_path"
+    },
+    {
+      "from": "casino_bonus_v2",
+      "on_event": "WageringBonusCancelConfirmed",
+      "to": "end_of_path"
+    },
+    {
+      "from": "casino_bonus_v2",
+      "on_event": "WageringBonusCancelledByWithdrawalConfirmed",
+      "to": "end_of_path"
+    },
+    {
+      "from": "casino_bonus_v2",
+      "on_event": "WageringBonusExpired",
+      "to": "end_of_path"
+    },
+    {
+      "from": "casino_bonus_v2",
+      "on_event": "WageringBonusFinished",
+      "to": "end_of_path"
+    },
+    {
+      "from": "casino_bonus_v2",
+      "on_event": "WageringBonusForfeited",
+      "to": "end_of_path"
+    },
+    {
+      "from": "casino_bonus_v2",
+      "on_event": "WageringBonusLost",
+      "to": "end_of_path"
+    },
+    {
+      "from": "casino_bonus_v2",
+      "on_event": "WageringBonusRejectConfirmed",
+      "to": "end_of_path"
+    },
+    {
+      "from": "deposit",
+      "on_event": "DepositConditionCanceled",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "deposit",
+      "on_event": "DepositConditionCanceled",
+      "to": "end_of_path"
+    },
+    {
+      "from": "deposit",
+      "on_event": "DepositConditionSatisfied",
+      "to": "freebet"
+    },
+    {
+      "from": "deposit",
+      "on_event": "DepositConditionSatisfied",
+      "to": "freespin_bonus"
+    },
+    {
+      "from": "deposit",
+      "on_event": "DepositConditionUnsatisfied",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "deposit",
+      "on_event": "DepositConditionUnsatisfied",
+      "to": "end_of_path"
+    },
+    {
+      "from": "dextra_email",
+      "on_event": "FailedEmailSend",
+      "to": "dextra_sms"
+    },
+    {
+      "from": "dextra_email",
+      "on_event": "SuccessEmailSend",
+      "to": "wait_interval"
+    },
+    {
+      "from": "dextra_sms",
+      "on_event": "FailedSmsSend",
+      "to": "end_of_path"
+    },
+    {
+      "from": "dextra_sms",
+      "on_event": "SuccessSmsSend",
+      "to": "end_of_path"
+    },
+    {
+      "from": "dwh_source",
+      "on_event": "PlayerAdded",
+      "to": "notification_center"
+    },
+    {
+      "from": "email_engagement_split",
+      "on_event": "Path1",
+      "to": "end_of_path"
+    },
+    {
+      "from": "email_engagement_split",
+      "on_event": "Path2",
+      "to": "dextra_sms"
+    },
+    {
+      "from": "email_engagement_split",
+      "on_event": "Path3",
+      "to": "dextra_sms"
+    },
+    {
+      "from": "email_engagement_split",
+      "on_event": "Path4",
+      "to": "dextra_sms"
+    },
+    {
+      "from": "email_engagement_split",
+      "on_event": "Path5",
+      "to": "dextra_sms"
+    },
+    {
+      "from": "email_engagement_split",
+      "on_event": "Path6",
+      "to": "dextra_sms"
+    },
+    {
+      "from": "event_detector",
+      "on_event": "DetectorFailed",
+      "to": "end_of_path"
+    },
+    {
+      "from": "event_detector",
+      "on_event": "DetectorSuccess",
+      "to": "end_of_path"
+    },
+    {
+      "from": "external_system_source",
+      "on_event": "PlayerAdded",
+      "to": "multipurpose_promotion"
+    },
+    {
+      "from": "freebet",
+      "on_event": "FreebetIssued",
+      "to": "notification_center"
+    },
+    {
+      "from": "freebet",
+      "on_event": "FreebetNotIssued",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "freebet",
+      "on_event": "FreebetNotIssued",
+      "to": "end_of_path"
+    },
+    {
+      "from": "freebet",
+      "on_event": "PlayerFreebetCanceled",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "freebet",
+      "on_event": "PlayerFreebetCanceled",
+      "to": "end_of_path"
+    },
+    {
+      "from": "freebet",
+      "on_event": "PlayerFreebetExpired",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "freebet",
+      "on_event": "PlayerFreebetExpired",
+      "to": "end_of_path"
+    },
+    {
+      "from": "freebet",
+      "on_event": "PlayerFreebetUsed",
+      "to": "campaign_connector"
+    },
+    {
+      "from": "freebet",
+      "on_event": "PlayerFreebetUsed",
+      "to": "end_of_path"
+    },
+    {
+      "from": "freespin_bonus",
+      "on_event": "FreeSpinsBonusTermsNotComplied",
+      "to": "end_of_path"
+    },
+    {
+      "from": "freespin_bonus",
+      "on_event": "FreespinBonusAwardAborted",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "freespin_bonus",
+      "on_event": "FreespinBonusCancelConfirmed",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "freespin_bonus",
+      "on_event": "FreespinBonusCancelledByWithdrawalConfirmed",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "freespin_bonus",
+      "on_event": "FreespinBonusCollectingFinished",
+      "to": "casino_bonus_v2"
+    },
+    {
+      "from": "freespin_bonus",
+      "on_event": "FreespinBonusNotUsed",
+      "to": "end_of_path"
+    },
+    {
+      "from": "freespin_bonus",
+      "on_event": "FreespinBonusRejectConfirmed",
+      "to": "end_of_path"
+    },
+    {
+      "from": "multipurpose_promotion",
+      "on_event": "PromotionExpired",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "multipurpose_promotion",
+      "on_event": "PromotionOffered",
+      "to": "wait_interval"
+    },
+    {
+      "from": "notification_center",
+      "on_event": "NotificationNotSent",
+      "to": "dextra_email"
+    },
+    {
+      "from": "notification_center",
+      "on_event": "NotificationNotSent",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "notification_center",
+      "on_event": "NotificationNotSent",
+      "to": "end_of_path"
+    },
+    {
+      "from": "notification_center",
+      "on_event": "NotificationNotSent",
+      "to": "notification_center"
+    },
+    {
+      "from": "notification_center",
+      "on_event": "NotificationNotSent",
+      "to": "wait_interval"
+    },
+    {
+      "from": "notification_center",
+      "on_event": "NotificationSent",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "notification_center",
+      "on_event": "NotificationSent",
+      "to": "end_of_path"
+    },
+    {
+      "from": "notification_center",
+      "on_event": "NotificationSent",
+      "to": "wait_interval"
+    },
+    {
+      "from": "notification_center_engagement_split",
+      "on_event": "NCEngagementSplitPassedPath01",
+      "to": "end_of_path"
+    },
+    {
+      "from": "notification_center_engagement_split",
+      "on_event": "NCEngagementSplitPassedPath02",
+      "to": "ams_decision_split"
+    },
+    {
+      "from": "notification_center_engagement_split",
+      "on_event": "NCEngagementSplitPassedPath02",
+      "to": "notification_center"
+    },
+    {
+      "from": "notification_center_engagement_split",
+      "on_event": "NCEngagementSplitPassedPath03",
+      "to": "ams_decision_split"
+    },
+    {
+      "from": "notification_center_engagement_split",
+      "on_event": "NCEngagementSplitPassedPath03",
+      "to": "notification_center"
+    },
+    {
+      "from": "notification_center_engagement_split",
+      "on_event": "NCEngagementSplitPassedPath04",
+      "to": "ams_decision_split"
+    },
+    {
+      "from": "notification_center_engagement_split",
+      "on_event": "NCEngagementSplitPassedPath04",
+      "to": "notification_center"
+    },
+    {
+      "from": "notification_center_engagement_split",
+      "on_event": "NCEngagementSplitPassedPath05",
+      "to": "ams_decision_split"
+    },
+    {
+      "from": "notification_center_engagement_split",
+      "on_event": "NCEngagementSplitPassedPath05",
+      "to": "notification_center"
+    },
+    {
+      "from": "promotion",
+      "on_event": "PromotionAccepted",
+      "to": "deposit"
+    },
+    {
+      "from": "promotion",
+      "on_event": "PromotionAccepted",
+      "to": "freebet"
+    },
+    {
+      "from": "promotion",
+      "on_event": "PromotionAccepted",
+      "to": "sport_bonus"
+    },
+    {
+      "from": "promotion",
+      "on_event": "PromotionExpired",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "promotion",
+      "on_event": "PromotionExpired",
+      "to": "end_of_path"
+    },
+    {
+      "from": "promotion",
+      "on_event": "PromotionOffered",
+      "to": "notification_center"
+    },
+    {
+      "from": "random_split",
+      "on_event": "RandomSplitPassedPath1",
+      "to": "promotion"
+    },
+    {
+      "from": "random_split",
+      "on_event": "RandomSplitPassedPath10",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "random_split",
+      "on_event": "RandomSplitPassedPath2",
+      "to": "promotion"
+    },
+    {
+      "from": "random_split",
+      "on_event": "RandomSplitPassedPath3",
+      "to": "promotion"
+    },
+    {
+      "from": "random_split",
+      "on_event": "RandomSplitPassedPath4",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "random_split",
+      "on_event": "RandomSplitPassedPath5",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "random_split",
+      "on_event": "RandomSplitPassedPath6",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "random_split",
+      "on_event": "RandomSplitPassedPath7",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "random_split",
+      "on_event": "RandomSplitPassedPath8",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "random_split",
+      "on_event": "RandomSplitPassedPath9",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "registration",
+      "on_event": "PlayerAdded",
+      "to": "ams_decision_split"
+    },
+    {
+      "from": "registration",
+      "on_event": "PlayerAdded",
+      "to": "notification_center"
+    },
+    {
+      "from": "sport_bonus",
+      "on_event": "Canceled",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "sport_bonus",
+      "on_event": "Completed",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "sport_bonus",
+      "on_event": "Expired",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "sport_bonus",
+      "on_event": "Lost",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "sport_bonus",
+      "on_event": "NotIssued",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "sport_bonus",
+      "on_event": "Terminated",
+      "to": "end_of_journey"
+    },
+    {
+      "from": "wait_interval",
+      "on_event": "WaitTimeCompleted",
+      "to": "email_engagement_split"
+    },
+    {
+      "from": "wait_interval",
+      "on_event": "WaitTimeCompleted",
+      "to": "notification_center"
+    },
+    {
+      "from": "wait_interval",
+      "on_event": "WaitTimeCompleted",
+      "to": "notification_center_engagement_split"
+    }
+  ]
+}

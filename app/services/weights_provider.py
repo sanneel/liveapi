@@ -115,13 +115,13 @@ _FIGHT_SPECS: Tuple[_SeedSpec, ...] = (
 # sport -> (static module name, seed specs). Every sport here is seedable for
 # display/editing on the admin page.
 _SEED_SOURCES: Dict[str, Tuple[str, Tuple[_SeedSpec, ...]]] = {
-    "football": ("weights_chile_first", _PAIR_SPECS),
-    "basketball": ("weights_basketball_chile_first", _PAIR_SPECS),
-    "tennis": ("weights_tennis_chile_first", _PAIR_SPECS),
-    "cybersport": ("weights_cybersport_chile", _CYBER_SPECS),
-    "ufc": ("weights_fights_chile_first", _FIGHT_SPECS),
-    "mma": ("weights_fights_chile_first", _FIGHT_SPECS),
-    "boxing": ("weights_fights_chile_first", _FIGHT_SPECS),
+    "football": ("scoring.weights_chile_first", _PAIR_SPECS),
+    "basketball": ("scoring.weights_basketball_chile_first", _PAIR_SPECS),
+    "tennis": ("scoring.weights_tennis_chile_first", _PAIR_SPECS),
+    "cybersport": ("scoring.weights_cybersport_chile", _CYBER_SPECS),
+    "ufc": ("scoring.weights_fights_chile_first", _FIGHT_SPECS),
+    "mma": ("scoring.weights_fights_chile_first", _FIGHT_SPECS),
+    "boxing": ("scoring.weights_fights_chile_first", _FIGHT_SPECS),
 }
 
 # Sports whose live scorer actually reads its weights back from this provider,

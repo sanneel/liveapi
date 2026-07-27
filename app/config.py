@@ -33,6 +33,34 @@ class Settings(BaseSettings):
     # process environment; used by app/services/figma_runner.py.
     figma_token: str = ""
 
+    # ── Journey Planner ──────────────────────────────────────────────
+    # Which LLM backs the /admin/planner chat: "groq" (free tier, cheapest) or
+    # "gemini". Auto-resolved at request time: if planner_provider is unset it
+    # prefers Groq when GROQ_API_KEY is present, else Gemini.
+    planner_provider: str = ""          # "groq" | "gemini" | "" (auto)
+
+    # Groq — free tier at console.groq.com; OpenAI-compatible chat API.
+    # 70b-versatile has the highest free-tier token budget (12K TPM; 8b-instant
+    # is only 6K). Even so the FULL prompt won't fit free — the backoffice sends
+    # Groq a LEAN prompt (no big KB doc) so it stays under budget. For the full
+    # prompt on Groq, upgrade to Dev tier (removes the TPM cap).
+    groq_api_key: str = ""
+    groq_model: str = "llama-3.3-70b-versatile"
+
+    # Max output tokens per reply. Counts toward Groq's per-minute token limit,
+    # so keep it modest; MODE 1/3 replies are short, MODE 2 asks per-object.
+    planner_max_tokens: int = 4096
+
+    # Gemini (fallback). Server-side key, never shipped to the browser.
+    gemini_api_key: str = ""
+    # flash-lite is the cheapest 2.5 tier — materially lower input/output price
+    # than 2.0/2.5-flash, enough for the planner's structured MODE 1/2/3 output.
+    gemini_model: str = "gemini-2.5-flash-lite"
+    # 2.5 models run "thinking" by default — those tokens bill at the output
+    # rate and dominate cost. 0 disables it (planner needs no chain-of-thought);
+    # raise it only if answer quality needs it.
+    gemini_thinking_budget: int = 0
+
     # ── Database ──────────────────────────────────────────────────────
     database_url: str = f"sqlite:///{BASE_DIR / 'data' / 'jugabet.db'}"
 

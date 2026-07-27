@@ -1,0 +1,424 @@
+{
+  "activityName": "promotion",
+  "source_template": "colocolo/followup.json",
+  "journey_size": 48,
+  "activity": {
+    "activityId": "a27459bd-fa42-4d7f-91ac-170bdd51bc52",
+    "activityName": "promotion",
+    "events": [
+      {
+        "eventName": "PromotionExpired",
+        "eventType": "Completion",
+        "nextActivityId": "bb80a042-889e-419f-b10c-5fc126790a71",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "PromotionAccepted",
+        "eventType": "Completion",
+        "nextActivityId": "d0fb1f63-5e32-47b3-a917-f1ebc9d0c20f",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "PromotionOffered",
+        "eventType": "Boundary",
+        "eventDisplayName": "Offered",
+        "nextActivityId": null
+      },
+      {
+        "eventName": "PromotionUpcoming",
+        "eventType": "Boundary",
+        "eventDisplayName": "Upcoming",
+        "nextActivityId": null
+      }
+    ],
+    "initializationData": {
+      "promotionId": "a63c694c-2aa7-4585-8157-903853bd0deb",
+      "promotionLinkId": "69bb9c45-f068-413c-a296-b94c7d701ad8",
+      "promotionStatus": "Accepted",
+      "channelsCondition": {
+        "values": [],
+        "isEnabled": false
+      },
+      "promotionDisplayId": "702877",
+      "displayData": [
+        "Accepted by default"
+      ],
+      "placements": [
+        {
+          "placementType": "PromoLobby",
+          "dataSources": [
+            {
+              "journeyActivityId": "55a5f0d1-1ea9-424f-a6dd-66031674ce4b",
+              "keys": [
+                "FreebetStatus",
+                "FreebetAmount",
+                "CurrencyCode",
+                "FreebetExpireAt",
+                "FreebetExpiredAt",
+                "FreebetUsedAt",
+                "FreebetTerminatedAt"
+              ],
+              "type": "Sync"
+            },
+            {
+              "journeyActivityId": "55a5f0d1-1ea9-424f-a6dd-66031674ce4b",
+              "keys": [
+                "FreebetIssuanceErrorType",
+                "FreebetIssuanceErrorMessage"
+              ],
+              "type": "Async"
+            },
+            {
+              "journeyActivityId": "d0fb1f63-5e32-47b3-a917-f1ebc9d0c20f",
+              "keys": [
+                "DepositConditionStatus",
+                "DepositConditionExpireAt",
+                "DepositAmount",
+                "CurrencyCode"
+              ]
+            }
+          ],
+          "data": {
+            "ContentId": "9fab1da8-1d5e-4a48-a441-ce81bbc2bdfa",
+            "FrontId": "137e06a1-1b3c-40bb-a6e9-7e971da97a79",
+            "moduleType": "FreeBet",
+            "freeBetMaxAmount": {
+              "CLP": 50000
+            },
+            "maxOdd": 5,
+            "expirationTimeout": 1,
+            "depositRate": 0.15,
+            "payGroups": [
+              {
+                "names": [],
+                "currencyCode": "CLP"
+              }
+            ],
+            "minDepositAmounts": [
+              {
+                "brand": "JBCL",
+                "amount": 5000,
+                "currencyCode": "CLP"
+              }
+            ],
+            "isActivityCurrencies": false
+          }
+        },
+        {
+          "placementType": "Cashier",
+          "dataSources": [
+            {
+              "journeyActivityId": "55a5f0d1-1ea9-424f-a6dd-66031674ce4b",
+              "keys": [
+                "FreebetStatus",
+                "FreebetAmount",
+                "CurrencyCode",
+                "FreebetExpireAt",
+                "FreebetExpiredAt",
+                "FreebetUsedAt",
+                "FreebetTerminatedAt"
+              ],
+              "type": "Sync"
+            },
+            {
+              "journeyActivityId": "55a5f0d1-1ea9-424f-a6dd-66031674ce4b",
+              "keys": [
+                "FreebetIssuanceErrorType",
+                "FreebetIssuanceErrorMessage"
+              ],
+              "type": "Async"
+            },
+            {
+              "journeyActivityId": "d0fb1f63-5e32-47b3-a917-f1ebc9d0c20f",
+              "keys": [
+                "DepositConditionStatus",
+                "DepositConditionExpireAt",
+                "DepositAmount",
+                "CurrencyCode"
+              ]
+            }
+          ],
+          "data": {
+            "ContentId": "9fab1da8-1d5e-4a48-a441-ce81bbc2bdfa",
+            "variables": [
+              {
+                "name": "{{MIN_DEPOSIT_AMOUNT}}",
+                "value": null
+              },
+              {
+                "name": "{{PLAYER_CURRENCY}}",
+                "value": null
+              }
+            ],
+            "moduleType": "FreeBet",
+            "freeBetMaxAmount": {
+              "CLP": 50000
+            },
+            "maxOdd": 5,
+            "expirationTimeout": 1,
+            "depositRate": 0.15,
+            "payGroups": [
+              {
+                "names": [],
+                "currencyCode": "CLP"
+              }
+            ],
+            "minDepositAmounts": [
+              {
+                "brand": "JBCL",
+                "amount": 5000,
+                "currencyCode": "CLP"
+              }
+            ],
+            "isActivityCurrencies": false
+          }
+        }
+      ],
+      "languages": [
+        "es",
+        "en"
+      ]
+    },
+    "activityDisplayName": "Active Promotion (15%)",
+    "dataDependencies": [],
+    "dependencies": [
+      {
+        "key": "CurrencyCode",
+        "journeyActivityId": "b3ec0d6e-f20d-4bda-ac83-0940db11a47d"
+      },
+      {
+        "key": "SelectedCurrencyCode",
+        "journeyActivityId": "b3ec0d6e-f20d-4bda-ac83-0940db11a47d",
+        "isOptional": true
+      },
+      {
+        "key": "PromotionLinkId",
+        "journeyActivityId": "b3ec0d6e-f20d-4bda-ac83-0940db11a47d",
+        "isOptional": true
+      }
+    ]
+  },
+  "config": {
+    "data": {
+      "promotionId": "a63c694c-2aa7-4585-8157-903853bd0deb",
+      "promotionLinkId": "69bb9c45-f068-413c-a296-b94c7d701ad8",
+      "promotionStatus": "Accepted",
+      "channelsCondition": {
+        "values": [],
+        "isEnabled": false
+      },
+      "promotionDisplayId": "676479"
+    },
+    "error": false,
+    "metadata": {
+      "frontId": "137e06a1-1b3c-40bb-a6e9-7e971da97a79",
+      "contentId": "9fab1da8-1d5e-4a48-a441-ce81bbc2bdfa"
+    },
+    "properties": {
+      "placements": [
+        {
+          "data": {
+            "maxOdd": 5,
+            "FrontId": "137e06a1-1b3c-40bb-a6e9-7e971da97a79",
+            "ContentId": "9fab1da8-1d5e-4a48-a441-ce81bbc2bdfa",
+            "payGroups": [
+              {
+                "names": [],
+                "currencyCode": "CLP"
+              }
+            ],
+            "moduleType": "FreeBet",
+            "depositRate": 0.15,
+            "freeBetMaxAmount": {
+              "CLP": 50000
+            },
+            "expirationTimeout": 1,
+            "minDepositAmounts": [
+              {
+                "brand": "JBCL",
+                "amount": 5000,
+                "currencyCode": "CLP"
+              }
+            ],
+            "isActivityCurrencies": false
+          },
+          "dataSources": [
+            {
+              "keys": [
+                "FreebetStatus",
+                "FreebetAmount",
+                "CurrencyCode",
+                "FreebetExpireAt",
+                "FreebetExpiredAt",
+                "FreebetUsedAt",
+                "FreebetTerminatedAt"
+              ],
+              "type": "Sync",
+              "journeyActivityId": "55a5f0d1-1ea9-424f-a6dd-66031674ce4b"
+            },
+            {
+              "keys": [
+                "FreebetIssuanceErrorType",
+                "FreebetIssuanceErrorMessage"
+              ],
+              "type": "Async",
+              "journeyActivityId": "55a5f0d1-1ea9-424f-a6dd-66031674ce4b"
+            },
+            {
+              "keys": [
+                "DepositConditionStatus",
+                "DepositConditionExpireAt",
+                "DepositAmount",
+                "CurrencyCode"
+              ],
+              "journeyActivityId": "d0fb1f63-5e32-47b3-a917-f1ebc9d0c20f"
+            }
+          ],
+          "placementType": "PromoLobby"
+        },
+        {
+          "data": {
+            "maxOdd": 5,
+            "ContentId": "9fab1da8-1d5e-4a48-a441-ce81bbc2bdfa",
+            "payGroups": [
+              {
+                "names": [],
+                "currencyCode": "CLP"
+              }
+            ],
+            "variables": [
+              {
+                "name": "{{MIN_DEPOSIT_AMOUNT}}",
+                "value": null
+              },
+              {
+                "name": "{{PLAYER_CURRENCY}}",
+                "value": null
+              }
+            ],
+            "moduleType": "FreeBet",
+            "depositRate": 0.15,
+            "freeBetMaxAmount": {
+              "CLP": 50000
+            },
+            "expirationTimeout": 1,
+            "minDepositAmounts": [
+              {
+                "brand": "JBCL",
+                "amount": 5000,
+                "currencyCode": "CLP"
+              }
+            ],
+            "isActivityCurrencies": false
+          },
+          "dataSources": [
+            {
+              "keys": [
+                "FreebetStatus",
+                "FreebetAmount",
+                "CurrencyCode",
+                "FreebetExpireAt",
+                "FreebetExpiredAt",
+                "FreebetUsedAt",
+                "FreebetTerminatedAt"
+              ],
+              "type": "Sync",
+              "journeyActivityId": "55a5f0d1-1ea9-424f-a6dd-66031674ce4b"
+            },
+            {
+              "keys": [
+                "FreebetIssuanceErrorType",
+                "FreebetIssuanceErrorMessage"
+              ],
+              "type": "Async",
+              "journeyActivityId": "55a5f0d1-1ea9-424f-a6dd-66031674ce4b"
+            },
+            {
+              "keys": [
+                "DepositConditionStatus",
+                "DepositConditionExpireAt",
+                "DepositAmount",
+                "CurrencyCode"
+              ],
+              "journeyActivityId": "d0fb1f63-5e32-47b3-a917-f1ebc9d0c20f"
+            }
+          ],
+          "placementType": "Cashier"
+        }
+      ],
+      "isBoundaryEventDisabled": true
+    },
+    "displayData": [
+      "Accepted by default"
+    ],
+    "displayName": "Active Promotion (15%)"
+  },
+  "node": {
+    "id": "a27459bd-fa42-4d7f-91ac-170bdd51bc52",
+    "data": {
+      "name": "promotion",
+      "ports": [
+        {
+          "id": "input-a27459bd-fa42-4d7f-91ac-170bdd51bc52"
+        },
+        {
+          "id": "PromotionOffered-a27459bd-fa42-4d7f-91ac-170bdd51bc52"
+        },
+        {
+          "id": "PromotionAccepted-a27459bd-fa42-4d7f-91ac-170bdd51bc52"
+        },
+        {
+          "id": "PromotionExpired-a27459bd-fa42-4d7f-91ac-170bdd51bc52"
+        }
+      ],
+      "events": [
+        {
+          "isHidden": false,
+          "eventName": "PromotionOffered",
+          "eventType": "Boundary",
+          "eventDisplayName": "Offered",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "PromotionAccepted",
+          "eventType": "Completion",
+          "eventDisplayName": "Accepted",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "PromotionExpired",
+          "eventType": "Completion",
+          "eventDisplayName": "Expired",
+          "canBeUsedInChoosableFlow": false
+        }
+      ],
+      "activityType": "promotion",
+      "activityDisplayName": "Promotion"
+    },
+    "type": "action",
+    "style": {
+      "cursor": "pointer"
+    },
+    "width": 267,
+    "extent": "parent",
+    "height": 64,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+      "x": 696.5,
+      "y": 208
+    },
+    "selected": false,
+    "draggable": false,
+    "parentNode": "6377f8ec-9f70-44b5-a0dc-a0eff39664fc",
+    "connectable": false,
+    "positionAbsolute": {
+      "x": -1128.75,
+      "y": 1000
+    }
+  },
+  "has_config": true,
+  "has_node": true
+}

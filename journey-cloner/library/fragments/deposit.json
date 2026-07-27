@@ -1,0 +1,206 @@
+{
+  "activityName": "deposit",
+  "source_template": "colocolo/followup.json",
+  "journey_size": 48,
+  "activity": {
+    "activityId": "9b597004-59a1-4c09-b762-df6d44d46b37",
+    "activityName": "deposit",
+    "events": [
+      {
+        "eventName": "DepositConditionUnsatisfied",
+        "eventType": "Completion",
+        "nextActivityId": "3524626d-b81a-45e3-b079-6d9124bb3195",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DepositConditionSatisfied",
+        "eventType": "Completion",
+        "nextActivityId": "c0e7158b-146c-4dd0-9299-c3e516ae677e",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DepositConditionCanceled",
+        "eventType": "Completion",
+        "eventDisplayName": "Canceled",
+        "nextActivityId": "0c69169b-af19-4555-ae08-2555c5d16053",
+        "isUsedInChoosableFlow": false
+      },
+      {
+        "eventName": "DepositConditionAccepted",
+        "eventType": "Boundary",
+        "eventDisplayName": "Activated",
+        "nextActivityId": null
+      }
+    ],
+    "initializationData": {
+      "depositConditions": {
+        "payGroups": [
+          {
+            "names": [],
+            "currencyCode": "CLP"
+          }
+        ],
+        "channelsCondition": {
+          "values": [],
+          "isEnabled": false
+        },
+        "expirationTimeout": "P0Y0M1DT0H0M0S",
+        "minDepositAmounts": [
+          {
+            "brand": "JBCL",
+            "amount": 10000,
+            "currencyCode": "CLP"
+          }
+        ],
+        "depositAccountingType": "Any"
+      },
+      "displayData": [
+        "1 days"
+      ]
+    },
+    "activityDisplayName": "Deposit",
+    "dataDependencies": [],
+    "dependencies": [
+      {
+        "key": "CurrencyCode",
+        "journeyActivityId": "b3ec0d6e-f20d-4bda-ac83-0940db11a47d"
+      },
+      {
+        "activityName": "promotion",
+        "activityEventName": "PromotionAccepted",
+        "key": "PromotionId",
+        "journeyActivityId": "bdf92a79-9022-4ee0-8ce1-c58608d40bef"
+      },
+      {
+        "activityName": "promotion",
+        "activityEventName": "PromotionAccepted",
+        "key": "PromotionAcceptedAt",
+        "journeyActivityId": "bdf92a79-9022-4ee0-8ce1-c58608d40bef"
+      }
+    ]
+  },
+  "config": {
+    "data": {
+      "depositConditions": {
+        "payGroups": [
+          {
+            "names": [],
+            "currencyCode": "CLP"
+          }
+        ],
+        "channelsCondition": {
+          "values": [],
+          "isEnabled": false
+        },
+        "expirationTimeout": "P0Y0M1DT0H0M0S",
+        "minDepositAmounts": [
+          {
+            "brand": "JBCL",
+            "amount": 10000,
+            "currencyCode": "CLP"
+          }
+        ],
+        "depositAccountingType": "Any"
+      }
+    },
+    "error": false,
+    "displayData": [
+      "1 days"
+    ],
+    "displayName": "Deposit"
+  },
+  "node": {
+    "id": "9b597004-59a1-4c09-b762-df6d44d46b37",
+    "data": {
+      "name": "deposit",
+      "ports": [
+        {
+          "id": "input-9b597004-59a1-4c09-b762-df6d44d46b37"
+        },
+        {
+          "id": "DepositConditionAccepted-9b597004-59a1-4c09-b762-df6d44d46b37"
+        },
+        {
+          "id": "DepositConditionSatisfied-9b597004-59a1-4c09-b762-df6d44d46b37"
+        },
+        {
+          "id": "DepositConditionUnsatisfied-9b597004-59a1-4c09-b762-df6d44d46b37"
+        },
+        {
+          "id": "DepositConditionCanceled-9b597004-59a1-4c09-b762-df6d44d46b37"
+        }
+      ],
+      "events": [
+        {
+          "isHidden": false,
+          "eventName": "DepositConditionAccepted",
+          "eventType": "Boundary",
+          "payloadKeys": [
+            "DepositConditionStatus",
+            "DepositConditionExpireAt"
+          ],
+          "eventDisplayName": "Activated",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DepositConditionSatisfied",
+          "eventType": "Completion",
+          "payloadKeys": [
+            "DepositConditionStatus",
+            "DepositId",
+            "DepositAmount",
+            "IsCollectible"
+          ],
+          "eventDisplayName": "Satisfied",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DepositConditionUnsatisfied",
+          "eventType": "Completion",
+          "payloadKeys": [
+            "DepositConditionStatus",
+            "DepositMismatchReason"
+          ],
+          "eventDisplayName": "Unsatisfied",
+          "canBeUsedInChoosableFlow": false
+        },
+        {
+          "isHidden": false,
+          "eventName": "DepositConditionCanceled",
+          "eventType": "Completion",
+          "payloadKeys": [],
+          "payloadKeysV2": [],
+          "eventDisplayName": "Canceled",
+          "canBeUsedInChoosableFlow": false
+        }
+      ],
+      "activityType": "condition",
+      "activityDisplayName": "Deposit"
+    },
+    "type": "action",
+    "style": {
+      "cursor": "pointer"
+    },
+    "width": 267,
+    "extent": "parent",
+    "height": 64,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+      "x": 1536.5,
+      "y": 472
+    },
+    "selected": false,
+    "draggable": false,
+    "parentNode": "6377f8ec-9f70-44b5-a0dc-a0eff39664fc",
+    "connectable": false,
+    "positionAbsolute": {
+      "x": -288.75,
+      "y": 1264
+    }
+  },
+  "has_config": true,
+  "has_node": true
+}

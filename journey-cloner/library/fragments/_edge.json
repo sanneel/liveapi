@@ -1,0 +1,37 @@
+{
+  "id": "e9e59387-4eb2-4fc6-ac0c-3f855baad7df",
+  "data": {
+    "isHidden": false,
+    "eventName": "PlayerAdded",
+    "eventType": "Activation",
+    "activityName": "external_system_source",
+    "isLabelHidden": true,
+    "isReconnectable": false,
+    "eventDisplayName": "Players added to journey",
+    "isDisconnectable": false,
+    "canBeUsedInChoosableFlow": false
+  },
+  "type": "default",
+  "style": {
+    "strokeDasharray": "3"
+  },
+  "hidden": false,
+  "source": "2cde0455-5d55-4435-aa23-8715c95f5ff0",
+  "target": "a9f6c0d4-f79c-40f3-b7be-e5d550399bc0",
+  "zIndex": 1,
+  "labelStyle": {
+    "color": "#000",
+    "fontSize": 14,
+    "fontWeight": 700
+  },
+  "labelBgStyle": {
+    "fill": "#D2D2D2"
+  },
+  "sourceHandle": "PlayerAdded-2cde0455-5d55-4435-aa23-8715c95f5ff0",
+  "targetHandle": "input-a9f6c0d4-f79c-40f3-b7be-e5d550399bc0",
+  "labelBgPadding": [
+    10,
+    3
+  ],
+  "labelBgBorderRadius": 4
+}

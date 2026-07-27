@@ -31,18 +31,18 @@ def _load(sport: str) -> Callable[[List[Dict[str, Any]]], bytes]:
 
     # Import the legacy renderers on first use.
     if sport == "football":
-        from render_server import render_hot_png as fn
+        from render_servers.render_server import render_hot_png as fn
     elif sport == "basketball":
-        from basketball_render_server import render_hot_png as fn
+        from render_servers.basketball_render_server import render_hot_png as fn
     elif sport == "tennis":
-        from tennis_render_server import render_hot_png as fn
+        from render_servers.tennis_render_server import render_hot_png as fn
     elif sport == "cybersport":
-        from cybersport_render_server import render_hot_png as fn
+        from render_servers.cybersport_render_server import render_hot_png as fn
     elif sport in ("fights", "ufc", "mma", "boxing"):
-        from fights_render_server import render_hot_png as fn
+        from render_servers.fights_render_server import render_hot_png as fn
     else:
         logger.warning(f"unknown sport={sport}, falling back to football renderer")
-        from render_server import render_hot_png as fn
+        from render_servers.render_server import render_hot_png as fn
 
     _CACHE[sport] = fn
     return fn
