@@ -561,6 +561,28 @@ def git_pull() -> Tuple[int, str]:
     return result.returncode, (result.stdout + result.stderr).strip()
 
 
+def _strip_fences(text: str) -> str:
+    """Return the JSON object inside a planner reply — the last ```json block if
+    fenced, else the first balanced {...}, else the text as-is. Mirrors
+    compose._extract_json, which is not importable from here (journey-cloner is
+    not a package on the app's path)."""
+    blob = (text or "").strip()
+    fences = re.findall(r"```(?:json|JSON)?\s*(.*?)```", blob, re.S)
+    if fences:
+        return fences[-1].strip()
+    depth, start = 0, None
+    for i, ch in enumerate(blob):
+        if ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}" and depth:
+            depth -= 1
+            if depth == 0 and start is not None:
+                return blob[start:i + 1]
+    return blob
+
+
 def generate_composed_console_script(
     spec_text: str, *, mode: str = "spec"
 ) -> Tuple[int, str, str, str | None, str]:
@@ -573,18 +595,46 @@ def generate_composed_console_script(
     the refusal text comes back in the log for the operator to paste back into
     the chat.
 
-    mode: "spec"  -> compose.py --spec            (MODE 3 recipe spec)
-          "graph" -> compose.py --graph           (MODE 4 linear graph)
-          "chain" -> journey_composer.py compose  (MODE 5 arbitrary chain —
-                     repeated activities, choosable flows, branches)
+    mode: "spec"       -> compose.py --spec            (MODE 3 recipe spec)
+          "graph"      -> compose.py --graph           (MODE 4 linear graph)
+          "chain"      -> journey_composer.py compose  (MODE 5 arbitrary chain —
+                          repeated activities, choosable flows, branches)
+          "randomizer" -> randomizer_campaign.py       (MODE 6 wheel / scratch
+                          card; flag-driven, so the spec becomes argv)
 
     Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
     """
-    if mode not in ("spec", "graph", "chain"):
-        raise ValueError(f"mode must be 'spec', 'graph' or 'chain', got {mode!r}")
+    if mode not in ("spec", "graph", "chain", "randomizer"):
+        raise ValueError(
+            f"mode must be 'spec', 'graph', 'chain' or 'randomizer', got {mode!r}")
     # Date the artifact so console_scripts/ stays browsable; _unique_basename's
     # uuid suffix keeps concurrent requests from reading each other's file.
     basename = _unique_basename("planner", datetime.date.today().isoformat())
+    if mode == "randomizer":
+        # randomizer_campaign.py is flag-driven, not stdin-driven, so the spec is
+        # translated into argv here rather than piped.
+        try:
+            spec = json.loads(_strip_fences(spec_text))
+        except ValueError as exc:
+            return 3, f"⛔ REFUSED — could not parse a randomizer spec: {exc}", "", None, ""
+        cmd = [python_executable(), str(RANDOMIZER_SCRIPT_PATH),
+               "--kind", str(spec.get("kind", "")), "--name", basename]
+        dates = spec.get("dates") or ([spec["date"]] if spec.get("date") else [])
+        if not dates:
+            return 3, "⛔ REFUSED — randomizer spec needs `date` or `dates`.", "", None, ""
+        cmd += (["--dates", *[str(d) for d in dates]] if len(dates) > 1
+                else ["--date", str(dates[0])])
+        if spec.get("days"):
+            cmd += ["--days", str(spec["days"])]
+        if spec.get("weights"):
+            cmd += ["--weights", *[str(w) for w in spec["weights"]]]
+        if spec.get("journeys"):
+            cmd += ["--journeys", *[str(j) for j in spec["journeys"]]]
+        if spec.get("internal_name"):
+            cmd += ["--internal-name", str(spec["internal_name"])]
+        if spec.get("url_short"):
+            cmd += ["--url-short", str(spec["url_short"])]
+        return _run_gow_cli(cmd, basename=basename)
     if mode == "chain":
         cmd = [python_executable(), str(CHAIN_COMPOSER_SCRIPT_PATH), "compose", "-",
                "--script", "--name", basename]

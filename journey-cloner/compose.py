@@ -830,6 +830,48 @@ def _chain_palette() -> dict:
     }
 
 
+def _randomizer_palette() -> dict:
+    """The randomizer builder's palette, for the prompt.
+
+    Wheels and scratch cards are NOT journeys — randomizer_campaign.py builds
+    them against captured templates. The planner had no idea it existed, so any
+    brief with a wheel dead-ended at "⛔ build it in the UI" even though weights
+    and prize routing are both overridable. Prize COUNT is fixed per template
+    (the slices come from the capture), which is why the count is published:
+    a spec must supply exactly that many weights and journeys, in order.
+    """
+    try:
+        if str(HERE) not in sys.path:
+            sys.path.insert(0, str(HERE))
+        import randomizer_campaign as rc
+    except Exception:
+        return {}
+    kinds: dict = {}
+    for key, cfg in (getattr(rc, "KINDS", {}) or {}).items():
+        entry = {"label": cfg.get("label"), "days_default": cfg.get("days_default")}
+        tpl = cfg.get("template")
+        try:
+            prizes = json.loads(Path(tpl).read_text(encoding="utf-8")).get("prizes") or []
+            entry["prize_count"] = len(prizes)
+            entry["template_weights"] = [p.get("weight") for p in prizes]
+        except Exception:
+            entry["prize_count"] = None
+        kinds[key] = entry
+    if not kinds:
+        return {}
+    return {
+        "_doc": "Fortune wheels and scratch cards. NOT journeys — build with "
+                "`python journey-cloner/randomizer_campaign.py --kind <kind> "
+                "--date <YYYY-MM-DD> [--weights ...] [--journeys ...]`. "
+                "The prize SLICES come from the captured template and cannot be "
+                "added or removed, so `weights` and `journeys` must each have "
+                "exactly prize_count entries, in template order. Weights must "
+                "sum to 100. Each prize routes a winner to a journey, so build "
+                "the journeys FIRST and pass their JRN ids.",
+        "kinds": kinds,
+    }
+
+
 def _knob_doc(k: Knob) -> dict:
     """One knob as the planner sees it. `range` is the accepted span of the value
     AS SENT, so the model can self-check before emitting rather than discovering
@@ -867,6 +909,7 @@ def catalog() -> dict:
         },
         "references": _reference_index(),
         "chain_composer": _chain_palette(),
+        "randomizer": _randomizer_palette(),
     }
 
 

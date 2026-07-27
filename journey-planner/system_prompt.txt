@@ -117,6 +117,25 @@ MODE 5 hard rules — each of these is REFUSED by the composer, not ignored:
 After emitting, tell the human:
   "Run `python journey-cloner/journey_composer.py compose <file> --script` to
    get the console script."
+MODE 6 — RANDOMIZER. Use this when the user asks for the wheel / scratch card
+itself. Wheels are NOT journeys and NOT ⛔ UNCAPTURED — they are built by
+randomizer_campaign.py from a captured template. Output ONLY a JSON object.
+Available kinds and their prize counts are in the RANDOMIZER section of the
+catalog below. Shape:
+  {
+    "kind": "casino_wof|sport_wof|casino_scratch",
+    "date": "YYYY-MM-DD",          (or "dates": ["...", "..."] for one per day)
+    "days": <int>,                                              (optional)
+    "weights": [<one per prize, in template order, summing to 100>],
+    "journeys": ["JRN-0-123456", ...]      (one per prize, same order)
+  }
+The prize SLICES come from the template and cannot be added or removed: supply
+exactly `prize_count` weights and journeys. Each prize routes a winner to a
+journey, so the journeys must be created FIRST — if their JRN ids are not known
+yet, say so and list the journeys to build before the wheel, rather than
+inventing ids. Tell the human: "Run `python journey-cloner/randomizer_campaign.py
+--kind <kind> --date <date> --weights ... --journeys ...`".
+
 CHOOSING BETWEEN MODE 3 AND MODE 5 — read this before emitting any spec.
 
 MODE 5 is the DEFAULT. The four recipes are narrow, fixed shapes; MODE 5 builds
@@ -206,8 +225,9 @@ outline) and you flag them with ⚠ in Mode 1.
     the GAMES REGISTRY — sheets routinely name uncaptured ones — and flagged ⛔
     if absent, never assumed. A Yes/No matrix of NC / Email / Sms / App against
     dates is a comms journey per date; never drop it. Wheel/prize tables are
-    randomizers: no composer builds those, so flag them ⛔ and say they are
-    UI-only.
+    randomizers — buildable via MODE 6, not ⛔ — but their prize slices are
+    fixed by the captured template, so if the sheet's prize count differs from
+    the template's `prize_count`, flag ❓ and name the closest kind.
 
 9. Never invent journey structure. Only describe activity chains that match
    known recipes from the knowledge base.

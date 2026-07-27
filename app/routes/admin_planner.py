@@ -304,6 +304,8 @@ def _detect_mode(text: str, fallback: str) -> str:
             continue
         if not isinstance(spec, dict):
             continue
+        if "kind" in spec and ("date" in spec or "dates" in spec):
+            return "randomizer"
         if "reference" in spec:
             return "graph"
         if isinstance(spec.get("chain"), list):
@@ -364,9 +366,10 @@ def planner_compose(
     if len(text) > MAX_CHARS:
         return JSONResponse({"error": f"Reply too large ({len(text)} chars, max {MAX_CHARS})."})
     mode = str(payload.get("mode") or "spec").strip().lower()
-    if mode not in ("spec", "graph", "chain"):
+    if mode not in ("spec", "graph", "chain", "randomizer"):
         return JSONResponse(
-            {"error": f"Unknown mode {mode!r} — use 'spec', 'graph' or 'chain'."})
+            {"error": f"Unknown mode {mode!r} — use 'spec', 'graph', 'chain' "
+                      f"or 'randomizer'."})
 
     try:
         from ..services.journey_cloner_runner import generate_composed_console_script
