@@ -61,6 +61,12 @@ class Knob:
     unit: str = "raw"                 # raw | minor  (minor: major CLP × 100)
     desc: str = ""
     required: bool = False
+    # Plausible range for the value AS SENT (major CLP for minor-unit knobs).
+    # The unit contract is prose, and prose loses: a live planner reply asked for
+    # "100 CLP per spin" and sent 10000 (minor), which the x100 conversion turned
+    # into a 10,000 CLP spin. Bounds turn that class of error into a refusal.
+    min_major: float | None = None
+    max_major: float | None = None
     # Extra targets that must receive the SAME logical value, as
     # (activity, path) or (activity, path, unit). A platform value is often
     # duplicated across nodes — e.g. a promotion's promo-lobby card carries its
@@ -118,16 +124,20 @@ RECIPES: dict[str, Recipe] = {
         knobs={
             "deposit_min_clp": Knob(
                 "deposit", "initializationData.depositConditions.minDepositAmounts.0.amount",
-                "minor", "minimum deposit to unlock the offer, in CLP"),
+                "minor", "minimum deposit to unlock the offer, in CLP",
+                min_major=100, max_major=1_000_000),
             "freebet_amount_clp": Knob(
                 "freebet", "initializationData.properties.freeBetAmount.CLP",
-                "minor", "free-bet value in CLP"),
+                "minor", "free-bet value in CLP",
+                min_major=100, max_major=1_000_000),
             "freebet_expire_days": Knob(
                 "freebet", "initializationData.properties.expireInDays",
-                "raw", "days the free bet stays valid"),
+                "raw", "days the free bet stays valid",
+                min_major=1, max_major=365),
             "freebet_max_odd": Knob(
                 "freebet", "initializationData.properties.maxOdd",
-                "raw", "maximum odds the free bet can be used at"),
+                "raw", "maximum odds the free bet can be used at",
+                min_major=1, max_major=1_000),
             "promocode": Knob(
                 "registration", "initializationData.promocodeSettings.values.0",
                 "raw", "entry promocode players redeem"),
@@ -149,25 +159,31 @@ RECIPES: dict[str, Recipe] = {
         knobs={
             "deposit_min_clp": Knob(
                 "deposit", "initializationData.depositConditions.minDepositAmounts.0.amount",
-                "minor", "minimum deposit to unlock, in CLP"),
+                "minor", "minimum deposit to unlock, in CLP",
+                min_major=100, max_major=1_000_000),
             "spins": Knob(
                 "freespin_bonus", "initializationData.freespinActivity.spins",
-                "raw", "number of free spins granted"),
+                "raw", "number of free spins granted",
+                min_major=1, max_major=10_000),
             "spin_bet_clp": Knob(
                 "freespin_bonus", "initializationData.freespinActivity.currenciesConfig.CLP.betAmount",
-                "minor", "bet value per spin, in CLP"),
+                "minor", "bet value per spin, in CLP",
+                min_major=10, max_major=20_000),
             "bonus_percent": Knob(
                 "casino_bonus_v2", "initializationData.bonusPercent",
-                "raw", "deposit-match percent (100 = 100%)"),
+                "raw", "deposit-match percent (100 = 100%)",
+                min_major=1, max_major=1_000),
             "wagering_x": Knob(
                 "casino_bonus_v2", "initializationData.wageringRequirement",
-                "raw", "wagering multiplier (e.g. 30 = x30)"),
+                "raw", "wagering multiplier (e.g. 30 = x30)",
+                min_major=1, max_major=100),
             "bonus_expiry_ms": Knob(
                 "casino_bonus_v2", "initializationData.bonusExpirationTime",
                 "raw", "bonus validity in milliseconds (172800000 = 48h)"),
             "release_limit_x": Knob(
                 "casino_bonus_v2", "initializationData.releaseLimitMultiplier",
-                "raw", "max cashout as a multiple of the bonus"),
+                "raw", "max cashout as a multiple of the bonus",
+                min_major=1, max_major=100),
         },
     ),
     # An INSTANT bonus — a promotion-gated freespin with NO wagering follow-up
@@ -191,10 +207,12 @@ RECIPES: dict[str, Recipe] = {
             "spins": Knob(
                 "freespin_bonus", "initializationData.freespinActivity.spins",
                 "raw", "number of free spins granted",
-                also=(("promotion", PROMO_FS + "spins"),)),
+                also=(("promotion", PROMO_FS + "spins"),),
+                min_major=1, max_major=10_000),
             "spin_bet_clp": Knob(
                 "freespin_bonus", "initializationData.freespinActivity.currenciesConfig.CLP.betAmount",
                 "minor", "bet value per spin, in CLP",
+                min_major=10, max_major=5_000,
                 also=(
                     ("freespin_bonus", "initializationData.freespinActivity.currenciesConfig.CLP.betAmount_majorUnits", "raw"),
                     ("promotion", PROMO_FS + "currenciesConfig.CLP.betAmount", "minor"),
@@ -517,6 +535,50 @@ GAME_FIELDS = ("provider", "lobbyGameId", "walletGameId", "externalGameId")
 GAMES_FILE = HERE / "library" / "games.json"
 
 
+def _check_ranges(recipe: Recipe, knobs: dict) -> None:
+    """Refuse values outside a knob's plausible range, and non-numeric values on
+    numeric knobs.
+
+    Two real failures this catches. (1) The unit mix-up: the prompt says amounts
+    are major CLP, the model sends minor, and the x100 conversion silently
+    inflates the value 100-fold — reproduced live with a "100 CLP per spin"
+    brief that shipped a 10,000 CLP spin. (2) A quoted amount ("200") used to
+    reach `int(round(raw * 100))` and raise an uncaught TypeError that escaped
+    the SpecError handler entirely."""
+    bad = []
+    for kname, raw in knobs.items():
+        knob = recipe.knobs.get(kname)
+        if knob is None:
+            continue
+        numeric = knob.unit == "minor" or knob.min_major is not None or knob.max_major is not None
+        if numeric and isinstance(raw, bool):
+            bad.append(f"{kname} = {raw!r} is a boolean, expected a number")
+            continue
+        if numeric and not isinstance(raw, (int, float)):
+            bad.append(f"{kname} = {raw!r} is {type(raw).__name__}, expected a number "
+                       f"(send 2500, not \"2500\" or \"$2.500\")")
+            continue
+        if knob.min_major is not None and raw < knob.min_major:
+            bad.append(f"{kname} = {raw} is below the plausible minimum "
+                       f"{knob.min_major:g}")
+        if knob.max_major is not None and raw > knob.max_major:
+            # If dividing by 100 lands the value neatly back in range, the model
+            # almost certainly sent minor units. Say so explicitly — that is the
+            # single most common spec error and the fix is obvious once named.
+            lo = knob.min_major if knob.min_major is not None else 0
+            unit_hint = ""
+            if knob.unit == "minor" and lo <= raw / 100 <= knob.max_major:
+                unit_hint = (f" — {raw:g} looks like MINOR units; send major CLP "
+                             f"({raw / 100:g}) and the composer converts")
+            bad.append(f"{kname} = {raw} exceeds the plausible maximum "
+                       f"{knob.max_major:g}{unit_hint}")
+    if bad:
+        joined = "\n    ".join(bad)
+        raise SpecError(
+            f"spec has {len(bad)} implausible value(s) — refusing to build a "
+            f"journey with amounts nobody meant:\n    {joined}")
+
+
 def _games_registry() -> dict:
     """{lobbyGameId: entry} from library/games.json. Empty dict if absent —
     grounding then degrades to a no-op rather than blocking every build."""
@@ -616,6 +678,7 @@ def validate_spec(spec: dict) -> Recipe:
             f"{recipe.key!r}: {missing}. Without them the journey ships "
             f"{recipe.reference}'s own values (real production content). "
             f"Resolve each from the games registry and re-emit the spec.")
+    _check_ranges(recipe, knobs)
     _check_games(recipe, knobs)
     return recipe
 
@@ -717,6 +780,18 @@ def _reference_index() -> dict:
     return refs
 
 
+def _knob_doc(k: Knob) -> dict:
+    """One knob as the planner sees it. `range` is the accepted span of the value
+    AS SENT, so the model can self-check before emitting rather than discovering
+    the bound via a refusal."""
+    doc: dict = {"wire_unit": k.unit, "desc": k.desc}
+    if k.required:
+        doc["required"] = True
+    if k.min_major is not None or k.max_major is not None:
+        doc["range"] = [k.min_major, k.max_major]
+    return doc
+
+
 def catalog() -> dict:
     """Machine-readable recipe catalog for the planner LLM to emit specs against.
     Includes a `references` index for MODE 4 graphs (which reference journey can
@@ -729,15 +804,15 @@ def catalog() -> dict:
                          "minor units yields a 100x value.",
             "required": "A spec that omits this knob is REFUSED, because omitting "
                         "it would silently ship the reference template's own value.",
+            "range": "[min, max] for the value AS SENT (major CLP). Outside it the "
+                     "spec is REFUSED. Worked example: a 100 CLP per-spin bet is "
+                     "spin_bet_clp: 100 — NOT 10000.",
         },
         "recipes": {
             k: {
                 "reference": r.reference,
                 "chain": [n.activity for n in r.chain] + [r.terminal],
-                "knobs": {kn: ({"wire_unit": v.unit, "desc": v.desc, "required": True}
-                               if v.required else
-                               {"wire_unit": v.unit, "desc": v.desc})
-                          for kn, v in r.knobs.items()},
+                "knobs": {kn: _knob_doc(v) for kn, v in r.knobs.items()},
             } for k, r in RECIPES.items()
         },
         "references": _reference_index(),

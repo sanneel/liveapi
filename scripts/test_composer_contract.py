@@ -124,6 +124,12 @@ refuses("a blocker sentinel", mutate(spin_game_lobby="⛔ RESOLVE_AT_BUILD_TIME"
 refuses("a fabricated game id", mutate(spin_game_lobby="pragmatic-mega-dragon-fortune-deluxe"))
 refuses("a placeholder token", mutate(spin_provider="TBD"))
 refuses("game ids mixed across two games", mutate(spin_game_wallet="vs20swbonsup"))
+# Reproduced live 2026-07-27: a "100 CLP per spin" brief came back as 10000
+# (minor units), which the x100 conversion turned into a 10,000 CLP spin with
+# every check green. The prose unit contract did not hold; the range gate does.
+refuses("minor units where major CLP was asked for", mutate(spin_bet_clp=10000))
+refuses("a quoted amount instead of a number", mutate(spins="25"))
+refuses("an absurd spin count", mutate(spins=999999))
 
 print("\na drifted knob path fails closed instead of silently not applying")
 knob = C.RECIPES["casino_instant_freespin"].knobs["spin_game_lobby"]

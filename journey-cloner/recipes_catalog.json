@@ -1,7 +1,8 @@
 {
   "_legend": {
     "wire_unit": "Unit of the DESTINATION field on the platform, NOT the unit you send. ALWAYS send amounts in major CLP — the composer converts where wire_unit is 'minor'. Sending minor units yields a 100x value.",
-    "required": "A spec that omits this knob is REFUSED, because omitting it would silently ship the reference template's own value."
+    "required": "A spec that omits this knob is REFUSED, because omitting it would silently ship the reference template's own value.",
+    "range": "[min, max] for the value AS SENT (major CLP). Outside it the spec is REFUSED. Worked example: a 100 CLP per-spin bet is spin_bet_clp: 100 — NOT 10000."
   },
   "recipes": {
     "comms": {
@@ -28,19 +29,35 @@
       "knobs": {
         "deposit_min_clp": {
           "wire_unit": "minor",
-          "desc": "minimum deposit to unlock the offer, in CLP"
+          "desc": "minimum deposit to unlock the offer, in CLP",
+          "range": [
+            100,
+            1000000
+          ]
         },
         "freebet_amount_clp": {
           "wire_unit": "minor",
-          "desc": "free-bet value in CLP"
+          "desc": "free-bet value in CLP",
+          "range": [
+            100,
+            1000000
+          ]
         },
         "freebet_expire_days": {
           "wire_unit": "raw",
-          "desc": "days the free bet stays valid"
+          "desc": "days the free bet stays valid",
+          "range": [
+            1,
+            365
+          ]
         },
         "freebet_max_odd": {
           "wire_unit": "raw",
-          "desc": "maximum odds the free bet can be used at"
+          "desc": "maximum odds the free bet can be used at",
+          "range": [
+            1,
+            1000
+          ]
         },
         "promocode": {
           "wire_unit": "raw",
@@ -61,23 +78,43 @@
       "knobs": {
         "deposit_min_clp": {
           "wire_unit": "minor",
-          "desc": "minimum deposit to unlock, in CLP"
+          "desc": "minimum deposit to unlock, in CLP",
+          "range": [
+            100,
+            1000000
+          ]
         },
         "spins": {
           "wire_unit": "raw",
-          "desc": "number of free spins granted"
+          "desc": "number of free spins granted",
+          "range": [
+            1,
+            10000
+          ]
         },
         "spin_bet_clp": {
           "wire_unit": "minor",
-          "desc": "bet value per spin, in CLP"
+          "desc": "bet value per spin, in CLP",
+          "range": [
+            10,
+            20000
+          ]
         },
         "bonus_percent": {
           "wire_unit": "raw",
-          "desc": "deposit-match percent (100 = 100%)"
+          "desc": "deposit-match percent (100 = 100%)",
+          "range": [
+            1,
+            1000
+          ]
         },
         "wagering_x": {
           "wire_unit": "raw",
-          "desc": "wagering multiplier (e.g. 30 = x30)"
+          "desc": "wagering multiplier (e.g. 30 = x30)",
+          "range": [
+            1,
+            100
+          ]
         },
         "bonus_expiry_ms": {
           "wire_unit": "raw",
@@ -85,7 +122,11 @@
         },
         "release_limit_x": {
           "wire_unit": "raw",
-          "desc": "max cashout as a multiple of the bonus"
+          "desc": "max cashout as a multiple of the bonus",
+          "range": [
+            1,
+            100
+          ]
         }
       }
     },
@@ -100,11 +141,19 @@
       "knobs": {
         "spins": {
           "wire_unit": "raw",
-          "desc": "number of free spins granted"
+          "desc": "number of free spins granted",
+          "range": [
+            1,
+            10000
+          ]
         },
         "spin_bet_clp": {
           "wire_unit": "minor",
-          "desc": "bet value per spin, in CLP"
+          "desc": "bet value per spin, in CLP",
+          "range": [
+            10,
+            5000
+          ]
         },
         "spin_provider": {
           "wire_unit": "raw",
