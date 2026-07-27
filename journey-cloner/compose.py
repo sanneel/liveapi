@@ -24,6 +24,7 @@ from __future__ import annotations
 import copy
 import datetime
 import json
+import re
 import sys
 import uuid
 from dataclasses import dataclass, field
@@ -468,14 +469,122 @@ def _find_blockers(obj, prefix: str = "") -> list[str]:
     return hits
 
 
+def _extract_json(raw: str) -> dict:
+    """Parse a spec out of whatever the planner actually produced.
+
+    An LLM asked for "ONLY a JSON object" still wraps it in a ```json fence or
+    prefixes "Here is the spec:" a good fraction of the time — observed on this
+    deployment in a single session. A bare json.load() turns that into a raw
+    JSONDecodeError traceback, which is why the spec path could not be driven
+    programmatically. Try, in order: the whole string, the last fenced block,
+    then the first balanced {...}. Raises SpecError so the caller's existing
+    refusal handling applies."""
+    text = (raw or "").strip()
+    candidates = [text]
+    fences = re.findall(r"```(?:json|JSON)?\s*(.*?)```", text, re.S)
+    candidates.extend(reversed([f.strip() for f in fences]))
+    depth, start = 0, None
+    for i, ch in enumerate(text):
+        if ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}" and depth:
+            depth -= 1
+            if depth == 0 and start is not None:
+                candidates.append(text[start:i + 1])
+                break
+    for cand in candidates:
+        if not cand:
+            continue
+        try:
+            parsed = json.loads(cand)
+        except ValueError:
+            continue
+        if isinstance(parsed, dict):
+            return parsed
+    raise SpecError(
+        "could not parse a JSON object from the input. The planner's reply must "
+        "contain one spec object; fenced blocks and surrounding prose are "
+        "tolerated, but nothing parseable was found.")
+
+
+# Fields whose value MUST come from the games registry, never from the model's
+# sense of what a game id looks like. The prompt shows 106 examples of the very
+# regular `pragmatic-<slug>` / `vs20<abbrev>` shape, so a plausible fabrication
+# is exactly the failure mode to expect.
+GAME_FIELDS = ("provider", "lobbyGameId", "walletGameId", "externalGameId")
+GAMES_FILE = HERE / "library" / "games.json"
+
+
+def _games_registry() -> dict:
+    """{lobbyGameId: entry} from library/games.json. Empty dict if absent —
+    grounding then degrades to a no-op rather than blocking every build."""
+    if not hasattr(_games_registry, "_cache"):
+        try:
+            _games_registry._cache = json.loads(
+                GAMES_FILE.read_text(encoding="utf-8")).get("games") or {}
+        except (OSError, ValueError):
+            _games_registry._cache = {}
+    return _games_registry._cache
+
+
+def _check_games(recipe: Recipe, knobs: dict) -> None:
+    """Refuse a spec whose game ids are not in the registry, or that mixes ids
+    from different games. `never guessed` in the knob descriptions was a request;
+    this makes it an invariant."""
+    games = _games_registry()
+    if not games:
+        return
+    # knob name -> which game field it lands on
+    fields = {k: kb.path.rsplit(".", 1)[-1] for k, kb in recipe.knobs.items()
+              if kb.path.rsplit(".", 1)[-1] in GAME_FIELDS}
+    given = {k: v for k, v in knobs.items() if k in fields}
+    if not given:
+        return
+    import difflib
+    valid = {f: {e.get(f) for e in games.values() if e.get(f)} for f in GAME_FIELDS}
+    bad = []
+    for kname, value in given.items():
+        field_name = fields[kname]
+        if value not in valid[field_name]:
+            near = difflib.get_close_matches(str(value), sorted(map(str, valid[field_name])), n=3, cutoff=0.5)
+            bad.append(f"{kname} = {value!r} is not a known {field_name}"
+                       + (f" — did you mean {near}?" if near else ""))
+    if bad:
+        joined = "\n    ".join(bad)
+        raise SpecError(
+            f"spec carries {len(bad)} game id(s) absent from the games registry "
+            f"({GAMES_FILE.name}, {len(games)} games) — refusing to build a "
+            f"journey that awards spins on a game that may not exist:\n    {joined}\n"
+            f"  Resolve each from the GAMES REGISTRY, or emit "
+            f"'⛔ RESOLVE_AT_BUILD_TIME' so the blocker stays visible.")
+    # All ids resolve individually — now make sure they describe the SAME game.
+    lobby_knob = next((k for k, f in fields.items() if f == "lobbyGameId"), None)
+    lobby = given.get(lobby_knob)
+    entry = games.get(lobby) if lobby else None
+    if entry:
+        mixed = [f"{k} = {v!r} belongs to a different game (expected "
+                 f"{entry.get(fields[k])!r})"
+                 for k, v in given.items()
+                 if fields[k] != "lobbyGameId" and v != entry.get(fields[k])]
+        if mixed:
+            joined = "\n    ".join(mixed)
+            raise SpecError(
+                f"spec mixes ids from different games — every game field must "
+                f"come from the {lobby!r} row of the registry:\n    {joined}")
+
+
 def validate_spec(spec: dict) -> Recipe:
-    """Refuse a spec the composer must not build. Four hard gates:
+    """Refuse a spec the composer must not build. Five hard gates:
       1. `recipe` must be one of the PROVEN recipes — no remap to the nearest.
       2. NO ⛔ / RESOLVE_AT_BUILD_TIME / UNCAPTURED blocker anywhere in the spec.
       3. Every knob name must exist on that recipe. An invented name is a plan
          with a hole: it used to be dropped with a warning, which shipped the
          reference template's own value under a green build.
       4. Every `required` knob must be present, for the same reason.
+      5. Every game id must exist in the games registry, and all game fields
+         must describe the SAME game.
     Returns the resolved Recipe on success, else raises SpecError with the why."""
     key = spec.get("recipe")
     recipe = RECIPES.get(key)
@@ -507,6 +616,7 @@ def validate_spec(spec: dict) -> Recipe:
             f"{recipe.key!r}: {missing}. Without them the journey ships "
             f"{recipe.reference}'s own values (real production content). "
             f"Resolve each from the games registry and re-emit the spec.")
+    _check_games(recipe, knobs)
     return recipe
 
 
@@ -857,17 +967,12 @@ def main() -> int:
         return 0
 
     unknown_knobs = []
-    if args[0] == "--spec":
-        spec = json.load(open(args[1], encoding="utf-8")) if len(args) > 1 else json.load(sys.stdin)
+    if args[0] in ("--spec", "--graph"):
+        raw = (Path(args[1]).read_text(encoding="utf-8") if len(args) > 1
+               else sys.stdin.read())
+        builder = compose_from_spec if args[0] == "--spec" else compose_from_graph
         try:
-            recipe, body, name, unknown_knobs = compose_from_spec(spec)
-        except SpecError as exc:
-            print(f"⛔ REFUSED — {exc}")
-            return 3
-    elif args[0] == "--graph":
-        spec = json.load(open(args[1], encoding="utf-8")) if len(args) > 1 else json.load(sys.stdin)
-        try:
-            recipe, body, name, unknown_knobs = compose_from_graph(spec)
+            recipe, body, name, unknown_knobs = builder(_extract_json(raw))
         except SpecError as exc:
             print(f"⛔ REFUSED — {exc}")
             return 3
