@@ -56,6 +56,7 @@
     <button type="button" id="jpInsert">＋ Insert birthday brief</button>
     <button type="button" id="jpClear">🗑 Clear</button>
     <button type="button" id="jpCopy">⧉ Copy last reply</button>
+    <button type="button" id="jpBuild">⚙ Build script</button>
   </div>
 
   <div class="jp-composer">
@@ -185,6 +186,62 @@ NOTES
     const last = [...history].reverse().find(m => m.role === "model");
     if(last){ navigator.clipboard.writeText(last.text); hint.textContent = "Copied last reply."; }
     else { hint.textContent = "Nothing to copy yet."; }
+  };
+
+  // Build script: send the last reply to the composer and offer the result as a
+  // download. The reply goes VERBATIM — the composer strips ```json fences and
+  // prose itself, so there is nothing for the operator to hand-clean. A refusal
+  // (unknown recipe, ⛔ blocker, invented game, out-of-range amount) comes back
+  // as ok:false with the reason, which is a usable answer, not a crash: paste it
+  // back into the chat and the planner corrects itself.
+  const buildBtn = document.getElementById("jpBuild");
+  buildBtn.onclick = async () => {
+    if(busy) return;
+    const last = [...history].reverse().find(m => m.role === "model");
+    if(!last){ hint.textContent = "Ask the planner for a spec first."; return; }
+    const mode = /"reference"\s*:/.test(last.text) ? "graph" : "spec";
+    busy = true; buildBtn.disabled = true; hint.textContent = "Composing…";
+    const bub = addMsg("model", ""); bub.innerHTML = '<span class="jp-dots"></span>';
+    try{
+      const res = await fetch("/admin/planner/compose", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text: last.text, mode }),
+      });
+      let data;
+      try { data = await res.json(); }
+      catch(e){ const raw = await res.text().catch(()=>""); throw new Error(`HTTP ${res.status} (non-JSON): ${raw.slice(0,300)}`); }
+
+      if(data.error){
+        bub.innerHTML = `<pre style="color:#c0392b">${esc(data.error)}</pre>`;
+        hint.textContent = "";
+      } else if(!data.ok){
+        bub.innerHTML = `<pre style="color:#c0392b">⛔ Composer refused (exit ${esc(String(data.returncode))})\n\n`
+                      + `${esc(data.log || "")}</pre>`;
+        hint.textContent = "Refused — paste the reason back into the chat to have the planner fix it.";
+      } else {
+        const blob = new Blob([data.js], { type: "text/javascript" });
+        const url = URL.createObjectURL(blob);
+        bub.innerHTML = `<pre>${esc(data.log || "")}</pre>`;
+        const row = document.createElement("div");
+        row.style.cssText = "margin-top:8px;display:flex;gap:8px;flex-wrap:wrap";
+        const dl = document.createElement("a");
+        dl.href = url; dl.download = data.filename || "composed_console.js";
+        dl.textContent = "⬇ Download " + (data.filename || "console script");
+        dl.style.cssText = "font-weight:600;text-decoration:none;border:1px solid #d7dae0;"
+                         + "border-radius:6px;padding:6px 10px;color:inherit";
+        const cp = document.createElement("button");
+        cp.type = "button"; cp.textContent = "⧉ Copy script";
+        cp.onclick = () => { navigator.clipboard.writeText(data.js); hint.textContent = "Script copied — paste into the backoffice console (F12)."; };
+        row.append(dl, cp); bub.append(row);
+        hint.textContent = "Built. Paste the script into a logged-in backoffice console (F12).";
+      }
+    }catch(err){
+      bub.innerHTML = `<pre style="color:#c0392b">Compose failed: ${esc(String(err))}</pre>`;
+      hint.textContent = "";
+    }finally{
+      busy = false; buildBtn.disabled = false; log.scrollTop = log.scrollHeight;
+    }
   };
 })();
 </script>

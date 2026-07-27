@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import os
 import json
 import re
@@ -182,6 +183,8 @@ NC_DISCOUNT_SCRIPT_PATH = CLONER_DIR / "nc_discount_campaign.py"
 NC_DISCOUNT_PMCL_SCRIPT_PATH = CLONER_DIR / "nc_discount_pmcl_campaign.py"
 PREDICTION_SCRIPT_PATH = CLONER_DIR / "prediction_campaign.py"
 TOURNAMENT_PMCL_SCRIPT_PATH = CLONER_DIR / "tournament_pmcl_campaign.py"
+COMPOSE_SCRIPT_PATH = CLONER_DIR / "compose.py"
+CHAIN_COMPOSER_SCRIPT_PATH = CLONER_DIR / "journey_composer.py"
 
 # Randomizer promos (weighted prize wheels / scratch cards). Keys must match
 # randomizer_campaign.py --kind.
@@ -556,6 +559,33 @@ def git_pull() -> Tuple[int, str]:
         timeout=60,
     )
     return result.returncode, (result.stdout + result.stderr).strip()
+
+
+def generate_composed_console_script(
+    spec_text: str, *, mode: str = "spec"
+) -> Tuple[int, str, str, str | None, str]:
+    """Turn a planner reply into a pasteable console script.
+
+    `spec_text` is the LLM's reply VERBATIM — compose.py's _extract_json pulls
+    the object out of a ```json fence or a "Here is the spec:" lead-in, so the
+    operator never has to hand-clean it. A spec the composer refuses (unknown
+    recipe, ⛔ blocker, invented knob or game, out-of-range amount) exits 3 and
+    the refusal text comes back in the log for the operator to paste back into
+    the chat.
+
+    mode: "spec"  -> compose.py --spec   (a MODE 3 recipe spec)
+          "graph" -> compose.py --graph  (a MODE 4 linear graph)
+
+    Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
+    """
+    if mode not in ("spec", "graph"):
+        raise ValueError(f"mode must be 'spec' or 'graph', got {mode!r}")
+    # Date the artifact so console_scripts/ stays browsable; _unique_basename's
+    # uuid suffix keeps concurrent requests from reading each other's file.
+    basename = _unique_basename("planner", datetime.date.today().isoformat())
+    cmd = [python_executable(), str(COMPOSE_SCRIPT_PATH), f"--{mode}",
+           "--name", basename]
+    return _run_gow_cli(cmd, spec_text=spec_text, basename=basename)
 
 
 def generate_nc_discount_console_script() -> Tuple[int, str, str, str | None, str]:

@@ -18,7 +18,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import requests
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Body, Depends, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from ..auth.dependencies import require_role
@@ -230,6 +230,47 @@ def planner_page(
     """Planner moved into the Optimization hub as a tab — keep the old URL
     working for bookmarks/links instead of 404ing."""
     return RedirectResponse(url="/admin/promotions?tab=planner", status_code=307)
+
+
+@router.post("/admin/planner/compose")
+def planner_compose(
+    payload: dict = Body(...),
+    user: User = Depends(require_role("editor")),
+) -> JSONResponse:
+    """Run the composer over a planner reply and hand back the console script.
+
+    Deliberately a sync `def`: FastAPI runs it in the threadpool, so the
+    subprocess (up to 300s) cannot stall the event loop the way an `async def`
+    calling blocking code would — the service runs a single uvicorn worker.
+
+    The reply is passed through verbatim; compose.py tolerates ```json fences
+    and prose lead-ins. A refusal is not an error here — returncode 3 with the
+    explanation in `log` is the composer working as designed, and the operator
+    can paste that text back into the chat for the planner to correct itself.
+    """
+    text = str(payload.get("text") or "").strip()
+    if not text:
+        return JSONResponse({"error": "Nothing to compose — send the planner reply."})
+    if len(text) > MAX_CHARS:
+        return JSONResponse({"error": f"Reply too large ({len(text)} chars, max {MAX_CHARS})."})
+    mode = str(payload.get("mode") or "spec").strip().lower()
+    if mode not in ("spec", "graph"):
+        return JSONResponse({"error": f"Unknown mode {mode!r} — use 'spec' or 'graph'."})
+
+    try:
+        from ..services.journey_cloner_runner import generate_composed_console_script
+        code, log, cmd, js, filename = generate_composed_console_script(text, mode=mode)
+    except FileNotFoundError as exc:
+        return JSONResponse({"error": f"Composer not found: {exc}"})
+    except Exception as exc:                      # subprocess timeout, OSError, ...
+        logger.warning("planner compose failed: %s", exc)
+        return JSONResponse({"error": f"Composer failed to run: {exc}"})
+
+    if code != 0 or not js:
+        logger.info("planner compose refused (exit %s)", code)
+        return JSONResponse({"ok": False, "returncode": code, "log": log, "cmd": cmd})
+    return JSONResponse({"ok": True, "returncode": 0, "log": log, "cmd": cmd,
+                         "js": js, "filename": filename})
 
 
 @router.post("/admin/planner/api")

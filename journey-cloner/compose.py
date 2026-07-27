@@ -1043,7 +1043,7 @@ JS_TEMPLATE = r'''// Composed journey — generated @GENERATED_AT@
 '''
 
 
-def emit(recipe: Recipe, body: dict, name: str) -> Path:
+def emit(recipe: Recipe, body: dict, name: str, basename: str | None = None) -> Path:
     js = (JS_TEMPLATE
           .replace("@GENERATED_AT@", datetime.datetime.utcnow().isoformat() + "Z")
           .replace("@RECIPE@", recipe.key)
@@ -1052,7 +1052,11 @@ def emit(recipe: Recipe, body: dict, name: str) -> Path:
           .replace("@BRAND@", json.dumps(recipe.brand))
           .replace("@BODY@", json.dumps(body, ensure_ascii=False)))
     OUT.mkdir(parents=True, exist_ok=True)
-    out = OUT / f"composed_{recipe.key}_console.js"
+    # Default filename is per-recipe, so two runs of the same recipe overwrite
+    # each other. Callers that need a stable, unique artifact (the backoffice
+    # runner, which looks for "<basename>_console.js") pass their own basename.
+    stem = basename or f"composed_{recipe.key}"
+    out = OUT / f"{stem}_console.js"
     out.write_text(js, encoding="utf-8")
     return out
 
@@ -1077,6 +1081,18 @@ def main() -> int:
         out.write_text(json.dumps(catalog(), indent=2, ensure_ascii=False), encoding="utf-8")
         print(f"wrote {out}")
         return 0
+
+    # --name <basename>: control the emitted filename. The backoffice runner
+    # needs a unique, predictable artifact per run; the default per-recipe name
+    # would have concurrent runs overwriting each other.
+    basename = None
+    if "--name" in args:
+        i = args.index("--name")
+        if i + 1 >= len(args):
+            print("--name needs a value")
+            return 2
+        basename = args[i + 1]
+        args = args[:i] + args[i + 2:]
 
     unknown_knobs = []
     if args[0] in ("--spec", "--graph"):
@@ -1108,7 +1124,7 @@ def main() -> int:
     if not ok:
         print("\nVerification FAILED — not emitting.")
         return 1
-    out = emit(recipe, body, name)
+    out = emit(recipe, body, name, basename)
     print(f"\nAll checks passed. Console script: {out}")
     return 0
 
