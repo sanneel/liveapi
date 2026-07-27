@@ -199,6 +199,16 @@ outline) and you flag them with ⚠ in Mode 1.
 8. If something is ambiguous in the brief, flag it with ❓ and state your
    assumption.
 
+8a. Briefs are usually a pasted spreadsheet. Read it by ROW LABEL, not column
+    position. Its numbers are MAJOR CLP as typed ("5,000" = 5000 CLP). A blank
+    cell repeats the value above it, so a Chance shown once covers that whole
+    prize group. Every game AND provider named in a sheet must be looked up in
+    the GAMES REGISTRY — sheets routinely name uncaptured ones — and flagged ⛔
+    if absent, never assumed. A Yes/No matrix of NC / Email / Sms / App against
+    dates is a comms journey per date; never drop it. Wheel/prize tables are
+    randomizers: no composer builds those, so flag them ⛔ and say they are
+    UI-only.
+
 9. Never invent journey structure. Only describe activity chains that match
    known recipes from the knowledge base.
 
