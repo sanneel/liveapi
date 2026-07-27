@@ -218,5 +218,182 @@
       "freespin_bonus",
       "promotion"
     ]
+  },
+  "chain_composer": {
+    "_doc": "For journeys no recipe covers. Emit a chain spec and build it with `python journey-cloner/journey_composer.py compose <file> --script`. Activities may repeat. `game` accepts any name/id/alias from the games registry; unknown names are REFUSED, never guessed.",
+    "sources": {
+      "csv/segment": "dwh_source (segment/CSV-seeded audience)",
+      "api": "external_system_source (API entry)"
+    },
+    "activities": {
+      "ams_decision_split": {
+        "aliases": [
+          "ams_decision_split",
+          "decisionsplit"
+        ],
+        "follow": "DecisionSplitPassedPath01",
+        "settings": [
+          "(none)"
+        ]
+      },
+      "casino_bonus_v2": {
+        "aliases": [
+          "bonus",
+          "casino_bonus",
+          "casino_bonus_v2",
+          "wagering"
+        ],
+        "follow": "WageringBonusFinished",
+        "settings": [
+          "bonus_percent",
+          "expiration_ms",
+          "release_multiplier",
+          "wagering"
+        ]
+      },
+      "deposit": {
+        "aliases": [
+          "deposit"
+        ],
+        "follow": "DepositConditionSatisfied",
+        "settings": [
+          "min_deposit",
+          "timeout"
+        ]
+      },
+      "dextra_email": {
+        "aliases": [
+          "dextra_email",
+          "email"
+        ],
+        "follow": "SuccessEmailSend",
+        "settings": [
+          "(none)"
+        ]
+      },
+      "dextra_sms": {
+        "aliases": [
+          "dextra_sms",
+          "sms"
+        ],
+        "follow": "SuccessSmsSend",
+        "settings": [
+          "text_en/es"
+        ]
+      },
+      "email_engagement_split": {
+        "aliases": [
+          "email_engagement_split",
+          "emailsplit"
+        ],
+        "follow": "Path2",
+        "settings": [
+          "(none)"
+        ]
+      },
+      "event_detector": {
+        "aliases": [
+          "event",
+          "event_detector"
+        ],
+        "follow": "DetectorSuccess",
+        "settings": [
+          "(none)"
+        ]
+      },
+      "freespin_bonus": {
+        "aliases": [
+          "freespin",
+          "freespin_bonus",
+          "freespins"
+        ],
+        "follow": "FreespinBonusCollectingFinished",
+        "settings": [
+          "bet_amount",
+          "game",
+          "spins"
+        ]
+      },
+      "multipurpose_promotion": {
+        "aliases": [
+          "drip",
+          "multipurpose_promotion"
+        ],
+        "follow": "PromotionAccepted",
+        "settings": [
+          "(none)"
+        ]
+      },
+      "notification_center#contract1": {
+        "aliases": [
+          "nc",
+          "notification"
+        ],
+        "follow": "NotificationSent",
+        "settings": [
+          "title_en/es, desc_en/es, caption_en/es"
+        ]
+      },
+      "notification_center#contract5": {
+        "aliases": [
+          "popup"
+        ],
+        "follow": "NotificationSent",
+        "settings": [
+          "title_en/es, desc_en/es, caption_en/es"
+        ]
+      },
+      "notification_center_engagement_split": {
+        "aliases": [
+          "ncsplit",
+          "notification_center_engagement_split"
+        ],
+        "follow": "NCEngagementSplitPassedPath02",
+        "settings": [
+          "(none)"
+        ]
+      },
+      "promotion": {
+        "aliases": [
+          "promotion"
+        ],
+        "follow": "PromotionAccepted",
+        "settings": [
+          "(none)"
+        ]
+      },
+      "wait_interval": {
+        "aliases": [
+          "wait",
+          "wait_interval"
+        ],
+        "follow": "WaitTimeCompleted",
+        "settings": [
+          "wait"
+        ]
+      }
+    },
+    "spec_shape": {
+      "name": "str",
+      "source": {
+        "type": "segment|csv|api",
+        "...settings": "?"
+      },
+      "chain": [
+        {
+          "type": "<chain type>",
+          "...settings": "?",
+          "follow": "optional Completion event that continues the chain (default: default_follow)",
+          "branches": {
+            "<Completion event>": [
+              "... nested chain nodes ..."
+            ]
+          }
+        }
+      ],
+      "date": "YYYY-MM-DD (stop anchor)",
+      "days": "int (default 1)",
+      "immediately": "bool (default true)"
+    }
   }
 }

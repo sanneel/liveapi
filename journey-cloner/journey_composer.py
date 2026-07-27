@@ -89,6 +89,66 @@ GAMES: dict[str, dict[str, str]] = {
     },
 }
 
+# The two entries above are legacy shorthands. The authoritative registry is
+# library/games.json (106 games), the same file compose.py grounds against —
+# hardcoding a two-game list here meant every other game was unbuildable.
+GAMES_FILE = HERE / "library" / "games.json"
+_GAME_FIELDS = ("lobbyGameId", "walletGameId", "externalGameId", "provider",
+                "gameTranslationKey")
+
+
+def _norm(s: str) -> str:
+    """Loose key for name matching: 'La Gran Copa Jugabet' -> 'lagrancopajugabet'."""
+    return "".join(ch for ch in str(s).lower() if ch.isalnum())
+
+
+def _game_index() -> dict[str, dict[str, str]]:
+    """Every way a brief might name a game -> that game's captured id tuple.
+    Indexes lobbyGameId, each alias, and the display name, all normalised."""
+    if not hasattr(_game_index, "_cache"):
+        idx: dict[str, dict[str, str]] = {}
+        for slug, entry in GAMES.items():          # legacy shorthands win ties
+            idx[_norm(slug)] = dict(entry)
+        try:
+            registry = json.loads(GAMES_FILE.read_text(encoding="utf-8")).get("games") or {}
+        except (OSError, ValueError):
+            registry = {}
+        for lobby_id, entry in registry.items():
+            tup = {f: entry.get(f) for f in _GAME_FIELDS if entry.get(f)}
+            if not tup.get("lobbyGameId"):
+                continue
+            keys = [lobby_id, entry.get("gameTranslationKey"), *(entry.get("aliases") or [])]
+            for k in keys:
+                if k:
+                    idx.setdefault(_norm(k), tup)
+        _game_index._cache = idx
+    return _game_index._cache
+
+
+def resolve_game(name: str) -> dict[str, str]:
+    """Resolve a brief's game name to its captured id tuple, or refuse.
+
+    Previously an unknown game only warned and kept the reference template's
+    game, so a journey would silently award spins on gow.json's own game under
+    a fully green build. A game nobody can resolve is a plan with a hole."""
+    idx = _game_index()
+    hit = idx.get(_norm(name))
+    if hit:
+        return hit
+    import difflib
+    key = _norm(name)
+    near = difflib.get_close_matches(key, list(idx), n=3, cutoff=0.6)
+    # Briefs often use a short form ("Big Bass"), which scores too low for
+    # difflib but is an unambiguous prefix/substring of the real title.
+    if len(key) >= 4:
+        near += [k for k in idx if key in k and k not in near][:5]
+    suggestions = sorted({idx[n].get("gameTranslationKey") or n for n in near})[:5]
+    raise SystemExit(
+        f"unknown game {name!r} — not in {GAMES_FILE.name} ({len(idx)} lookup keys). "
+        + (f"Did you mean: {suggestions}? " if suggestions else "")
+        + "Refusing to keep the reference template's game, which would award "
+          "spins on the wrong title.")
+
 # chain-type aliases -> canonical captured activity key (every captured type)
 ALIASES = {
     "csv": "dwh_source", "segment": "dwh_source", "dwh_source": "dwh_source",
@@ -141,7 +201,9 @@ SETTINGS_DOC = {
     "promotion": {"(none)": "external promotion refs are kept from the capture; promotionDisplayId is stripped"},
     "deposit": {"min_deposit": "minimum deposit amount, platform minor units (all tiers set to this)",
                 "timeout": "ISO-8601 window, e.g. P0Y0M1DT0H0M0S"},
-    "freespin_bonus": {"spins": "free-spin count", "game": f"one of {list(GAMES)}",
+    "freespin_bonus": {"spins": "free-spin count",
+                       "game": "game name, id or alias from library/games.json "
+                               "(see the `games` key); unknown names are REFUSED",
                        "bet_amount": "currenciesConfig.CLP.betAmount (minor units)"},
     "casino_bonus_v2": {"bonus_percent": "deposit-match %", "wagering": "wagering requirement (x)",
                         "release_multiplier": "releaseLimitMultiplier", "expiration_ms": "bonusExpirationTime in ms"},
@@ -255,12 +317,10 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
         if "spins" in s:
             note("spins", fa.get("spins"), s["spins"]); fa["spins"] = s["spins"]
         if "game" in s:
-            g = GAMES.get(str(s["game"]))
-            if not g:
-                warnings.append(f"unknown game {s['game']!r}; known: {list(GAMES)} — kept template game")
-            else:
-                for k, v in g.items():
-                    note(k, fa.get(k), v); fa[k] = v
+            # resolve_game refuses an unresolvable name rather than leaving the
+            # reference template's game in place under a green build.
+            for k, v in resolve_game(str(s["game"])).items():
+                note(k, fa.get(k), v); fa[k] = v
         if "bet_amount" in s:
             cc = (fa.get("currenciesConfig") or {}).get("CLP") or {}
             note("betAmount", cc.get("betAmount"), s["bet_amount"]); cc["betAmount"] = s["bet_amount"]
@@ -351,7 +411,11 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
         report.append(f"dwh_source: segment <- {frag_path.name} "
                       f"({(frag.get('currentTemplate') or {}).get('name')!r})")
 
-    # unknown keys: loud, never silent
+    # Unknown keys are REFUSED, not warned about. A warning here meant a spec
+    # that nested its values under "settings", or used a recipe knob name like
+    # spin_bet_clp instead of bet_amount, composed cleanly and shipped the
+    # captured template's own values — 50 spins on La Gran Copa when the brief
+    # asked for 30 on Big Bass, "VERIFIED OK", exit 0.
     known = {
         "deposit": {"min_deposit", "timeout"},
         "freespin_bonus": {"spins", "game", "bet_amount"},
@@ -363,9 +427,18 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
         "external_system_source": {"description"},
         "dwh_source": {"segment_file"},
     }.get(kind, set())
-    for k in s:
-        if k not in known and k not in UNIVERSAL_KEYS:
-            warnings.append(f"{kind}: setting {k!r} is not supported (known: {sorted(known)})")
+    bad = [k for k in s if k not in known and k not in UNIVERSAL_KEYS]
+    if bad:
+        hint = ""
+        if "settings" in bad:
+            hint = (" — put settings INLINE on the node "
+                    '({"type": "freespins", "spins": 30}), not nested under a '
+                    '"settings" key')
+        raise SystemExit(
+            f"{kind}: unsupported setting(s) {sorted(bad)}{hint}. "
+            f"Known for this activity: {sorted(known)} (plus {sorted(UNIVERSAL_KEYS)}). "
+            f"Refusing to build — an ignored setting ships the captured "
+            f"template's own value instead of the one you asked for.")
 
 
 # ── the composer ─────────────────────────────────────────────────────────────
@@ -728,7 +801,13 @@ def captured_connections() -> list[dict]:
 
 
 # ── CLI ──────────────────────────────────────────────────────────────────────
-def cmd_options(as_json: bool) -> int:
+def options() -> dict:
+    """The composable palette as data: sources, activities, their captured
+    events and settings, the games registry and the spec shape.
+
+    Split out of cmd_options so it can be imported — compose.py's catalog()
+    publishes a compacted form into the planner prompt, which is what lets the
+    planner emit chain specs instead of only the four fixed recipes."""
     lib = load_library()
     have = sorted(k for k in lib["types"] if k not in ("end_of_journey", "end_of_path"))
 
@@ -738,7 +817,7 @@ def cmd_options(as_json: bool) -> int:
                 "boundary": sorted(e["eventName"] for e in evs if e.get("eventType") == "Boundary"),
                 "activation": sorted(e["eventName"] for e in evs if e.get("eventType") == "Activation")}
 
-    out = {
+    return {
         "sources": {"csv/segment": "dwh_source (segment/CSV-seeded audience)",
                     "api": "external_system_source (API entry)"},
         "chain_types": {k: {"aliases": sorted(a for a, v in ALIASES.items() if v == k),
@@ -748,7 +827,10 @@ def cmd_options(as_json: bool) -> int:
                             "captured_in": lib["types"][k]["template"]}
                         for k in have if k not in SOURCE_TYPES},
         "captured_connections": captured_connections(),
-        "games": {k: v["gameTranslationKey"] for k, v in GAMES.items()},
+        # The full registry, so a caller (or an LLM) can resolve a brief's game
+        # name without guessing. Keyed by lobbyGameId -> display name.
+        "games": {e["lobbyGameId"]: e.get("gameTranslationKey") or e["lobbyGameId"]
+                  for e in _game_index().values()},
         "spec_shape": {"name": "str", "source": {"type": "segment|csv|api", "...settings": "?"},
                        "chain": [{"type": "<chain type>", "...settings": "?",
                                   "follow": "optional Completion event that continues the chain (default: default_follow)",
@@ -756,6 +838,10 @@ def cmd_options(as_json: bool) -> int:
                        "date": "YYYY-MM-DD (stop anchor)", "days": "int (default 1)",
                        "immediately": "bool (default true)"},
     }
+
+
+def cmd_options(as_json: bool) -> int:
+    out = options()
     if as_json:
         print(json.dumps(out, ensure_ascii=False, indent=2))
     else:

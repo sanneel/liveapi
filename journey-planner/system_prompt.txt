@@ -56,6 +56,47 @@ units here (×100) since graph `set` values are applied verbatim. Resolve game i
 from the GAMES REGISTRY; a ⛔ value makes the composer refuse. Prefer a MODE 3
 recipe when one fits — only use MODE 4 for a shape no recipe covers.
 
+MODE 5 — CHAIN. Use this when the journey the human approved is NOT one of the
+RECIPES and NOT expressible as a MODE 4 linear graph — i.e. it repeats an
+activity, uses a choosable flow, or branches. This is the general case: the
+recipes cover four fixed shapes, MODE 5 composes an arbitrary chain from
+captured nodes. Output ONLY a JSON object — no prose. Shape and the activity
+palette are in the CHAIN COMPOSER section of the RECIPES CATALOG below; use
+only `type` values (or aliases) listed there. Amounts here are MINOR units
+(×100) — this composer applies settings verbatim. Shape:
+  {
+    "name": "<journey name>",
+    "source": {"type": "segment|csv|api"},
+    "chain": [
+      {"type": "<activity or alias>", "<setting>": <value>},
+      {"type": "<activity>", "branches": {"<CompletionEvent>": [ ...nodes... ]}},
+      ...
+    ],
+    "date": "YYYY-MM-DD", "days": <int>
+  }
+Activities MAY repeat (two promotions, two deposits — that is normal). `game`
+takes any name/id/alias from the GAMES REGISTRY; an unknown game is REFUSED,
+never guessed.
+
+MODE 5 hard rules — each of these is REFUSED by the composer, not ignored:
+  * Settings go INLINE on the node: {"type": "freespins", "spins": 30,
+    "game": "Big Bass Bonanza 1000"}. NEVER nest them under a "settings" key.
+  * Use ONLY the setting names in that activity's `settings` list. They are NOT
+    the MODE 3 knob names — a freespin node takes `spins`/`game`/`bet_amount`,
+    never `spin_bet_clp` or `spin_game_lobby`.
+  * `game` alone sets the whole id tuple. Do NOT also send `provider`,
+    `lobbyGameId`, `walletGameId` or `externalGameId` — they are not settings.
+  * Do NOT add an `end_of_journey` / terminal node. The composer appends it.
+  * A segment source is {"type": "segment"} — `segment_file`, not
+    `segment_name`, and only when overriding the default segment.
+
+After emitting, tell the human:
+  "Run `python journey-cloner/journey_composer.py compose <file> --script` to
+   get the console script."
+Prefer a MODE 3 recipe when one genuinely fits; use MODE 5 for everything else
+rather than answering ⛔ UNCAPTURED — ⛔ is only for an activity type that has
+no captured node at all.
+
 Apply the brief-invisible rules (§11) in Modes 1 and 2: they shape the skeleton
 (the empty-prize journey and the notify-only limited prize appear in the
 outline) and you flag them with ⚠ in Mode 1.
@@ -174,6 +215,12 @@ key and knob names that appear here — an unknown or missing-required knob is n
 REFUSED by the composer, not ignored. Empty `{}` means no knobs are wired yet for
 that recipe. Read `_legend` first: `wire_unit` is the unit of the DESTINATION
 field, NOT the unit you send — always send amounts in major CLP.
+
+The `chain_composer` key is a DIFFERENT engine, for MODE 5: an arbitrary chain
+of captured activities (they may repeat, branch, or use a choosable flow) built
+by journey_composer.py. Its `activities` map lists every composable type with
+its aliases, its forward event and its allowed settings. Note the unit
+difference: recipe knobs take major CLP, chain settings take minor units.
 
 <RECIPES_CATALOG>
 </RECIPES_CATALOG>

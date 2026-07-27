@@ -780,6 +780,42 @@ def _reference_index() -> dict:
     return refs
 
 
+def _chain_palette() -> dict:
+    """The chain composer's palette, compacted for the prompt.
+
+    RECIPES cover four fixed shapes. Anything else — a repeated activity, a
+    choosable flow, a branch — needs journey_composer.py, which assembles an
+    arbitrary chain from captured nodes. Publishing its palette here is what
+    lets the planner emit a chain spec at all; without it the model only ever
+    sees the four recipes and answers '⛔ UNCAPTURED' to everything else.
+
+    Deliberately drops the full per-activity event lists and game table (~30KB)
+    — the events are implied by `follow`, and games_index.md is already injected
+    separately. Degrades to {} if journey_composer is unavailable.
+    """
+    try:
+        if str(HERE) not in sys.path:
+            sys.path.insert(0, str(HERE))
+        import journey_composer as jc
+        opts = jc.options()
+    except Exception:
+        return {}
+    return {
+        "_doc": "For journeys no recipe covers. Emit a chain spec and build it with "
+                "`python journey-cloner/journey_composer.py compose <file> --script`. "
+                "Activities may repeat. `game` accepts any name/id/alias from the "
+                "games registry; unknown names are REFUSED, never guessed.",
+        "sources": opts.get("sources", {}),
+        "activities": {
+            k: {"aliases": v.get("aliases", []),
+                "follow": v.get("default_follow"),
+                "settings": sorted(v.get("settings", {}))}
+            for k, v in (opts.get("chain_types") or {}).items()
+        },
+        "spec_shape": opts.get("spec_shape", {}),
+    }
+
+
 def _knob_doc(k: Knob) -> dict:
     """One knob as the planner sees it. `range` is the accepted span of the value
     AS SENT, so the model can self-check before emitting rather than discovering
@@ -816,6 +852,7 @@ def catalog() -> dict:
             } for k, r in RECIPES.items()
         },
         "references": _reference_index(),
+        "chain_composer": _chain_palette(),
     }
 
 
