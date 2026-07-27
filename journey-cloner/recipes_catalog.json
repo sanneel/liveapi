@@ -220,7 +220,7 @@
     ]
   },
   "chain_composer": {
-    "_doc": "For journeys no recipe covers. Emit a chain spec and build it with `python journey-cloner/journey_composer.py compose <file> --script`. Activities may repeat. `game` accepts any name/id/alias from the games registry; unknown names are REFUSED, never guessed.",
+    "_doc": "For journeys no recipe covers. Activities may repeat, branch, or use a choosable flow. `inline_keys` lists the keys that go DIRECTLY on the node object — {\"type\": \"freespins\", \"spins\": 30} — never wrapped in a nested \"settings\" object. `game` accepts any name/id/alias from the games registry and sets the whole id tuple; unknown names are REFUSED, never guessed. Build with `journey_composer.py compose <file> --script`.",
     "sources": {
       "csv/segment": "dwh_source (segment/CSV-seeded audience)",
       "api": "external_system_source (API entry)"
@@ -232,7 +232,7 @@
           "decisionsplit"
         ],
         "follow": "DecisionSplitPassedPath01",
-        "settings": [
+        "inline_keys": [
           "(none)"
         ]
       },
@@ -244,7 +244,7 @@
           "wagering"
         ],
         "follow": "WageringBonusFinished",
-        "settings": [
+        "inline_keys": [
           "bonus_percent",
           "expiration_ms",
           "release_multiplier",
@@ -256,7 +256,7 @@
           "deposit"
         ],
         "follow": "DepositConditionSatisfied",
-        "settings": [
+        "inline_keys": [
           "min_deposit",
           "timeout"
         ]
@@ -267,7 +267,7 @@
           "email"
         ],
         "follow": "SuccessEmailSend",
-        "settings": [
+        "inline_keys": [
           "(none)"
         ]
       },
@@ -277,7 +277,7 @@
           "sms"
         ],
         "follow": "SuccessSmsSend",
-        "settings": [
+        "inline_keys": [
           "text_en/es"
         ]
       },
@@ -287,7 +287,7 @@
           "emailsplit"
         ],
         "follow": "Path2",
-        "settings": [
+        "inline_keys": [
           "(none)"
         ]
       },
@@ -297,7 +297,7 @@
           "event_detector"
         ],
         "follow": "DetectorSuccess",
-        "settings": [
+        "inline_keys": [
           "(none)"
         ]
       },
@@ -308,7 +308,7 @@
           "freespins"
         ],
         "follow": "FreespinBonusCollectingFinished",
-        "settings": [
+        "inline_keys": [
           "bet_amount",
           "game",
           "spins"
@@ -320,7 +320,7 @@
           "multipurpose_promotion"
         ],
         "follow": "PromotionAccepted",
-        "settings": [
+        "inline_keys": [
           "(none)"
         ]
       },
@@ -330,7 +330,7 @@
           "notification"
         ],
         "follow": "NotificationSent",
-        "settings": [
+        "inline_keys": [
           "title_en/es, desc_en/es, caption_en/es"
         ]
       },
@@ -339,7 +339,7 @@
           "popup"
         ],
         "follow": "NotificationSent",
-        "settings": [
+        "inline_keys": [
           "title_en/es, desc_en/es, caption_en/es"
         ]
       },
@@ -349,7 +349,7 @@
           "notification_center_engagement_split"
         ],
         "follow": "NCEngagementSplitPassedPath02",
-        "settings": [
+        "inline_keys": [
           "(none)"
         ]
       },
@@ -358,7 +358,7 @@
           "promotion"
         ],
         "follow": "PromotionAccepted",
-        "settings": [
+        "inline_keys": [
           "(none)"
         ]
       },
@@ -368,7 +368,7 @@
           "wait_interval"
         ],
         "follow": "WaitTimeCompleted",
-        "settings": [
+        "inline_keys": [
           "wait"
         ]
       }

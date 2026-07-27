@@ -254,8 +254,9 @@ def planner_compose(
     if len(text) > MAX_CHARS:
         return JSONResponse({"error": f"Reply too large ({len(text)} chars, max {MAX_CHARS})."})
     mode = str(payload.get("mode") or "spec").strip().lower()
-    if mode not in ("spec", "graph"):
-        return JSONResponse({"error": f"Unknown mode {mode!r} — use 'spec' or 'graph'."})
+    if mode not in ("spec", "graph", "chain"):
+        return JSONResponse(
+            {"error": f"Unknown mode {mode!r} — use 'spec', 'graph' or 'chain'."})
 
     try:
         from ..services.journey_cloner_runner import generate_composed_console_script

@@ -199,7 +199,13 @@ NOTES
     if(busy) return;
     const last = [...history].reverse().find(m => m.role === "model");
     if(!last){ hint.textContent = "Ask the planner for a spec first."; return; }
-    const mode = /"reference"\s*:/.test(last.text) ? "graph" : "spec";
+    // Route to the right engine by the spec's own shape: a MODE 4 graph names a
+    // `reference`, a MODE 5 chain has a `chain` array, a MODE 3 recipe spec has
+    // `recipe`. Checked most-specific first — a chain spec has no `recipe` key.
+    const t = last.text;
+    const mode = /"reference"\s*:/.test(t) ? "graph"
+               : (/"chain"\s*:\s*\[/.test(t) && !/"recipe"\s*:/.test(t)) ? "chain"
+               : "spec";
     busy = true; buildBtn.disabled = true; hint.textContent = "Composing…";
     const bub = addMsg("model", ""); bub.innerHTML = '<span class="jp-dots"></span>';
     try{

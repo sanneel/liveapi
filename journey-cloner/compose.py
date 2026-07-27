@@ -801,15 +801,22 @@ def _chain_palette() -> dict:
     except Exception:
         return {}
     return {
-        "_doc": "For journeys no recipe covers. Emit a chain spec and build it with "
-                "`python journey-cloner/journey_composer.py compose <file> --script`. "
-                "Activities may repeat. `game` accepts any name/id/alias from the "
-                "games registry; unknown names are REFUSED, never guessed.",
+        "_doc": "For journeys no recipe covers. Activities may repeat, branch, or "
+                "use a choosable flow. `inline_keys` lists the keys that go "
+                "DIRECTLY on the node object — {\"type\": \"freespins\", "
+                "\"spins\": 30} — never wrapped in a nested \"settings\" object. "
+                "`game` accepts any name/id/alias from the games registry and "
+                "sets the whole id tuple; unknown names are REFUSED, never "
+                "guessed. Build with `journey_composer.py compose <file> --script`.",
         "sources": opts.get("sources", {}),
+        # Named `inline_keys`, not `settings`: a key called "settings" primes the
+        # model to emit {"type": x, "settings": {...}}, which the composer
+        # refuses. Observed repeatedly in live runs and not fixed by prompt
+        # instruction — the field name itself was the cue.
         "activities": {
             k: {"aliases": v.get("aliases", []),
                 "follow": v.get("default_follow"),
-                "settings": sorted(v.get("settings", {}))}
+                "inline_keys": sorted(v.get("settings", {}))}
             for k, v in (opts.get("chain_types") or {}).items()
         },
         "spec_shape": opts.get("spec_shape", {}),

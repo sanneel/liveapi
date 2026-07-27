@@ -573,18 +573,24 @@ def generate_composed_console_script(
     the refusal text comes back in the log for the operator to paste back into
     the chat.
 
-    mode: "spec"  -> compose.py --spec   (a MODE 3 recipe spec)
-          "graph" -> compose.py --graph  (a MODE 4 linear graph)
+    mode: "spec"  -> compose.py --spec            (MODE 3 recipe spec)
+          "graph" -> compose.py --graph           (MODE 4 linear graph)
+          "chain" -> journey_composer.py compose  (MODE 5 arbitrary chain —
+                     repeated activities, choosable flows, branches)
 
     Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
     """
-    if mode not in ("spec", "graph"):
-        raise ValueError(f"mode must be 'spec' or 'graph', got {mode!r}")
+    if mode not in ("spec", "graph", "chain"):
+        raise ValueError(f"mode must be 'spec', 'graph' or 'chain', got {mode!r}")
     # Date the artifact so console_scripts/ stays browsable; _unique_basename's
     # uuid suffix keeps concurrent requests from reading each other's file.
     basename = _unique_basename("planner", datetime.date.today().isoformat())
-    cmd = [python_executable(), str(COMPOSE_SCRIPT_PATH), f"--{mode}",
-           "--name", basename]
+    if mode == "chain":
+        cmd = [python_executable(), str(CHAIN_COMPOSER_SCRIPT_PATH), "compose", "-",
+               "--script", "--name", basename]
+    else:
+        cmd = [python_executable(), str(COMPOSE_SCRIPT_PATH), f"--{mode}",
+               "--name", basename]
     return _run_gow_cli(cmd, spec_text=spec_text, basename=basename)
 
 

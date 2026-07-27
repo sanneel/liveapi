@@ -64,6 +64,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 TPL = HERE / "templates" / "casino"
 OUT = HERE / "out"
+CONSOLE_OUT = HERE / "console_scripts"     # shared with compose.py / the runner
 
 GOW = TPL / "gow.json"
 COMMS = TPL / "gow_comms.json"
@@ -878,7 +879,7 @@ def emit_console_script(body: dict, out_path: Path) -> str:
     return str(out_path)
 
 
-def cmd_compose(spec: dict, as_json: bool, script: bool) -> int:
+def cmd_compose(spec: dict, as_json: bool, script: bool, basename: str | None = None) -> int:
     res = compose(spec)
     errs = verify(res["body"])
     OUT.mkdir(exist_ok=True)
@@ -888,7 +889,14 @@ def cmd_compose(spec: dict, as_json: bool, script: bool) -> int:
 
     js_path = None
     if script and not errs:
-        js_path = emit_console_script(res["body"], OUT / f"{slug}.console.js")
+        if basename:
+            # Called by the backoffice runner, which reads back exactly
+            # console_scripts/<basename>_console.js — same convention as every
+            # other generator. Bare CLI runs keep the name-derived out/ path.
+            CONSOLE_OUT.mkdir(parents=True, exist_ok=True)
+            js_path = emit_console_script(res["body"], CONSOLE_OUT / f"{basename}_console.js")
+        else:
+            js_path = emit_console_script(res["body"], OUT / f"{slug}.console.js")
 
     summary = {
         "ok": not errs,
@@ -933,13 +941,24 @@ def main() -> int:
     pc = sub.add_parser("compose"); pc.add_argument("spec"); pc.add_argument("--json", action="store_true")
     pc.add_argument("--script", action="store_true",
                     help="also emit the paste-ready browser console script (reserve id -> POST)")
+    pc.add_argument("--name", default=None,
+                    help="emit console_scripts/<name>_console.js instead of a "
+                         "name-derived path under out/ (used by the backoffice runner)")
     a = p.parse_args()
     if a.mode == "options":
         return cmd_options(a.json)
-    spec = json.loads(sys.stdin.read() if a.spec == "-" else Path(a.spec).read_text(encoding="utf-8"))
+    raw = sys.stdin.read() if a.spec == "-" else Path(a.spec).read_text(encoding="utf-8")
+    # Tolerate a planner reply verbatim: ```json fences and prose lead-ins are
+    # what the model actually emits, and a bare json.loads turns that into a
+    # traceback instead of a usable message.
+    from compose import _extract_json, SpecError
+    try:
+        spec = _extract_json(raw)
+    except SpecError as exc:
+        raise SystemExit(f"⛔ REFUSED — {exc}")
     if a.mode == "describe":
         return cmd_describe(spec)
-    return cmd_compose(spec, a.json, a.script)
+    return cmd_compose(spec, a.json, a.script, a.name)
 
 
 if __name__ == "__main__":
