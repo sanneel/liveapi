@@ -159,6 +159,19 @@ def main() -> int:
         print(__doc__)
         return 2
 
+    # After pasting a fresh games.json from fetch_games_catalog_console.js the
+    # compact index is stale, and there was no way to rebuild it without also
+    # re-mining a HAR. The prompt reads the index, so a stale one silently means
+    # the planner cannot see the games you just captured.
+    if args[0] == "--reindex":
+        if not REGISTRY.exists():
+            print(f"no registry at {REGISTRY}")
+            return 2
+        games = json.load(open(REGISTRY, encoding="utf-8")).get("games") or {}
+        write_compact_index(games)
+        print(f"reindexed {len(games)} games -> {INDEX} ({INDEX.stat().st_size:,} bytes)")
+        return 0
+
     paths: list[str] = []
     for a in args:
         paths += glob.glob(a) or [a]
