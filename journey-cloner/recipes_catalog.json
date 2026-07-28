@@ -220,7 +220,8 @@
     "_doc": "For journeys no recipe covers. Activities may repeat, branch, or use a choosable flow. `inline_keys` lists the keys that go DIRECTLY on the node object — {\"type\": \"freespins\", \"spins\": 30} — never wrapped in a nested \"settings\" object. `game` accepts any name/id/alias from the games registry and sets the whole id tuple; unknown names are REFUSED, never guessed. Build with `journey_composer.py compose <file> --script`.",
     "sources": {
       "csv/segment": "dwh_source (segment/CSV-seeded audience)",
-      "api": "external_system_source (API entry)"
+      "api": "external_system_source (API entry) — use this for a journey a randomizer routes winners into",
+      "promocode": "registration (Reference codes entry; takes `promocode`)"
     },
     "activities": {
       "ams_decision_split": {
@@ -232,6 +233,14 @@
         "inline_keys": [
           "(none)"
         ]
+      },
+      "campaign_connector": {
+        "aliases": [
+          "campaign_connector",
+          "connector"
+        ],
+        "follow": "PlayerAddedToCampaign",
+        "inline_keys": []
       },
       "casino_bonus_v2": {
         "aliases": [
@@ -298,6 +307,19 @@
           "(none)"
         ]
       },
+      "freebet": {
+        "aliases": [
+          "free_bet",
+          "freebet",
+          "sport_freebet"
+        ],
+        "follow": "PlayerFreebetUsed",
+        "inline_keys": [
+          "amount",
+          "expire_days",
+          "max_odds"
+        ]
+      },
       "freespin_bonus": {
         "aliases": [
           "freespin",
@@ -361,6 +383,22 @@
         "inline_keys": [
           "(none)"
         ]
+      },
+      "random_split": {
+        "aliases": [
+          "random_split",
+          "randomsplit"
+        ],
+        "follow": null,
+        "inline_keys": []
+      },
+      "sport_bonus": {
+        "aliases": [
+          "sport_bonus",
+          "sportbonus"
+        ],
+        "follow": "SportBonusFinished",
+        "inline_keys": []
       },
       "wait_interval": {
         "aliases": [

@@ -70,6 +70,24 @@ GOW = TPL / "gow.json"
 COMMS = TPL / "gow_comms.json"
 DEFAULT_SEGMENT = TPL / "segment_cs_301.json"
 
+# Every capture the library draws activity types from, in priority order: the
+# first template containing a type supplies the canonical instance.
+#
+# The "one reference per journey, never mix" rule in COMPOSER_RULES.md is about
+# compose.py's RECIPE model, which lifts a whole chain out of one capture and
+# depends on that capture's shared shell. This composer works differently — it
+# deep-clones each activity WITH its own mirror element, regenerates ids per
+# node and rewires dependencies by role — so a node from a second capture is no
+# more foreign than a second node from the first. Sport activities (freebet,
+# registration) live only in the udch captures, and excluding them made every
+# sport prize unbuildable.
+SOURCES = (
+    GOW,
+    COMMS,
+    HERE / "templates" / "udch" / "two_hours.json",     # freebet, registration
+    HERE / "templates" / "udch" / "followup.json",      # multipurpose + freebet
+)
+
 UUID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I)
 
 # Known games (mirrors casino_journey.py GAMES — the only captured-valid tuples).
@@ -167,6 +185,13 @@ ALIASES = {
     "notification_center": "notification_center#contract1",
     "onsite": "notification_center#contract1",
     "popup": "notification_center#contract5",
+    # Sport activities, available since the udch captures joined SOURCES.
+    "freebet": "freebet", "free_bet": "freebet", "sport_freebet": "freebet",
+    "sport_bonus": "sport_bonus", "sportbonus": "sport_bonus",
+    "registration": "registration", "promocode": "registration",
+    "reference_codes": "registration",
+    "campaign_connector": "campaign_connector", "connector": "campaign_connector",
+    "random_split": "random_split", "randomsplit": "random_split",
     "sms": "dextra_sms", "dextra_sms": "dextra_sms",
     "email": "dextra_email", "dextra_email": "dextra_email",
     "wait": "wait_interval", "wait_interval": "wait_interval",
@@ -176,7 +201,10 @@ ALIASES = {
     "emailsplit": "email_engagement_split", "email_engagement_split": "email_engagement_split",
     "decisionsplit": "ams_decision_split", "ams_decision_split": "ams_decision_split",
 }
-SOURCE_TYPES = {"dwh_source", "external_system_source"}
+# Entry activities. `registration` (the backoffice's "Reference codes" node)
+# fires PlayerAdded, an ACTIVATION — it starts a journey, it cannot sit in
+# the middle of one, so it belongs here rather than among the chain types.
+SOURCE_TYPES = {"dwh_source", "external_system_source", "registration"}
 
 # The default forward completion event per node type — all are real captured
 # events. Override per node with "follow": "<EventName>"; route other events
@@ -191,6 +219,9 @@ HAPPY = {
     "notification_center#contract5": "NotificationSent",
     "dextra_sms": "SuccessSmsSend",
     "dextra_email": "SuccessEmailSend",
+    "freebet": "PlayerFreebetUsed",
+    "sport_bonus": "SportBonusFinished",
+    "campaign_connector": "PlayerAddedToCampaign",
     "wait_interval": "WaitTimeCompleted",
     "event_detector": "DetectorSuccess",
     # splits: default to the captured "engaged" path; use follow/branches to
@@ -213,6 +244,10 @@ SETTINGS_DOC = {
                        "game": "game name, id or alias from library/games.json "
                                "(see the `games` key); unknown names are REFUSED",
                        "bet_amount": "currenciesConfig.CLP.betAmount (minor units)"},
+    "freebet": {"amount": "free-bet value, platform MINOR units (3,000 CLP -> 300000)",
+                "max_odds": "maximum odds the free bet can be used at",
+                "expire_days": "days the free bet stays valid once issued"},
+    "registration": {"promocode": "the promocode players redeem to enter"},
     "casino_bonus_v2": {"bonus_percent": "deposit-match %", "wagering": "wagering requirement (x)",
                         "release_multiplier": "releaseLimitMultiplier", "expiration_ms": "bonusExpirationTime in ms"},
     "notification_center#contract1": {"title_en/es, desc_en/es, caption_en/es": "on-site notification copy"},
@@ -244,7 +279,7 @@ def load_library() -> dict:
     element, activitiesConfiguration entry, pathesConfiguration entry, and its
     captured outgoing edges keyed by eventName."""
     lib: dict[str, dict] = {}
-    for path in (GOW, COMMS):
+    for path in SOURCES:
         body = json.loads(path.read_text(encoding="utf-8-sig"))
         raw = body["rawJourneyData"]
         els = raw["elements"]
@@ -341,6 +376,26 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
             note("betAmount", cc.get("betAmount"), s["bet_amount"]); cc["betAmount"] = s["bet_amount"]
             if "betAmount_majorUnits" in cc:      # proven pipeline keeps both in sync
                 cc["betAmount_majorUnits"] = int(s["bet_amount"]) // 100
+    elif kind == "freebet":
+        props = init.get("properties") or {}
+        if "amount" in s:
+            cur = props.get("freeBetAmount") or {}
+            for ccy in (cur or {"CLP": None}):
+                note(f"freeBetAmount.{ccy}", cur.get(ccy), s["amount"]); cur[ccy] = s["amount"]
+            props["freeBetAmount"] = cur
+        if "max_odds" in s:
+            note("maxOdd", props.get("maxOdd"), s["max_odds"]); props["maxOdd"] = s["max_odds"]
+        if "expire_days" in s:
+            note("expireInDays", props.get("expireInDays"), s["expire_days"])
+            props["expireInDays"] = s["expire_days"]
+    elif kind == "registration":
+        if "promocode" in s:
+            # The captured entry node carries a real promocode (VAMOSBULLA);
+            # leaving it is how another campaign's code reached a new journey.
+            ps = init.get("promocodeSettings") or {}
+            note("promocodeSettings.values", ps.get("values"), [s["promocode"]])
+            ps["values"] = [s["promocode"]]
+            init["displayData"] = [f"Promo codes: {s['promocode']}"]
     elif kind == "casino_bonus_v2":
         pairs = {"bonus_percent": "bonusPercent", "wagering": "wageringRequirement",
                  "release_multiplier": "releaseLimitMultiplier", "expiration_ms": "bonusExpirationTime"}
@@ -451,6 +506,14 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
         for mirror_key in list(cfg.keys()):
             if mirror_key in init:
                 cfg[mirror_key] = copy.deepcopy(init[mirror_key])
+    # displayData is the label the builder prints on the node, and it lives at
+    # the mirror entry's TOP level, a sibling of `data` — so the loop above never
+    # reached it and a renamed promocode still showed "Promo codes: VAMOSBULLA".
+    conf = node.get("config")
+    if isinstance(conf, dict):
+        for top_key in ("displayData",):
+            if top_key in conf and top_key in init:
+                conf[top_key] = copy.deepcopy(init[top_key])
 
     # Unknown keys are REFUSED, not warned about. A warning here meant a spec
     # that nested its values under "settings", or used a recipe knob name like
@@ -460,6 +523,8 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
     known = {
         "deposit": {"min_deposit", "timeout"},
         "freespin_bonus": {"spins", "game", "bet_amount", "with_wagering"},
+        "freebet": {"amount", "max_odds", "expire_days"},
+        "registration": {"promocode"},
         "casino_bonus_v2": {"bonus_percent", "wagering", "release_multiplier", "expiration_ms"},
         "notification_center#contract1": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "deeplink"},
         "notification_center#contract5": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "deeplink"},
@@ -824,7 +889,7 @@ def captured_connections() -> list[dict]:
     connection grammar, straight from the templates (like build_catalog)."""
     conns: list[dict] = []
     seen: set = set()
-    for path in (GOW, COMMS):
+    for path in SOURCES:
         body = json.loads(path.read_text(encoding="utf-8-sig"))
         by_id = {a["activityId"]: a for a in body["activities"]}
         for a in body["activities"]:
@@ -860,7 +925,10 @@ def options() -> dict:
 
     return {
         "sources": {"csv/segment": "dwh_source (segment/CSV-seeded audience)",
-                    "api": "external_system_source (API entry)"},
+                    "api": "external_system_source (API entry) — use this for a "
+                           "journey a randomizer routes winners into",
+                    "promocode": "registration (Reference codes entry; takes "
+                                 "`promocode`)"},
         "chain_types": {k: {"aliases": sorted(a for a, v in ALIASES.items() if v == k),
                             "default_follow": HAPPY.get(k),
                             "events": events_of(k),
@@ -929,7 +997,7 @@ def _inherited_content_errors(body: dict) -> list[str]:
     except Exception:
         return []
     leaks: dict[str, None] = {}
-    for path in (GOW, COMMS):
+    for path in SOURCES:
         try:
             ref = json.loads(path.read_text(encoding="utf-8-sig"))
         except (OSError, ValueError):
