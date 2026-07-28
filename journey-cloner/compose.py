@@ -1134,12 +1134,18 @@ def catalog() -> dict:
                      "spec is REFUSED. Worked example: a 100 CLP per-spin bet is "
                      "spin_bet_clp: 100 — NOT 10000.",
         },
+        # Only recipes a spec can legitimately build are advertised. A recipe
+        # with no knobs can ONLY reproduce its reference verbatim, so every
+        # spec-driven use of it ships another campaign's content — validate_spec
+        # refuses them, and listing them anyway just invites the model to pick
+        # one and get refused. Telling it "do not use comms" in prose did not
+        # work; not offering comms does.
         "recipes": {
             k: {
                 "reference": r.reference,
                 "chain": [n.activity for n in r.chain] + [r.terminal],
                 "knobs": {kn: _knob_doc(v) for kn, v in r.knobs.items()},
-            } for k, r in RECIPES.items()
+            } for k, r in RECIPES.items() if r.knobs
         },
         "references": _reference_index(),
         "chain_composer": _chain_palette(),

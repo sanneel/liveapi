@@ -5,18 +5,6 @@
     "range": "[min, max] for the value AS SENT (major CLP). Outside it the spec is REFUSED. Worked example: a 100 CLP per-spin bet is spin_bet_clp: 100 — NOT 10000."
   },
   "recipes": {
-    "comms": {
-      "reference": "casino/gow_comms.json",
-      "chain": [
-        "dwh_source",
-        "notification_center",
-        "notification_center",
-        "dextra_sms",
-        "dextra_email",
-        "end_of_journey"
-      ],
-      "knobs": {}
-    },
     "sport_deposit_freebet": {
       "reference": "udch/two_hours.json",
       "chain": [
@@ -331,6 +319,7 @@
           "bet_amount",
           "game",
           "spins",
+          "spins_expiration_ms",
           "with_wagering"
         ]
       },

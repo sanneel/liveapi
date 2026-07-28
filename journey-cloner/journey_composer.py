@@ -239,6 +239,8 @@ SETTINGS_DOC = {
     "deposit": {"min_deposit": "minimum deposit amount, platform minor units (all tiers set to this)",
                 "timeout": "ISO-8601 window, e.g. P0Y0M1DT0H0M0S"},
     "freespin_bonus": {"spins": "free-spin count",
+                       "spins_expiration_ms": "how long the spins stay usable, in "
+                                              "milliseconds (24h = 86400000)",
                        "with_wagering": "false for an INSTANT bonus (no wagering "
                                         "grind, no casino_bonus follow-up node)",
                        "game": "game name, id or alias from library/games.json "
@@ -392,6 +394,9 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
             # reference template's game in place under a green build.
             for k, v in resolve_game(str(s["game"])).items():
                 note(k, fa.get(k), v); fa[k] = v
+        if "spins_expiration_ms" in s:
+            note("spinsExpirationDuration", fa.get("spinsExpirationDuration"), s["spins_expiration_ms"])
+            fa["spinsExpirationDuration"] = s["spins_expiration_ms"]
         if "with_wagering" in s:
             # The instant-bonus marker: freespinActivity.withWagering false and
             # no wagering follow-up node. Without this setting an instant bonus
@@ -550,7 +555,8 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
     # asked for 30 on Big Bass, "VERIFIED OK", exit 0.
     known = {
         "deposit": {"min_deposit", "timeout"},
-        "freespin_bonus": {"spins", "game", "bet_amount", "with_wagering"},
+        "freespin_bonus": {"spins", "game", "bet_amount", "with_wagering",
+                           "spins_expiration_ms"},
         "freebet": {"amount", "max_odds", "expire_days"},
         "registration": {"promocode"},
         "casino_bonus_v2": {"bonus_percent", "wagering", "release_multiplier", "expiration_ms"},
@@ -588,6 +594,13 @@ def compose(spec: dict) -> dict:
     if src_kind not in SOURCE_TYPES:
         raise SystemExit(f"source.type must be one of csv/segment/api, got {src_spec.get('type')!r}")
     chain_specs = spec.get("chain") or []
+    # A spec often ends with an explicit terminal because that is how MODE 1/2
+    # writes the flow out ("... -> freespins -> end_of_journey"). The composer
+    # appends the terminal itself, so an explicit one is redundant, not wrong —
+    # refusing it made the model rewrite a correct chain to fix a non-problem.
+    _TERMINALS = {"end", "end_of_journey", "end_of_path", "exit", "endofjourney"}
+    while chain_specs and str((chain_specs[-1] or {}).get("type", "")).lower() in _TERMINALS:
+        chain_specs = chain_specs[:-1]
     if not chain_specs:
         raise SystemExit("chain must have at least one node")
 

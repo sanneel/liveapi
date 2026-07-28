@@ -379,12 +379,27 @@ def _repair_spec(settings, spec_text: str, refusal: str, mode: str) -> str | Non
     one instruction — change only what the refusal names. A free-form "try
     again" tends to produce a different journey rather than the same journey
     with the error fixed."""
-    instruction = (
-        f"The composer REFUSED this {mode} spec. Fix ONLY what the refusal names "
-        f"and re-emit the corrected JSON object — no prose, no explanation, no "
-        f"other changes to the journey.\n\n"
-        f"--- SPEC ---\n{spec_text}\n\n--- REFUSAL ---\n{refusal.strip()[:4000]}\n"
-    )
+    # A SHAPE refusal ("this recipe is deposit-gated", "this recipe has no
+    # knobs") cannot be fixed by editing a value — the answer is a different
+    # engine. The old instruction forbade exactly that, so the model edited
+    # knobs forever and got refused every round.
+    wants_chain = "MODE 5" in refusal or "chain" in refusal.lower()
+    if wants_chain:
+        instruction = (
+            f"The composer REFUSED this {mode} spec, and the refusal says the "
+            f"RECIPE cannot express this journey. Do not try to fix the knobs — "
+            f"re-emit it as a MODE 5 CHAIN spec instead, containing only the "
+            f"activities this journey actually needs, with the same values. "
+            f"Output ONLY the JSON object.\n\n"
+            f"--- SPEC ---\n{spec_text}\n\n--- REFUSAL ---\n{refusal.strip()[:4000]}\n"
+        )
+    else:
+        instruction = (
+            f"The composer REFUSED this {mode} spec. Fix ONLY what the refusal "
+            f"names and re-emit the corrected JSON object — no prose, no "
+            f"explanation, no other changes to the journey.\n\n"
+            f"--- SPEC ---\n{spec_text}\n\n--- REFUSAL ---\n{refusal.strip()[:4000]}\n"
+        )
     try:
         provider = _resolve_provider(settings)
         system_prompt = _build_system_prompt(lean=(provider == "groq"))
@@ -518,6 +533,10 @@ def planner_compose(
             break
         logger.info("planner compose refused (exit %s) — retrying with a repair", code)
         current = repaired
+        # A shape refusal is repaired by switching ENGINES, so the mode has to
+        # be re-read from what came back — otherwise a chain spec would be run
+        # through --spec and die as "unknown recipe None".
+        mode = _detect_mode(current, mode)
 
     logger.info("planner compose refused after %d attempt(s)", len(attempts))
     return JSONResponse({"ok": False, "returncode": attempts[-1]["returncode"],
