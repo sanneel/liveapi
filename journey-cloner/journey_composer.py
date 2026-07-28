@@ -262,7 +262,7 @@ SETTINGS_DOC = {
     "ams_decision_split": {"(none)": "branch with follow/branches on DecisionSplitPassedPath01..20/RemainderPath"},
 }
 # keys valid on every chain node, besides type + per-type settings
-UNIVERSAL_KEYS = {"type", "follow", "branches"}
+UNIVERSAL_KEYS = {"type", "follow", "branches", "parallel"}
 
 
 # ── template library ─────────────────────────────────────────────────────────
@@ -311,6 +311,34 @@ def load_library() -> dict:
 
 
 # ── cloning with fresh ids ───────────────────────────────────────────────────
+def load_parallel_parts() -> dict | None:
+    """The captured parallelFlow container and one flowEntry header.
+
+    Parallel flows are the one structure that is not a plain activity: the owner
+    activity's forward event carries `split.paths`, and the canvas gets a
+    container element whose children are re-parented into it. Both pieces are
+    CAPTURED in gow.json, so this clones them like everything else rather than
+    synthesising canvas — synthesising is what produces blank drafts.
+
+    Layout constants come from the capture: flows are columns 480px apart, the
+    header sits 88px down, content starts at 208px.
+    """
+    if not hasattr(load_parallel_parts, "_cache"):
+        parts = None
+        try:
+            els = json.loads(GOW.read_text(encoding="utf-8-sig"))["rawJourneyData"]["elements"]
+            container = next(e for e in els if e.get("type") == "parallelFlow")
+            entry = next(e for e in els
+                         if e.get("type") == "flowEntry"
+                         and e.get("parentNode") == container["id"])
+            parts = {"container": container, "flow_entry": entry,
+                     "col_step": 480, "header_y": 88, "content_y": 208}
+        except (OSError, ValueError, StopIteration, KeyError):
+            parts = None
+        load_parallel_parts._cache = parts
+    return load_parallel_parts._cache
+
+
 def clone_with_fresh_id(entry: dict) -> dict:
     """Deep-clone a library node and swap its captured activityId for a fresh
     uuid4 via serialized string replace (ports/handles/config keys embed the id
@@ -587,6 +615,7 @@ def compose(spec: dict) -> dict:
     placed: list[dict] = []
     edges_wanted: list[tuple] = []     # (node_entry|"src", event, target_id)
     exits_drawn: list[tuple] = []      # (end_id, col, row)
+    parallel_blocks: list[dict] = []   # filled by build_level, drawn after layout
     col_counter = [0]
 
     def completion_events(kind: str) -> set:
@@ -630,12 +659,52 @@ def compose(spec: dict) -> dict:
             nxt = level[i + 1]["node"]["new_id"] if i + 1 < len(level) else term
             branch_heads = {bev: build_level(bspecs, node_upstream, row + 1 + list(branches).index(bev))
                             for bev, bspecs in branches.items()}
+
+            # PARALLEL: the follow event fans out into N simultaneous flows via
+            # split.paths instead of a single nextActivityId. Each flow is an
+            # ordinary chain; the wrap into a container element happens after
+            # layout, in _wrap_parallel().
+            parallel_specs = c.get("parallel") or []
+            parallel_plan = None
+            if parallel_specs:
+                if not isinstance(parallel_specs, list) or not all(
+                        isinstance(f, list) and f for f in parallel_specs):
+                    raise SystemExit(
+                        f"{k}: `parallel` must be a list of flows, each a non-empty "
+                        f"list of chain nodes — e.g. "
+                        f'"parallel": [[{{"type":"freespins","spins":100}}], [...], [...]]')
+                if branches:
+                    raise SystemExit(
+                        f"{k}: use either `branches` (one event each) or `parallel` "
+                        f"(one event, simultaneous flows), not both on one node.")
+                flows = []
+                for fi, fspecs in enumerate(parallel_specs):
+                    head = build_level(fspecs, node_upstream, row + 1 + fi)
+                    flows.append({"flow_id": str(uuid.uuid4()), "head": head,
+                                  "path_id": fi + 1, "name": f"Flow {fi + 1}"})
+                parallel_plan = {"owner": entry, "event": follow, "flows": flows, "after": nxt}
+                parallel_blocks.append(parallel_plan)
+
             for ev in node["activity"].get("events", []):
+                # A captured node can arrive with `split` already on one of its
+                # events — the original journey's parallel block. Its flowIds and
+                # nextActivityIds point at nodes that do not exist here, so it is
+                # a dangling reference on every event we are not fanning out on.
+                if not (parallel_plan and ev.get("eventName") == follow):
+                    ev.pop("split", None)
                 if ev.get("eventType") != "Completion":
                     ev.pop("nextActivityId", None)      # boundary events carry no next
                     continue
                 en = ev.get("eventName")
-                if en == follow:
+                if en == follow and parallel_plan:
+                    # The capture keeps nextActivityId alongside split; the split
+                    # is what the engine fans out on.
+                    ev["split"] = {"paths": [
+                        {"pathId": f["path_id"], "pathName": f["name"],
+                         "flowId": f["flow_id"], "nextActivityId": f["head"]}
+                        for f in parallel_plan["flows"]]}
+                    ev["nextActivityId"] = parallel_plan["flows"][0]["head"]
+                elif en == follow:
                     ev["nextActivityId"] = nxt
                     edges_wanted.append((entry, en, nxt))
                 elif en in branch_heads:
@@ -743,11 +812,105 @@ def compose(spec: dict) -> dict:
             "sourceHandle": f"{ev_name}-{sid}", "targetHandle": f"input-{tgt_id}",
         }
 
+    def port_edge(sid: str, tgt_id: str, source_handle: str, activity_name: str,
+                  event_name: str = "") -> dict:
+        """An edge whose source port is NOT an event handle — the container and
+        flowEntry connectors, which hang off named ports instead."""
+        return {
+            "id": str(uuid.uuid4()),
+            "data": {"isHidden": False, "eventName": event_name,
+                     "eventType": "Completion" if event_name else None,
+                     "activityName": activity_name, "isLabelHidden": True,
+                     "isReconnectable": False, "eventDisplayName": event_name,
+                     "isDisconnectable": False, "canBeUsedInChoosableFlow": False},
+            "type": "default", "style": {"strokeDasharray": "3"}, "hidden": False,
+            "source": sid, "target": tgt_id, "zIndex": 1,
+            "sourceHandle": source_handle, "targetHandle": f"input-{tgt_id}",
+            "labelBgPadding": [10, 3], "labelBgBorderRadius": 4,
+            "labelStyle": {"color": "#000", "fontSize": 14, "fontWeight": 700},
+            "labelBgStyle": {"fill": "#D2D2D2"},
+        }
+
     act_ev = next((e["eventName"] for e in src["activity"].get("events", [])
                    if e.get("eventType") == "Activation"), "PlayerAdded")
     elements.append(make_edge(src["new_id"], src_kind, act_ev, head_id))
     for entry, ev_name, tgt in edges_wanted:
         elements.append(make_edge(entry["node"]["new_id"], entry["kind"], ev_name, tgt))
+
+    # ── wrap parallel blocks: container element + flowEntry headers ──
+    # Done AFTER layout so each flow is laid out as an ordinary chain first and
+    # then re-parented, rather than teaching the grid about nested coordinates.
+    for block in parallel_blocks:
+        parts = load_parallel_parts()
+        if not parts:
+            warnings.append("parallel: gow.json has no captured parallelFlow container; "
+                            "flows are wired in the activities but not drawn")
+            continue
+        by_id = {e["id"]: e for e in elements if "source" not in e}
+        owner_id = block["owner"]["node"]["new_id"]
+        cont = copy.deepcopy(parts["container"])
+        cont_id = str(uuid.uuid4())
+        cont["id"] = cont_id
+        cont["data"] = dict(cont.get("data") or {})
+        cont["data"]["ports"] = [{"id": f"input-{cont_id}"},
+                                 {"id": f"parallel-flow-output-{cont_id}"}]
+        # Collect each flow's elements: its head plus everything downstream of it
+        # that layout put on the same row.
+        flow_members: list[list[dict]] = []
+        for flow in block["flows"]:
+            head_el = by_id.get(flow["head"])
+            row = next((e["row"] for e in placed
+                        if e["node"]["new_id"] == flow["head"]), None)
+            members = [by_id[e["node"]["new_id"]] for e in placed
+                       if e["row"] == row and e["node"]["new_id"] in by_id] if row is not None else []
+            if head_el and head_el not in members:
+                members.insert(0, head_el)
+            flow_members.append(members)
+
+        col_step, header_y, content_y = parts["col_step"], parts["header_y"], parts["content_y"]
+        base_x, base_y = 120, 300 + 260 * (max(
+            (e["row"] for e in placed), default=0) + 1)
+        cont["position"] = {"x": base_x, "y": base_y}
+        cont["positionAbsolute"] = dict(cont["position"])
+        cont["width"] = cont["data"]["width"] = max(col_step * len(block["flows"]) + 120, 600)
+        cont["height"] = cont["data"]["height"] = 602
+        cont["style"] = {"width": f"{cont['width']}px", "cursor": "pointer",
+                         "height": f"{cont['height']}px"}
+        elements.append(cont)
+
+        for fi, (flow, members) in enumerate(zip(block["flows"], flow_members)):
+            fx = 96 + fi * col_step
+            # flowEntry header — its id IS the flowId the split refers to.
+            fe = copy.deepcopy(parts["flow_entry"])
+            fe["id"] = flow["flow_id"]
+            fe["data"] = dict(fe.get("data") or {})
+            fe["data"]["order"] = fi + 1
+            fe["data"]["ports"] = [{"id": f"flow-entry-output-{flow['flow_id']}"}]
+            fe["data"]["parentNode"] = owner_id
+            fe["parentNode"] = cont_id
+            fe["extent"] = "parent"
+            fe["position"] = {"x": fx, "y": header_y}
+            fe["positionAbsolute"] = {"x": base_x + fx, "y": base_y + header_y}
+            elements.append(fe)
+            # re-parent the flow's own nodes into the container
+            for mi, el in enumerate(members):
+                el["parentNode"] = cont_id
+                el["extent"] = "parent"
+                el["position"] = {"x": fx, "y": content_y + mi * 120}
+                el["positionAbsolute"] = {"x": base_x + el["position"]["x"],
+                                          "y": base_y + el["position"]["y"]}
+            if members:
+                # flowEntry -> the flow's first node, off the header's own port
+                elements.append(port_edge(
+                    flow["flow_id"], members[0]["id"],
+                    f"flow-entry-output-{flow['flow_id']}", "flowEntry"))
+        # owner -> container (the event's handle into the container's input),
+        # then container -> whatever follows the whole block.
+        elements.append(port_edge(
+            owner_id, cont_id, f"{block['event']}-{owner_id}",
+            names_raw(block["owner"]["kind"]), event_name=block["event"]))
+        elements.append(port_edge(
+            cont_id, block["after"], f"parallel-flow-output-{cont_id}", "parallelFlow"))
 
     all_nodes = [src] + [e["node"] for e in placed]
     acfg = {n["new_id"]: n["config"] for n in all_nodes if n.get("config")}
