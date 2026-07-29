@@ -1,69 +1,298 @@
-{# Journey Planner chat widget. Included both from the Optimization page's
-   "Planner" tab (promotions.html) and — nowhere else now; /admin/planner just
-   redirects here. Expects: docs_present, key_configured, provider, key_env, model. #}
+{# Journey Planner chat widget. Included from the Optimization page's "AI" tab
+   (promotions.html) and nowhere else — /admin/planner just redirects here.
+   Expects: docs_present, key_configured, provider, key_env, model.
+
+   Styling rule for this panel: every colour comes from the redesign.css theme
+   variables (--ac accent, --surface, --border, --t-*), never a hex literal. That
+   is what keeps it matching the rest of the back-office, following the accent
+   the operator picked, and working in dark mode. #}
 <style>
-  .jp-wrap{display:flex;flex-direction:column;height:calc(100vh - 310px);min-height:420px}
-  .jp-banner{background:#fff4d6;border:1px solid #f0d18a;color:#7a5b00;border-radius:10px;
-    padding:10px 14px;font-size:13px;margin-bottom:12px}
-  .jp-log{flex:1;overflow-y:auto;background:#fff;border:1px solid #e6e8ee;border-radius:12px;
-    padding:16px;display:flex;flex-direction:column;gap:14px}
-  .jp-empty{color:#8a93a3;text-align:center;margin:auto;max-width:520px;line-height:1.6;font-size:14px}
-  .jp-msg{display:flex;gap:10px}
-  .jp-role{font-size:11px;color:#8a93a3;text-transform:uppercase;letter-spacing:.5px;min-width:60px;padding-top:5px}
-  .jp-bubble{border:1px solid #e6e8ee;border-radius:10px;padding:10px 13px;flex:1;overflow-x:auto}
-  .jp-msg.user .jp-bubble{background:#eef3fb;border-color:#d6e2f7}
-  .jp-msg.model .jp-bubble{background:#fafbfc}
-  .jp-bubble pre{margin:0;font-family:"SFMono-Regular",Consolas,Menlo,monospace;font-size:12.5px;
-    line-height:1.5;white-space:pre-wrap;word-break:break-word}
-  .jp-bubble .u{white-space:pre-wrap;line-height:1.5;font-size:14px}
-  .jp-warn{color:#b7791f}.jp-uncap{color:#c0392b;font-weight:600}.jp-q{color:#2b6cb0}.jp-head{color:#111;font-weight:600}
-  .jp-tools{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 8px}
-  .jp-tools button{cursor:pointer;border:1px solid #d7dae0;background:#fff;color:#333;border-radius:8px;
-    padding:6px 11px;font-size:12px;font-weight:500}
-  .jp-tools button:hover{border-color:#4c8bf5}
-  .jp-composer{display:flex;gap:8px;align-items:flex-end}
-  .jp-composer textarea{flex:1;resize:vertical;min-height:52px;max-height:220px;border:1px solid #d7dae0;
-    border-radius:8px;padding:10px 12px;font-size:14px;font-family:inherit;line-height:1.4}
-  .jp-send{cursor:pointer;border:none;background:#4c8bf5;color:#fff;border-radius:8px;padding:10px 18px;font-size:14px;font-weight:600}
-  .jp-send:hover{background:#3567c4}.jp-send:disabled{opacity:.5;cursor:not-allowed}
-  .jp-hint{color:#8a93a3;font-size:12px;margin-top:6px;min-height:16px}
-  .jp-dots::after{content:"planning…";color:#4c8bf5}
+  /* ── shell ─────────────────────────────────────────────────────────────── */
+  .jp-wrap{display:flex;flex-direction:column;gap:14px;height:calc(100vh - 250px);min-height:660px}
+  .jp-wrap.jp-full{position:fixed;inset:0;z-index:60;background:var(--canvas);
+    padding:18px 22px 20px;height:100vh;min-height:0}
+  .jp-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 318px;gap:14px}
+  /* min-height:0 or the log grows past the panel instead of scrolling inside it */
+  .jp-main{min-width:0;min-height:0;display:flex;flex-direction:column;gap:12px}
+  .jp-aside{display:flex;flex-direction:column;gap:12px;overflow-y:auto;padding-right:2px}
+
+  /* ── assistant header ──────────────────────────────────────────────────── */
+  .jp-head{display:flex;align-items:center;gap:14px;padding:16px 18px}
+  .jp-mark{flex:none;width:42px;height:42px;border-radius:13px;background:var(--acw);
+    display:flex;align-items:center;justify-content:center;color:var(--ac)}
+  .jp-mark svg{width:22px;height:22px}
+  .jp-h1{display:flex;align-items:center;gap:9px;font-size:15.5px;font-weight:800;
+    letter-spacing:-.01em;color:var(--t-strong)}
+  .jp-h2{margin-top:3px;font-size:12.5px;color:var(--t-muted)}
+  .jp-beta{font-size:10px;font-weight:800;letter-spacing:.06em;padding:3px 7px;border-radius:7px;
+    background:var(--acw);color:var(--ac)}
+  .jp-headright{margin-left:auto;display:flex;align-items:center;gap:9px}
+  .jp-model{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;
+    color:var(--t-muted);background:var(--subtle);border:1px solid var(--border);
+    border-radius:10px;padding:7px 11px}
+  .jp-model b{color:var(--t-body);font-weight:700}
+
+  /* ── conversation ──────────────────────────────────────────────────────── */
+  .jp-log{flex:1;min-height:0;overflow-y:auto;background:var(--surface);
+    border:1px solid var(--border);border-radius:16px;padding:18px;
+    display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+  .jp-empty{margin:auto;text-align:center;max-width:540px}
+  .jp-empty .jp-mark{margin:0 auto 12px;width:46px;height:46px}
+  .jp-empty h4{margin:0 0 6px;font-size:15px;font-weight:800;color:var(--t-strong)}
+  .jp-empty p{margin:0;font-size:13px;line-height:1.6;color:var(--t-muted)}
+  .jp-starters{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px}
+  .jp-msg{display:flex;gap:11px;align-items:flex-start}
+  .jp-av{flex:none;width:30px;height:30px;border-radius:10px;display:flex;align-items:center;
+    justify-content:center;font-size:11px;font-weight:800;background:var(--subtle);
+    border:1px solid var(--border);color:var(--t-muted)}
+  .jp-msg.model .jp-av{background:var(--acw);border-color:transparent;color:var(--ac)}
+  .jp-msg.model .jp-av svg{width:15px;height:15px}
+  .jp-bubble{flex:1;min-width:0;border:1px solid var(--border);border-radius:14px;
+    padding:12px 15px;background:var(--surface);overflow-x:auto}
+  .jp-msg.user .jp-bubble{background:var(--acw);border-color:color-mix(in srgb, var(--ac) 20%, transparent)}
+  .jp-bubble pre{margin:0;font-family:'SFMono-Regular',Consolas,Menlo,monospace;font-size:12.5px;
+    line-height:1.55;white-space:pre-wrap;word-break:break-word;color:var(--t-body)}
+  .jp-bubble .u{white-space:pre-wrap;line-height:1.55;font-size:13.5px;color:var(--t-body)}
+  .jp-bubble .jp-sum{font-size:13.5px;font-weight:700;color:var(--t-strong)}
+  .jp-warn{color:var(--warn-t)}
+  .jp-uncap{color:var(--live-t);font-weight:700}
+  .jp-q{color:var(--club-t)}
+  .jp-head-line{color:var(--t-strong);font-weight:700}
+  .jp-err{color:var(--live-t)}
+  .jp-dots::after{content:"planning…";color:var(--ac);font-size:13px;font-weight:600}
+  /* A ```json block is machine data — collapsed to a chip so the plan stays
+     readable, expandable for when the operator does want to read it. */
+  .jp-code{margin:10px 0 2px}
+  .jp-code > summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:7px;
+    font:700 11.5px/1 var(--font);color:var(--ac);background:var(--acw);
+    border:1px solid color-mix(in srgb, var(--ac) 22%, transparent);border-radius:9px;padding:7px 11px}
+  .jp-code > summary::-webkit-details-marker{display:none}
+  .jp-code > summary::before{content:"▸";font-size:10px}
+  .jp-code[open] > summary::before{content:"▾"}
+  .jp-code > summary .sz{color:var(--t-faint);font-weight:600}
+  .jp-code pre{margin:9px 0 0;padding:11px 13px;background:var(--subtle);
+    border:1px solid var(--border);border-radius:11px;max-height:260px;overflow:auto;font-size:11.5px}
+  /* Design boards drawn straight into the conversation, full width and in order,
+     so the plan and its pictures are read by scrolling one answer. */
+  .jp-inline-board{margin:11px 0 0;border:1px solid var(--border);border-radius:12px;
+    overflow:hidden;background:var(--subtle)}
+  .jp-inline-board img{display:block;width:100%;height:auto;cursor:zoom-in;background:#fff}
+  .jp-inline-board figcaption{display:flex;align-items:center;gap:10px;justify-content:space-between;
+    padding:8px 11px;background:var(--surface);border-top:1px solid var(--border);
+    font-size:11.5px;font-weight:700;color:var(--t-muted)}
+  .jp-inline-board figcaption span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* ── results: Boards / Script ──────────────────────────────────────────── */
+  .jp-results{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;flex-direction:column;max-height:46%}
+  /* a `display` rule of our own beats the UA's [hidden]{display:none} */
+  .jp-wrap [hidden]{display:none}
+  .jp-rtabs{display:flex;gap:4px;padding:8px 10px 0;border-bottom:1px solid var(--border)}
+  .jp-rtab{cursor:pointer;background:none;border:none;padding:9px 13px 11px;font:700 12.5px/1 var(--font);
+    color:var(--t-faint);border-bottom:2px solid transparent;margin-bottom:-1px}
+  .jp-rtab:hover{color:var(--t-body)}
+  .jp-rtab.on{color:var(--ac);border-bottom-color:var(--ac)}
+  .jp-rbody{overflow:auto;padding:14px}
+  .jp-boards{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px;
+    align-items:start}
+  .jp-board{border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--subtle);
+    display:flex;flex-direction:column}
+  /* Uniform preview height: a board is 2400×700-ish, so scaled-to-width thumbs
+     come out at wildly different heights and the grid looks ragged. Crop from
+     the top-left — the campaign header and first journey are what identify it. */
+  .jp-board img{display:block;width:100%;height:168px;object-fit:cover;object-position:left top;
+    cursor:zoom-in;background:#fff}
+  .jp-board-bar{display:flex;align-items:center;gap:10px;justify-content:space-between;
+    padding:9px 11px;background:var(--surface);border-top:1px solid var(--border)}
+  .jp-board-bar .n{font-size:11.5px;font-weight:700;color:var(--t-body);overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .jp-board-bar .m{font-size:10.5px;color:var(--t-faint)}
+  .jp-dl{display:inline-flex;align-items:center;gap:6px;font:700 11.5px/1 var(--font);
+    text-decoration:none;color:var(--ac);background:var(--acw);
+    border:1px solid color-mix(in srgb, var(--ac) 22%, transparent);
+    border-radius:9px;padding:6px 10px;cursor:pointer;white-space:nowrap}
+  .jp-dl:hover{filter:brightness(.96)}
+  .jp-srow{display:flex;align-items:center;gap:10px;justify-content:space-between;
+    border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:9px}
+  .jp-srow:last-child{margin-bottom:0}
+  .jp-srow .t{min-width:0}
+  .jp-srow .t b{display:block;font-size:12.5px;color:var(--t-strong)}
+  .jp-srow .t span{font-size:11px;color:var(--t-faint)}
+  .jp-srow.bad{border-color:color-mix(in srgb, var(--live-t) 40%, transparent);background:var(--live-bg)}
+  .jp-srow.bad .t b{color:var(--live-t)}
+  .jp-rempty{font-size:12.5px;color:var(--t-faint);text-align:center;padding:18px 0}
+
+  /* ── composer ──────────────────────────────────────────────────────────── */
+  .jp-composer{display:flex;gap:10px;align-items:flex-end;background:var(--surface);
+    border:1px solid var(--border);border-radius:16px;padding:10px;
+    box-shadow:0 1px 2px rgba(16,24,40,.04)}
+  .jp-composer textarea{flex:1;resize:vertical;min-height:52px;max-height:230px;border:none;
+    outline:none;background:none;padding:8px 6px;font:400 13.5px/1.5 var(--font);color:var(--t-body)}
+  .jp-composer textarea::placeholder{color:var(--t-disabled)}
+  .jp-send{flex:none}
+  .jp-hint{font-size:11.5px;color:var(--t-faint);min-height:15px;padding:0 4px}
+
+  /* ── sidebar cards ─────────────────────────────────────────────────────── */
+  .jp-card{padding:14px 15px}
+  .jp-card-head{display:flex;align-items:center;gap:8px;margin-bottom:11px}
+  .jp-card-head h4{margin:0;font-size:12.5px;font-weight:800;color:var(--t-strong);
+    letter-spacing:-.01em}
+  .jp-card-head .sp{margin-left:auto}
+  .jp-acts{display:flex;flex-direction:column;gap:7px}
+  .jp-acts .btn{width:100%;justify-content:flex-start}
+  .jp-acts .btn .ic{width:15px;text-align:center;opacity:.75}
+  .jp-select{width:100%;font:600 12px/1 var(--font);color:var(--t-body);background:var(--surface);
+    border:1px solid var(--border-in);border-radius:10px;padding:9px 10px}
+  .jp-jlist{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto}
+  .jp-jrow{display:flex;align-items:center;gap:9px;border:1px solid var(--border);
+    border-radius:11px;padding:9px 11px;cursor:pointer;background:var(--surface);text-align:left}
+  .jp-jrow:hover{background:var(--hover)}
+  .jp-jrow .i{flex:none;font-size:11px;font-weight:800;color:var(--t-faint);min-width:14px}
+  .jp-jrow .n{flex:1;min-width:0;font-size:12px;font-weight:600;color:var(--t-body);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .jp-jrow .b{flex:none;font-size:10px;font-weight:800;padding:3px 7px;border-radius:7px;
+    background:var(--neu-bg);color:var(--neu-t)}
+  .jp-ctx{display:flex;flex-direction:column;gap:10px}
+  .jp-ctx > div{display:flex;flex-direction:column;gap:3px}
+  .jp-ctx dt{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--t-faint2)}
+  .jp-ctx dd{margin:0;font-size:12px;color:var(--t-body);word-break:break-word}
+  .jp-note{font-size:11.5px;line-height:1.5;color:var(--t-faint)}
+
+  /* ── banners ───────────────────────────────────────────────────────────── */
+  .jp-banner{border-radius:13px;padding:11px 14px;font-size:12.5px;
+    background:var(--warn-bg);color:var(--warn-t);border:1px solid color-mix(in srgb, var(--warn-t) 30%, transparent)}
+  .jp-banner.bad{background:var(--live-bg);color:var(--live-t);
+    border-color:color-mix(in srgb, var(--live-t) 34%, transparent)}
+  .jp-banner code{font-family:'SFMono-Regular',Consolas,Menlo,monospace;font-size:12px}
+
+  /* ── responsive ────────────────────────────────────────────────────────────
+     Last in the sheet on purpose: these are overrides of the rules above, and a
+     media query carries no extra specificity — placed earlier, the plain rules
+     would win. Below the breakpoint the sidebar stacks under the chat, so a
+     viewport-locked panel height no longer fits: the page scrolls instead and
+     the log keeps a fixed share of the viewport. */
+  @media (max-width:1180px){
+    .jp-wrap{height:auto;min-height:0}
+    .jp-wrap.jp-full{height:100vh;overflow:auto}
+    .jp-grid{grid-template-columns:minmax(0,1fr)}
+    .jp-log{flex:0 0 auto;height:58vh;min-height:340px}
+    .jp-results{max-height:none}
+    .jp-aside{flex-direction:row;flex-wrap:wrap;overflow:visible}
+    .jp-aside > *{flex:1 1 260px}
+    .jp-jlist{max-height:220px}
+  }
 </style>
 
-<p class="card-sub" style="margin-bottom:12px">Paste a campaign brief — the AI lays out the backoffice objects, creation order, and the platform-invisible rules it applied. Model: {{ model }}.</p>
+{% set spark %}<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.6l1.9 5.1a4 4 0 002.4 2.4l5.1 1.9-5.1 1.9a4 4 0 00-2.4 2.4L12 21.4l-1.9-5.1a4 4 0 00-2.4-2.4L2.6 12l5.1-1.9a4 4 0 002.4-2.4L12 2.6z"/><path d="M19.4 2.6l.7 1.8.0.1 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.9z" opacity=".65"/></svg>{% endset %}
 
-<div class="jp-wrap">
+<div class="jp-wrap" id="jpWrap">
+
+  <div class="card jp-head">
+    <div class="jp-mark">{{ spark }}</div>
+    <div>
+      <div class="jp-h1">AI Assistant <span class="jp-beta">BETA</span></div>
+      <div class="jp-h2">Campaign briefs in, journey design and console scripts out.</div>
+    </div>
+    <div class="jp-headright">
+      <span class="jp-model">Model <b>{{ model }}</b></span>
+      <button type="button" class="btn sm" id="jpExpand" title="Full screen (Esc to exit)">⛶ Expand</button>
+    </div>
+  </div>
+
   {% if not docs_present %}
-    <div class="jp-banner" style="background:#fde8e8;border-color:#f5b5b5;color:#a12020">
-      ⚠ journey-planner/ docs not found on the server — the planner can't load its knowledge base.
+    <div class="jp-banner bad">
+      ⚠ <code>journey-planner/</code> docs not found on the server — the planner can't load its
+      knowledge base.
     </div>
   {% elif not key_configured %}
     <div class="jp-banner">
-      ⚠ No {{ provider|capitalize }} key configured. Add <code>{{ key_env }}=…</code> to the <code>.env</code>
-      (or the jugabet service environment) and restart the service.
-      {% if provider == 'groq' %}<br>Get a free key at <code>console.groq.com</code>.{% endif %}
+      ⚠ No {{ provider|capitalize }} key configured. Add <code>{{ key_env }}=…</code> to the
+      <code>.env</code> (or the jugabet service environment) and restart the service.
+      {% if provider == 'groq' %} Get a free key at <code>console.groq.com</code>.{% endif %}
     </div>
   {% endif %}
 
-  <div class="jp-log" id="jpLog">
-    <div class="jp-empty" id="jpEmpty">
-      Click <b>＋ Insert birthday brief</b> to try the sample campaign, or paste your own brief below.<br><br>
-      After the first plan you can ask follow-ups — the conversation keeps context.
+  <div class="jp-grid">
+    <div class="jp-main">
+
+      <div class="jp-log" id="jpLog">
+        <div class="jp-empty" id="jpEmpty">
+          <div class="jp-mark">{{ spark }}</div>
+          <h4>Paste a campaign brief</h4>
+          <p>The first reply is a short outline plus a design block — press
+             <b>Render design</b> to see every journey drawn as a board, one card and icon
+             per activity. Then ask for an object in full, and <b>Build script</b> composes it.</p>
+          <div class="jp-starters">
+            <button type="button" class="chip" data-starter="brief">＋ Birthday brief</button>
+            <button type="button" class="chip" data-starter="specs">Specs of each journey</button>
+            <button type="button" class="chip" data-starter="script">Full script</button>
+            <button type="button" class="chip" data-starter="wheel">Build the wheel</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="jp-results" id="jpResults" hidden>
+        <div class="jp-rtabs">
+          <button type="button" class="jp-rtab" data-rtab="boards">Boards <span id="jpBoardCount">(0)</span></button>
+          <button type="button" class="jp-rtab" data-rtab="script">Script <span id="jpScriptCount">(0)</span></button>
+        </div>
+        <div class="jp-rbody" data-rpane="boards" hidden>
+          <div class="jp-boards" id="jpBoards"></div>
+        </div>
+        <div class="jp-rbody" data-rpane="script" hidden>
+          <div id="jpScripts"></div>
+        </div>
+      </div>
+
+      <div class="jp-composer">
+        <textarea id="jpInput" placeholder="Paste a campaign brief, or ask a follow-up…  (Enter to send · Shift+Enter for newline)"></textarea>
+        <button class="btn primary jp-send" id="jpSend" type="button">➤ Send</button>
+      </div>
+      <div class="jp-hint" id="jpHint"></div>
     </div>
-  </div>
 
-  <div class="jp-tools">
-    <button type="button" id="jpInsert">＋ Insert birthday brief</button>
-    <button type="button" id="jpClear">🗑 Clear</button>
-    <button type="button" id="jpCopy">⧉ Copy last reply</button>
-    <button type="button" id="jpBuild">⚙ Build script</button>
-  </div>
+    <aside class="jp-aside">
+      <div class="card jp-card">
+        <div class="jp-card-head">
+          <h4>Journey Planner</h4>
+          <button type="button" class="btn sm sp" id="jpClear">Clear all</button>
+        </div>
+        <select class="jp-select" id="jpPerImage" title="How many journeys per rendered board"
+                style="margin-bottom:10px">
+          <option value="1">1 journey / board</option>
+          <option value="2" selected>2 journeys / board</option>
+          <option value="3">3 journeys / board</option>
+          <option value="0">all on one board</option>
+        </select>
+        <div class="jp-jlist" id="jpJourneyList">
+          <div class="jp-note" id="jpJourneyEmpty">No design rendered yet. Send a brief, then
+            <b>Render design</b> — the journeys it drew appear here.</div>
+        </div>
+      </div>
 
-  <div class="jp-composer">
-    <textarea id="jpInput" placeholder="Paste a campaign brief, or ask a follow-up…  (Enter to send · Shift+Enter for newline)"></textarea>
-    <button class="jp-send" id="jpSend" type="button">Send</button>
+      <div class="card jp-card">
+        <div class="jp-card-head"><h4>Quick actions</h4></div>
+        <div class="jp-acts">
+          <button type="button" class="btn" id="jpInsert"><span class="ic">＋</span> Insert birthday brief</button>
+          <button type="button" class="btn" id="jpDesign"><span class="ic">🖼</span> Render design</button>
+          <button type="button" class="btn" id="jpBuild"><span class="ic">⚙</span> Full script</button>
+          <button type="button" class="btn" id="jpCopy"><span class="ic">⧉</span> Copy last reply</button>
+        </div>
+      </div>
+
+      <div class="card jp-card">
+        <div class="jp-card-head"><h4>Context</h4></div>
+        <div class="jp-ctx">
+          <div><dt>Provider</dt><dd>{{ provider|capitalize }}{% if not key_configured %} — no key{% endif %}</dd></div>
+          <div><dt>Model</dt><dd>{{ model }}</dd></div>
+          <div><dt>Knowledge base</dt><dd>{% if docs_present %}journey-planner/ loaded{% else %}missing{% endif %}</dd></div>
+          <div><dt>Boards go to</dt><dd>data/journey_designs/</dd></div>
+          <div><dt>Tokens this session</dt><dd id="jpUsage">—</dd></div>
+        </div>
+      </div>
+    </aside>
   </div>
-  <div class="jp-hint" id="jpHint"></div>
 </div>
 
 <script>
@@ -73,10 +302,20 @@
         empty = document.getElementById("jpEmpty"),
         input = document.getElementById("jpInput"),
         sendBtn = document.getElementById("jpSend"),
-        hint = document.getElementById("jpHint");
+        hint = document.getElementById("jpHint"),
+        results = document.getElementById("jpResults"),
+        boardsBox = document.getElementById("jpBoards"),
+        scriptsBox = document.getElementById("jpScripts"),
+        boardCount = document.getElementById("jpBoardCount"),
+        scriptCount = document.getElementById("jpScriptCount"),
+        jlist = document.getElementById("jpJourneyList"),
+        jempty = document.getElementById("jpJourneyEmpty");
   if (!log || !input || !sendBtn) return;
   const history = [];
-  let busy = false;
+  const spent = { calls: 0, input: 0, cached: 0, thought: 0, answer: 0 };
+  const meter = document.getElementById("jpUsage");
+  const SPARK = document.querySelector(".jp-mark").innerHTML;
+  let busy = false, boards = 0, scripts = 0;
 
   // Sample brief inlined so the button works without an extra fetch/route.
   const BRIEF = `CAMPAIGN BRIEF — "Spin the Wheel — 3 Years JugaBet"
@@ -115,29 +354,116 @@ NOTES
 - Landing URL should be short and birthday-themed.
 - Keep it live for the whole of July.`;
 
+  // The workflow, as prompts: brief -> (design draws itself) -> adjust in your
+  // own words -> specs of each journey -> full script.
+  const STARTERS = {
+    brief: BRIEF,
+    specs: "Now the specs of each journey — for every journey, every setting an "
+         + "operator has to type into each activity.",
+    script: "Now give me the full script for this campaign.",
+    wheel: "Build the wheel — the randomizer spec, with the weights from the brief.",
+  };
+
   function esc(s){ return String(s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 
-  function renderModel(text){
-    const lines = esc(text).split("\n").map(line => {
+  function prose(text){
+    if(!text.trim()) return "";
+    const lines = esc(text.replace(/^\n+|\n+$/g, "")).split("\n").map(line => {
       if(/⚠/.test(line)) return `<span class="jp-warn">${line}</span>`;
       if(/⛔/.test(line)) return `<span class="jp-uncap">${line}</span>`;
       if(/❓/.test(line)) return `<span class="jp-q">${line}</span>`;
-      if(/^\s*━|^\s*CAMPAIGN:|^\s*[A-Z ]{4,}━/.test(line)) return `<span class="jp-head">${line}</span>`;
+      if(/^\s*━|^\s*CAMPAIGN:|^\s*[A-Z ]{4,}━/.test(line)) return `<span class="jp-head-line">${line}</span>`;
       return line;
     }).join("\n");
     return `<pre>${lines}</pre>`;
   }
 
+  // A fenced block is data for a tool, not prose for a human: label it by what
+  // it is and keep it folded. The old panel printed the whole diagram JSON into
+  // the log, which buried the outline it belongs to.
+  function codeBlock(code){
+    let label = "JSON block";
+    if(/"diagram"\s*:/.test(code)){
+      const n = (code.match(/"name"\s*:/g) || []).length;
+      label = `Journey design data${n ? ` · ${n} journeys` : ""}`;
+    } else if(/"recipe"\s*:/.test(code)) label = "Build spec · recipe";
+    else if(/"chain"\s*:\s*\[/.test(code)) label = "Build spec · chain";
+    else if(/"reference"\s*:/.test(code)) label = "Build spec · graph";
+    else if(/"kind"\s*:/.test(code)) label = "Randomizer spec";
+    const kb = (code.length / 1024).toFixed(1);
+    return `<details class="jp-code"><summary>{ } ${esc(label)} `
+         + `<span class="sz">${kb} KB</span></summary><pre>${esc(code)}</pre></details>`;
+  }
+
+  function renderModel(text){
+    const out = [];
+    const fence = /```(?:[a-zA-Z]*)\s*([\s\S]*?)```/g;
+    let last = 0, m;
+    while((m = fence.exec(text)) !== null){
+      out.push(prose(text.slice(last, m.index)));
+      out.push(codeBlock(m[1].trim()));
+      last = fence.lastIndex;
+    }
+    out.push(prose(text.slice(last)));
+    const html = out.filter(Boolean).join("");
+    return html || prose(text) || "<pre></pre>";
+  }
+
+  function toBottom(){
+    // Twice, a frame apart: showing the Boards pane resizes the log after the
+    // first paint, and a single pass leaves it parked mid-conversation.
+    const jump = () => { log.scrollTop = log.scrollHeight; };
+    requestAnimationFrame(() => { jump(); requestAnimationFrame(jump); });
+  }
+
   function addMsg(role, text){
     empty.style.display = "none";
     const msg = document.createElement("div"); msg.className = "jp-msg " + role;
-    const rl = document.createElement("div"); rl.className = "jp-role"; rl.textContent = role === "user" ? "you" : "AI";
+    const av = document.createElement("div"); av.className = "jp-av";
+    if(role === "user"){ av.textContent = "YOU"; av.style.fontSize = "9px"; }
+    else { av.innerHTML = SPARK; }
     const bub = document.createElement("div"); bub.className = "jp-bubble";
     if(role === "user"){ const d = document.createElement("div"); d.className="u"; d.textContent = text; bub.appendChild(d); }
     else { bub.innerHTML = renderModel(text); }
-    msg.appendChild(rl); msg.appendChild(bub); log.appendChild(msg);
-    log.scrollTop = log.scrollHeight;
+    msg.appendChild(av); msg.appendChild(bub); log.appendChild(msg);
+    toBottom();
     return bub;
+  }
+
+  // The Boards / Script strip is an INDEX of what this session produced. The
+  // boards themselves are inline in the conversation, so the strip stays
+  // collapsed to a tab row (a click opens it, a second click closes it) instead
+  // of permanently eating half the panel with a second copy of the pictures.
+  function showStrip(){ results.hidden = false; }
+
+  function showPane(which){
+    const open = document.querySelector(".jp-rtab.on");
+    const same = open && open.dataset.rtab === which;
+    results.hidden = false;
+    document.querySelectorAll(".jp-rtab").forEach(t =>
+      t.classList.toggle("on", !same && t.dataset.rtab === which));
+    document.querySelectorAll("[data-rpane]").forEach(p =>
+      p.hidden = same || p.dataset.rpane !== which);
+    toBottom();
+  }
+  document.querySelectorAll(".jp-rtab").forEach(t =>
+    t.onclick = () => showPane(t.dataset.rtab));
+
+  function openFull(im){
+    const w = window.open();
+    if(w) w.document.write(`<title>${esc(im.name)}</title>`
+      + `<body style="margin:0;background:#15171D"><img src="${im.data}" style="max-width:100%">`);
+  }
+
+  function dlAnchor(href, filename, label){
+    const a = document.createElement("a");
+    a.href = href; a.download = filename || "download";
+    a.className = "jp-dl"; a.textContent = label || "⬇ Download";
+    return a;
+  }
+  function dlLink(text, filename, label, mime){
+    return dlAnchor(URL.createObjectURL(new Blob([text], { type: mime || "text/javascript" })),
+                    filename || "composed_console.js", label);
   }
 
   async function send(){
@@ -159,16 +485,30 @@ NOTES
       let data;
       try { data = await res.json(); }
       catch(e){ const raw = await res.text().catch(()=>""); throw new Error(`HTTP ${res.status} (non-JSON): ${raw.slice(0,300)}`); }
-      if(data.error){ bub.innerHTML = `<pre style="color:#c0392b">${esc(data.error)}</pre>`; }
+      if(data.error){ bub.innerHTML = `<pre class="jp-err">${esc(data.error)}</pre>`; }
       else if(typeof data.text === "string" && data.text.length){
         bub.innerHTML = renderModel(data.text); history.push({ role: "model", text: data.text });
+        // Tokens spent, so the cost of a campaign is visible while you work
+        // rather than a surprise on the bill. `cached` bills far below fresh
+        // input — the system prompt repeats on every call, so it should be high.
+        if(data.usage){
+          spent.calls += data.usage.calls; spent.input += data.usage.input;
+          spent.cached += data.usage.cached; spent.thought += data.usage.thought;
+          spent.answer += data.usage.answer;
+          const pct = spent.input ? Math.round(100 * spent.cached / spent.input) : 0;
+          meter.textContent = `${spent.calls} call(s) · in ${(spent.input/1000).toFixed(1)}k `
+                            + `(${pct}% cached) · thought ${(spent.thought/1000).toFixed(1)}k `
+                            + `· out ${(spent.answer/1000).toFixed(1)}k`;
+        }
+        // An outline and its boards are one answer — draw them straight away.
+        if(hasDiagram(data.text)){ await renderDesign(data.text); }
       } else {
-        bub.innerHTML = `<pre style="color:#c0392b">Empty response from server (HTTP ${res.status}). Payload:\n${esc(JSON.stringify(data))}</pre>`;
+        bub.innerHTML = `<pre class="jp-err">Empty response from server (HTTP ${res.status}). Payload:\n${esc(JSON.stringify(data))}</pre>`;
       }
     }catch(err){
-      bub.innerHTML = `<pre style="color:#c0392b">Request failed: ${esc(String(err))}</pre>`;
+      bub.innerHTML = `<pre class="jp-err">Request failed: ${esc(String(err))}</pre>`;
     }finally{
-      busy = false; sendBtn.disabled = false; log.scrollTop = log.scrollHeight;
+      busy = false; sendBtn.disabled = false; toBottom();
     }
   }
 
@@ -177,15 +517,164 @@ NOTES
     if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); send(); }
   });
   document.getElementById("jpInsert").onclick = () => { input.value = BRIEF; input.focus(); };
+  document.querySelectorAll("[data-starter]").forEach(chip => {
+    chip.onclick = () => { input.value = STARTERS[chip.dataset.starter] || ""; input.focus(); };
+  });
   document.getElementById("jpClear").onclick = () => {
     history.length = 0;
     log.querySelectorAll(".jp-msg").forEach(n => n.remove());
     empty.style.display = ""; hint.textContent = "";
+    boardsBox.innerHTML = ""; scriptsBox.innerHTML = "";
+    boards = scripts = 0; boardCount.textContent = "(0)"; scriptCount.textContent = "(0)";
+    results.hidden = true;
+    jlist.querySelectorAll(".jp-jrow").forEach(n => n.remove());
+    jempty.hidden = false;
+    Object.keys(spent).forEach(k => { spent[k] = 0; });
+    if(meter) meter.textContent = "—";
   };
   document.getElementById("jpCopy").onclick = () => {
     const last = [...history].reverse().find(m => m.role === "model");
     if(last){ navigator.clipboard.writeText(last.text); hint.textContent = "Copied last reply."; }
     else { hint.textContent = "Nothing to copy yet."; }
+  };
+
+  // Full screen. The tab's own layout is fine for chatting but cramped for a
+  // 6-journey plan or a wide design board, so this is a class toggle rather than
+  // a separate page — the conversation is never lost.
+  const wrap = document.getElementById("jpWrap"), expandBtn = document.getElementById("jpExpand");
+  function setFull(on){
+    wrap.classList.toggle("jp-full", on);
+    document.body.style.overflow = on ? "hidden" : "";
+    expandBtn.textContent = on ? "✕ Close" : "⛶ Expand";
+    toBottom();
+  }
+  expandBtn.onclick = () => setFull(!wrap.classList.contains("jp-full"));
+  document.addEventListener("keydown", e => {
+    if(e.key === "Escape" && wrap.classList.contains("jp-full")) setFull(false);
+  });
+
+  // Render design: turn a reply's MODE 1 `diagram` block into picture boards.
+  // The AI does not see the images — it emitted the data, python draws them, and
+  // the operator gets one PNG per (pair of) journeys to look at.
+  //
+  // This runs AUTOMATICALLY on any reply that carries a diagram: the outline and
+  // the boards are one answer, and making the operator press a button for the
+  // pictures every time was just a step in the way. The button re-renders (e.g.
+  // after changing journeys-per-board) and works on an older reply.
+  const designBtn = document.getElementById("jpDesign"),
+        perImage = document.getElementById("jpPerImage");
+
+  function hasDiagram(text){ return /"diagram"\s*:/.test(text || ""); }
+
+  async function renderDesign(text, bub){
+    // `bub` lets the caller reuse the bubble the boards belong under; without one
+    // (the button path) a fresh bubble is added.
+    if(!bub){ bub = addMsg("model", ""); bub.innerHTML = '<span class="jp-dots"></span>'; }
+    hint.textContent = "Drawing boards…";
+    designBtn.disabled = true;
+    try{
+      const res = await fetch("/admin/planner/design", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text, per_image: Number(perImage.value) }),
+      });
+      let data;
+      try { data = await res.json(); }
+      catch(e){ const raw = await res.text().catch(()=>""); throw new Error(`HTTP ${res.status} (non-JSON): ${raw.slice(0,300)}`); }
+
+      if(data.error || !data.ok){
+        bub.innerHTML = `<pre class="jp-err">${esc(data.error || "Render failed.")}</pre>`;
+        hint.textContent = "";
+      } else {
+        boardsBox.innerHTML = ""; boards = 0;
+        jlist.querySelectorAll(".jp-jrow").forEach(n => n.remove());
+        jempty.hidden = true;
+        let jn = 0;
+        data.images.forEach((im, i) => {
+          const box = document.createElement("div"); box.className = "jp-board"; box.id = `jpBoard${i}`;
+          const img = document.createElement("img");
+          img.src = im.data; img.alt = im.name; img.loading = "lazy"; img.title = "Open full size";
+          img.onclick = () => openFull(im);
+          const bar = document.createElement("div"); bar.className = "jp-board-bar";
+          const label = document.createElement("div"); label.style.minWidth = "0";
+          const nm = document.createElement("div"); nm.className = "n";
+          nm.textContent = im.journeys.join(" · ") || im.name;
+          nm.title = im.journeys.join(" · ");
+          const mt = document.createElement("div"); mt.className = "m";
+          mt.textContent = `Board ${i + 1} · ${im.w}×${im.h}`;
+          label.append(nm, mt);
+          bar.append(label, dlAnchor(im.data, im.name, "⬇ PNG"));
+          box.append(img, bar); boardsBox.append(box); boards++;
+
+          // Sidebar list: one row per journey, jumping to the board it is on.
+          (im.journeys.length ? im.journeys : [im.name]).forEach(name => {
+            jn++;
+            const row = document.createElement("button");
+            row.type = "button"; row.className = "jp-jrow";
+            row.innerHTML = `<span class="i">${jn}</span>`
+                          + `<span class="n">${esc(name)}</span>`
+                          + `<span class="b">Board ${i + 1}</span>`;
+            row.onclick = () => {
+              const inline = log.querySelectorAll(".jp-inline-board")[i];
+              if(inline){ inline.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+              showPane("boards");
+              document.getElementById(`jpBoard${i}`)
+                      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+            };
+            jlist.append(row);
+          });
+        });
+        boardCount.textContent = `(${boards})`;
+        showStrip();
+
+        // Inline in the conversation too, full width, in order — this is the
+        // answer to the brief, so it should be readable by scrolling the log,
+        // not only by visiting the Boards tab.
+        const folded = data.collapsed
+          ? ` (${data.collapsed} near-identical journeys share a board)` : "";
+        bub.innerHTML = `<div class="jp-sum">🖼 ${esc(data.campaign || "Journey design")}`
+                      + ` — ${data.count} board${data.count === 1 ? "" : "s"}, `
+                      + `${data.journeys} journeys${folded}</div>`
+                      + `<div class="u" style="color:var(--t-muted);font-size:12.5px;margin-top:2px">`
+                      + `Click a board to open it full size · also in the Boards tab below.</div>`;
+        data.images.forEach((im, i) => {
+          const fig = document.createElement("figure"); fig.className = "jp-inline-board";
+          const img = document.createElement("img");
+          img.src = im.data; img.alt = im.name; img.loading = "lazy"; img.title = "Open full size";
+          img.onclick = () => openFull(im);
+          const cap = document.createElement("figcaption");
+          const nm = document.createElement("span");
+          nm.textContent = `${i + 1}. ${im.journeys.join("  ·  ") || im.name}`;
+          cap.append(nm, dlAnchor(im.data, im.name, "⬇ PNG"));
+          fig.append(img, cap); bub.append(fig);
+          // The log height changes as each board decodes; keep the view pinned.
+          img.addEventListener("load", toBottom, { once: true });
+        });
+        hint.textContent = data.truncated
+          ? `${data.count} board${data.count === 1 ? "" : "s"} drawn — the design `
+            + `data was cut off, so late journeys may be missing. Ask for "the `
+            + `design block for journeys N onward" to get the rest.`
+          : `${data.count} board${data.count === 1 ? "" : "s"} drawn.`;
+      }
+    }catch(err){
+      bub.innerHTML = `<pre class="jp-err">Render failed: ${esc(String(err))}</pre>`;
+      hint.textContent = "";
+    }finally{
+      designBtn.disabled = false; toBottom();
+    }
+  }
+
+  designBtn.onclick = async () => {
+    if(busy) return;
+    // Fall back to the most recent reply that actually HAS a design, so pressing
+    // this after a MODE 2 detail answer redraws that campaign instead of
+    // refusing — the diagram lives in the outline, several replies back.
+    const src = [...history].reverse().find(m => m.role === "model" && hasDiagram(m.text))
+             || [...history].reverse().find(m => m.role === "model");
+    if(!src){ hint.textContent = "Paste a brief first — the outline carries the design."; return; }
+    busy = true;
+    try { await renderDesign(src.text); }
+    finally { busy = false; }
   };
 
   // Build script: send the last reply to the composer and offer the result as a
@@ -195,10 +684,59 @@ NOTES
   // as ok:false with the reason, which is a usable answer, not a crash: paste it
   // back into the chat and the planner corrects itself.
   const buildBtn = document.getElementById("jpBuild");
+
+  function hasSpec(text){
+    return /"recipe"\s*:|"chain"\s*:\s*\[|"reference"\s*:|"kind"\s*:/.test(text || "");
+  }
+
+  // "Now give me the full script" — one press from an approved plan. If the last
+  // reply is still prose (an outline or the per-journey detail), the spec JSON is
+  // requested first, in the chat where the operator can see what was asked, and
+  // then composed. Before, this said "that reply is a plan, not a spec" and left
+  // the operator to guess the magic words.
+  async function ensureSpec(){
+    const withSpec = [...history].reverse().find(m => m.role === "model" && hasSpec(m.text));
+    if(withSpec) return withSpec.text;
+    const ask = "Now the build specs: emit the spec JSON for every object in the "
+              + "plan above — one ```json block each, no prose between them.";
+    addMsg("user", ask);
+    history.push({ role: "user", text: ask });
+    const bub = addMsg("model", ""); bub.innerHTML = '<span class="jp-dots"></span>';
+    hint.textContent = "Asking the planner for the build specs…";
+    const res = await fetch("/admin/planner/api", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ messages: history, temperature: 0 }),
+    });
+    const data = await res.json();
+    if(data.error || !data.text){
+      bub.innerHTML = `<pre class="jp-err">${esc(data.error || "No spec came back.")}</pre>`;
+      return null;
+    }
+    bub.innerHTML = renderModel(data.text);
+    history.push({ role: "model", text: data.text });
+    return hasSpec(data.text) ? data.text : null;
+  }
+
   buildBtn.onclick = async () => {
     if(busy) return;
-    const last = [...history].reverse().find(m => m.role === "model");
-    if(!last){ hint.textContent = "Ask the planner for a spec first."; return; }
+    if(!history.some(m => m.role === "model")){
+      hint.textContent = "Send a brief first — the script is built from the plan.";
+      return;
+    }
+    busy = true; buildBtn.disabled = true;
+    let specText = null;
+    try { specText = await ensureSpec(); }
+    catch(err){
+      hint.textContent = "";
+      addMsg("model", "").innerHTML = `<pre class="jp-err">Spec request failed: ${esc(String(err))}</pre>`;
+    }
+    busy = false; buildBtn.disabled = false;
+    if(!specText){
+      hint.textContent = "No buildable spec yet — say which object to build "
+                       + "(\"journey 2 in full\", then \"generate json\").";
+      return;
+    }
+    const last = { text: specText };
     // Route to the right engine by the spec's own shape: a MODE 4 graph names a
     // `reference`, a MODE 5 chain has a `chain` array, a MODE 3 recipe spec has
     // `recipe`. Checked most-specific first — a chain spec has no `recipe` key.
@@ -218,84 +756,89 @@ NOTES
       try { data = await res.json(); }
       catch(e){ const raw = await res.text().catch(()=>""); throw new Error(`HTTP ${res.status} (non-JSON): ${raw.slice(0,300)}`); }
 
-      const dlLink = (js, filename, label) => {
-        const url = URL.createObjectURL(new Blob([js], { type: "text/javascript" }));
-        const a = document.createElement("a");
-        a.href = url; a.download = filename || "composed_console.js";
-        a.textContent = label || ("⬇ " + (filename || "console script"));
-        a.style.cssText = "display:inline-block;font-weight:600;text-decoration:none;"
-                        + "border:1px solid #d7dae0;border-radius:6px;padding:6px 10px;color:inherit";
-        return a;
-      };
+      function srow(title, sub, node, bad){
+        const row = document.createElement("div");
+        row.className = "jp-srow" + (bad ? " bad" : "");
+        const t2 = document.createElement("div"); t2.className = "t";
+        t2.innerHTML = `<b>${esc(title)}</b><span>${esc(sub || "")}</span>`;
+        row.append(t2);
+        if(node) row.append(node);
+        scriptsBox.append(row);
+        if(!bad){ scripts++; scriptCount.textContent = `(${scripts})`; }
+        return row;
+      }
 
       if(data.error){
-        bub.innerHTML = `<pre style="color:#c0392b">${esc(data.error)}</pre>`;
+        bub.innerHTML = `<pre class="jp-err">${esc(data.error)}</pre>`;
         hint.textContent = "";
       } else if(data.multi){
         // A campaign is many objects; one reply can carry several specs.
-        bub.innerHTML = `<div style="font-weight:600;margin-bottom:6px">`
-                      + `Built ${data.built} of ${data.total} objects</div>`;
-        const list = document.createElement("div");
-        list.style.cssText = "display:flex;flex-direction:column;gap:6px";
         for(const r of data.results){
-          const row = document.createElement("div");
           if(r.ok && r.batch){
             // One script, N drafts — the whole campaign in a single paste.
-            row.append(dlLink(r.js, r.filename,
-              `⬇ ${r.name}${r.partial ? " (partial)" : ""} — ONE paste`));
-            const names = document.createElement("div");
-            names.style.cssText = "font-size:12px;opacity:.7;margin:4px 0 0 4px";
-            names.textContent = (r.detail || []).map((n,i) => `${i+1}. ${n}`).join("  ·  ");
-            row.append(names);
+            srow(`${r.name}${r.partial ? " (partial)" : ""}`,
+                 (r.detail || []).map((n,i) => `${i+1}. ${n}`).join("  ·  "),
+                 dlLink(r.js, r.filename, "⬇ ONE paste"));
             if(r.partial){
-              const warn = document.createElement("div");
-              warn.style.cssText = "font-size:12px;color:#b45309;margin-left:4px";
-              warn.textContent = "Some objects were refused — see the log below; the script has the rest.";
-              row.append(warn);
               const pre = document.createElement("pre");
-              pre.style.cssText = "font-size:11px;max-height:140px;overflow:auto";
-              pre.textContent = r.log || "";
-              row.append(pre);
+              pre.className = "jp-err";
+              pre.style.cssText = "font-size:11px;max-height:140px;overflow:auto;margin:0 0 9px";
+              pre.textContent = "Some objects were refused — the script has the rest.\n"
+                              + (r.log || "");
+              scriptsBox.append(pre);
             }
           } else if(r.ok){
-            row.append(dlLink(r.js, r.filename, `⬇ ${r.index}. ${r.name} (${r.mode})`));
+            srow(`${r.index}. ${r.name}`, r.mode, dlLink(r.js, r.filename, "⬇ script"));
           } else {
-            const why = (r.log || "").trim().split("\n").filter(Boolean).pop() || "refused";
-            row.innerHTML = `<span style="color:#c0392b">⛔ ${esc(String(r.index))}. `
-                          + `${esc(r.name)} — ${esc(why.slice(0,160))}</span>`;
+            // The FIRST informative line names the object and the reason ("game
+            // X is not a known lobbyGameId — did you mean …?"). The last line is
+            // usually the generic tail, which told the operator nothing.
+            const lines = (r.log || "").trim().split("\n").map(l => l.trim()).filter(Boolean);
+            const why = lines.find(l => /⛔|refus|unknown|not a known|missing/i.test(l))
+                     || lines[0] || "refused";
+            const row = srow(`⛔ ${r.index}. ${r.name}`, why.slice(0, 220), null, true);
+            if(lines.length > 1){
+              const det = document.createElement("details"); det.className = "jp-code";
+              det.innerHTML = `<summary>full refusal</summary><pre>${esc(r.log || "")}</pre>`;
+              row.append(det);
+              row.style.flexWrap = "wrap";
+            }
           }
-          list.append(row);
         }
-        bub.append(list);
+        showPane("script");
+        bub.innerHTML = `<div class="jp-sum">⚙ Built ${data.built} of ${data.total} objects</div>`
+                      + `<div class="u" style="color:var(--t-muted);font-size:12.5px;margin-top:4px">`
+                      + `In the Script tab below.</div>`;
         hint.textContent = data.built === data.total
           ? "All built. Paste each into a logged-in backoffice console (F12)."
           : "Some refused — paste the reason back into the chat to have the planner fix those.";
       } else if(!data.ok){
-        bub.innerHTML = `<pre style="color:#c0392b">⛔ Composer refused (exit ${esc(String(data.returncode))})\n\n`
+        bub.innerHTML = `<pre class="jp-err">⛔ Composer refused (exit ${esc(String(data.returncode))})\n\n`
                       + `${esc(data.log || "")}</pre>`;
         hint.textContent = "Refused — paste the reason back into the chat to have the planner fix it.";
       } else {
-        const blob = new Blob([data.js], { type: "text/javascript" });
-        const url = URL.createObjectURL(blob);
-        bub.innerHTML = `<pre>${esc(data.log || "")}</pre>`;
-        const row = document.createElement("div");
-        row.style.cssText = "margin-top:8px;display:flex;gap:8px;flex-wrap:wrap";
-        const dl = document.createElement("a");
-        dl.href = url; dl.download = data.filename || "composed_console.js";
-        dl.textContent = "⬇ Download " + (data.filename || "console script");
-        dl.style.cssText = "font-weight:600;text-decoration:none;border:1px solid #d7dae0;"
-                         + "border-radius:6px;padding:6px 10px;color:inherit";
+        const dl = dlLink(data.js, data.filename, "⬇ script");
         const cp = document.createElement("button");
-        cp.type = "button"; cp.textContent = "⧉ Copy script";
-        cp.onclick = () => { navigator.clipboard.writeText(data.js); hint.textContent = "Script copied — paste into the backoffice console (F12)."; };
-        row.append(dl, cp); bub.append(row);
-        hint.textContent = "Built. Paste the script into a logged-in backoffice console (F12).";
+        cp.type = "button"; cp.className = "jp-dl"; cp.textContent = "⧉ Copy";
+        cp.onclick = () => { navigator.clipboard.writeText(data.js);
+                             hint.textContent = "Script copied — paste into the backoffice console (F12)."; };
+        const wrapRow = document.createElement("div");
+        wrapRow.style.cssText = "display:flex;gap:7px;flex-wrap:wrap";
+        wrapRow.append(dl, cp);
+        srow(data.filename || "console script",
+             (data.log || "").trim().split("\n").filter(Boolean).pop() || "", wrapRow);
+        showPane("script");
+        bub.innerHTML = `<div class="jp-sum">⚙ Script built</div>`
+                      + `<div class="u" style="color:var(--t-muted);font-size:12.5px;margin-top:4px">`
+                      + `In the Script tab below — paste it into a logged-in backoffice console (F12).</div>`
+                      + renderModel(data.log || "");
+        hint.textContent = "Built.";
       }
     }catch(err){
-      bub.innerHTML = `<pre style="color:#c0392b">Compose failed: ${esc(String(err))}</pre>`;
+      bub.innerHTML = `<pre class="jp-err">Compose failed: ${esc(String(err))}</pre>`;
       hint.textContent = "";
     }finally{
-      busy = false; buildBtn.disabled = false; log.scrollTop = log.scrollHeight;
+      busy = false; buildBtn.disabled = false; toBottom();
     }
   };
 })();

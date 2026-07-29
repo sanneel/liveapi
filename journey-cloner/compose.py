@@ -184,6 +184,20 @@ RECIPES: dict[str, Recipe] = {
                 "casino_bonus_v2", "initializationData.releaseLimitMultiplier",
                 "raw", "max cashout as a multiple of the bonus",
                 min_major=0, max_major=100),
+            # Same silent-cap trap as the instant recipe: unset means gow.json's
+            # own maxBonusAmount ships instead of the brief's.
+            "spin_max_bonus_clp": Knob(
+                "freespin_bonus",
+                "initializationData.freespinActivity.currenciesConfig.CLP.maxBonusAmount",
+                "minor", "cap on winnings from the spins, in CLP",
+                min_major=0, max_major=100_000_000,
+                also=(("freespin_bonus", "initializationData.freespinActivity.currenciesConfig.CLP.maxBonusAmount_majorUnits", "raw"),)),
+            "spin_min_bonus_clp": Knob(
+                "freespin_bonus",
+                "initializationData.freespinActivity.currenciesConfig.CLP.minBonusAmount",
+                "minor", "minimum winnings paid from the spins, in CLP",
+                min_major=0, max_major=100_000_000,
+                also=(("freespin_bonus", "initializationData.freespinActivity.currenciesConfig.CLP.minBonusAmount_majorUnits", "raw"),)),
         },
     ),
     # An INSTANT bonus — a promotion-gated freespin with NO wagering follow-up
@@ -235,6 +249,36 @@ RECIPES: dict[str, Recipe] = {
             "spin_game_external": Knob(
                 "freespin_bonus", "initializationData.freespinActivity.externalGameId",
                 "raw", "externalGameId — from games registry", also=(("promotion", PROMO_FS + "externalGameId"),)),
+            # Without these the journey silently keeps instfs.json's own caps —
+            # a brief asking for "Max bonus 200k" shipped 50k and the operator
+            # only saw it by opening the activity in the backoffice.
+            "spin_max_bonus_clp": Knob(
+                "freespin_bonus",
+                "initializationData.freespinActivity.currenciesConfig.CLP.maxBonusAmount",
+                "minor", "cap on winnings from the spins, in CLP",
+                min_major=0, max_major=100_000_000,
+                also=(
+                    ("freespin_bonus", "initializationData.freespinActivity.currenciesConfig.CLP.maxBonusAmount_majorUnits", "raw"),
+                    ("promotion", PROMO_FS + "currenciesConfig.CLP.maxBonusAmount", "minor"),
+                    ("promotion", PROMO_FS + "currenciesConfig.CLP.maxBonusAmount_majorUnits", "raw"),
+                )),
+            "spin_min_bonus_clp": Knob(
+                "freespin_bonus",
+                "initializationData.freespinActivity.currenciesConfig.CLP.minBonusAmount",
+                "minor", "minimum winnings paid from the spins, in CLP",
+                min_major=0, max_major=100_000_000,
+                also=(
+                    ("freespin_bonus", "initializationData.freespinActivity.currenciesConfig.CLP.minBonusAmount_majorUnits", "raw"),
+                    ("promotion", PROMO_FS + "currenciesConfig.CLP.minBonusAmount", "minor"),
+                    ("promotion", PROMO_FS + "currenciesConfig.CLP.minBonusAmount_majorUnits", "raw"),
+                )),
+            # "Provider's campaign end date" in the backoffice. Left unset, the
+            # reference's date is in the past and fix_dates pushes it to +7 days
+            # from the build — a date nobody chose. Send the campaign's own end.
+            "spin_campaign_end": Knob(
+                "freespin_bonus", "initializationData.freespinActivity.stopAt",
+                "raw", "provider campaign end, ISO-8601 Z (e.g. 2026-03-15T23:59:59Z)",
+                also=(("promotion", PROMO_FS + "stopAt"),)),
         },
     ),
 }
@@ -428,7 +472,18 @@ def compose(recipe: Recipe, values: dict | None = None) -> tuple[dict, str, list
             f"journey would ship the template's own value:\n    {joined}\n"
             f"  The reference template's shape has changed; re-check the knob "
             f"paths in RECIPES for this recipe.")
-    fix_dates(shell)
+    # A rewritten date is a value the operator did not choose (a campaign whose
+    # window has already passed gets pushed to +7 days), so it is announced
+    # rather than swallowed — this silently shipped an August end date on a March
+    # campaign and only turned up when someone opened the draft.
+    # ONE line, not one per field: a 20-journey batch printed five of these per
+    # journey and the ~100 lines buried the refusals underneath them.
+    rewritten = fix_dates(shell)
+    if rewritten:
+        when = re.search(r"-> (\S+)", rewritten[0])
+        print(f"  ⚠ {len(rewritten)} stale template date(s) rewritten"
+              f"{' to ' + when.group(1) if when else ''}"
+              f" — set `spin_campaign_end` to choose it yourself")
     return shell, name, chain_ids
 
 
@@ -923,10 +978,72 @@ def _refuse_inherited(body: dict, reference: str) -> None:
         f"only the activities you actually want.")
 
 
+def sync_game_labels(body: dict) -> list[str]:
+    """Make the human-facing game labels match the game actually being granted.
+
+    `gameTranslationKey` / `providerTranslationKey` are display-only, so nothing
+    validated them and no knob wrote them: a journey granting spins on La Gran
+    Copa went out advertising the reference template's "Sweet Bonanza Super
+    Scatter / Pragmatic Play" on the activity card and the promo-lobby card. The
+    ids were right, the labels lied — which is exactly what an operator reviewing
+    the draft reads. The registry row for the lobby id is the authority.
+    """
+    games = _games_registry()
+    if not games:
+        return []
+    log: list[str] = []
+
+    def pretty(provider_id: str) -> str:
+        return " ".join(w.capitalize() for w in re.split(r"[-_]+", provider_id or "") if w)
+
+    def walk(obj):
+        if isinstance(obj, dict):
+            lobby = obj.get("lobbyGameId")
+            entry = games.get(lobby) if isinstance(lobby, str) else None
+            if entry:
+                game_name = entry.get("gameTranslationKey")
+                provider_name = (entry.get("providerTranslationKey")
+                                 or pretty(entry.get("provider", "")))
+                if game_name and obj.get("gameTranslationKey") != game_name:
+                    log.append(f"label: gameTranslationKey {obj.get('gameTranslationKey')!r} "
+                               f"-> {game_name!r}")
+                    obj["gameTranslationKey"] = game_name
+                if provider_name and obj.get("providerTranslationKey") != provider_name:
+                    obj["providerTranslationKey"] = provider_name
+            for value in obj.values():
+                walk(value)
+        elif isinstance(obj, list):
+            for item in obj:
+                walk(item)
+
+    walk(body)
+
+    # The activity card title is a separate label ("<provider> | <game>") that is
+    # not derived from the wire fields, so it needs the same treatment.
+    freespin_ids = {a.get("activityId") for a in body.get("activities", [])
+                    if a.get("activityName") == "freespin_bonus"}
+    label = None
+    for activity in body.get("activities", []):
+        if activity.get("activityId") not in freespin_ids:
+            continue
+        fa = (activity.get("initializationData") or {}).get("freespinActivity") or {}
+        if fa.get("gameTranslationKey"):
+            label = f"{fa.get('providerTranslationKey') or ''} | {fa['gameTranslationKey']}".strip(" |")
+            activity["activityDisplayName"] = label
+    if label:
+        config = (body.get("rawJourneyData") or {}).get("activitiesConfiguration") or {}
+        for activity_id, cfg in config.items():
+            if activity_id in freespin_ids and isinstance(cfg, dict) and "displayName" in cfg:
+                cfg["displayName"] = label
+        log.append(f"label: freespin activity card -> {label!r}")
+    return log
+
+
 def compose_from_spec(spec: dict) -> tuple[Recipe, dict, str, list[str]]:
     recipe = validate_spec(spec)
     values, unknown = spec_to_values(recipe, spec)
     body, name, _ = compose(recipe, values)
+    sync_game_labels(body)
     _refuse_inherited(body, recipe.reference)
     return recipe, body, name, unknown
 
@@ -1415,12 +1532,143 @@ BATCH_JS_TEMPLATE = r'''// Composed CAMPAIGN — @COUNT@ journeys, generated @GE
   // randomizer spec's `journeys` list.
   console.log('journeyIds in order:', created.map(c=>c.id));
   window.__createdJourneys = created;
+
+  // ── the wheel / scratch card ──────────────────────────────────────────────
+  // A promotion is the journeys AND the object that routes players into them.
+  // The routing needs ids that only exist once the journeys are created, which
+  // is why this runs here rather than in a second paste: each prize names the
+  // journey it routes to and that name is resolved against what was just made.
+  const RANDOMIZERS = @RANDOMIZERS@;   // [] when the campaign has no wheel
+  if (RANDOMIZERS.length) {
+    const CRM_BASE = BASE.replace(/\/journey-builder\/v0$/, '');
+    const byName = new Map(created.map(c => [c.name, c.id]));
+    const rok = [], rfail = [];
+    console.log('%cCreating '+RANDOMIZERS.length+' randomizer(s)...','color:#60a5fa;font-weight:bold');
+    for (const R of RANDOMIZERS) {
+      try {
+        // Each prize routes to a journey by NAME (created above) or by a literal
+        // JRN id (a wheel pointing at journeys that already exist).
+        const unresolved = [];
+        const ids = (R.prizeJourneys || []).map((ref) => {
+          if (/^JRN-/.test(String(ref))) return ref;
+          const hit = byName.get(ref);
+          if (!hit) unresolved.push(ref);
+          return hit;
+        });
+        if (unresolved.length) throw new Error('prize routes to journeys not created here: '+unresolved.join(', '));
+        const payload = JSON.parse(JSON.stringify(R.body));
+        const prizes = payload.prizes || [];
+        if (ids.length && ids.length !== prizes.length) throw new Error('template has '+prizes.length+' prize slices but '+ids.length+' journeys were given');
+        ids.forEach((jid, i) => { (prizes[i].journeyPrizeSettings = prizes[i].journeyPrizeSettings || {}).journeyId = jid; });
+
+        let r = await fetch(CRM_BASE+'/promo/v2/promo-drafts/randomizer',{ method:'POST', headers:headers('application/json'), credentials:'include', body:JSON.stringify(payload) });
+        let resp = await r.text();
+        if(!r.ok) throw new Error('create HTTP '+r.status+' '+resp);
+        let cr = {}; try { cr = JSON.parse(resp); } catch(e){}
+        const rid = cr.id || cr.draftId || cr.promotionDraftId || (cr.data && cr.data.id);
+        if(!rid) throw new Error('no draft id in create response: '+resp);
+        // Fill the draft — same two-step the standalone randomizer script uses.
+        if (R.flow === 'create_put') {
+          r = await fetch(CRM_BASE+'/promo/v2/randomizer/'+encodeURIComponent(rid),{ method:'PUT', headers:headers('application/json'), credentials:'include', body:JSON.stringify({ ...payload, id:String(rid) }) });
+        } else {
+          r = await fetch(CRM_BASE+'/promo/v2/randomizer?draftId='+encodeURIComponent(rid),{ method:'POST', headers:headers('application/json'), credentials:'include', body:JSON.stringify(payload) });
+        }
+        resp = await r.text();
+        if(!r.ok) throw new Error('draft '+rid+' created but fill failed HTTP '+r.status+' '+resp);
+        rok.push({ name: R.internalName, id: rid });
+        console.log('%c  ✓ '+R.internalName+' -> '+rid,'color:#22c55e');
+      } catch (e) {
+        const msg = String((e && e.message) || e);
+        rfail.push({ name: R.internalName, err: msg });
+        console.error('  ✗ '+R.internalName+' — '+msg);
+      }
+      await sleep(PAUSE_MS);
+    }
+    console.log('%cRANDOMIZERS — '+rok.length+' created, '+rfail.length+' failed.',
+                'color:'+(rfail.length?'#f59e0b':'#22c55e')+';font-weight:bold');
+    window.__createdRandomizers = rok;
+  }
+  console.log('%cCAMPAIGN DONE','color:#22c55e;font-weight:bold;font-size:14px');
 })();
 '''
 
 
+def prepare_randomizers(spec: dict) -> list[dict]:
+    """A MODE 6 randomizer spec -> payload(s) the campaign script can create.
+
+    The prize->journey routing is deliberately NOT baked in here: the journeys do
+    not exist yet. Each prize carries the NAME of the journey it routes to and
+    the script resolves it against what it just created (a literal JRN id passes
+    through, for a wheel pointed at journeys that already exist).
+    """
+    try:
+        import randomizer_campaign as RC          # same directory
+    except ImportError as exc:                    # pragma: no cover
+        raise SpecError(f"randomizer builder unavailable: {exc}")
+
+    kind = str(spec.get("kind") or "").strip()
+    if kind not in RC.KINDS:
+        raise SpecError(f"unknown randomizer kind {kind!r} — known: {list(RC.KINDS)}")
+    dates = spec.get("dates") or ([spec["date"]] if spec.get("date") else [])
+    if not dates:
+        raise SpecError("randomizer spec needs `date` or `dates`")
+
+    routes = [str(j).strip() for j in (spec.get("journeys") or []) if str(j).strip()]
+    if not routes:
+        raise SpecError(
+            "randomizer spec has no `journeys` — every prize must name the journey "
+            "it routes to (by journey_name, or a literal JRN id). Without it the "
+            "wheel would keep the captured template's own prize routing.")
+    if any("XXXX" in r or "⛔" in r for r in routes):
+        raise SpecError(
+            f"randomizer `journeys` still contains placeholders ({routes}) — use the "
+            f"journey_name of each prize's journey; the script fills in the real id.")
+
+    weights = [str(w) for w in (spec.get("weights") or [])] or None
+
+    # Check the slice count HERE: prepare() raises about "--weights", a CLI flag
+    # that means nothing to someone who pressed a button in the chat.
+    def slices_of(k: str) -> int:
+        try:
+            return len(json.loads(RC.KINDS[k]["template"].read_text(encoding="utf-8"))
+                       .get("prizes") or [])
+        except (OSError, ValueError):
+            return 0
+
+    slices = slices_of(kind)
+    for label, given in (("weights", weights), ("journeys", routes)):
+        if given and slices and len(given) != slices:
+            kinds = ", ".join(f"{k} ({slices_of(k)} slices)" for k in RC.KINDS)
+            raise SpecError(
+                f"{kind} is a captured wheel with {slices} prize slices, but "
+                f"`{label}` lists {len(given)} — slices cannot be added or removed. "
+                f"Plan {slices} prizes (including the empty one), or capture a "
+                f"{len(given)}-slice wheel first. Available: {kinds}.")
+    out = []
+    for date_str in dates:
+        try:
+            body, _report = RC.prepare(
+                kind, str(date_str), days=spec.get("days"),
+                internal_name=str(spec.get("internal_name") or ""),
+                url_short=str(spec.get("url_short") or ""),
+                weights=weights, journeys=None)   # routing wired at run time
+        except SystemExit as exc:                 # prepare() exits on bad counts
+            raise SpecError(str(exc))
+        prizes = body.get("prizes") or []
+        if len(routes) != len(prizes):
+            raise SpecError(
+                f"{kind} has {len(prizes)} prize slices but `journeys` lists "
+                f"{len(routes)} — the slices come from the captured template and "
+                f"cannot be added or removed.")
+        out.append({"internalName": body.get("internalName"),
+                    "flow": RC.KINDS[kind]["flow"],
+                    "body": body, "prizeJourneys": routes})
+    return out
+
+
 def emit_batch(items: list[tuple[str, dict]], basename: str,
-               brand: str = DEFAULT_BRAND) -> Path:
+               brand: str = DEFAULT_BRAND,
+               randomizers: list[dict] | None = None) -> Path:
     """One console script that creates MANY journeys from a single paste.
 
     A campaign is a dozen-plus journeys, and one script per journey means one
@@ -1428,14 +1676,23 @@ def emit_batch(items: list[tuple[str, dict]], basename: str,
     the first failure with the ids already created so a re-run can resume. It
     also prints the created ids in order, which is exactly the list a wheel's
     `journeys` routing needs.
+
+    `randomizers` makes it the WHOLE promotion in one paste: each entry is
+    {internalName, flow, body, prizeJourneys}, where prizeJourneys names the
+    journey each prize slice routes to. Those names are resolved to the ids
+    created moments earlier in the same run — the reason this cannot simply be a
+    second script is that the ids do not exist until the first one has run.
     """
     manifest = "".join(f"//   {i + 1}. {name}\n" for i, (name, _) in enumerate(items))
+    for r in randomizers or []:
+        manifest += f"//   + randomizer: {r.get('internalName', '?')}\n"
     js = (BATCH_JS_TEMPLATE
           .replace("@GENERATED_AT@", datetime.datetime.utcnow().isoformat() + "Z")
           .replace("@COUNT@", str(len(items)))
           .replace("@MANIFEST@", manifest)
           .replace("@BASE@", json.dumps(BASE_URL))
           .replace("@BRAND@", json.dumps(brand))
+          .replace("@RANDOMIZERS@", json.dumps(randomizers or [], ensure_ascii=False))
           .replace("@BODIES@", json.dumps(
               [{"name": n, "body": b} for n, b in items], ensure_ascii=False)))
     OUT.mkdir(parents=True, exist_ok=True)
@@ -1496,7 +1753,8 @@ def main() -> int:
         args = args[:i] + args[i + 2:]
 
     # --batch: many specs -> ONE console script. A campaign is a dozen journeys,
-    # and one script each means one token capture and one paste each.
+    # and one script each means one token capture and one paste each. With a
+    # `randomizer` alongside them it is the WHOLE promotion in one paste.
     if args[0] == "--batch":
         raw = (Path(args[1]).read_text(encoding="utf-8") if len(args) > 1
                else sys.stdin.read())
@@ -1525,13 +1783,44 @@ def main() -> int:
                 continue
             items.append((name, body))
             print(f"  [{i}/{len(specs)}] {name}: {len(body['activities'])} activities OK")
-        for f in failures:
-            print(f"  ⛔ {f}")
         if not items:
+            for f in failures:
+                print(f"  ⛔ {f}")
             print("\nNothing composed — not emitting.")
             return 3
-        out = emit_batch(items, basename or "composed_campaign")
-        print(f"\n{len(items)}/{len(specs)} composed. Console script: {out}")
+
+        # The wheel/scratch card that routes players into those journeys. It goes
+        # in the SAME script because its prize routing needs ids that only exist
+        # after the journeys above have been created.
+        randomizers = []
+        rspec = payload.get("randomizer") if isinstance(payload, dict) else None
+        if isinstance(rspec, dict):
+            try:
+                randomizers = prepare_randomizers(rspec)
+                for r in randomizers:
+                    print(f"  + randomizer {r['internalName']}: "
+                          f"{len(r['body'].get('prizes') or [])} prize slice(s) -> "
+                          f"{', '.join(r['prizeJourneys'])}")
+            except SpecError as exc:
+                failures.append(f"randomizer: {exc}")
+                print(f"  ⛔ randomizer: {exc}")
+
+        out = emit_batch(items, basename or "composed_campaign", randomizers=randomizers)
+
+        # The summary goes LAST because that is what a reader sees first when a
+        # long build scrolls past: exactly what the script will create, and
+        # exactly what it will not.
+        extra = f" + {len(randomizers)} randomizer(s)" if randomizers else ""
+        print(f"\n══ IN THE SCRIPT: {len(items)} journey(s){extra} ══")
+        for name, _ in items:
+            print(f"  ✓ {name}")
+        for r in randomizers:
+            print(f"  ✓ randomizer {r['internalName']}")
+        if failures:
+            print(f"\n══ NOT BUILT: {len(failures)} ══")
+            for f in failures:
+                print(f"  ⛔ {f}")
+        print(f"\n{len(items)}/{len(specs)} composed{extra}. Console script: {out}")
         # Exit 4 = partial, so a caller can tell "all good" from "some missing".
         return 0 if not failures else 4
 

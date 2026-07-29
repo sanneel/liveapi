@@ -115,6 +115,22 @@
             0,
             100
           ]
+        },
+        "spin_max_bonus_clp": {
+          "wire_unit": "minor",
+          "desc": "cap on winnings from the spins, in CLP",
+          "range": [
+            0,
+            100000000
+          ]
+        },
+        "spin_min_bonus_clp": {
+          "wire_unit": "minor",
+          "desc": "minimum winnings paid from the spins, in CLP",
+          "range": [
+            0,
+            100000000
+          ]
         }
       }
     },
@@ -159,6 +175,26 @@
         "spin_game_external": {
           "wire_unit": "raw",
           "desc": "externalGameId — from games registry"
+        },
+        "spin_max_bonus_clp": {
+          "wire_unit": "minor",
+          "desc": "cap on winnings from the spins, in CLP",
+          "range": [
+            0,
+            100000000
+          ]
+        },
+        "spin_min_bonus_clp": {
+          "wire_unit": "minor",
+          "desc": "minimum winnings paid from the spins, in CLP",
+          "range": [
+            0,
+            100000000
+          ]
+        },
+        "spin_campaign_end": {
+          "wire_unit": "raw",
+          "desc": "provider campaign end, ISO-8601 Z (e.g. 2026-03-15T23:59:59Z)"
         }
       }
     }

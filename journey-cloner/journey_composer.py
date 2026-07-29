@@ -113,7 +113,7 @@ GAMES: dict[str, dict[str, str]] = {
 # hardcoding a two-game list here meant every other game was unbuildable.
 GAMES_FILE = HERE / "library" / "games.json"
 _GAME_FIELDS = ("lobbyGameId", "walletGameId", "externalGameId", "provider",
-                "gameTranslationKey")
+                "gameTranslationKey", "providerTranslationKey")
 
 
 def _norm(s: str) -> str:
@@ -134,6 +134,9 @@ def _game_index() -> dict[str, dict[str, str]]:
             registry = {}
         for lobby_id, entry in registry.items():
             tup = {f: entry.get(f) for f in _GAME_FIELDS if entry.get(f)}
+            if not tup.get("providerTranslationKey") and entry.get("provider"):
+                tup["providerTranslationKey"] = " ".join(
+                    w.capitalize() for w in str(entry["provider"]).replace("_", "-").split("-") if w)
             if not tup.get("lobbyGameId"):
                 continue
             keys = [lobby_id, entry.get("gameTranslationKey"), *(entry.get("aliases") or [])]
