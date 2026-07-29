@@ -642,7 +642,7 @@ def figma_run(
     return templates.TemplateResponse(request, "figma.html", ctx)
 
 
-_PROMO_TABS = {"overview", "gow", "tournament_pmcl", "bet_and_get", "journey_cloner", "randomizers", "nc_discount", "scripts", "prediction", "slot_cards", "sport_comms"}
+_PROMO_TABS = {"overview", "gow", "tournament_pmcl", "bet_and_get", "journey_cloner", "randomizers", "nc_discount", "scripts", "prediction", "slot_cards", "sport_comms", "comms_builder"}
 _JC_TYPES = ["followup", "bfr", "two_hours", "aft"]
 
 
@@ -774,11 +774,26 @@ def _slot_ns() -> dict:
 
 
 
+def _comms_ns(*, form=None, error="", result=None, console_script=None) -> dict:
+    """Comms builder tab state. `form` echoes the operator's picks back so a
+    refusal does not wipe the sheet they just pasted."""
+    return {
+        "form": form if form is not None else {
+            "channels": ["nc", "popup", "email", "sms"],
+            "splits": ["nc", "popup", "email"],
+            "wait_nc": "2h", "wait_popup": "1d", "wait_email": "1d", "wait_sms": "",
+            "variant": "", "sheet": "", "date": "", "days": "",
+            "journey_name": "", "link": "", "email_template": "", "email_heading": "",
+        },
+        "error": error, "result": result, "console_script": console_script,
+    }
+
+
 def _bag_ns(*, form=None, error="", result=None, console_script=None) -> dict:
     return {"form": form or {}, "error": error, "result": result, "console_script": console_script}
 
 def _promotions_context(*, user, active_tab="overview", gow=None, tournament=None, bag=None, jc=None,
-                        rnd=None, nc=None, pred=None, scomms=None) -> dict:
+                        rnd=None, nc=None, pred=None, scomms=None, comms=None) -> dict:
     """Full context for the unified Optimization page: automation graph + the
     embedded generators (GOW, Tournament Comms, Journey Cloner, Randomizers,
     Discount NC, Prediction, Planner, Slot Cards) + all-scripts list. All of
@@ -805,6 +820,7 @@ def _promotions_context(*, user, active_tab="overview", gow=None, tournament=Non
         "nc": nc if nc is not None else _nc_ns(),
         "pred": pred if pred is not None else _pred_ns(),
         "scomms": scomms if scomms is not None else _scomms_ns(),
+        "comms": comms if comms is not None else _comms_ns(),
         "sc": _slot_ns(),
     }
 
@@ -1400,3 +1416,78 @@ def parser_feeds_test_telegram(
 @router.get("/admin/")
 def admin_trailing_slash() -> RedirectResponse:
     return RedirectResponse(url="/admin")
+
+
+@router.post("/admin/promotions/comms-builder", response_class=HTMLResponse)
+def promotions_comms_builder(
+    request: Request,
+    sheet: str = Form(""),
+    channels: List[str] = Form([]),
+    splits: List[str] = Form([]),
+    variant: str = Form(""),
+    wait_nc: str = Form(""),
+    wait_popup: str = Form(""),
+    wait_email: str = Form(""),
+    wait_sms: str = Form(""),
+    date: str = Form(""),
+    days: str = Form(""),
+    journey_name: str = Form(""),
+    link: str = Form(""),
+    email_template: str = Form(""),
+    email_heading: str = Form(""),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """Build a JBCL comms journey from ticked channels + the pasted sheet.
+
+    Nothing here is inferred: the chain is exactly what was ticked, and every
+    word of copy comes from the sheet. A gap — a channel ticked with no copy, a
+    split on SMS, a missing link or date — is a refusal with the reason in the
+    log, which is the generator working rather than a crash."""
+    from ..services.journey_cloner_runner import generate_comms_builder_console_script
+
+    waits = {"nc": wait_nc, "popup": wait_popup, "email": wait_email, "sms": wait_sms}
+    form = {
+        "channels": channels, "splits": splits, "variant": variant,
+        "wait_nc": wait_nc, "wait_popup": wait_popup, "wait_email": wait_email,
+        "wait_sms": wait_sms, "sheet": sheet, "date": date, "days": days,
+        "journey_name": journey_name, "link": link,
+        "email_template": email_template, "email_heading": email_heading,
+    }
+    error = ""
+    result = None
+    console_script = None
+    try:
+        exit_code, output, display_cmd, js_text, js_name = generate_comms_builder_console_script(
+            sheet_text=sheet,
+            channels=list(channels),
+            splits=list(splits),
+            waits=waits,
+            variant=variant,
+            date=date,
+            days=days,
+            journey_name=journey_name,
+            link=link,
+            email_template=email_template,
+            email_heading=email_heading,
+        )
+        result = {"exit_code": exit_code, "output": output, "command": display_cmd,
+                  "ok": exit_code == 0 and js_text is not None}
+        if exit_code == 0 and js_text is not None:
+            console_script = {"name": js_name, "text": js_text}
+        else:
+            # The builder refuses by design; the reason is already in `output`,
+            # so do not bury it behind a generic message.
+            error = "Refused — see the run output below."
+    except ValueError as exc:
+        error = str(exc)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("comms builder failed")
+        error = str(exc)
+
+    ctx = _promotions_context(
+        user=user,
+        active_tab="comms_builder",
+        comms=_comms_ns(form=form, error=error, result=result,
+                        console_script=console_script),
+    )
+    return templates.TemplateResponse(request, "promotions.html", ctx)

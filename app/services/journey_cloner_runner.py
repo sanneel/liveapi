@@ -187,6 +187,7 @@ COMPOSE_SCRIPT_PATH = CLONER_DIR / "compose.py"
 CHAIN_COMPOSER_SCRIPT_PATH = CLONER_DIR / "journey_composer.py"
 BET_AND_GET_PMCL_SCRIPT_PATH = CLONER_DIR / "bet_and_get_pmcl_campaign.py"
 SPORT_COMMS_SCRIPT_PATH = CLONER_DIR / "sport_comms_campaign.py"
+COMMS_BUILDER_SCRIPT_PATH = CLONER_DIR / "comms_builder.py"
 
 # Randomizer promos (weighted prize wheels / scratch cards). Keys must match
 # randomizer_campaign.py --kind.
@@ -833,3 +834,96 @@ def generate_bet_and_get_pmcl_console_script(
     if allow_any_weekday:
         cmd += ["--allow-any-weekday"]
     return _run_gow_cli(cmd, spec_text=email_spec, basename=basename)
+
+
+def generate_comms_builder_console_script(
+    *,
+    sheet_text: str,
+    channels: List[str],
+    splits: List[str],
+    waits: Dict[str, str],
+    variant: str = "",
+    date: str = "",
+    days: str = "",
+    journey_name: str = "",
+    link: str = "",
+    email_template: str = "",
+    email_heading: str = "",
+    artwork: str = "PICK",
+) -> Tuple[int, str, str, str | None, str]:
+    """Build a JBCL comms journey from ticked channels + the pasted sheet.
+
+    Wraps journey-cloner/comms_builder.py, which is deterministic: the chain is
+    exactly the channels/splits/waits passed in, and every word of copy comes
+    from the sheet via spec_parser. No model is involved, so there is nothing to
+    hallucinate — and a gap (a channel with no copy, a split on SMS, a missing
+    link or date) exits non-zero with the reason instead of being filled in.
+
+    The sheet goes in over stdin so it never touches disk.
+
+    Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
+    """
+    if not sheet_text.strip():
+        raise ValueError("Paste the content sheet (the channel copy + the Link row).")
+    if not channels:
+        raise ValueError("Tick at least one channel.")
+
+    basename = _unique_basename("comms_builder", date)
+    cmd = [
+        python_executable(),
+        str(COMMS_BUILDER_SCRIPT_PATH),
+        "--sheet", "-",
+        "--channels", ",".join(channels),
+        "--splits", ",".join(splits),          # explicit, so "none ticked" means none
+        "--out-name", basename,
+        "--script",
+    ]
+    if variant.strip():
+        cmd += ["--variant", variant.strip()]
+    for chan, dur in waits.items():
+        if dur.strip():
+            cmd += ["--wait", f"{chan}={dur.strip()}"]
+    if date.strip():
+        cmd += ["--date", date.strip()]
+    if days.strip():
+        cmd += ["--days", days.strip()]
+    if journey_name.strip():
+        cmd += ["--name", journey_name.strip()]
+    if link.strip():
+        cmd += ["--link", link.strip()]
+    if email_template.strip():
+        cmd += ["--email-template", email_template.strip()]
+    if email_heading.strip():
+        cmd += ["--email-heading", email_heading.strip()]
+    if artwork.strip() and artwork.strip() != "PICK":
+        cmd += ["--artwork", artwork.strip()]
+
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    display_cmd = " ".join(
+        part if " " not in part else repr(part) for part in cmd
+    ) + "  < (pasted sheet piped via stdin)"
+
+    proc = subprocess.run(
+        cmd,
+        cwd=CLONER_DIR,
+        env=env,
+        text=True,
+        encoding="utf-8",
+        capture_output=True,
+        timeout=180,
+        input=sheet_text,
+    )
+    output = proc.stdout
+    if proc.stderr:
+        output += "\nSTDERR:\n" + proc.stderr
+
+    js_filename = f"{basename}_console.js"
+    js_text = None
+    if proc.returncode == 0:
+        js_path = CLONER_DIR / "console_scripts" / js_filename
+        if js_path.exists():
+            js_text = js_path.read_text(encoding="utf-8")
+        else:
+            output += f"\n(expected {js_filename} but it was not written)"
+    return proc.returncode, output, display_cmd, js_text, js_filename

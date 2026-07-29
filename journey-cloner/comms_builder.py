@@ -285,6 +285,9 @@ def main() -> int:
     ap.add_argument("--date", default="", help="start date YYYY-MM-DD (default: the sheet's)")
     ap.add_argument("--days", type=int, help="build one journey per day for N days")
     ap.add_argument("--name", default="", help="journey name (default: from the sheet's Event)")
+    ap.add_argument("--out-name", default="", metavar="BASENAME",
+                    help="write console_scripts/<BASENAME>_console.js — how the admin "
+                         "reads the script back, instead of the name-derived out/ path")
     ap.add_argument("--link", default="", help="override the sheet's Link row")
     ap.add_argument("--email-template", default="", help="reuse an existing CSE id instead of authoring")
     ap.add_argument("--email-hero-link", default="", help="email hero href (default: the link)")
@@ -339,7 +342,8 @@ def main() -> int:
     if args.json:
         print(json.dumps(spec, ensure_ascii=False, indent=2))
         return 0
-    return JC.cmd_compose(spec, as_json=False, script=args.script)
+    return JC.cmd_compose(spec, as_json=False, script=args.script,
+                          basename=args.out_name or None)
 
 
 if __name__ == "__main__":

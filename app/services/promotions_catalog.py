@@ -162,7 +162,7 @@ GENERATORS: List[dict] = [
      "what": "THE JBCL comms entry point: pick channels/splits/waits, paste the sheet. "
              "--variant gow / scratch_card / nc_only / tournament covers the shapes that "
              "used to be a script each. No model involved",
-     "script": "comms_builder.py", "tab": None},
+     "script": "comms_builder.py", "tab": "comms_builder"},
     {"key": "nc_discount", "group": "Casino", "brand": "JBCL",
      "label": "Discount NC",
      "what": "One notification journey per game/day from the calendar. Superseded by "
