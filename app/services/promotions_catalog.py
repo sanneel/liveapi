@@ -182,7 +182,7 @@ GENERATORS: List[dict] = [
     {"key": "sport_comms", "group": "Sport", "brand": "JBCL",
      "label": "Scratch Card Comms",
      "what": "SMS + notification + pop-up + email for a liveapi campaign",
-     "script": "sport_comms_campaign.py", "tab": None},
+     "script": "sport_comms_campaign.py", "tab": "sport_comms"},
 
     # ── Wheels & cards ────────────────────────────────────────────────────
     {"key": "randomizers", "group": "Wheels & cards", "brand": "JBCL/PMCL",

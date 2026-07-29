@@ -642,7 +642,7 @@ def figma_run(
     return templates.TemplateResponse(request, "figma.html", ctx)
 
 
-_PROMO_TABS = {"overview", "gow", "tournament_pmcl", "bet_and_get", "journey_cloner", "randomizers", "nc_discount", "scripts", "prediction", "slot_cards"}
+_PROMO_TABS = {"overview", "gow", "tournament_pmcl", "bet_and_get", "journey_cloner", "randomizers", "nc_discount", "scripts", "prediction", "slot_cards", "sport_comms"}
 _JC_TYPES = ["followup", "bfr", "two_hours", "aft"]
 
 
@@ -720,6 +720,50 @@ def _pred_ns(*, sheet="", draft_id="", content_id="", front_id="", base_body="",
     }
 
 
+def _scomms_campaigns() -> list[dict]:
+    """Campaigns the sport-comms tab can build for, newest first.
+
+    Only enabled campaigns with an expiry, because those are the two things the
+    generator refuses without — offering the rest would just be a dropdown of
+    entries that fail on submit. `has_matches` is surfaced so the operator can
+    see at a glance that the card the email links to will render something.
+    """
+    from ..database import db_session
+    from ..repositories.campaign_repo import CampaignRepository
+    from datetime import datetime
+
+    now = datetime.utcnow()
+    out = []
+    with db_session() as session:
+        repo = CampaignRepository(session)
+        for row in repo.list_all(enabled_only=True):
+            if row.expires_at is None or row.expires_at <= now:
+                continue
+            out.append({
+                "slug": row.slug,
+                "title": row.title,
+                "sport": row.sport,
+                "expires_at": row.expires_at.strftime("%Y-%m-%d %H:%M"),
+                "match_count": len(repo.get_matches(row.slug)),
+            })
+    out.sort(key=lambda c: c["expires_at"])
+    return out
+
+
+def _scomms_ns(*, campaign="", sheet="", dry_run=False,
+               error="", result=None, console_script=None) -> dict:
+    try:
+        campaigns = _scomms_campaigns()
+        load_error = ""
+    except Exception as exc:  # noqa: BLE001 - a broken DB must not blank the page
+        campaigns, load_error = [], str(exc)
+    return {
+        "campaigns": campaigns, "load_error": load_error,
+        "campaign": campaign, "sheet": sheet, "dry_run": dry_run,
+        "error": error, "result": result, "console_script": console_script,
+    }
+
+
 def _planner_ns() -> dict:
     from .admin_planner import planner_view_context
     return planner_view_context()
@@ -735,7 +779,7 @@ def _bag_ns(*, form=None, error="", result=None, console_script=None) -> dict:
     return {"form": form or {}, "error": error, "result": result, "console_script": console_script}
 
 def _promotions_context(*, user, active_tab="overview", gow=None, tournament=None, bag=None, jc=None,
-                        rnd=None, nc=None, pred=None) -> dict:
+                        rnd=None, nc=None, pred=None, scomms=None) -> dict:
     """Full context for the unified Optimization page: automation graph + the
     embedded generators (GOW, Tournament Comms, Journey Cloner, Randomizers,
     Discount NC, Prediction, Planner, Slot Cards) + all-scripts list. All of
@@ -761,6 +805,7 @@ def _promotions_context(*, user, active_tab="overview", gow=None, tournament=Non
         "rnd": rnd if rnd is not None else _rnd_ns(),
         "nc": nc if nc is not None else _nc_ns(),
         "pred": pred if pred is not None else _pred_ns(),
+        "scomms": scomms if scomms is not None else _scomms_ns(),
         "sc": _slot_ns(),
     }
 
@@ -990,6 +1035,48 @@ def promotions_prediction(
         pred=_pred_ns(sheet=sheet, draft_id=draft_id, content_id=content_id, front_id=front_id,
                       base_body=base_body, dry_run=do_dry_run,
                       error=error, result=result, console_script=console_script),
+    )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
+
+
+@router.post("/admin/promotions/sport-comms", response_class=HTMLResponse)
+def promotions_sport_comms(
+    request: Request,
+    campaign: str = Form(...),
+    sheet: str = Form(...),
+    dry_run: str = Form(""),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """Build the sport scratch-card comms journey for a liveapi campaign, from
+    the Optimization page's Scratch Card Comms tab (wraps
+    journey-cloner/sport_comms_campaign.py)."""
+    from ..services.journey_cloner_runner import generate_sport_comms_console_script
+    do_dry_run = dry_run.strip().lower() in ("on", "true", "1", "yes")
+    error = ""
+    result = None
+    console_script = None
+    try:
+        exit_code, output, display_cmd, js_text, js_name = generate_sport_comms_console_script(
+            campaign_slug=campaign, sheet_text=sheet, dry_run=do_dry_run,
+        )
+        result = {"exit_code": exit_code, "output": output, "command": display_cmd,
+                  "ok": exit_code == 0}
+        if exit_code == 0 and js_text is not None:
+            console_script = {"name": js_name, "text": js_text}
+        elif exit_code != 0:
+            # The generator refuses rather than warns, so a non-zero exit is
+            # usually a named check that failed — the reason is in the output.
+            error = "Refused — nothing was generated. The reason is in the run output below."
+    except ValueError as exc:
+        error = str(exc)
+    except Exception as exc:  # noqa: BLE001
+        error = str(exc)
+
+    ctx = _promotions_context(
+        user=user,
+        active_tab="sport_comms",
+        scomms=_scomms_ns(campaign=campaign, sheet=sheet, dry_run=do_dry_run,
+                          error=error, result=result, console_script=console_script),
     )
     return templates.TemplateResponse(request, "promotions.html", ctx)
 

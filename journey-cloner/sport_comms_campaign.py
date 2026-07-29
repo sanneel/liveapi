@@ -211,7 +211,9 @@ def _schedule(campaign: dict) -> tuple[str, str]:
 
 # ── input 2: the content sheet ──────────────────────────────────────────
 def read_spec(path: Path):
-    text = path.read_text(encoding="utf-8")
+    # "-" reads stdin, so the admin tab can pipe a pasted sheet without ever
+    # putting it on disk — same convention as the gow/prediction textareas.
+    text = sys.stdin.read() if str(path) == "-" else path.read_text(encoding="utf-8")
     spec = parse_spec(text, expect_game_offer=False)
     missing = []
     if not spec.promo_slug:
@@ -646,7 +648,8 @@ def main() -> int:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     p.add_argument("--campaign", required=True, help="liveapi campaign slug")
-    p.add_argument("--spec", required=True, type=Path, help="content sheet (tab-separated)")
+    p.add_argument("--spec", required=True, type=Path,
+                   help="content sheet (tab-separated); '-' reads stdin")
     p.add_argument("--name", default="sport_comms", help="output basename")
     p.add_argument("--dry-run", action="store_true",
                    help="write the prepared bodies to out/ instead of a console script")

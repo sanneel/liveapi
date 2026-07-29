@@ -186,6 +186,7 @@ TOURNAMENT_PMCL_SCRIPT_PATH = CLONER_DIR / "tournament_pmcl_campaign.py"
 COMPOSE_SCRIPT_PATH = CLONER_DIR / "compose.py"
 CHAIN_COMPOSER_SCRIPT_PATH = CLONER_DIR / "journey_composer.py"
 BET_AND_GET_PMCL_SCRIPT_PATH = CLONER_DIR / "bet_and_get_pmcl_campaign.py"
+SPORT_COMMS_SCRIPT_PATH = CLONER_DIR / "sport_comms_campaign.py"
 
 # Randomizer promos (weighted prize wheels / scratch cards). Keys must match
 # randomizer_campaign.py --kind.
@@ -535,6 +536,78 @@ def generate_prediction_console_script(
         plan_path = CLONER_DIR / "out" / basename / "00_request_plan.txt"
         if proc.returncode == 0 and plan_path.exists():
             output += "\n\n" + plan_path.read_text(encoding="utf-8")
+        return proc.returncode, output, display_cmd, None, basename
+
+    js_filename = f"{basename}_console.js"
+    js_text = None
+    if proc.returncode == 0:
+        js_path = CLONER_DIR / "console_scripts" / js_filename
+        if js_path.exists():
+            js_text = js_path.read_text(encoding="utf-8")
+        else:
+            output += f"\nERROR: expected script file not found: {js_path}"
+    return proc.returncode, output, display_cmd, js_text, js_filename
+
+
+def generate_sport_comms_console_script(
+    *,
+    campaign_slug: str,
+    sheet_text: str,
+    name: str = "",
+    dry_run: bool = False,
+) -> Tuple[int, str, str, str | None, str]:
+    """Build the sport scratch-card comms journey for a liveapi campaign.
+
+    Wraps journey-cloner/sport_comms_campaign.py. The pasted content sheet goes
+    in over stdin (--spec -) so it never touches disk; the campaign is read from
+    this app's own database by the generator.
+
+    Returns (returncode, output_log, display_cmd, js_text or None, basename).
+    A refusal — no such campaign, no expiry, a sheet missing its Link row, or a
+    verify() check that failed — exits non-zero with the reason in the log, and
+    js_text is None. That is the generator working, not a crash.
+    """
+    if not campaign_slug.strip():
+        raise ValueError("Pick the liveapi campaign this promo belongs to.")
+    if not sheet_text.strip():
+        raise ValueError("Paste the content sheet (channel copy + the Link row).")
+
+    # _unique_basename slugs on digits only, which would flatten a campaign
+    # slug to "date". Keep the slug readable; the uuid still makes the
+    # console_scripts/<basename>.js path unique per request.
+    safe = re.sub(r"[^a-z0-9]+", "-", campaign_slug.strip().lower()).strip("-") or "campaign"
+    basename = name.strip() or f"sport_comms_{safe}_{uuid.uuid4().hex[:8]}"
+    cmd = [
+        python_executable(),
+        str(SPORT_COMMS_SCRIPT_PATH),
+        "--campaign", campaign_slug.strip(),
+        "--spec", "-",
+        "--name", basename,
+    ]
+    if dry_run:
+        cmd.append("--dry-run")
+
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    display_cmd = " ".join(
+        part if " " not in part else repr(part) for part in cmd
+    ) + "  < (pasted sheet piped via stdin)"
+
+    proc = subprocess.run(
+        cmd,
+        cwd=CLONER_DIR,
+        env=env,
+        text=True,
+        encoding="utf-8",
+        capture_output=True,
+        timeout=120,
+        input=sheet_text,
+    )
+    output = proc.stdout
+    if proc.stderr:
+        output += "\nSTDERR:\n" + proc.stderr
+
+    if dry_run:
         return proc.returncode, output, display_cmd, None, basename
 
     js_filename = f"{basename}_console.js"

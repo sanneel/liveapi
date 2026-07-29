@@ -21,6 +21,7 @@
       <button type="button" class="tab" data-tab="bet_and_get">PMCL Bet &amp; Get</button>
       <button type="button" class="tab" data-tab="journey_cloner">Promo Codes</button>
       <button type="button" class="tab" data-tab="prediction">Prediction</button>
+      <button type="button" class="tab" data-tab="sport_comms">Scratch Card Comms</button>
       <button type="button" class="tab" data-tab="randomizers">Randomizers</button>
       <button type="button" class="tab" data-tab="nc_discount">Discount NC</button>
     </div>
@@ -291,6 +292,120 @@
           <div class="help" style="line-height:1.7">
             <p style="margin:0 0 8px">Wraps <span class="mono">journey-cloner/prediction_campaign.py</span>: uploads SPA + widget content (en/es), both manifests, both settings.json, then PUTs the promo draft — the exact sequence captured from a manual edit, matched field-for-field against the HAR.</p>
             <p style="margin:0">Each question gets a fresh uuid, a <span class="mono">predictionValidationRule</span> entry (maxValue 2 if it has a 3rd answer, else 1 for Yes/No), and a <span class="mono">forecastMultiTitleKey</span> built from the sheet row.</p>
+          </div>
+        </section>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{# ── Scratch Card Comms (SMS + NC + pop-up + email, one journey) ─────── #}
+<section data-panel="sport_comms" hidden>
+  {% if scomms.error %}<div class="alert err">{{ scomms.error }}</div>{% endif %}
+  {% if scomms.result %}
+    <div class="alert {% if scomms.result.ok %}ok{% else %}err{% endif %}">
+      {% if scomms.result.ok %}{% if scomms.dry_run %}Dry run complete — the four bodies were written to out/.{% else %}Console script generated.{% endif %}{% else %}Refused with exit code {{ scomms.result.exit_code }} — see the output below.{% endif %}
+    </div>
+  {% endif %}
+
+  <div class="row-flex">
+    <form method="post" action="/admin/promotions/sport-comms" class="card card-pad col-rail" style="display:flex; flex-direction:column; gap:14px">
+      <div>
+        <h2 class="card-title">Build the comms journey</h2>
+        <p class="card-sub">One journey carrying SMS, Notification Center, Cat-fish pop-up and email for a fixture scratch-card promo. Two inputs: the campaign, and the content sheet.</p>
+      </div>
+
+      <div class="field">
+        <span class="lbl">Campaign (created in liveapi)</span>
+        {% if scomms.load_error %}
+          <p class="help" style="color:var(--danger,#b91c1c)">Could not read campaigns: {{ scomms.load_error }}</p>
+        {% elif not scomms.campaigns %}
+          <p class="help">No campaign is eligible. A campaign needs to be <b>enabled</b> and carry an <b>expiry date</b> — the expiry becomes the journey's stop date, so the comms cannot outlive the page they link to. <a href="/admin/campaigns/new">Create one</a>.</p>
+        {% else %}
+          <select class="input mono" name="campaign" required>
+            <option value="">— pick a campaign —</option>
+            {% for c in scomms.campaigns %}
+              <option value="{{ c.slug }}" {% if scomms.campaign == c.slug %}selected{% endif %}>
+                {{ c.title }} — /{{ c.slug }} · {{ c.sport }} · {{ c.match_count }} match{% if c.match_count != 1 %}es{% endif %} · until {{ c.expires_at }}
+              </option>
+            {% endfor %}
+          </select>
+          <p class="help" style="margin-top:6px">Supplies the journey name, the stop date, and the email hero image (the campaign's rendered card).</p>
+        {% endif %}
+      </div>
+
+      <div class="field">
+        <span class="lbl">Content sheet (TSV pasted from Google Sheets)</span>
+        <textarea class="input mono" name="sheet" rows="12" spellcheck="false" placeholder="Link (Other)&#9;https://jugabet.cl/services/promo/offers/randomizer/&lt;slug&gt;&#10;Notification&#9;TRUE&#10;Notification Title&#9;&lt;EN&gt;&#9;&lt;ES&gt;&#10;Notification Description&#9;&lt;EN&gt;&#9;&lt;ES&gt;&#10;Notification Button&#9;&lt;EN&gt;&#9;&lt;ES&gt;&#10;Notification Pop-up (Cat-fish)&#9;TRUE&#10;...&#10;Sms&#9;TRUE&#10;Sms Text&#9;&lt;EN&gt;&#9;&lt;ES&gt;&#10;Email&#9;TRUE&#10;Email Tittle&#9;&lt;EN&gt;&#9;&lt;ES&gt;&#10;Email Pre-header&#9;&lt;EN&gt;&#9;&lt;ES&gt;">{{ scomms.sheet or '' }}</textarea>
+        <p class="help" style="margin-top:6px">The <span class="mono">Link</span> row carries the randomizer promo URL — its slug is what all four channels point at, in both languages.</p>
+      </div>
+
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:2px">
+        <input type="checkbox" name="dry_run" {% if scomms.dry_run %}checked{% endif %}/>
+        <span class="lbl" style="margin:0">Dry run <span style="color:var(--t-faint)">(write the four request bodies to out/ instead of a console script)</span></span>
+      </label>
+
+      <button class="btn primary" style="justify-content:center">Generate console script</button>
+      <p class="help">Every check must pass before anything is written — a refusal names the field.</p>
+    </form>
+
+    <div class="col-main stack">
+      {% if scomms.console_script %}
+        <section class="card" style="overflow:hidden">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Console Script Ready</h2>
+              <p class="card-sub">{{ scomms.console_script.name }}</p>
+            </div>
+            <button type="button" id="scomms-copy" class="btn primary">Copy script</button>
+          </div>
+          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+            <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
+              <li>Click <b>Copy script</b> above.</li>
+              <li>Open the backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
+              <li>Paste and press Enter. If it says "Waiting for a token", click anything in the UI.</li>
+              <li>It asks for two images — the <b>notification icon</b> and the <b>pop-up background</b>. The email hero comes from the campaign card automatically.</li>
+              <li>Watch for the green line naming the journey id and the email content id.</li>
+            </ol>
+            <textarea id="scomms-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ scomms.console_script.text }}</textarea>
+          </div>
+        </section>
+        <script>
+          (function () {
+            var btn = document.getElementById('scomms-copy');
+            var area = document.getElementById('scomms-script-text');
+            if (!btn || !area) return;
+            btn.addEventListener('click', function () {
+              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
+              if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); });
+              } else { area.select(); document.execCommand('copy'); done(); }
+            });
+          })();
+        </script>
+      {% endif %}
+
+      {% if scomms.result %}
+        <section class="card" style="overflow:hidden">
+          <div class="card-head"><h2 class="card-title">Run Output</h2></div>
+          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+            <div>
+              <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Command</div>
+              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0">{{ scomms.result.command }}</pre>
+            </div>
+            <div>
+              <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Output</div>
+              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:32rem; margin:0">{{ scomms.result.output }}</pre>
+            </div>
+          </div>
+        </section>
+      {% else %}
+        <section class="card card-pad">
+          <h2 class="card-title" style="margin-bottom:8px">How it works</h2>
+          <div class="help" style="line-height:1.7">
+            <p style="margin:0 0 8px">Wraps <span class="mono">journey-cloner/sport_comms_campaign.py</span>, built from a HAR of the 15.07 ENG vs ARG run. The campaign gives the journey name, the stop date (its expiry) and the email hero; the sheet gives every channel's EN/ES copy and the promo slug.</p>
+            <p style="margin:0 0 8px">The email content is created <b>first</b>, and its id substituted into the journey. The recorded run skipped that step and left the journey pointing at the previous campaign's email — replayed as captured, every draft would have sent the wrong one.</p>
+            <p style="margin:0">Drafts are left unpublished. A failed check writes nothing: an unreplaced link, a surviving captured id or artwork still shared with the capture is a refusal, not a warning.</p>
           </div>
         </section>
       {% endif %}

@@ -107,7 +107,7 @@ date, Chile kick-off time and promocode. Per-team templates under
 `templates/udch/` and `templates/colocolo/`; a team with no file of its own
 inherits the base team's.
 
-### Scratch Card Comms — `sport_comms_campaign.py` — shell only
+### Scratch Card Comms — `sport_comms_campaign.py` → Optimization ▸ Scratch Card Comms
 The fixture scratch-card promo announced on four channels from **one** journey:
 SMS, Notification Center, Cat-fish pop-up and email, with waits, two decision
 splits and a `deposit.approved` detector between them. Built from a HAR of the
@@ -119,6 +119,7 @@ Two inputs, both of which the operator already has:
 
 ```bash
 python sport_comms_campaign.py --campaign <liveapi-slug> --spec sheet.tsv
+python sport_comms_campaign.py --campaign <liveapi-slug> --spec -   # sheet on stdin
 ```
 
 - **the liveapi campaign** (`app/models/campaign.py`) gives the journey name
@@ -128,6 +129,19 @@ python sport_comms_campaign.py --campaign <liveapi-slug> --spec sheet.tsv
 - **the content sheet** gives every channel's EN/ES copy through
   `spec_parser.py`, and its `Link` row gives the randomizer promo slug that all
   four channels point at.
+
+**The tab** (`/admin/promotions?tab=sport_comms`) is the way to drive it: the
+campaign is a **dropdown read live from the liveapi database**, not a slug typed
+from memory, and the sheet is a textarea piped to the generator over stdin
+(`--spec -`) so a pasted sheet never touches disk. Each option shows the
+campaign's sport, match count and expiry, and the list holds only campaigns that
+are enabled *and* carry an expiry — the two things the generator refuses
+without, so the dropdown cannot offer a choice that fails on submit. Route:
+`POST /admin/promotions/sport-comms` → `generate_sport_comms_console_script`
+(`app/services/journey_cloner_runner.py`). Dry run writes the four request
+bodies to `out/` instead of a script. A refusal renders the failing check in the
+run output and **no copy button**, so there is nothing to paste when the build
+was rejected.
 
 The notification icon and the pop-up background are still picked by hand at
 paste time — they are per-campaign artwork, and leaving them as captured would
