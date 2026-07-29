@@ -185,6 +185,7 @@ PREDICTION_SCRIPT_PATH = CLONER_DIR / "prediction_campaign.py"
 TOURNAMENT_PMCL_SCRIPT_PATH = CLONER_DIR / "tournament_pmcl_campaign.py"
 COMPOSE_SCRIPT_PATH = CLONER_DIR / "compose.py"
 CHAIN_COMPOSER_SCRIPT_PATH = CLONER_DIR / "journey_composer.py"
+BET_AND_GET_PMCL_SCRIPT_PATH = CLONER_DIR / "bet_and_get_pmcl_campaign.py"
 
 # Randomizer promos (weighted prize wheels / scratch cards). Keys must match
 # randomizer_campaign.py --kind.
@@ -728,3 +729,28 @@ def run_journey_cloner(
     if proc.stderr:
         output += "\nSTDERR:\n" + proc.stderr
     return proc.returncode, output, display_cmd
+
+
+def generate_bet_and_get_pmcl_console_script(
+    *,
+    date: str,
+    email_spec: str,
+    allow_any_weekday: bool = False,
+) -> Tuple[int, str, str, str | None, str]:
+    """Generate the PMCL "Bet & Get" weekend console script: promo page +
+    journey + email, all created as drafts by one paste.
+
+    ``date`` is the promo's Friday (YYYY-MM-DD); the Sunday end is derived.
+    ``email_spec`` is the pasted Subject / Pre-header / Body text.
+    """
+    basename = _unique_basename("pmcl_bet_and_get", date)
+    cmd = [
+        python_executable(),
+        str(BET_AND_GET_PMCL_SCRIPT_PATH),
+        "--date", date.strip(),
+        "--email-spec", "-",
+        "--name", basename,
+    ]
+    if allow_any_weekday:
+        cmd += ["--allow-any-weekday"]
+    return _run_gow_cli(cmd, spec_text=email_spec, basename=basename)
