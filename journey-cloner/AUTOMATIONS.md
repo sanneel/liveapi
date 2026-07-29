@@ -197,6 +197,12 @@ The comms half of a GOW campaign; runs as part of that tab by default.
 
 ## Adding a new automation
 
+> **Planned:** `HAR_TO_AUTOMATION.md` — drop a HAR of one manual run into the
+> admin and get the generator, the template and the input form back, instead of
+> the hand-build below. Not built yet; the plan is grounded in the real
+> `raw_fetches/journey.har`.
+
+
 1. **Capture** the flow by hand with DevTools open; save the request bodies.
 2. Put the template in `templates/<brand>/<name>.json` — verify it renders.
 3. Write the generator next to its peers: `prepare()` builds the bodies,
