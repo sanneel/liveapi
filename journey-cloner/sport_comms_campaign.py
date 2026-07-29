@@ -63,7 +63,7 @@ from create_journeys import BRAND, LOCAL_TZ, UTC, utc_api  # noqa: E402
 from casino_journey import DEFAULT_BASE_URL  # noqa: E402
 from comms_campaign import DEFAULT_FOLDER_ID  # noqa: E402
 from compose import audit_inherited_content  # noqa: E402
-from spec_parser import parse_spec  # noqa: E402
+from spec_parser import parse_spec, _PROMO_SLUG_RE  # noqa: E402
 
 TEMPLATE_DIR = HERE / "templates" / "sportcomms"
 TPL_CREATE = TEMPLATE_DIR / "scratch_card_comms_create.json"
@@ -225,16 +225,49 @@ def _schedule(campaign: dict, stop_at: str = "") -> tuple[str, str]:
 
 
 # ── input 2: the content sheet ──────────────────────────────────────────
-def read_spec(path: Path):
+_SLUG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+
+def promo_slug_from(value: str) -> str:
+    """The randomizer slug in `value` — a full promo URL or a bare slug.
+
+    Operators paste whichever is in front of them, so both are accepted. A URL
+    that is not a randomizer promo page is refused rather than guessed at: the
+    slug ends up in every channel's link, and quietly taking the last path
+    segment of some other URL would send every player to the wrong page.
+    """
+    v = (value or "").strip()
+    if not v:
+        return ""
+    found = _PROMO_SLUG_RE.search(v)
+    if found:
+        return found.group(1)
+    if "/" in v or ":" in v:
+        raise Refused(
+            f"link {v!r} is not a randomizer promo page. Expected "
+            f"…/services/promo/offers/randomizer/<slug> (or just the slug)."
+        )
+    if not _SLUG_RE.match(v):
+        raise Refused(f"promo slug {v!r} is not a usable slug.")
+    return v
+
+
+def read_spec(path: Path, promo_link: str = ""):
     # "-" reads stdin, so the admin tab can pipe a pasted sheet without ever
     # putting it on disk — same convention as the gow/prediction textareas.
     text = sys.stdin.read() if str(path) == "-" else path.read_text(encoding="utf-8")
     spec = parse_spec(text, expect_game_offer=False)
+    # An explicit link wins over the sheet's "Link" row: it is the value the
+    # operator just typed for this run, and it is the one thing that has to be
+    # right in all four channels at once.
+    override = promo_slug_from(promo_link)
+    if override:
+        spec.promo_slug = override
     missing = []
     if not spec.promo_slug:
         missing.append(
-            'no randomizer promo slug — the sheet needs a "Link" row holding '
-            "the promo URL (…/services/promo/offers/randomizer/<slug>)"
+            "no randomizer promo link — give one on this run, or put it in the "
+            'sheet\'s "Link" row (…/services/promo/offers/randomizer/<slug>)'
         )
     if not (spec.sms.text_es and spec.sms.text_en):
         missing.append("Sms text (EN and ES)")
@@ -245,9 +278,7 @@ def read_spec(path: Path):
     if not (spec.email.subject_es and spec.email.preheader_es):
         missing.append("Email subject/pre-header")
     if missing:
-        raise Refused(
-            "the content sheet is missing:\n  - " + "\n  - ".join(missing)
-        )
+        raise Refused("missing input:\n  - " + "\n  - ".join(missing))
     return spec
 
 
@@ -349,7 +380,7 @@ def prepare(campaign: dict, spec, now: datetime | None = None,
     report = [
         f"campaign      {campaign['slug']!r} — {label!r} ({campaign['sport']})",
         f"journeyName   {journey_sp!r}",
-        f"promo slug    {slug}  ->  {PROMO_URL.format(slug=slug)}",
+        f"promo link    {PROMO_URL.format(slug=slug)}  (in all four channels)",
         f"stopAt        {stop_plain}  ({'given on this run' if stop_at.strip() else 'campaign expires_at'})",
         f"email         {email_name!r}  (created first, id wired into the journey)",
         f"hero image    {campaign['image_url'] or '(no PUBLIC_BASE_URL — file picker)'}",
@@ -666,6 +697,9 @@ def main() -> int:
     p.add_argument("--campaign", required=True, help="liveapi campaign slug")
     p.add_argument("--spec", required=True, type=Path,
                    help="content sheet (tab-separated); '-' reads stdin")
+    p.add_argument("--promo-link", default="",
+                   help="randomizer promo URL (or bare slug) every channel links to. "
+                        "Overrides the sheet's Link row.")
     p.add_argument("--stop-at", default="",
                    help="journey stop date (YYYY-MM-DD or YYYY-MM-DDTHH:MM, Chile local). "
                         "Defaults to the campaign's expiry.")
@@ -675,7 +709,7 @@ def main() -> int:
     args = p.parse_args()
 
     campaign = load_campaign(args.campaign)
-    spec = read_spec(args.spec)
+    spec = read_spec(args.spec, args.promo_link)
     bundle, report = prepare(campaign, spec, stop_at=args.stop_at)
 
     print("Sport scratch-card comms:")

@@ -219,6 +219,32 @@ def main() -> int:
     raises(lambda: G.prepare(campaign(expires_at=None), spec, stop_at="2020-01-01T00:00"),
            "a stop date in the past")
 
+    print("\npromo link given on the run:")
+    sheet_path = _write_tmp(SHEET)
+    over = G.read_spec(sheet_path, "https://jugabet.cl/services/promo/offers/randomizer/other-page")
+    check(over.promo_slug == "other-page", "an explicit link overrides the sheet's Link row")
+    check(G.read_spec(sheet_path, "bare-slug").promo_slug == "bare-slug", "a bare slug is accepted")
+    check(G.read_spec(sheet_path, "").promo_slug == "eng-arg-final", "blank falls back to the sheet")
+
+    # A sheet with NO Link row must still build when the field supplies one.
+    no_link = _write_tmp("\n".join(l for l in SHEET.splitlines() if not l.startswith("Link")))
+    spec2 = G.read_spec(no_link, "https://jugabet.cl/services/promo/offers/randomizer/only-field")
+    b5, _ = G.prepare(campaign(), spec2)
+    both5 = json.dumps(b5["journey_save"], ensure_ascii=False) + json.dumps(b5["email_save"], ensure_ascii=False)
+    check("/randomizer/only-field" in both5, "a sheet with no Link row builds from the field alone")
+    # The whole reason this is one field: it has to be right in all four at once.
+    save5 = json.dumps(b5["journey_save"], ensure_ascii=False)
+    for chan, probe in [("sms", "jugabet.cl/services/promo/offers/randomizer/only-field"),
+                        ("notification/pop-up", "/randomizer/only-field?%$utm_tags%"),
+                        ("email", "/randomizer/only-field")]:
+        src = json.dumps(b5["email_save"], ensure_ascii=False) if chan == "email" else save5
+        check(probe in src, f"the link reached {chan}")
+
+    raises(lambda: G.read_spec(sheet_path, "https://jugabet.cl/es/football/live"),
+           "a link that is not a randomizer promo page")
+    raises(lambda: G.read_spec(no_link, ""),
+           "no link in either the field or the sheet")
+
     print("\nstop date:")
     # The whole point of the field: a campaign with no expiry is still usable,
     # which is what an eligibility filter on the dropdown took away.

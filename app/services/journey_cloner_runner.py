@@ -553,6 +553,7 @@ def generate_sport_comms_console_script(
     *,
     campaign_slug: str,
     sheet_text: str,
+    promo_link: str = "",
     stop_at: str = "",
     name: str = "",
     dry_run: bool = False,
@@ -585,6 +586,8 @@ def generate_sport_comms_console_script(
         "--spec", "-",
         "--name", basename,
     ]
+    if promo_link.strip():
+        cmd += ["--promo-link", promo_link.strip()]
     if stop_at.strip():
         cmd += ["--stop-at", stop_at.strip()]
     if dry_run:

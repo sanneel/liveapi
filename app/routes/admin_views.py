@@ -748,7 +748,7 @@ def _scomms_campaigns() -> list[dict]:
     return out
 
 
-def _scomms_ns(*, campaign="", sheet="", stop_at="", dry_run=False,
+def _scomms_ns(*, campaign="", sheet="", promo_link="", stop_at="", dry_run=False,
                error="", result=None, console_script=None) -> dict:
     try:
         campaigns = _scomms_campaigns()
@@ -757,7 +757,8 @@ def _scomms_ns(*, campaign="", sheet="", stop_at="", dry_run=False,
         campaigns, load_error = [], str(exc)
     return {
         "campaigns": campaigns, "load_error": load_error,
-        "campaign": campaign, "sheet": sheet, "stop_at": stop_at, "dry_run": dry_run,
+        "campaign": campaign, "sheet": sheet, "promo_link": promo_link,
+        "stop_at": stop_at, "dry_run": dry_run,
         "error": error, "result": result, "console_script": console_script,
     }
 
@@ -1042,6 +1043,7 @@ def promotions_sport_comms(
     request: Request,
     campaign: str = Form(...),
     sheet: str = Form(...),
+    promo_link: str = Form(""),
     stop_at: str = Form(""),
     dry_run: str = Form(""),
     user: User = Depends(require_role("editor")),
@@ -1056,7 +1058,8 @@ def promotions_sport_comms(
     console_script = None
     try:
         exit_code, output, display_cmd, js_text, js_name = generate_sport_comms_console_script(
-            campaign_slug=campaign, sheet_text=sheet, stop_at=stop_at, dry_run=do_dry_run,
+            campaign_slug=campaign, sheet_text=sheet, promo_link=promo_link,
+            stop_at=stop_at, dry_run=do_dry_run,
         )
         result = {"exit_code": exit_code, "output": output, "command": display_cmd,
                   "ok": exit_code == 0}
@@ -1074,7 +1077,8 @@ def promotions_sport_comms(
     ctx = _promotions_context(
         user=user,
         active_tab="sport_comms",
-        scomms=_scomms_ns(campaign=campaign, sheet=sheet, stop_at=stop_at, dry_run=do_dry_run,
+        scomms=_scomms_ns(campaign=campaign, sheet=sheet, promo_link=promo_link,
+                          stop_at=stop_at, dry_run=do_dry_run,
                           error=error, result=result, console_script=console_script),
     )
     return templates.TemplateResponse(request, "promotions.html", ctx)

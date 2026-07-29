@@ -341,9 +341,15 @@
       </div>
 
       <div class="field">
+        <span class="lbl">Link (randomizer promo page)</span>
+        <input class="input mono" name="promo_link" value="{{ scomms.promo_link or '' }}" placeholder="https://jugabet.cl/services/promo/offers/randomizer/arg-eng-sc"/>
+        <p class="help" style="margin-top:6px">Goes into <b>every</b> communication — SMS, notification, pop-up and email, in both languages. Paste the full URL or just the slug. Leave blank to use the sheet's <span class="mono">Link</span> row.</p>
+      </div>
+
+      <div class="field">
         <span class="lbl">Content sheet (TSV pasted from Google Sheets)</span>
         <textarea class="input mono" name="sheet" rows="12" spellcheck="false" placeholder="Link (Other)&#9;https://jugabet.cl/services/promo/offers/randomizer/&lt;slug&gt;&#10;Notification&#9;TRUE&#10;Notification Title&#9;&lt;EN&gt;&#9;&lt;ES&gt;&#10;Notification Description&#9;&lt;EN&gt;&#9;&lt;ES&gt;&#10;Notification Button&#9;&lt;EN&gt;&#9;&lt;ES&gt;&#10;Notification Pop-up (Cat-fish)&#9;TRUE&#10;...&#10;Sms&#9;TRUE&#10;Sms Text&#9;&lt;EN&gt;&#9;&lt;ES&gt;&#10;Email&#9;TRUE&#10;Email Tittle&#9;&lt;EN&gt;&#9;&lt;ES&gt;&#10;Email Pre-header&#9;&lt;EN&gt;&#9;&lt;ES&gt;">{{ scomms.sheet or '' }}</textarea>
-        <p class="help" style="margin-top:6px">The <span class="mono">Link</span> row carries the randomizer promo URL — its slug is what all four channels point at, in both languages.</p>
+        <p class="help" style="margin-top:6px">Channel copy (EN/ES) for notification, pop-up, SMS and email. Its <span class="mono">Link</span> row is the fallback for the field above.</p>
       </div>
 
       <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:2px">

@@ -130,6 +130,15 @@ python sport_comms_campaign.py --campaign <liveapi-slug> --spec -   # sheet on s
   `spec_parser.py`, and its `Link` row gives the randomizer promo slug that all
   four channels point at.
 
+**The link** has its own field (`--promo-link`) because it is the one value that
+has to be right in all four channels at once — SMS, notification, pop-up and
+email, in both languages. Give it as a full promo URL or a bare slug; it
+overrides the sheet's `Link` row, and a blank field falls back to that row. A
+URL that is not a randomizer promo page is **refused rather than guessed at**:
+quietly taking the last path segment of some other URL would send every player
+to the wrong page. Whichever source wins, the slug is written everywhere and
+`verify()` refuses if any captured slug survives or if EN and ES disagree.
+
 **The tab** (`/admin/promotions?tab=sport_comms`) is the way to drive it: the
 campaign is a **dropdown read live from the liveapi database**, not a slug typed
 from memory, and the sheet is a textarea piped to the generator over stdin
