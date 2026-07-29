@@ -1,5 +1,9 @@
 # Journey Cloner
 
+> **What exists and how it works:** [AUTOMATIONS.md](AUTOMATIONS.md) — every
+> generator, the shared capture → template → substitute → verify → emit
+> pipeline, and how to add the next one.
+
 Creates 4 Journey Builder draft clones for one promocode match campaign:
 
 - FollowUp

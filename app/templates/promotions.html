@@ -61,13 +61,21 @@
             {% elif g.route %}
               <a class="btn sm" href="{{ g.route }}">Open →</a>
             {% else %}
-              <span class="gen-cli mono" title="Run it from a shell: python journey-cloner/{{ g.script }}">CLI only</span>
+              <span class="gen-cli mono" title="Run it from a shell: python journey-cloner/{{ g.script }}">{% if g.legacy %}legacy · CLI{% else %}CLI only{% endif %}</span>
             {% endif %}
           </div>
         {% endfor %}
       </div>
     {% endfor %}
   </div>
+
+  <p class="help" style="margin:14px 0 0">
+    How each one works, and how to add the next:
+    <a class="link" href="/admin/promotions/download?path=AUTOMATIONS.md" target="_blank">AUTOMATIONS.md</a>.
+    Where the AI stands:
+    <a class="link" href="/admin/ai">AI page</a> ·
+    <span class="mono" style="font-size:11.5px">JOURNEY_COMPOSER_STATUS.md</span>
+  </p>
 
   {% if unlisted %}
     <div class="alert err" style="margin:14px 0">
