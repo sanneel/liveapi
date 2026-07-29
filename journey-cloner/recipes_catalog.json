@@ -1,21 +1,10 @@
 {
   "_legend": {
     "wire_unit": "Unit of the DESTINATION field on the platform, NOT the unit you send. ALWAYS send amounts in major CLP — the composer converts where wire_unit is 'minor'. Sending minor units yields a 100x value.",
-    "required": "A spec that omits this knob is REFUSED, because omitting it would silently ship the reference template's own value."
+    "required": "A spec that omits this knob is REFUSED, because omitting it would silently ship the reference template's own value.",
+    "range": "[min, max] for the value AS SENT (major CLP). Outside it the spec is REFUSED. Worked example: a 100 CLP per-spin bet is spin_bet_clp: 100 — NOT 10000."
   },
   "recipes": {
-    "comms": {
-      "reference": "casino/gow_comms.json",
-      "chain": [
-        "dwh_source",
-        "notification_center",
-        "notification_center",
-        "dextra_sms",
-        "dextra_email",
-        "end_of_journey"
-      ],
-      "knobs": {}
-    },
     "sport_deposit_freebet": {
       "reference": "udch/two_hours.json",
       "chain": [
@@ -28,19 +17,35 @@
       "knobs": {
         "deposit_min_clp": {
           "wire_unit": "minor",
-          "desc": "minimum deposit to unlock the offer, in CLP"
+          "desc": "minimum deposit to unlock the offer, in CLP",
+          "range": [
+            0,
+            1000000
+          ]
         },
         "freebet_amount_clp": {
           "wire_unit": "minor",
-          "desc": "free-bet value in CLP"
+          "desc": "free-bet value in CLP",
+          "range": [
+            100,
+            100000
+          ]
         },
         "freebet_expire_days": {
           "wire_unit": "raw",
-          "desc": "days the free bet stays valid"
+          "desc": "days the free bet stays valid",
+          "range": [
+            1,
+            365
+          ]
         },
         "freebet_max_odd": {
           "wire_unit": "raw",
-          "desc": "maximum odds the free bet can be used at"
+          "desc": "maximum odds the free bet can be used at",
+          "range": [
+            1,
+            1000
+          ]
         },
         "promocode": {
           "wire_unit": "raw",
@@ -61,23 +66,43 @@
       "knobs": {
         "deposit_min_clp": {
           "wire_unit": "minor",
-          "desc": "minimum deposit to unlock, in CLP"
+          "desc": "minimum deposit to unlock, in CLP",
+          "range": [
+            0,
+            1000000
+          ]
         },
         "spins": {
           "wire_unit": "raw",
-          "desc": "number of free spins granted"
+          "desc": "number of free spins granted",
+          "range": [
+            1,
+            10000
+          ]
         },
         "spin_bet_clp": {
           "wire_unit": "minor",
-          "desc": "bet value per spin, in CLP"
+          "desc": "bet value per spin, in CLP",
+          "range": [
+            10,
+            20000
+          ]
         },
         "bonus_percent": {
           "wire_unit": "raw",
-          "desc": "deposit-match percent (100 = 100%)"
+          "desc": "deposit-match percent (100 = 100%)",
+          "range": [
+            0,
+            1000
+          ]
         },
         "wagering_x": {
           "wire_unit": "raw",
-          "desc": "wagering multiplier (e.g. 30 = x30)"
+          "desc": "wagering multiplier (e.g. 30 = x30)",
+          "range": [
+            0,
+            100
+          ]
         },
         "bonus_expiry_ms": {
           "wire_unit": "raw",
@@ -85,7 +110,27 @@
         },
         "release_limit_x": {
           "wire_unit": "raw",
-          "desc": "max cashout as a multiple of the bonus"
+          "desc": "max cashout as a multiple of the bonus",
+          "range": [
+            0,
+            100
+          ]
+        },
+        "spin_max_bonus_clp": {
+          "wire_unit": "minor",
+          "desc": "cap on winnings from the spins, in CLP",
+          "range": [
+            0,
+            100000000
+          ]
+        },
+        "spin_min_bonus_clp": {
+          "wire_unit": "minor",
+          "desc": "minimum winnings paid from the spins, in CLP",
+          "range": [
+            0,
+            100000000
+          ]
         }
       }
     },
@@ -100,16 +145,23 @@
       "knobs": {
         "spins": {
           "wire_unit": "raw",
-          "desc": "number of free spins granted"
+          "desc": "number of free spins granted",
+          "range": [
+            1,
+            10000
+          ]
         },
         "spin_bet_clp": {
           "wire_unit": "minor",
-          "desc": "bet value per spin, in CLP"
+          "desc": "bet value per spin, in CLP",
+          "range": [
+            10,
+            5000
+          ]
         },
         "spin_provider": {
           "wire_unit": "raw",
-          "desc": "game provider id (e.g. pragmatic) — from games registry",
-          "required": true
+          "desc": "game provider id (e.g. pragmatic) — from games registry"
         },
         "spin_game_lobby": {
           "wire_unit": "raw",
@@ -118,13 +170,31 @@
         },
         "spin_game_wallet": {
           "wire_unit": "raw",
-          "desc": "walletGameId — from games registry",
-          "required": true
+          "desc": "walletGameId — from games registry"
         },
         "spin_game_external": {
           "wire_unit": "raw",
-          "desc": "externalGameId — from games registry",
-          "required": true
+          "desc": "externalGameId — from games registry"
+        },
+        "spin_max_bonus_clp": {
+          "wire_unit": "minor",
+          "desc": "cap on winnings from the spins, in CLP",
+          "range": [
+            0,
+            100000000
+          ]
+        },
+        "spin_min_bonus_clp": {
+          "wire_unit": "minor",
+          "desc": "minimum winnings paid from the spins, in CLP",
+          "range": [
+            0,
+            100000000
+          ]
+        },
+        "spin_campaign_end": {
+          "wire_unit": "raw",
+          "desc": "provider campaign end, ISO-8601 Z (e.g. 2026-03-15T23:59:59Z)"
         }
       }
     }
@@ -169,5 +239,270 @@
       "freespin_bonus",
       "promotion"
     ]
+  },
+  "chain_composer": {
+    "_doc": "For journeys no recipe covers. Activities may repeat, branch, or use a choosable flow. `inline_keys` lists the keys that go DIRECTLY on the node object — {\"type\": \"freespins\", \"spins\": 30} — never wrapped in a nested \"settings\" object. `game` accepts any name/id/alias from the games registry and sets the whole id tuple; unknown names are REFUSED, never guessed. Build with `journey_composer.py compose <file> --script`.",
+    "sources": {
+      "csv/segment": "dwh_source (segment/CSV-seeded audience)",
+      "api": "external_system_source (API entry) — use this for a journey a randomizer routes winners into",
+      "promocode": "registration (Reference codes entry; takes `promocode`)"
+    },
+    "activities": {
+      "ams_decision_split": {
+        "aliases": [
+          "ams_decision_split",
+          "decisionsplit"
+        ],
+        "follow": "DecisionSplitPassedPath01",
+        "inline_keys": [
+          "(none)"
+        ]
+      },
+      "campaign_connector": {
+        "aliases": [
+          "campaign_connector",
+          "connector"
+        ],
+        "follow": "PlayerAddedToCampaign",
+        "inline_keys": []
+      },
+      "casino_bonus_v2": {
+        "aliases": [
+          "bonus",
+          "casino_bonus",
+          "casino_bonus_v2",
+          "wagering"
+        ],
+        "follow": "WageringBonusFinished",
+        "inline_keys": [
+          "bonus_percent",
+          "expiration_ms",
+          "release_multiplier",
+          "wagering"
+        ]
+      },
+      "deposit": {
+        "aliases": [
+          "deposit"
+        ],
+        "follow": "DepositConditionSatisfied",
+        "inline_keys": [
+          "min_deposit",
+          "timeout"
+        ]
+      },
+      "dextra_email": {
+        "aliases": [
+          "dextra_email",
+          "email"
+        ],
+        "follow": "SuccessEmailSend",
+        "inline_keys": [
+          "from_name",
+          "template"
+        ]
+      },
+      "dextra_sms": {
+        "aliases": [
+          "dextra_sms",
+          "sms"
+        ],
+        "follow": "SuccessSmsSend",
+        "inline_keys": [
+          "text_en/es"
+        ]
+      },
+      "email_engagement_split": {
+        "aliases": [
+          "email_engagement_split",
+          "emailsplit"
+        ],
+        "follow": "Path2",
+        "inline_keys": [
+          "(none)"
+        ]
+      },
+      "event_detector": {
+        "aliases": [
+          "event",
+          "event_detector"
+        ],
+        "follow": "DetectorSuccess",
+        "inline_keys": [
+          "(none)"
+        ]
+      },
+      "freebet": {
+        "aliases": [
+          "free_bet",
+          "freebet",
+          "sport_freebet"
+        ],
+        "follow": "PlayerFreebetUsed",
+        "inline_keys": [
+          "amount",
+          "expire_days",
+          "max_odds"
+        ]
+      },
+      "freespin_bonus": {
+        "aliases": [
+          "freespin",
+          "freespin_bonus",
+          "freespins"
+        ],
+        "follow": "FreespinBonusCollectingFinished",
+        "inline_keys": [
+          "bet_amount",
+          "game",
+          "spins",
+          "spins_expiration_ms",
+          "with_wagering"
+        ]
+      },
+      "multipurpose_promotion": {
+        "aliases": [
+          "drip",
+          "multipurpose_promotion"
+        ],
+        "follow": "PromotionAccepted",
+        "inline_keys": [
+          "(none)"
+        ]
+      },
+      "notification_center#contract1": {
+        "aliases": [
+          "nc",
+          "notification",
+          "notification_center",
+          "onsite"
+        ],
+        "follow": "NotificationSent",
+        "inline_keys": [
+          "deeplink",
+          "icon",
+          "link_en/es",
+          "title_en/es, desc_en/es, caption_en/es"
+        ]
+      },
+      "notification_center#contract5": {
+        "aliases": [
+          "popup"
+        ],
+        "follow": "NotificationSent",
+        "inline_keys": [
+          "image",
+          "title_en/es, desc_en/es, caption_en/es"
+        ]
+      },
+      "notification_center_engagement_split": {
+        "aliases": [
+          "ncsplit",
+          "notification_center_engagement_split"
+        ],
+        "follow": "NCEngagementSplitPassedPath02",
+        "inline_keys": [
+          "(none)"
+        ]
+      },
+      "promotion": {
+        "aliases": [
+          "promotion"
+        ],
+        "follow": "PromotionAccepted",
+        "inline_keys": [
+          "(none)"
+        ]
+      },
+      "random_split": {
+        "aliases": [
+          "random_split",
+          "randomsplit"
+        ],
+        "follow": null,
+        "inline_keys": []
+      },
+      "sport_bonus": {
+        "aliases": [
+          "sport_bonus",
+          "sportbonus"
+        ],
+        "follow": "SportBonusFinished",
+        "inline_keys": []
+      },
+      "wait_interval": {
+        "aliases": [
+          "wait",
+          "wait_interval"
+        ],
+        "follow": "WaitTimeCompleted",
+        "inline_keys": [
+          "wait"
+        ]
+      }
+    },
+    "spec_shape": {
+      "name": "str",
+      "source": {
+        "type": "segment|csv|api",
+        "...settings": "?"
+      },
+      "chain": [
+        {
+          "type": "<chain type>",
+          "...settings": "?",
+          "follow": "optional Completion event that continues the chain (default: default_follow)",
+          "branches": {
+            "<Completion event>": [
+              "... nested chain nodes ..."
+            ]
+          }
+        }
+      ],
+      "date": "YYYY-MM-DD (stop anchor)",
+      "days": "int (default 1)",
+      "immediately": "bool (default true)"
+    }
+  },
+  "randomizer": {
+    "_doc": "Fortune wheels and scratch cards. NOT journeys — build with `python journey-cloner/randomizer_campaign.py --kind <kind> --date <YYYY-MM-DD> [--weights ...] [--journeys ...]`. The prize SLICES come from the captured template and cannot be added or removed, so `weights` and `journeys` must each have exactly prize_count entries, in template order. Weights must sum to 100. Each prize routes a winner to a journey, so build the journeys FIRST and pass their JRN ids.",
+    "kinds": {
+      "sport_wof": {
+        "label": "Sport Wheel of Fortune",
+        "days_default": 1,
+        "prize_count": 6,
+        "template_weights": [
+          "0.1",
+          "3",
+          "25",
+          "10",
+          "36.9",
+          "25"
+        ]
+      },
+      "casino_wof": {
+        "label": "Casino Wheel of Fortune",
+        "days_default": 1,
+        "prize_count": 4,
+        "template_weights": [
+          55,
+          42,
+          2.7,
+          0.3
+        ]
+      },
+      "casino_scratch": {
+        "label": "Raspa y Gana (Scratch Card)",
+        "days_default": 2,
+        "prize_count": 5,
+        "template_weights": [
+          3,
+          50,
+          42,
+          5,
+          0
+        ]
+      }
+    }
   }
 }

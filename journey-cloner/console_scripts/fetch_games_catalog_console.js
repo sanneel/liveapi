@@ -10,12 +10,74 @@
 //   /journey-activities/free-spins-bonus-deposit/data/providers?productType=slots
 //   /journey-activities/free-spins-bonus-deposit/data/games?gameProvider=<p>&productType=slots&page=<n>&size=100
 // then stores the chosen game's lobbyId/walletId/externalGameId on the activity.
+//
+// RATE LIMITING: this walks every provider page by page — hundreds of requests
+// back to back, which is enough to get throttled or temporarily blocked. Every
+// request is spaced by THROTTLE_MS and retried with exponential backoff on 429
+// and 5xx, honouring Retry-After when the server sends it. If you still see
+// 429s, raise THROTTLE_MS; the run is unattended anyway.
 (async () => {
   const BASE = "https://pmi.rea-backoffice.gr8.tech/api/ubo/api/v0/crm/journey-builder/v0";
   const ACT = "/journey-activities/free-spins-bonus-deposit/data";
   const BRAND = "JBCL";
   const PRODUCT_TYPES = ["slots"];        // extend if you run non-slot freespins
   const FREESPIN_TYPES = ["instant", ""]; // "" = no filter; merged + de-duped
+
+  // ---- pacing knobs -------------------------------------------------------
+  const THROTTLE_MS  = 400;    // minimum gap between two requests
+  const JITTER_MS    = 150;    // random extra so retries don't sync up
+  const MAX_RETRIES  = 5;      // per request, on 429/5xx/network error
+  const BACKOFF_BASE = 1000;   // 1s, 2s, 4s, 8s, 16s
+  const MAX_BACKOFF  = 30000;
+  const PAGE_CAP     = 50;     // safety cap per provider
+
+  const sleep  = (ms) => new Promise(r => setTimeout(r, ms));
+  const jitter = () => THROTTLE_MS + Math.floor(Math.random() * JITTER_MS);
+
+  let lastRequestAt = 0, requestCount = 0, retryCount = 0;
+
+  // fetch() is not rate-limited by the browser, so without this the loops below
+  // fire as fast as the network allows.
+  async function pace() {
+    const wait = lastRequestAt + jitter() - Date.now();
+    if (wait > 0) await sleep(wait);
+    lastRequestAt = Date.now();
+  }
+
+  async function getJson(url) {
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      await pace();
+      let r;
+      try {
+        r = await fetch(url, { headers: H, credentials: 'include' });
+      } catch (netErr) {
+        // Network blip: back off rather than abort a run that may already be
+        // several minutes in.
+        if (attempt === MAX_RETRIES) throw netErr;
+        const d = Math.min(BACKOFF_BASE * (2 ** attempt), MAX_BACKOFF);
+        retryCount++;
+        console.warn(`  network error, retry ${attempt + 1}/${MAX_RETRIES} in ${d}ms — ${netErr.message}`);
+        await sleep(d);
+        continue;
+      }
+      requestCount++;
+      if (r.ok) return r.json();
+
+      const retryable = r.status === 429 || r.status >= 500;
+      if (!retryable || attempt === MAX_RETRIES) throw new Error('HTTP ' + r.status + ' ' + url);
+
+      let delay = Math.min(BACKOFF_BASE * (2 ** attempt), MAX_BACKOFF);
+      const ra = r.headers.get('retry-after');       // seconds, or an HTTP-date
+      if (ra) {
+        const ms = /^\d+$/.test(ra.trim()) ? parseInt(ra, 10) * 1000 : (Date.parse(ra) - Date.now());
+        if (ms > 0) delay = Math.min(Math.max(ms, delay), MAX_BACKOFF * 4);
+      }
+      retryCount++;
+      console.warn(`  HTTP ${r.status}, retry ${attempt + 1}/${MAX_RETRIES} in ${delay}ms`);
+      await sleep(delay);
+    }
+    throw new Error('unreachable');
+  }
 
   function decodeJwt(t){ try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); } catch(e){ return null; } }
   function usableAuth(v){ if(!v || !/^Bearer\s+\S+/i.test(v)) return null; const p=decodeJwt(v.replace(/^Bearer\s+/i,'')); if(!p||p.typ!=='Bearer') return null; return 'Bearer '+v.replace(/^Bearer\s+/i,''); }
@@ -31,7 +93,6 @@
 
   const auth = await obtainAuth();
   const H = { accept:'application/json, text/plain, */*', authorization:auth, 'x-brand':BRAND };
-  const getJson = async (url) => { const r = await fetch(url, { headers:H, credentials:'include' }); if(!r.ok) throw new Error('HTTP '+r.status+' '+url); return r.json(); };
 
   const games = {};
   const norm = (g) => ({
@@ -44,26 +105,32 @@
     aliases: [ (g.translationKey||'').trim().toLowerCase() ].filter(Boolean),
   });
 
+  const startedAt = Date.now();
+  console.log(`%cPacing ${THROTTLE_MS}-${THROTTLE_MS + JITTER_MS}ms between requests, up to ${MAX_RETRIES} retries each. Slow on purpose — leave the tab open.`, 'color:#eab308');
+
   for (const pt of PRODUCT_TYPES) {
     for (const fst of FREESPIN_TYPES) {
       const fq = (extra) => `${BASE}${ACT}` + extra + `&productType=${pt}` + (fst?`&freeSpinTypes=${fst}`:'');
       let providers = [];
-      try { providers = await getJson(fq('/providers?_=1').replace('/providers?_=1','/providers?x=1')); }
+      try { providers = await getJson(fq('/providers?x=1')); }
       catch(e){ console.warn('providers fetch failed for', pt, fst, e.message); continue; }
-      for (const prov of providers) {
-        const pid = prov.lobbyId || prov.gameProvider || prov.id;
+      console.log(`%c${pt}/${fst||'all'}: ${providers.length} providers`, 'color:#60a5fa;font-weight:bold');
+
+      for (let i = 0; i < providers.length; i++) {
+        const pid = providers[i].lobbyId || providers[i].gameProvider || providers[i].id;
         if (!pid) continue;
         let page = 0, got = 100;
-        while (got === 100 && page < 50) {          // 50-page safety cap
+        while (got === 100 && page < PAGE_CAP) {
           let batch = [];
           try { batch = await getJson(fq(`/games?gameProvider=${encodeURIComponent(pid)}&page=${page}&size=100`)); }
           catch(e){ console.warn('games fetch failed', pid, 'page', page, e.message); break; }
           const items = Array.isArray(batch) ? batch : (batch.data || batch.items || []);
           got = items.length;
           for (const g of items) { if (g && g.lobbyId) games[g.lobbyId] = norm(g); }
-          console.log(`  ${pt}/${fst||'all'} ${pid}: page ${page} → ${got} (total ${Object.keys(games).length})`);
           page++;
         }
+        const elapsed = ((Date.now() - startedAt) / 1000).toFixed(0);
+        console.log(`  [${i + 1}/${providers.length}] ${pid}: ${page} page(s) — ${Object.keys(games).length} games so far (${elapsed}s, ${requestCount} reqs, ${retryCount} retries)`);
       }
     }
   }
@@ -71,8 +138,30 @@
   const sorted = {}; Object.keys(games).sort().forEach(k => sorted[k] = games[k]);
   const out = { _doc: "Games registry — generated live from the backoffice catalog API by fetch_games_catalog_console.js.", games: sorted };
   const json = JSON.stringify(out, null, 2);
-  console.log('%cDONE: '+Object.keys(sorted).length+' games.','color:#22c55e;font-weight:bold');
-  try { copy(json); console.log('Copied games.json to clipboard — paste into journey-cloner/library/games.json'); } catch(e) { console.log('Clipboard blocked; JSON below:'); }
-  console.log(json);
+  const mins = ((Date.now() - startedAt) / 60000).toFixed(1);
+  console.log(`%cDONE: ${Object.keys(sorted).length} games in ${mins} min (${requestCount} requests, ${retryCount} retries).`, 'color:#22c55e;font-weight:bold');
+  // Per-provider counts, so you can see at a glance whether Tada / 3oaks arrived.
+  const byProvider = {};
+  Object.values(sorted).forEach(g => { byProvider[g.provider] = (byProvider[g.provider] || 0) + 1; });
+  console.log('Games per provider:', byProvider);
+  // Download as a real file. The full registry runs to a few hundred KB, which
+  // some consoles silently truncate on copy() — a truncated games.json is
+  // invalid JSON and fails at the far end, so the file is the safe path and the
+  // clipboard is the convenience.
+  try {
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'games.json';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+    console.log('%cDownloaded games.json to your Downloads folder.', 'color:#22c55e;font-weight:bold');
+  } catch (e) {
+    console.warn('Download failed:', e.message);
+  }
+  try { copy(json); console.log('Also copied to clipboard (may truncate if very large — prefer the downloaded file).'); }
+  catch(e) { console.log('Clipboard blocked — use the downloaded file.'); }
+  console.log('Next: replace journey-cloner/library/games.json with it, then run');
+  console.log('  python journey-cloner/build_games_registry.py --reindex');
   window.__gamesRegistry = out;
 })();

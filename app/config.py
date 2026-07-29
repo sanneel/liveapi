@@ -47,19 +47,41 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     groq_model: str = "llama-3.3-70b-versatile"
 
-    # Max output tokens per reply. Counts toward Groq's per-minute token limit,
-    # so keep it modest; MODE 1/3 replies are short, MODE 2 asks per-object.
-    planner_max_tokens: int = 4096
+    # Max output tokens per reply. A real spreadsheet brief (5 deposit tiers × 6
+    # prize levels) plans 30+ journeys, and its design block alone runs past 4K —
+    # at that cap the reply died mid-JSON and every step after it had nothing to
+    # work with. Gemini 2.5 allows far more; the planner also auto-continues a
+    # truncated reply, so this is a ceiling per round, not per answer.
+    planner_max_tokens: int = 16384
 
     # Gemini (fallback). Server-side key, never shipped to the browser.
     gemini_api_key: str = ""
     # flash-lite is the cheapest 2.5 tier — materially lower input/output price
     # than 2.0/2.5-flash, enough for the planner's structured MODE 1/2/3 output.
     gemini_model: str = "gemini-2.5-flash-lite"
-    # 2.5 models run "thinking" by default — those tokens bill at the output
-    # rate and dominate cost. 0 disables it (planner needs no chain-of-thought);
-    # raise it only if answer quality needs it.
-    gemini_thinking_budget: int = 0
+    # Model for the PLANNING calls (the chat itself). Planning is the reasoning
+    # step — read a spreadsheet brief, decide what is one journey vs thirty, count
+    # prize slices — and flash-lite is measurably inconsistent at it: four runs of
+    # the same brief scored 85/95/91/87% on scripts/eval_planner.py, one of them
+    # planning a 31-slice wheel (no captured template has more than 6). The
+    # mechanical calls (repairs, design-block extraction) stay on gemini_model,
+    # so the better tier is paid for roughly one call in six.
+    # Set GEMINI_PLANNING_MODEL=gemini-2.5-flash-lite to put everything back.
+    gemini_planning_model: str = "gemini-2.5-flash"
+    # 2.5 models run "thinking" by default. This was set to 0 to save cost, on the
+    # assumption the planner needs no chain-of-thought. Measured on the Ruletazo
+    # brief (5 deposit tiers x 6 prize levels), that assumption was wrong and the
+    # saving was imaginary:
+    #   thinking 0     -> 0 thought + 10,950 answer tokens. Ignored MODE 1
+    #                     entirely, dumped 29.5K chars of MODE 2 detail, invented
+    #                     journeys ("(Fallback)" copies) and a 7-slice wheel that
+    #                     matches no captured template.
+    #   thinking 8192  -> 8,189 thought + 2,946 answer tokens. Correct MODE 1
+    #                     outline, 8 journeys, no invented objects.
+    # Total tokens: 34,478 vs 34,663 — a 0.5% difference, because a model that
+    # reasons first writes a short right answer instead of a long wrong one.
+    # Planning a campaign IS the reasoning step; this is where to spend.
+    gemini_thinking_budget: int = 8192
 
     # ── Database ──────────────────────────────────────────────────────
     database_url: str = f"sqlite:///{BASE_DIR / 'data' / 'jugabet.db'}"

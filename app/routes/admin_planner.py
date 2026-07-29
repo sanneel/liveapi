@@ -1,9 +1,8 @@
 """
 REA Journey Planner — in-backoffice chat.
 
-  GET  /admin/planner         redirects to the Optimization page's Planner tab
-                              (/admin/promotions?tab=planner), where the chat
-                              widget actually lives (partials/_planner_panel.html)
+  GET  /admin/ai              the planner's own page (partials/_planner_panel.html)
+  GET  /admin/planner         redirects to /admin/ai (old bookmarks)
   POST /admin/planner/api     Gemini proxy — assembles the system prompt from the
                               journey-planner docs and forwards the conversation
 
@@ -15,11 +14,20 @@ CLI and the backoffice chat always agree — edit the docs, not this file.
 
 from __future__ import annotations
 
+import base64
+import contextvars
+import json
+import re
+import shutil
+import subprocess
+import sys
+import time
+import uuid
 from pathlib import Path
 
 import requests
-from fastapi import APIRouter, Depends, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi import APIRouter, Body, Depends, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from ..auth.dependencies import require_role
 from ..config import get_settings
@@ -35,9 +43,154 @@ PLANNER_DIR = REPO_ROOT / "journey-planner"
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 MAX_MESSAGES = 40          # cap conversation length forwarded upstream
-MAX_CHARS = 20000          # per-message guard
+# Composer refusals are precise and single-edit, so one or two automatic repair
+# rounds convert most of them into a script. Beyond that the model tends to
+# rewrite the journey rather than fix the field, so the operator should see it.
+MAX_COMPOSE_REPAIRS = 2
+MAX_CHARS = 20000          # per-message guard for what is sent UPSTREAM
+# Guard for a reply we only process locally (render boards, compose scripts). A
+# continued reply for a 30-journey campaign runs past 90K chars legitimately, so
+# the upstream per-message cap is the wrong limit to apply to it.
+MAX_ARTIFACT_CHARS = 250_000
 
 router = APIRouter()
+
+
+# Upstream statuses worth retrying: rate limit and the transient 5xx family.
+# Gemini returns 503 "experiencing high demand" routinely under load, and a
+# single one used to surface to the operator as a hard failure — during a
+# measured 8-brief run it killed two otherwise-recoverable auto-repairs.
+RETRY_STATUSES = (429, 500, 502, 503, 504)
+RETRY_ATTEMPTS = 3
+RETRY_BACKOFF_SECONDS = (1.5, 4.0)
+
+
+# Per-request token accounting. Every planner answer can fan out into repair and
+# continuation calls, so "what did this campaign cost" is otherwise unknowable.
+# A contextvar keeps concurrent requests from mixing their totals.
+_USAGE: contextvars.ContextVar[dict] = contextvars.ContextVar("planner_usage")
+
+
+def _usage_start() -> dict:
+    totals = {"calls": 0, "input": 0, "cached": 0, "thought": 0, "answer": 0}
+    _USAGE.set(totals)
+    return totals
+
+
+def _usage_add(meta: dict) -> None:
+    try:
+        totals = _USAGE.get()
+    except LookupError:
+        return
+    totals["calls"] += 1
+    totals["input"] += int(meta.get("promptTokenCount") or 0)
+    totals["cached"] += int(meta.get("cachedContentTokenCount") or 0)
+    totals["thought"] += int(meta.get("thoughtsTokenCount") or 0)
+    totals["answer"] += int(meta.get("candidatesTokenCount") or 0)
+
+
+def _with_retry(call, *args):
+    """Retry a provider call on transient upstream errors.
+
+    `call` returns (text, error) and never raises; a retryable failure is
+    detected from the error string it produced, which is why the callers embed
+    the status code there. Non-retryable errors (a bad key, a safety block, a
+    malformed request) return immediately — retrying those just burns time.
+    """
+    last = (None, "no attempt made")
+    for attempt in range(RETRY_ATTEMPTS):
+        text, error = call(*args)
+        if not error:
+            return text, None
+        last = (text, error)
+        if not any(f" {code}:" in error for code in RETRY_STATUSES):
+            return last
+        if attempt == RETRY_ATTEMPTS - 1:
+            break
+        delay = RETRY_BACKOFF_SECONDS[min(attempt, len(RETRY_BACKOFF_SECONDS) - 1)]
+        logger.info("upstream transient error (%s) — retrying in %.1fs", error[:80], delay)
+        time.sleep(delay)
+    return last
+
+
+# A reply that hit the output cap carries this marker (added by the callers
+# below). A 30-journey plan or its design block genuinely does not fit one
+# round, so the planner asks the model to carry on and stitches the pieces.
+_TRUNCATED = ("[finishReason: MAX_TOKENS]", "[finish_reason: length]")
+MAX_CONTINUATIONS = 4
+
+# Budget for the mechanical calls (fix this knob, emit that block). Measured on
+# the Ruletazo workflow, the full 8K-thought budget on these was ~60% of the
+# thinking spend and changed nothing about the answers: they are "apply the
+# refusal you were just handed", not "plan a campaign". The lean prompt drops the
+# knowledge base and capture backlog with them — 23.5K input tokens -> 15.7K.
+REPAIR_THINKING = 1024
+
+
+def _is_truncated(text: str) -> bool:
+    return any(marker in (text or "") for marker in _TRUNCATED)
+
+
+def _strip_markers(text: str) -> str:
+    for marker in _TRUNCATED:
+        text = text.replace(marker, "")
+    return text.rstrip()
+
+
+def _complete(settings, messages: list, temperature: float, *,
+              lean: bool | None = None,
+              thinking: int | None = None) -> tuple[str | None, str | None]:
+    """One planner answer, continued until it is actually finished.
+
+    The provider stops at `planner_max_tokens`, which a big campaign exceeds: the
+    Ruletazo brief (37 journeys) died halfway through its design block, leaving
+    unparseable JSON and no boards. Here a truncated reply is continued from
+    exactly where it stopped and the parts are concatenated, so callers always
+    see one whole answer.
+    """
+    provider = _resolve_provider(settings)
+    if lean is None:
+        lean = provider == "groq"
+    system_prompt = _build_system_prompt(lean=lean)
+    model = None if lean else (settings.gemini_planning_model or None)
+    if provider == "groq":
+        caller, args = _call_groq, (settings, system_prompt, messages, temperature)
+    else:
+        caller, args = _call_gemini, (settings, system_prompt, messages, temperature,
+                                      thinking, model)
+
+    text, error = _with_retry(caller, *args)
+    if error or not text:
+        return text, error
+
+    rounds = 0
+    while _is_truncated(text) and rounds < MAX_CONTINUATIONS:
+        rounds += 1
+        so_far = _strip_markers(text)
+        # The model sees its own partial answer and is told to resume mid-token —
+        # no preamble, no restating, or the stitched result would repeat itself.
+        follow = messages + [
+            {"role": "model", "text": so_far[-8000:]},
+            {"role": "user", "text":
+                "Your reply was cut off by the output limit. Continue it from the "
+                "EXACT character where it stopped — do not repeat anything already "
+                "written, do not restate the outline, do not add a preamble or "
+                "explanation, and if you were mid-way through a ```json block, "
+                "carry on inside that block and close it properly."},
+        ]
+        cont_args = ((settings, system_prompt, follow, temperature) if provider == "groq"
+                     else (settings, system_prompt, follow, temperature, thinking, model))
+        more, more_error = _with_retry(caller, *cont_args)
+        if more_error or not more:
+            logger.warning("continuation %d unavailable: %s", rounds, more_error)
+            return so_far, None
+        logger.info("planner reply truncated — continued (round %d, +%d chars)",
+                    rounds, len(more))
+        if _is_truncated(more):
+            text = so_far + more            # marker kept: the loop goes again
+        else:
+            text = so_far + _strip_markers(more)
+    return text, None
 
 
 def _resolve_provider(settings) -> str:
@@ -97,8 +250,14 @@ def _call_groq(settings, system_prompt: str, messages: list, temperature: float)
     return text, None
 
 
-def _call_gemini(settings, system_prompt: str, messages: list, temperature: float):
-    """Gemini (fallback). Returns (text, error)."""
+def _call_gemini(settings, system_prompt: str, messages: list, temperature: float,
+                 thinking: int | None = None, model: str | None = None):
+    """Gemini (fallback). Returns (text, error).
+
+    `thinking` overrides the configured budget for THIS call. Planning a campaign
+    needs deliberation; "fix the field this refusal names" does not, and paying
+    8K thought tokens for a mechanical edit is most of what made a full workflow
+    expensive."""
     contents = []
     for m in messages:
         role = "model" if m.get("role") == "model" else "user"
@@ -113,14 +272,15 @@ def _call_gemini(settings, system_prompt: str, messages: list, temperature: floa
     # pro). flash-lite rejects it → HTTP 400 invalid argument. Only send it when
     # a positive budget is set (i.e. you explicitly want to cap thinking); a 0/
     # unset budget just omits it (flash-lite doesn't think by default anyway).
-    if settings.gemini_thinking_budget and settings.gemini_thinking_budget > 0:
-        gen_config["thinkingConfig"] = {"thinkingBudget": settings.gemini_thinking_budget}
+    budget = settings.gemini_thinking_budget if thinking is None else thinking
+    if budget and budget > 0:
+        gen_config["thinkingConfig"] = {"thinkingBudget": budget}
     body = {
         "system_instruction": {"parts": [{"text": system_prompt}]},
         "contents": contents,
         "generationConfig": gen_config,
     }
-    url = GEMINI_URL.format(model=settings.gemini_model)
+    url = GEMINI_URL.format(model=model or settings.gemini_model)
     try:
         r = requests.post(url, params={"key": settings.gemini_api_key.strip()},
                           json=body, timeout=120)
@@ -136,6 +296,7 @@ def _call_gemini(settings, system_prompt: str, messages: list, temperature: floa
         logger.warning("gemini %s: %s", r.status_code, detail)
         return None, f"Gemini error {r.status_code}: {detail}"
     data = r.json()
+    _usage_add(data.get("usageMetadata") or {})
     cand = (data.get("candidates") or [{}])[0]
     parts = (cand.get("content") or {}).get("parts") or []
     text = "".join(p.get("text", "") for p in parts).strip()
@@ -210,7 +371,8 @@ def planner_view_context() -> dict:
     standalone page and the Optimization page's Planner tab."""
     settings = get_settings()
     provider = _resolve_provider(settings)
-    model = settings.groq_model if provider == "groq" else settings.gemini_model
+    model = (settings.groq_model if provider == "groq"
+             else (settings.gemini_planning_model or settings.gemini_model))
     key_ok = bool((settings.groq_api_key if provider == "groq"
                    else settings.gemini_api_key).strip())
     return {
@@ -222,14 +384,751 @@ def planner_view_context() -> dict:
     }
 
 
+@router.get("/admin/ai", response_class=HTMLResponse)
+def ai_page(
+    request: Request,
+    user: User = Depends(require_role("editor")),
+):
+    """The AI planner on its own page.
+
+    It lived as a tab on the Optimization hub, sharing that page with nine
+    generator forms — which meant a cropped panel for the one thing here that is
+    a workspace rather than a form. Optimization is now only generators.
+    """
+    from ..routes.admin_views import templates
+    # Same call shape as every other page here: (request, name, context).
+    return templates.TemplateResponse(request, "ai.html", {
+        "active_page": "ai",
+        "current_user": user,
+        "pl": planner_view_context(),
+    })
+
+
 @router.get("/admin/planner")
 def planner_page(
     request: Request,
     user: User = Depends(require_role("editor")),
 ) -> RedirectResponse:
-    """Planner moved into the Optimization hub as a tab — keep the old URL
-    working for bookmarks/links instead of 404ing."""
-    return RedirectResponse(url="/admin/promotions?tab=planner", status_code=307)
+    """Old bookmarks and the old Optimization tab link both land here."""
+    return RedirectResponse(url="/admin/ai", status_code=307)
+
+
+def _detect_mode(text: str, fallback: str) -> str:
+    """Pick the engine from the spec's own keys.
+
+    The browser guesses with a regex, which misroutes often enough to matter (a
+    chain spec sent to --spec dies as "unknown recipe None"). Parsing the object
+    here is deterministic: `reference` means a MODE 4 graph, `chain` a MODE 5
+    chain, `recipe` a MODE 3 spec. Falls back to the caller's mode when nothing
+    parses — the composer then produces its own clean refusal.
+    """
+    blob = text.strip()
+    fences = re.findall(r"```(?:json|JSON)?\s*(.*?)```", blob, re.S)
+    candidates = [*reversed([f.strip() for f in fences]), blob]
+    # ...and the first balanced {...}, which is what a "Here is the spec:"
+    # lead-in leaves behind. Same three-way fallback as compose._extract_json.
+    depth, start = 0, None
+    for i, ch in enumerate(blob):
+        if ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}" and depth:
+            depth -= 1
+            if depth == 0 and start is not None:
+                candidates.append(blob[start:i + 1])
+                break
+    for candidate in candidates:
+        try:
+            spec = json.loads(candidate)
+        except ValueError:
+            continue
+        if not isinstance(spec, dict):
+            continue
+        if "kind" in spec and ("date" in spec or "dates" in spec):
+            return "randomizer"
+        if "reference" in spec:
+            return "graph"
+        if isinstance(spec.get("chain"), list):
+            return "chain"
+        if "recipe" in spec:
+            return "spec"
+    return fallback
+
+
+def _extract_all_specs(text: str) -> list[dict]:
+    """Every JSON object in a reply that looks like a buildable spec.
+
+    A campaign is many objects but a spec builds ONE, so an operator either asks
+    per object or gets several specs in one reply. Both are supported: fenced
+    blocks first (what the model emits when listing several), else the whole
+    reply, else the first balanced {...}."""
+    blob = (text or "").strip()
+    found: list[dict] = []
+    seen: set[str] = set()
+
+    def consider(candidate: str) -> None:
+        try:
+            spec = json.loads(candidate)
+        except ValueError:
+            return
+        if not isinstance(spec, dict):
+            return
+        # A spec is identifiable by the key that selects its engine.
+        if not ({"recipe", "chain", "reference", "kind"} & set(spec)):
+            return
+        fingerprint = json.dumps(spec, sort_keys=True)
+        if fingerprint not in seen:
+            seen.add(fingerprint)
+            found.append(spec)
+
+    for fence in re.findall(r"```(?:json|JSON)?\s*(.*?)```", blob, re.S):
+        consider(fence.strip())
+    if not found:
+        consider(blob)
+    if not found:
+        depth, start = 0, None
+        for i, ch in enumerate(blob):
+            if ch == "{":
+                if depth == 0:
+                    start = i
+                depth += 1
+            elif ch == "}" and depth:
+                depth -= 1
+                if depth == 0 and start is not None:
+                    consider(blob[start:i + 1])
+                    start = None
+    return found
+
+
+def _spec_mode(spec: dict) -> str:
+    """Which engine builds this spec, from its own keys."""
+    if "kind" in spec and ("date" in spec or "dates" in spec):
+        return "randomizer"
+    if "reference" in spec:
+        return "graph"
+    if isinstance(spec.get("chain"), list):
+        return "chain"
+    return "spec"
+
+
+def _repair_spec(settings, spec_text: str, refusal: str, mode: str) -> str | None:
+    """Ask the planner to fix a spec the composer refused. Returns the corrected
+    reply, or None if the model could not be reached.
+
+    Kept deliberately narrow: the model is given the spec, the exact refusal and
+    one instruction — change only what the refusal names. A free-form "try
+    again" tends to produce a different journey rather than the same journey
+    with the error fixed."""
+    # A SHAPE refusal ("this recipe is deposit-gated", "this recipe has no
+    # knobs") cannot be fixed by editing a value — the answer is a different
+    # engine. The old instruction forbade exactly that, so the model edited
+    # knobs forever and got refused every round.
+    wants_chain = "MODE 5" in refusal or "chain" in refusal.lower()
+    if wants_chain:
+        instruction = (
+            f"The composer REFUSED this {mode} spec, and the refusal says the "
+            f"RECIPE cannot express this journey. Do not try to fix the knobs — "
+            f"re-emit it as a MODE 5 CHAIN spec instead, containing only the "
+            f"activities this journey actually needs, with the same values. "
+            f"Output ONLY the JSON object.\n\n"
+            f"--- SPEC ---\n{spec_text}\n\n--- REFUSAL ---\n{refusal.strip()[:4000]}\n"
+        )
+    else:
+        instruction = (
+            f"The composer REFUSED this {mode} spec. Fix ONLY what the refusal "
+            f"names and re-emit the corrected JSON object — no prose, no "
+            f"explanation, no other changes to the journey.\n\n"
+            f"--- SPEC ---\n{spec_text}\n\n--- REFUSAL ---\n{refusal.strip()[:4000]}\n"
+        )
+    try:
+        text, error = _complete(settings, [{"role": "user", "text": instruction}], 0.0,
+                                lean=True, thinking=REPAIR_THINKING)
+    except Exception as exc:
+        logger.warning("spec repair call failed: %s", exc)
+        return None
+    if error or not text:
+        logger.warning("spec repair unavailable: %s", error)
+        return None
+    return text
+
+
+def _games_in(spec: dict) -> set[str]:
+    """Every game a spec names, in either shape (recipe knobs or chain nodes)."""
+    found: set[str] = set()
+
+    def add(value) -> None:
+        text = str(value or "").strip()
+        if text and "⛔" not in text:
+            found.add(re.sub(r"[^a-z0-9]+", "", text.lower()))
+
+    for knob, value in (spec.get("knobs") or {}).items():
+        if "game" in knob.lower():
+            add(value)
+
+    def walk(nodes) -> None:
+        for node in nodes or []:
+            if not isinstance(node, dict):
+                continue
+            if node.get("game"):
+                add(node["game"])
+            for branch in (node.get("branches") or {}).values():
+                walk(branch)
+
+    walk(spec.get("chain"))
+    return found
+
+
+def _reject_game_swaps(before: list[dict], after: list[dict]) -> tuple[list[dict], list[str]]:
+    """Drop repaired specs that changed a game to one the brief never named.
+
+    A repair round is told to fix the engine, not the campaign. But when the
+    composer refuses an unregistered game it also suggests near matches, and the
+    model will happily take one — turning "Bone Fortune" into "Ocean Fortune" and
+    "3x5 Double Blazing" into "Double Rainbow". That builds cleanly and grants
+    spins on the wrong game, which is worse than not building at all. Only the
+    operator gets to choose a replacement game, so a swap is dropped here and
+    reported.
+    """
+    allowed: set[str] = set()
+    for spec in before:
+        allowed |= _games_in(spec)
+    kept, swapped = [], []
+    for spec in after:
+        extra = _games_in(spec) - allowed
+        if extra and allowed:
+            swapped.append(spec.get("journey_name") or spec.get("name") or "journey")
+            continue
+        kept.append(spec)
+    return kept, swapped
+
+
+def _chain_palette(specs: list[dict]) -> str:
+    """The allowed inline settings for exactly the activities these specs use.
+
+    The full palette is already in the system prompt (inside the recipes
+    catalog), but on a 30-journey repair the model keeps inventing one new
+    setting name per round — `promotion_settings`, `targetSystem`,
+    `max_bonus_amount` — and each round costs a model call. Handing it the
+    relevant few lines as data converges in one round instead of five.
+    """
+    catalog_file = REPO_ROOT / "journey-cloner" / "recipes_catalog.json"
+    try:
+        activities = json.loads(catalog_file.read_text(encoding="utf-8")) \
+            .get("chain_composer", {}).get("activities", {})
+    except Exception as exc:                       # missing/!json catalog
+        logger.warning("chain palette unavailable: %s", exc)
+        return ""
+    if not activities:
+        return ""
+
+    # Which activity names appear in these specs (through their aliases)?
+    used: set[str] = set()
+
+    def walk(nodes) -> None:
+        for node in nodes or []:
+            if not isinstance(node, dict):
+                continue
+            raw = str(node.get("type") or node.get("activity") or "").strip().lower()
+            for key, spec in activities.items():
+                if raw == key or raw in (spec.get("aliases") or []):
+                    used.add(key)
+                    break
+            for branch in (node.get("branches") or {}).values():
+                walk(branch)
+
+    for spec in specs:
+        walk(spec.get("chain"))
+    if not used:
+        used = set(activities)                     # first repair: nothing is a chain yet
+
+    lines = []
+    for key in sorted(used):
+        keys = [k for k in (activities[key].get("inline_keys") or []) if k != "(none)"]
+        allowed = ", ".join(keys) if keys else (
+            'NO settings at all — the node is {"type": "' + key + '"} and nothing else')
+        lines.append(f"  {key}: {allowed}")
+    return ("\n\nThe ONLY settings each of these activities accepts (anything else "
+            "is refused, not ignored):\n" + "\n".join(lines))
+
+
+def _repair_batch(settings, specs: list[dict], reasons: list[str]) -> str | None:
+    """One correction round for a whole campaign's specs.
+
+    A 30-journey campaign refused 30 times is one mistake made 30 times — most
+    often a recipe that cannot express the journey (no game knob), whose only fix
+    is a different engine. The model is shown the distinct refusals and re-emits
+    every spec, so "full script" turns into scripts instead of a wall of ⛔.
+    """
+    joined = "\n".join(f"  - {r}" for r in reasons)
+    # A "recipe does not define that knob" / "recipe is deposit-gated" refusal is
+    # a SHAPE refusal: no edit to the knobs can fix it, the answer is the chain
+    # engine. Asked politely ("switch if the refusal says…") the model keeps the
+    # recipe and gets refused again, so when the reasons say shape, the
+    # instruction is not a choice.
+    wants_chain = any(re.search(r"does not define|has no |deposit-gated|MODE 5|zero knobs",
+                                r, re.I) for r in reasons)
+    if wants_chain:
+        instruction = (
+            f"The composer REFUSED all of the specs below. The distinct reasons "
+            f"were:\n{joined}\n\n"
+            f"These recipes cannot express these journeys — that is a shape "
+            f"problem, and editing knobs cannot fix it. Re-emit ALL {len(specs)} "
+            f"objects as MODE 5 CHAIN specs: the {{\"name\", \"source\", \"chain\", "
+            f"\"date\", \"days\"}} shape, settings INLINE on each node, and NO "
+            f"`recipe` key anywhere. Keep every journey's name, its activities and "
+            f"its values. The rules that get violated most, so check each one:\n"
+            f"  * NO `follow` key on any node — a chain wires itself, and a `follow` "
+            f"that names the node's own forward event is refused outright.\n"
+            f"  * NO wrapper keys: settings go INLINE on the node. Never "
+            f"`settings`, never `promotion_settings`. `promotion` takes no settings "
+            f"at all — it is exactly {{\"type\": \"promotion\"}}.\n"
+            f"  * ONLY the setting names that activity lists in the CHAIN COMPOSER "
+            f"palette; the refusals above print the allowed list where they know it.\n"
+            f"  * Amounts are MINOR units — multiply every CLP figure by 100 "
+            f"(2.500 CLP -> 250000, bet 50 -> 5000).\n"
+            f"  * The brief's game NAME goes in `game`; send no provider. NEVER "
+            f"swap it for a near match the composer suggested — a journey that "
+            f"grants spins on a different game is wrong, not fixed. If a game is "
+            f"not registered, leave that journey out and name it at the end.\n"
+            f"  * The ENTRY is the spec's `source` field — {{\"type\": \"api\"}} for a "
+            f"wheel/promo-page entry, {{\"type\": \"segment\"}} for a segment. It is "
+            f"NOT a chain node: no `external_system_source` node, no `targetSystem`.\n"
+            f"  * Do not add a terminal node — the composer appends it.\n"
+            f"  * DROP any object that is not a journey — a promo page, a wheel, a "
+            f"randomizer. Emit no block for it and name it in one line at the end.\n"
+            f"One ```json block per journey, no prose between them."
+            f"{_chain_palette(specs)}\n\n"
+            f"--- SPECS ---\n{json.dumps(specs, ensure_ascii=False)[:MAX_CHARS]}\n"
+        )
+    else:
+        instruction = (
+            f"The composer REFUSED the specs below. The distinct reasons were:\n"
+            f"{joined}\n\n"
+            f"Re-emit ALL {len(specs)} objects, corrected, one ```json block each "
+            f"and no prose between them. Keep every journey's NAME and VALUES "
+            f"exactly as they are — only fix what the refusals name. Drop an object "
+            f"only if it is not a journey at all (a promo page), and say so in one "
+            f"line after the blocks.\n\n"
+            f"--- SPECS ---\n{json.dumps(specs, ensure_ascii=False)[:MAX_CHARS]}\n"
+        )
+    try:
+        text, error = _complete(settings, [{"role": "user", "text": instruction}], 0.0,
+                                lean=True, thinking=REPAIR_THINKING)
+    except Exception as exc:
+        logger.warning("batch repair call failed: %s", exc)
+        return None
+    if error or not text:
+        logger.warning("batch repair unavailable: %s", error)
+        return None
+    return text
+
+
+@router.post("/admin/planner/compose")
+def planner_compose(
+    payload: dict = Body(...),
+    user: User = Depends(require_role("editor")),
+) -> JSONResponse:
+    """Run the composer over a planner reply and hand back the console script.
+
+    Deliberately a sync `def`: FastAPI runs it in the threadpool, so the
+    subprocess (up to 300s) cannot stall the event loop the way an `async def`
+    calling blocking code would — the service runs a single uvicorn worker.
+
+    The reply is passed through verbatim; compose.py tolerates ```json fences
+    and prose lead-ins. A refusal is not an error here — returncode 3 with the
+    explanation in `log` is the composer working as designed, and the operator
+    can paste that text back into the chat for the planner to correct itself.
+    """
+    text = str(payload.get("text") or "").strip()
+    if not text:
+        return JSONResponse({"error": "Nothing to compose — send the planner reply."})
+    if len(text) > MAX_ARTIFACT_CHARS:
+        return JSONResponse({"error": f"Reply too large ({len(text)} chars, "
+                                     f"max {MAX_ARTIFACT_CHARS})."})
+    mode = str(payload.get("mode") or "spec").strip().lower()
+    if mode not in ("spec", "graph", "chain", "randomizer"):
+        return JSONResponse(
+            {"error": f"Unknown mode {mode!r} — use 'spec', 'graph', 'chain' "
+                      f"or 'randomizer'."})
+
+    try:
+        from ..services.journey_cloner_runner import generate_composed_console_script
+    except ImportError as exc:
+        return JSONResponse({"error": f"Composer not available: {exc}"})
+
+    settings = get_settings()
+
+    # A campaign is many objects; a spec builds one. Build every spec present so
+    # a reply listing several journeys produces several scripts in one click.
+    specs = _extract_all_specs(text)
+    if not specs:
+        return JSONResponse({
+            "error": "That reply is a plan, not a spec — there is no buildable "
+                     "JSON object in it. Ask for one object at a time: say "
+                     "\"journey 2 in full\", then \"generate json\". For the "
+                     "whole campaign, ask for \"the spec JSON for every "
+                     "journey, one JSON block each\"."})
+    if len(specs) > 1:
+
+        def build_all(batch: list[dict]) -> list[dict]:
+            """Compose a whole campaign's specs.
+
+            Recipe specs collapse into ONE script — one token capture, one paste,
+            every draft — and a wheel alongside them joins that SAME script: its
+            prize routing needs the journey ids, which only exist once the
+            journeys in it have been created. Chains use a different engine, so
+            those stay individual.
+            """
+            results: list[dict] = []
+            recipe_specs = [s for s in batch if _spec_mode(s) == "spec"]
+            wheel_specs = [s for s in batch if _spec_mode(s) == "randomizer"]
+            other_specs = [s for s in batch
+                           if _spec_mode(s) not in ("spec", "randomizer")]
+            if len(recipe_specs) > 1:
+                names = [s.get("journey_name") or "journey" for s in recipe_specs]
+                payload: dict = {"journeys": recipe_specs}
+                # One wheel rides along with the journeys it routes into. More
+                # than one is ambiguous (which journeys belong to which wheel?),
+                # so the extras stay separate scripts.
+                with_wheel = wheel_specs[0] if len(wheel_specs) == 1 else None
+                if with_wheel:
+                    payload["randomizer"] = with_wheel
+                    wheel_specs = wheel_specs[1:]
+                    names = names + [f"randomizer: {with_wheel.get('kind', 'wheel')}"]
+                try:
+                    code, log, cmd, js, filename = generate_composed_console_script(
+                        json.dumps(payload), mode="batch")
+                except Exception as exc:
+                    logger.warning("planner batch compose failed: %s", exc)
+                    code, log, js, filename = 1, f"Composer failed to run: {exc}", None, ""
+                # What the script ACTUALLY carries, read back from the build log.
+                # "20 journeys + the wheel" while the script created 5 and dropped
+                # the wheel is worse than no label at all.
+                in_script = re.findall(r"^  ✓ (.+)$", log or "", re.M)
+                not_built = re.findall(r"^  ⛔ (.+)$", log or "", re.M)
+                journeys_in = [n for n in in_script if not n.startswith("randomizer ")]
+                wheel_in = [n for n in in_script if n.startswith("randomizer ")]
+                if in_script:
+                    label = f"{len(journeys_in)} journey(s)"
+                    label += " + the wheel" if wheel_in else ""
+                    label += " — one paste"
+                    if len(journeys_in) < len(recipe_specs) or (with_wheel and not wheel_in):
+                        label += f" ({len(not_built)} object(s) NOT built)"
+                    names = in_script + [f"⛔ {n}" for n in not_built]
+                else:
+                    label = (f"{len(recipe_specs)} journeys + the wheel — one paste"
+                             if with_wheel else f"{len(recipe_specs)} journeys in one script")
+                results.append({
+                    "index": 1, "batch": True, "count": len(journeys_in) or len(recipe_specs),
+                    "name": label,
+                    "detail": names, "mode": "batch",
+                    # exit 4 = partial: fewer drafts than asked for, still usable.
+                    "ok": code in (0, 4) and bool(js), "partial": code == 4,
+                    "returncode": code, "log": log, "js": js, "filename": filename,
+                })
+            else:
+                other_specs = recipe_specs + other_specs
+            other_specs = other_specs + wheel_specs
+
+            for spec in other_specs:
+                spec_mode = _spec_mode(spec)
+                i = len(results) + 1
+                try:
+                    code, log, cmd, js, filename = generate_composed_console_script(
+                        json.dumps(spec), mode=spec_mode)
+                except Exception as exc:
+                    logger.warning("planner compose failed on spec %d: %s", i, exc)
+                    code, log, js, filename = 1, f"Composer failed to run: {exc}", None, ""
+                results.append({
+                    "index": i,
+                    "name": spec.get("journey_name") or spec.get("name")
+                            or spec.get("kind") or f"object {i}",
+                    "mode": spec_mode, "ok": code == 0 and bool(js),
+                    "returncode": code, "log": log, "js": js, "filename": filename,
+                })
+            return results
+
+        def scored(results: list[dict]) -> int:
+            """Objects actually built (a batch result stands for its whole count)."""
+            return sum(r.get("count", 1) if r.get("ok") else 0 for r in results)
+
+        def digest(results: list[dict]) -> list[str]:
+            """The DISTINCT refusals in a run.
+
+            A 30-journey campaign refused 30 times is one mistake made 30 times,
+            so the per-object prefix is stripped and duplicates collapse — that is
+            what makes a single repair round able to fix the whole batch. Every
+            line is scanned, not just the first: a batch log carries one refusal
+            per journey and the dominant reason is usually further down.
+            """
+            reasons: list[str] = []
+            for r in results:
+                if r["ok"]:
+                    continue
+                for line in (r.get("log") or "").splitlines():
+                    line = line.strip()
+                    if line.upper().startswith("STDERR"):
+                        continue
+                    if not line or not re.search(
+                            r"⛔|refus|unknown|not a known|does not define|unsupported",
+                            line, re.I):
+                        continue
+                    key = re.sub(r"^⛔\s*\d+\.\s*[^:]*:\s*", "", line)[:700]
+                    if key not in reasons:
+                        reasons.append(key)
+                    if len(reasons) >= 6:
+                        break
+            return reasons
+
+        # Repair rounds, same budget as the single-spec path. One round is not
+        # enough in practice: the first fixes the ENGINE (a recipe that cannot
+        # carry a game becomes a chain) and the second fixes the setting names
+        # that engine uses. Each round is one model call for the whole campaign.
+        current, results, repaired = specs, [], False
+        swaps: list[str] = []          # journeys a repair tried to re-game
+        best: tuple[int, list[dict]] = (-1, [])
+        for attempt in range(1 + MAX_COMPOSE_REPAIRS):
+            results = build_all(current)
+            score = scored(results)
+            if score > best[0]:
+                best = (score, results)
+                repaired = attempt > 0
+            if all(r["ok"] for r in results) or attempt == MAX_COMPOSE_REPAIRS:
+                break
+            reasons = digest(results)
+            if not reasons:
+                break
+            logger.info("batch compose refused (round %d) — repairing over %d distinct reason(s)",
+                        attempt + 1, len(reasons))
+            fixed = _repair_batch(settings, current, reasons)
+            next_specs = _extract_all_specs(fixed or "")
+            next_specs, swapped = _reject_game_swaps(current, next_specs)
+            if swapped:
+                logger.info("batch repair swapped games on %d object(s) — dropped",
+                            len(swapped))
+                swaps.extend(swapped)
+            if not next_specs:
+                logger.info("batch repair produced no specs — stopping")
+                break
+            current = next_specs
+
+        built_objects, results = best
+        for name in dict.fromkeys(swaps):
+            results.append({
+                "index": len(results) + 1, "name": name, "mode": "spec", "ok": False,
+                "returncode": 3,
+                "log": "⛔ not built — the repair tried to swap this journey's game "
+                       "for a similar registered one. The brief's game is not in the "
+                       "games registry, and granting spins on a different game is "
+                       "not a fix: register the game (journey-cloner/"
+                       "build_games_registry.py) or tell the planner which "
+                       "registered game to use instead.",
+            })
+        built = sum(1 for r in results if r["ok"])
+        return JSONResponse({"ok": built > 0, "multi": True, "built": built,
+                             "repaired": repaired, "objects": built_objects,
+                             "total": len(results), "results": results})
+
+    # Single spec: the mode comes from the spec itself, not the browser's guess.
+    mode = _spec_mode(specs[0])
+    attempts: list[dict] = []
+    current = text
+    # Every refusal the composer emits names the offending field and says how to
+    # fix it, so a refusal is a repair instruction the model can act on. The
+    # common failures — minor-vs-major units, a game tuple from two different
+    # games, a knob the chosen recipe lacks — are all one-edit fixes that the
+    # model gets right when told. Retrying here is the difference between "the
+    # tool refused" and "the tool produced a script".
+    for attempt in range(1 + MAX_COMPOSE_REPAIRS):
+        try:
+            code, log, cmd, js, filename = generate_composed_console_script(current, mode=mode)
+        except Exception as exc:                  # subprocess timeout, OSError, ...
+            logger.warning("planner compose failed: %s", exc)
+            return JSONResponse({"error": f"Composer failed to run: {exc}"})
+        attempts.append({"attempt": attempt + 1, "returncode": code, "log": log})
+        if code == 0 and js:
+            return JSONResponse({"ok": True, "returncode": 0, "log": log, "cmd": cmd,
+                                 "js": js, "filename": filename,
+                                 "attempts": attempts, "repaired": attempt > 0})
+        if attempt >= MAX_COMPOSE_REPAIRS:
+            break
+        repaired = _repair_spec(settings, current, log, mode)
+        if not repaired:
+            break
+        logger.info("planner compose refused (exit %s) — retrying with a repair", code)
+        current = repaired
+        # A shape refusal is repaired by switching ENGINES, so the mode has to
+        # be re-read from what came back — otherwise a chain spec would be run
+        # through --spec and die as "unknown recipe None".
+        mode = _detect_mode(current, mode)
+
+    logger.info("planner compose refused after %d attempt(s)", len(attempts))
+    return JSONResponse({"ok": False, "returncode": attempts[-1]["returncode"],
+                         "log": attempts[-1]["log"], "cmd": cmd,
+                         "attempts": attempts})
+
+
+DESIGN_SCRIPT = PLANNER_DIR / "render_journey_design.py"
+DESIGN_OUT_DIR = REPO_ROOT / "data" / "journey_designs"
+MAX_DESIGN_JOURNEYS = 40       # a brief past this is a paste accident, not a campaign
+KEEP_DESIGN_RUNS = 40          # boards go to the browser as data URLs; disk is a cache
+
+
+def _prune_design_runs() -> None:
+    """Keep the last few render directories. The operator gets the PNGs inline
+    and downloads what they want, so older runs are only useful for a quick
+    re-check — an unbounded pile of them is not."""
+    try:
+        runs = sorted((p for p in DESIGN_OUT_DIR.iterdir() if p.is_dir()),
+                      key=lambda p: p.stat().st_mtime, reverse=True)
+    except FileNotFoundError:
+        return
+    for stale in runs[KEEP_DESIGN_RUNS:]:
+        shutil.rmtree(stale, ignore_errors=True)
+
+
+def _looks_like_plan(text: str) -> bool:
+    """Is this reply a campaign plan (so a design can be drawn from it)?"""
+    probe = text.upper()
+    return ("OBJECTS TO BUILD" in probe or "CREATION ORDER" in probe
+            or "SAY WHICH OBJECT" in probe or "CAMPAIGN:" in probe)
+
+
+def _design_block_for(settings, plan_text: str) -> str | None:
+    """Ask the planner for the design block of an outline that shipped without one.
+
+    MODE 1 is supposed to include it, but compliance slips on long briefs — the
+    model spends its reply on the outline and flags and just stops. Rather than
+    make the operator notice and re-ask, the block is requested here from the
+    plan the model already wrote. Same one-shot repair the composer does for a
+    refused spec; the plan itself is never re-generated, so nothing changes but
+    the picture data.
+    """
+    instruction = (
+        "Below is a campaign outline you already produced. Emit ONLY the MODE 1 "
+        "DESIGN BLOCK for it — a single ```json fence containing the `diagram` "
+        "object, one entry in `journeys` for every object in the outline, in the "
+        "same order and with the same names. No prose, no outline, no spec.\n\n"
+        f"--- OUTLINE ---\n{plan_text[:MAX_CHARS]}\n"
+    )
+    try:
+        text, error = _complete(settings, [{"role": "user", "text": instruction}], 0.0,
+                                lean=True, thinking=REPAIR_THINKING)
+    except Exception as exc:
+        logger.warning("design block request failed: %s", exc)
+        return None
+    if error or not text:
+        logger.warning("design block unavailable: %s", error)
+        return None
+    return text
+
+
+@router.post("/admin/planner/design")
+def planner_design(
+    payload: dict = Body(...),
+    user: User = Depends(require_role("editor")),
+) -> JSONResponse:
+    """Render a MODE 1 reply's `diagram` block into picture boards.
+
+    The planner emits the outline plus a JSON diagram; this turns that diagram
+    into PNGs (one card per activity, with its icon) and hands them back inline
+    as data URLs. Sync `def` for the same reason compose is: the subprocess runs
+    in FastAPI's threadpool instead of blocking the event loop.
+
+    The model never sees the images — it only produced the data. An outline that
+    arrived without a design block is repaired once (see `_design_block_for`)
+    rather than bounced back to the operator.
+    """
+    text = str(payload.get("text") or "").strip()
+    if not text:
+        return JSONResponse({"error": "Nothing to render — send the planner reply."})
+    if len(text) > MAX_ARTIFACT_CHARS:
+        return JSONResponse({"error": f"Reply too large ({len(text)} chars, "
+                                     f"max {MAX_ARTIFACT_CHARS})."})
+    try:
+        per_image = int(payload.get("per_image", 2))
+    except (TypeError, ValueError):
+        per_image = 2
+    per_image = min(max(per_image, 0), 12)     # 0 = every journey on one board
+    if not DESIGN_SCRIPT.exists():
+        return JSONResponse({"error": f"Renderer not found at {DESIGN_SCRIPT} — "
+                                      "make sure journey-planner/ is deployed."})
+
+    run_dir = DESIGN_OUT_DIR / f"{time.strftime('%Y-%m-%d')}_{uuid.uuid4().hex[:8]}"
+    venv_python = REPO_ROOT / ".venv" / "bin" / "python"
+    cmd = [str(venv_python) if venv_python.exists() else sys.executable,
+           str(DESIGN_SCRIPT), "-", "--out", str(run_dir), "--name", "journey",
+           "--per-image", str(per_image)]
+
+    def draw(source: str) -> tuple[int, dict, str]:
+        """Run the renderer over `source`. Returns (exit code, manifest, detail)."""
+        try:
+            proc = subprocess.run(cmd, input=source, text=True, encoding="utf-8",
+                                  capture_output=True, timeout=120, cwd=str(REPO_ROOT))
+        except Exception as exc:                   # timeout, OSError, ...
+            logger.warning("design render failed: %s", exc)
+            return 1, {}, f"Renderer failed to run: {exc}"
+        out = (proc.stdout or "").strip()
+        found: dict = {}
+        for line in reversed(out.splitlines()):    # manifest is the last JSON line
+            try:
+                found = json.loads(line)
+                break
+            except ValueError:
+                continue
+        detail = found.get("error") or (proc.stderr or out or "").strip()[-1200:]
+        return proc.returncode, found, detail
+
+    code, manifest, detail = draw(text)
+    repaired = False
+    if (code != 0 or not manifest.get("ok")) and _looks_like_plan(text):
+        # The outline is there but the design block is not — ask for just the
+        # block and draw that instead of sending the operator back to the chat.
+        logger.info("design block missing from a plan — requesting it")
+        block = _design_block_for(get_settings(), text)
+        if block:
+            code, manifest, detail = draw(block)
+            repaired = manifest.get("ok", False)
+
+    if code != 0 or not manifest.get("ok"):
+        logger.info("design render refused (exit %s): %s", code, detail[:200])
+        shutil.rmtree(run_dir, ignore_errors=True)
+        # The common case is a reply that is a spec or a follow-up answer, not an
+        # outline — say what to do about it instead of echoing the parser.
+        if "no diagram" in detail.lower():
+            detail = ("that reply carries no `diagram` block, and the planner could "
+                      "not produce one from it. Ask for \"the outline again, with "
+                      "the design block\".")
+        return JSONResponse({"ok": False, "error": f"No design to draw — {detail}"})
+
+    images = []
+    for item in (manifest.get("images") or [])[:MAX_DESIGN_JOURNEYS]:
+        path = Path(item.get("path") or "")
+        if not path.is_file():
+            continue
+        images.append({
+            "name": path.name,
+            "journeys": item.get("journeys") or [],
+            "w": item.get("w"), "h": item.get("h"),
+            "data": "data:image/png;base64,"
+                    + base64.b64encode(path.read_bytes()).decode("ascii"),
+        })
+    if not images:
+        shutil.rmtree(run_dir, ignore_errors=True)
+        return JSONResponse({"ok": False, "error": "Renderer produced no boards."})
+    _prune_design_runs()
+    return JSONResponse({"ok": True, "repaired": repaired,
+                         # Half a plan drawn beats none, but the operator has to
+                         # know the design data itself was cut off.
+                         "truncated": bool(manifest.get("truncated")),
+                         # near-identical journeys share a board, so the count of
+                         # boards is not the count of journeys
+                         "collapsed": int(manifest.get("collapsed") or 0),
+                         "count": len(images), "images": images,
+                         "campaign": manifest.get("campaign") or "",
+                         "journeys": manifest.get("journeys") or len(images),
+                         "dir": str(run_dir)})
 
 
 @router.post("/admin/planner/api")
@@ -277,11 +1176,14 @@ async def planner_api(
             status_code=200,
         )
 
-    if provider == "groq":
-        text, error = _call_groq(settings, system_prompt, messages, temperature)
-    else:
-        text, error = _call_gemini(settings, system_prompt, messages, temperature)
+    totals = _usage_start()
+    text, error = _complete(settings, messages, temperature)
+    # Cached input bills far below fresh input, and the system prompt is identical
+    # on every call, so the cache-hit share is the single most useful number here.
+    logger.info("planner usage: %d call(s), input %d (cached %d), thought %d, answer %d",
+                totals["calls"], totals["input"], totals["cached"],
+                totals["thought"], totals["answer"])
 
     if error:
         return JSONResponse({"error": error}, status_code=200)
-    return JSONResponse({"text": text})
+    return JSONResponse({"text": text, "usage": totals})

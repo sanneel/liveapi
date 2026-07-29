@@ -1,8 +1,13 @@
 # Journey Composer System — Project Status & Implementation Guide
 
-**Last Updated:** 2026-07-21  
-**Branch:** `claude/journey-planner-mvp-test-882ubc`  
-**Status:** ~80% Ready — Core system + games registry complete; 2 recipes + UI pending
+**Last Updated:** 2026-07-29  
+**Branch:** `claude/ai-planner-chain-composer`  
+**Status: BETA — trust the builder, verify the plan.** The pipeline runs end to
+end from the admin (brief → plan → design boards → console scripts → drafts in
+the backoffice), and the composer's refusals are reliable. The *planning* step is
+probabilistic and still makes domain mistakes, so no plan should reach production
+without an operator reading its flags. See **Phase** below for what that means
+concretely and what is left.
 
 ---
 
@@ -38,6 +43,89 @@ Console Script (token capture + POST)
     ↓
 Backoffice (paste + renders ✅)
 ```
+
+---
+
+---
+
+## Phase: where the AI actually is (2026-07-29)
+
+The system has two halves and they are at different maturities. Conflating them
+is how "can I trust it?" gets the wrong answer.
+
+### The builder — dependable
+Deterministic, and it refuses rather than guesses. Measured behaviour:
+
+| Guard | Refuses when |
+| --- | --- |
+| games registry | a game is not in `library/games.json` (4,901 games) — with near matches |
+| knob validation | a spec uses a knob the recipe does not define, or omits a required one |
+| recipe fit | the recipe cannot express the journey (no game knob, a deposit gate it does not want) |
+| inherited content | the built journey still shares copy, artwork, links or an email template with its reference |
+| game swaps | a repair round tried to substitute a near-match game for an unregistered one |
+| wheel slices | the prize count does not match a captured template (4 / 5 / 6) |
+| implausible values | amounts nobody meant (a 0-spin bonus, a bet outside the sane range) |
+
+Every one of these was written after the failure it prevents reached a real
+draft. **This half is worth relying on**: it will not silently ship something
+wrong, and when it refuses, the message names the field and the fix.
+
+### The planner — assistive, not autonomous
+Scored by `scripts/eval_planner.py` (a fixed brief set, mechanical checks):
+
+```
+closing_line      ██████████ 100%     grouped           ██████████ 100%
+design_block      ██████████ 100%     mode1_shape       ██████████ 100%
+flags_terse       ██████████ 100%     no_false_blockers ██████████ 100%
+no_invented       ██████████ 100%     wheel_fits        ████████·· 75%
+OVERALL 98%  (was 85% before the 2026-07-29 changes)
+```
+
+Those checks cover **format and internal consistency**. Nothing verifies that a
+plan matches what the brief *meant* — that judgement is the operator's. Real
+mistakes seen while building this: a 31-slice wheel, six invented "(Fallback)"
+journeys, a ⛔ claiming a registered game was missing, and a run that dropped the
+brief's deposit ladder entirely.
+
+**The working contract:** read the ⚠ / ❓ / ⛔ flags and the design boards before
+pressing Full script. Almost every problem was visible there.
+
+### What moved on 2026-07-29
+- Thinking was **off** (`gemini_thinking_budget: 0`) to save cost. Measured: the
+  saving was imaginary — without it the model wrote 10,950 tokens of wrong answer
+  instead of 8,189 thought + 2,946 of right answer, 0.5% total difference. Now on.
+- Planning runs on `gemini-2.5-flash`, mechanical repairs on flash-lite with the
+  lean prompt and a 1024 thinking budget (−58% billed output, same result).
+- A truncated reply continues itself; `planner_max_tokens` 4096 → 16384. At the
+  old cap a 30-journey plan died mid-JSON and every later step had nothing.
+- Design boards, and near-identical journeys fold onto one board by shape.
+- Journeys **and the wheel** in one paste (`compose.py --batch`).
+- Token usage is reported per reply and totalled in the AI page.
+
+### What is left, in the order I would do it
+
+1. **Games registry gaps.** `Bone Fortune` (TaDa) and `3x5 Double Blazing`
+   (Gamzix) are absent — those providers are not in the registry at all. Any
+   campaign naming them cannot be built. Refresh with
+   `build_games_registry.py`; needs a backoffice catalog capture.
+2. **`wheel_fits` at 75%.** One run stated no prize count at all, so a reviewer
+   could not tell whether the wheel was buildable. Should be 100%.
+3. **The eval stops at MODE 1.** Nothing scores the steps after planning: does
+   "give specs" then "full script" produce journeys that match the brief? That is
+   the gap between 98% on format and confidence in the output.
+4. **A 7-slice wheel.** Six prizes plus an empty slice is a shape no captured
+   template has. Real campaigns ask for it.
+5. **Email content beyond the template id.** A comms journey can point at an
+   email content, but the copy inside it is still created by hand.
+6. **Recipes that cannot carry a game.** `casino_deposit_freespins` has no game
+   knob, so a deposit+freespins brief is pushed to MODE 5 chains via a repair
+   round. Adding the knob would remove a whole class of refusal-and-retry.
+
+### Cost, for reference
+A full workflow (plan → boards → specs → script) is roughly 5–7 model calls.
+Input is ~23K tokens per call but Gemini's implicit cache hits it hard (measured
+`cached 23,515 of 23,528` on a repeat), so output dominates. The AI page shows a
+running total; watch the cached percentage — if it drops, inputs get expensive.
 
 ---
 
@@ -129,27 +217,12 @@ Both sport and casino recipes proven to render + save in the backoffice editor.
 
 ---
 
-## What's Pending (Next Sprint)
+## What's Pending
 
-### UI Integration (2 hours)
-
-To make it one-click end-to-end:
-
-1. **Backoffice button** ("Generate journey spec")
-   - Takes brief as input
-   - Calls planner LLM
-   - Displays MODE 3 JSON
-
-2. **API endpoint** (`POST /admin/planner/compose`)
-   - Takes spec JSON
-   - Calls `compose.py --spec`
-   - Returns console script ready to paste
-
-3. **UI flow** (download or copy button for script)
-
-**Files to create/modify:**
-- `app/routes/admin_planner.py` (add compose endpoint)
-- `app/templates/planner/index.html` (add button + script download)
+The UI integration this section used to describe has shipped: the AI page
+(`/admin/ai`) runs brief → plan → boards → **Full script** → drafts, with
+`POST /admin/planner/api`, `/design` and `/compose` behind it. For the current
+list of what is genuinely outstanding, see **Phase → What is left** above.
 
 ---
 
@@ -161,7 +234,7 @@ To make it one-click end-to-end:
 cd /home/user/liveapi
 
 # 1. Get MODE 3 spec from planner
-# (via backoffice chat at /admin/planner, or use test spec below)
+# (via the AI page at /admin/ai, or use the test spec below)
 
 # 2. Create a brief.json file
 cat > /tmp/test_brief.json <<'EOF'

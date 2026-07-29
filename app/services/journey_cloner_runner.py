@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import os
 import json
 import re
@@ -182,6 +183,8 @@ NC_DISCOUNT_SCRIPT_PATH = CLONER_DIR / "nc_discount_campaign.py"
 NC_DISCOUNT_PMCL_SCRIPT_PATH = CLONER_DIR / "nc_discount_pmcl_campaign.py"
 PREDICTION_SCRIPT_PATH = CLONER_DIR / "prediction_campaign.py"
 TOURNAMENT_PMCL_SCRIPT_PATH = CLONER_DIR / "tournament_pmcl_campaign.py"
+COMPOSE_SCRIPT_PATH = CLONER_DIR / "compose.py"
+CHAIN_COMPOSER_SCRIPT_PATH = CLONER_DIR / "journey_composer.py"
 BET_AND_GET_PMCL_SCRIPT_PATH = CLONER_DIR / "bet_and_get_pmcl_campaign.py"
 
 # Randomizer promos (weighted prize wheels / scratch cards). Keys must match
@@ -557,6 +560,105 @@ def git_pull() -> Tuple[int, str]:
         timeout=60,
     )
     return result.returncode, (result.stdout + result.stderr).strip()
+
+
+def _strip_fences(text: str) -> str:
+    """Return the JSON object inside a planner reply — the last ```json block if
+    fenced, else the first balanced {...}, else the text as-is. Mirrors
+    compose._extract_json, which is not importable from here (journey-cloner is
+    not a package on the app's path)."""
+    blob = (text or "").strip()
+    fences = re.findall(r"```(?:json|JSON)?\s*(.*?)```", blob, re.S)
+    if fences:
+        return fences[-1].strip()
+    depth, start = 0, None
+    for i, ch in enumerate(blob):
+        if ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}" and depth:
+            depth -= 1
+            if depth == 0 and start is not None:
+                return blob[start:i + 1]
+    return blob
+
+
+def generate_composed_console_script(
+    spec_text: str, *, mode: str = "spec"
+) -> Tuple[int, str, str, str | None, str]:
+    """Turn a planner reply into a pasteable console script.
+
+    `spec_text` is the LLM's reply VERBATIM — compose.py's _extract_json pulls
+    the object out of a ```json fence or a "Here is the spec:" lead-in, so the
+    operator never has to hand-clean it. A spec the composer refuses (unknown
+    recipe, ⛔ blocker, invented knob or game, out-of-range amount) exits 3 and
+    the refusal text comes back in the log for the operator to paste back into
+    the chat.
+
+    mode: "spec"       -> compose.py --spec            (MODE 3 recipe spec)
+          "graph"      -> compose.py --graph           (MODE 4 linear graph)
+          "chain"      -> journey_composer.py compose  (MODE 5 arbitrary chain —
+                          repeated activities, choosable flows, branches)
+          "randomizer" -> randomizer_campaign.py       (MODE 6 wheel / scratch
+                          card; flag-driven, so the spec becomes argv)
+          "batch"      -> compose.py --batch            (many recipe specs into
+                          ONE script: one token capture, one paste, N drafts)
+
+    Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
+    """
+    if mode not in ("spec", "graph", "chain", "randomizer", "batch"):
+        raise ValueError(
+            f"mode must be 'spec', 'graph', 'chain', 'randomizer' or "
+            f"'batch', got {mode!r}")
+    # Date the artifact so console_scripts/ stays browsable; _unique_basename's
+    # uuid suffix keeps concurrent requests from reading each other's file.
+    basename = _unique_basename("planner", datetime.date.today().isoformat())
+    if mode == "randomizer":
+        # randomizer_campaign.py is flag-driven, not stdin-driven, so the spec is
+        # translated into argv here rather than piped.
+        try:
+            spec = json.loads(_strip_fences(spec_text))
+        except ValueError as exc:
+            return 3, f"⛔ REFUSED — could not parse a randomizer spec: {exc}", "", None, ""
+        cmd = [python_executable(), str(RANDOMIZER_SCRIPT_PATH),
+               "--kind", str(spec.get("kind", "")), "--name", basename]
+        dates = spec.get("dates") or ([spec["date"]] if spec.get("date") else [])
+        if not dates:
+            return 3, "⛔ REFUSED — randomizer spec needs `date` or `dates`.", "", None, ""
+        cmd += (["--dates", *[str(d) for d in dates]] if len(dates) > 1
+                else ["--date", str(dates[0])])
+        if spec.get("days"):
+            cmd += ["--days", str(spec["days"])]
+        if spec.get("weights"):
+            cmd += ["--weights", *[str(w) for w in spec["weights"]]]
+        if spec.get("journeys"):
+            cmd += ["--journeys", *[str(j) for j in spec["journeys"]]]
+        if spec.get("internal_name"):
+            cmd += ["--internal-name", str(spec["internal_name"])]
+        if spec.get("url_short"):
+            cmd += ["--url-short", str(spec["url_short"])]
+        return _run_gow_cli(cmd, basename=basename)
+    if mode == "batch":
+        # Many recipe specs -> ONE console script. Exit 4 means PARTIAL: some
+        # composed, some refused, and the script still carries the ones that
+        # worked — worth returning, since _run_gow_cli only reads the file on 0.
+        cmd = [python_executable(), str(COMPOSE_SCRIPT_PATH), "--batch",
+               "--name", basename]
+        code, log, display_cmd, js, js_name = _run_gow_cli(
+            cmd, spec_text=spec_text, basename=basename)
+        if code == 4 and js is None:
+            js_path = CLONER_DIR / "console_scripts" / f"{basename}_console.js"
+            if js_path.exists():
+                js = js_path.read_text(encoding="utf-8")
+        return code, log, display_cmd, js, js_name
+    if mode == "chain":
+        cmd = [python_executable(), str(CHAIN_COMPOSER_SCRIPT_PATH), "compose", "-",
+               "--script", "--name", basename]
+    else:
+        cmd = [python_executable(), str(COMPOSE_SCRIPT_PATH), f"--{mode}",
+               "--name", basename]
+    return _run_gow_cli(cmd, spec_text=spec_text, basename=basename)
 
 
 def generate_nc_discount_console_script() -> Tuple[int, str, str, str | None, str]:

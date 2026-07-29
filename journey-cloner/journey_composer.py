@@ -64,10 +64,29 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 TPL = HERE / "templates" / "casino"
 OUT = HERE / "out"
+CONSOLE_OUT = HERE / "console_scripts"     # shared with compose.py / the runner
 
 GOW = TPL / "gow.json"
 COMMS = TPL / "gow_comms.json"
 DEFAULT_SEGMENT = TPL / "segment_cs_301.json"
+
+# Every capture the library draws activity types from, in priority order: the
+# first template containing a type supplies the canonical instance.
+#
+# The "one reference per journey, never mix" rule in COMPOSER_RULES.md is about
+# compose.py's RECIPE model, which lifts a whole chain out of one capture and
+# depends on that capture's shared shell. This composer works differently — it
+# deep-clones each activity WITH its own mirror element, regenerates ids per
+# node and rewires dependencies by role — so a node from a second capture is no
+# more foreign than a second node from the first. Sport activities (freebet,
+# registration) live only in the udch captures, and excluding them made every
+# sport prize unbuildable.
+SOURCES = (
+    GOW,
+    COMMS,
+    HERE / "templates" / "udch" / "two_hours.json",     # freebet, registration
+    HERE / "templates" / "udch" / "followup.json",      # multipurpose + freebet
+)
 
 UUID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I)
 
@@ -89,6 +108,69 @@ GAMES: dict[str, dict[str, str]] = {
     },
 }
 
+# The two entries above are legacy shorthands. The authoritative registry is
+# library/games.json (106 games), the same file compose.py grounds against —
+# hardcoding a two-game list here meant every other game was unbuildable.
+GAMES_FILE = HERE / "library" / "games.json"
+_GAME_FIELDS = ("lobbyGameId", "walletGameId", "externalGameId", "provider",
+                "gameTranslationKey", "providerTranslationKey")
+
+
+def _norm(s: str) -> str:
+    """Loose key for name matching: 'La Gran Copa Jugabet' -> 'lagrancopajugabet'."""
+    return "".join(ch for ch in str(s).lower() if ch.isalnum())
+
+
+def _game_index() -> dict[str, dict[str, str]]:
+    """Every way a brief might name a game -> that game's captured id tuple.
+    Indexes lobbyGameId, each alias, and the display name, all normalised."""
+    if not hasattr(_game_index, "_cache"):
+        idx: dict[str, dict[str, str]] = {}
+        for slug, entry in GAMES.items():          # legacy shorthands win ties
+            idx[_norm(slug)] = dict(entry)
+        try:
+            registry = json.loads(GAMES_FILE.read_text(encoding="utf-8")).get("games") or {}
+        except (OSError, ValueError):
+            registry = {}
+        for lobby_id, entry in registry.items():
+            tup = {f: entry.get(f) for f in _GAME_FIELDS if entry.get(f)}
+            if not tup.get("providerTranslationKey") and entry.get("provider"):
+                tup["providerTranslationKey"] = " ".join(
+                    w.capitalize() for w in str(entry["provider"]).replace("_", "-").split("-") if w)
+            if not tup.get("lobbyGameId"):
+                continue
+            keys = [lobby_id, entry.get("gameTranslationKey"), *(entry.get("aliases") or [])]
+            for k in keys:
+                if k:
+                    idx.setdefault(_norm(k), tup)
+        _game_index._cache = idx
+    return _game_index._cache
+
+
+def resolve_game(name: str) -> dict[str, str]:
+    """Resolve a brief's game name to its captured id tuple, or refuse.
+
+    Previously an unknown game only warned and kept the reference template's
+    game, so a journey would silently award spins on gow.json's own game under
+    a fully green build. A game nobody can resolve is a plan with a hole."""
+    idx = _game_index()
+    hit = idx.get(_norm(name))
+    if hit:
+        return hit
+    import difflib
+    key = _norm(name)
+    near = difflib.get_close_matches(key, list(idx), n=3, cutoff=0.6)
+    # Briefs often use a short form ("Big Bass"), which scores too low for
+    # difflib but is an unambiguous prefix/substring of the real title.
+    if len(key) >= 4:
+        near += [k for k in idx if key in k and k not in near][:5]
+    suggestions = sorted({idx[n].get("gameTranslationKey") or n for n in near})[:5]
+    raise SystemExit(
+        f"unknown game {name!r} — not in {GAMES_FILE.name} ({len(idx)} lookup keys). "
+        + (f"Did you mean: {suggestions}? " if suggestions else "")
+        + "Refusing to keep the reference template's game, which would award "
+          "spins on the wrong title.")
+
 # chain-type aliases -> canonical captured activity key (every captured type)
 ALIASES = {
     "csv": "dwh_source", "segment": "dwh_source", "dwh_source": "dwh_source",
@@ -100,7 +182,19 @@ ALIASES = {
     "bonus": "casino_bonus_v2", "casino_bonus": "casino_bonus_v2", "wagering": "casino_bonus_v2",
     "casino_bonus_v2": "casino_bonus_v2",
     "notification": "notification_center#contract1", "nc": "notification_center#contract1",
+    # The canonical activity name must resolve too. Without it a spec written
+    # with the platform's own wire name — which is what the knowledge base and
+    # MODE 1/2 output both use — was refused as an unknown chain type.
+    "notification_center": "notification_center#contract1",
+    "onsite": "notification_center#contract1",
     "popup": "notification_center#contract5",
+    # Sport activities, available since the udch captures joined SOURCES.
+    "freebet": "freebet", "free_bet": "freebet", "sport_freebet": "freebet",
+    "sport_bonus": "sport_bonus", "sportbonus": "sport_bonus",
+    "registration": "registration", "promocode": "registration",
+    "reference_codes": "registration",
+    "campaign_connector": "campaign_connector", "connector": "campaign_connector",
+    "random_split": "random_split", "randomsplit": "random_split",
     "sms": "dextra_sms", "dextra_sms": "dextra_sms",
     "email": "dextra_email", "dextra_email": "dextra_email",
     "wait": "wait_interval", "wait_interval": "wait_interval",
@@ -110,7 +204,10 @@ ALIASES = {
     "emailsplit": "email_engagement_split", "email_engagement_split": "email_engagement_split",
     "decisionsplit": "ams_decision_split", "ams_decision_split": "ams_decision_split",
 }
-SOURCE_TYPES = {"dwh_source", "external_system_source"}
+# Entry activities. `registration` (the backoffice's "Reference codes" node)
+# fires PlayerAdded, an ACTIVATION — it starts a journey, it cannot sit in
+# the middle of one, so it belongs here rather than among the chain types.
+SOURCE_TYPES = {"dwh_source", "external_system_source", "registration"}
 
 # The default forward completion event per node type — all are real captured
 # events. Override per node with "follow": "<EventName>"; route other events
@@ -125,6 +222,9 @@ HAPPY = {
     "notification_center#contract5": "NotificationSent",
     "dextra_sms": "SuccessSmsSend",
     "dextra_email": "SuccessEmailSend",
+    "freebet": "PlayerFreebetUsed",
+    "sport_bonus": "SportBonusFinished",
+    "campaign_connector": "PlayerAddedToCampaign",
     "wait_interval": "WaitTimeCompleted",
     "event_detector": "DetectorSuccess",
     # splits: default to the captured "engaged" path; use follow/branches to
@@ -141,14 +241,33 @@ SETTINGS_DOC = {
     "promotion": {"(none)": "external promotion refs are kept from the capture; promotionDisplayId is stripped"},
     "deposit": {"min_deposit": "minimum deposit amount, platform minor units (all tiers set to this)",
                 "timeout": "ISO-8601 window, e.g. P0Y0M1DT0H0M0S"},
-    "freespin_bonus": {"spins": "free-spin count", "game": f"one of {list(GAMES)}",
+    "freespin_bonus": {"spins": "free-spin count",
+                       "spins_expiration_ms": "how long the spins stay usable, in "
+                                              "milliseconds (24h = 86400000)",
+                       "with_wagering": "false for an INSTANT bonus (no wagering "
+                                        "grind, no casino_bonus follow-up node)",
+                       "game": "game name, id or alias from library/games.json "
+                               "(see the `games` key); unknown names are REFUSED",
                        "bet_amount": "currenciesConfig.CLP.betAmount (minor units)"},
+    "freebet": {"amount": "free-bet value, platform MINOR units (3,000 CLP -> 300000)",
+                "max_odds": "maximum odds the free bet can be used at",
+                "expire_days": "days the free bet stays valid once issued"},
+    "registration": {"promocode": "the promocode players redeem to enter"},
     "casino_bonus_v2": {"bonus_percent": "deposit-match %", "wagering": "wagering requirement (x)",
                         "release_multiplier": "releaseLimitMultiplier", "expiration_ms": "bonusExpirationTime in ms"},
-    "notification_center#contract1": {"title_en/es, desc_en/es, caption_en/es": "on-site notification copy"},
-    "notification_center#contract5": {"title_en/es, desc_en/es, caption_en/es": "pop-up (Cat-fish) copy"},
+    "notification_center#contract1": {"title_en/es, desc_en/es, caption_en/es": "on-site notification copy",
+                                      "icon": "notification artwork URL — set it, or the card shows "
+                                              "the captured campaign's image",
+                                      "link_en/es": "where the card sends the player",
+                                      "deeplink": "app deeplink, when there is one"},
+    "notification_center#contract5": {"title_en/es, desc_en/es, caption_en/es": "pop-up (Cat-fish) copy",
+                                      "image": "pop-up background artwork URL — set it, or the "
+                                               "journey shows the captured campaign's picture"},
     "dextra_sms": {"text_en/es": "SMS body"},
-    "dextra_email": {"(none)": "email references a content-studio CSE id; swap it after creating email content"},
+    "dextra_email": {"template": "content-studio email id (e.g. CSE-0-14458). Set it, or the "
+                                 "journey emails the CAPTURED campaign's template — which the "
+                                 "inherited-content check refuses to build",
+                     "from_name": "from-line text (default: the reference's)"},
     "wait_interval": {"wait": "ISO-8601 duration, e.g. P0Y0M0DT1H0M0S"},
     "event_detector": {"(none)": "captured deposit-band watcher kept as-is"},
     "multipurpose_promotion": {"(none)": "captured choosable-flow drip kept as-is (see warning on compose)"},
@@ -157,7 +276,7 @@ SETTINGS_DOC = {
     "ams_decision_split": {"(none)": "branch with follow/branches on DecisionSplitPassedPath01..20/RemainderPath"},
 }
 # keys valid on every chain node, besides type + per-type settings
-UNIVERSAL_KEYS = {"type", "follow", "branches"}
+UNIVERSAL_KEYS = {"type", "follow", "branches", "parallel"}
 
 
 # ── template library ─────────────────────────────────────────────────────────
@@ -174,7 +293,7 @@ def load_library() -> dict:
     element, activitiesConfiguration entry, pathesConfiguration entry, and its
     captured outgoing edges keyed by eventName."""
     lib: dict[str, dict] = {}
-    for path in (GOW, COMMS):
+    for path in SOURCES:
         body = json.loads(path.read_text(encoding="utf-8-sig"))
         raw = body["rawJourneyData"]
         els = raw["elements"]
@@ -206,6 +325,34 @@ def load_library() -> dict:
 
 
 # ── cloning with fresh ids ───────────────────────────────────────────────────
+def load_parallel_parts() -> dict | None:
+    """The captured parallelFlow container and one flowEntry header.
+
+    Parallel flows are the one structure that is not a plain activity: the owner
+    activity's forward event carries `split.paths`, and the canvas gets a
+    container element whose children are re-parented into it. Both pieces are
+    CAPTURED in gow.json, so this clones them like everything else rather than
+    synthesising canvas — synthesising is what produces blank drafts.
+
+    Layout constants come from the capture: flows are columns 480px apart, the
+    header sits 88px down, content starts at 208px.
+    """
+    if not hasattr(load_parallel_parts, "_cache"):
+        parts = None
+        try:
+            els = json.loads(GOW.read_text(encoding="utf-8-sig"))["rawJourneyData"]["elements"]
+            container = next(e for e in els if e.get("type") == "parallelFlow")
+            entry = next(e for e in els
+                         if e.get("type") == "flowEntry"
+                         and e.get("parentNode") == container["id"])
+            parts = {"container": container, "flow_entry": entry,
+                     "col_step": 480, "header_y": 88, "content_y": 208}
+        except (OSError, ValueError, StopIteration, KeyError):
+            parts = None
+        load_parallel_parts._cache = parts
+    return load_parallel_parts._cache
+
+
 def clone_with_fresh_id(entry: dict) -> dict:
     """Deep-clone a library node and swap its captured activityId for a fresh
     uuid4 via serialized string replace (ports/handles/config keys embed the id
@@ -255,17 +402,45 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
         if "spins" in s:
             note("spins", fa.get("spins"), s["spins"]); fa["spins"] = s["spins"]
         if "game" in s:
-            g = GAMES.get(str(s["game"]))
-            if not g:
-                warnings.append(f"unknown game {s['game']!r}; known: {list(GAMES)} — kept template game")
-            else:
-                for k, v in g.items():
-                    note(k, fa.get(k), v); fa[k] = v
+            # resolve_game refuses an unresolvable name rather than leaving the
+            # reference template's game in place under a green build.
+            for k, v in resolve_game(str(s["game"])).items():
+                note(k, fa.get(k), v); fa[k] = v
+        if "spins_expiration_ms" in s:
+            note("spinsExpirationDuration", fa.get("spinsExpirationDuration"), s["spins_expiration_ms"])
+            fa["spinsExpirationDuration"] = s["spins_expiration_ms"]
+        if "with_wagering" in s:
+            # The instant-bonus marker: freespinActivity.withWagering false and
+            # no wagering follow-up node. Without this setting an instant bonus
+            # could only be expressed by omitting the casino_bonus_v2 node, and
+            # the captured node's own withWagering=true survived into it.
+            v = bool(s["with_wagering"])
+            note("withWagering", fa.get("withWagering"), v); fa["withWagering"] = v
         if "bet_amount" in s:
             cc = (fa.get("currenciesConfig") or {}).get("CLP") or {}
             note("betAmount", cc.get("betAmount"), s["bet_amount"]); cc["betAmount"] = s["bet_amount"]
             if "betAmount_majorUnits" in cc:      # proven pipeline keeps both in sync
                 cc["betAmount_majorUnits"] = int(s["bet_amount"]) // 100
+    elif kind == "freebet":
+        props = init.get("properties") or {}
+        if "amount" in s:
+            cur = props.get("freeBetAmount") or {}
+            for ccy in (cur or {"CLP": None}):
+                note(f"freeBetAmount.{ccy}", cur.get(ccy), s["amount"]); cur[ccy] = s["amount"]
+            props["freeBetAmount"] = cur
+        if "max_odds" in s:
+            note("maxOdd", props.get("maxOdd"), s["max_odds"]); props["maxOdd"] = s["max_odds"]
+        if "expire_days" in s:
+            note("expireInDays", props.get("expireInDays"), s["expire_days"])
+            props["expireInDays"] = s["expire_days"]
+    elif kind == "registration":
+        if "promocode" in s:
+            # The captured entry node carries a real promocode (VAMOSBULLA);
+            # leaving it is how another campaign's code reached a new journey.
+            ps = init.get("promocodeSettings") or {}
+            note("promocodeSettings.values", ps.get("values"), [s["promocode"]])
+            ps["values"] = [s["promocode"]]
+            init["displayData"] = [f"Promo codes: {s['promocode']}"]
     elif kind == "casino_bonus_v2":
         pairs = {"bonus_percent": "bonusPercent", "wagering": "wageringRequirement",
                  "release_multiplier": "releaseLimitMultiplier", "expiration_ms": "bonusExpirationTime"}
@@ -280,7 +455,10 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
         # (contract1 keys: title-en/des-en/caption-en; contract5: title_en/description_en/caption_en)
         vars_ = (init.get("objectForSend") or {}).get("variables") or []
         tabs = (init.get("singleChannel") or {}).get("localizedLanguagesTab") or {}
-        keymap = {"title": "title", "desc": "des", "caption": "caption"}
+        # `link` matters as much as the copy: a captured card carries the OLD
+        # campaign's promo-page URL, so a new journey silently linked players to
+        # the previous promotion.
+        keymap = {"title": "title", "desc": "des", "caption": "caption", "link": "link"}
         for skey, stem in keymap.items():
             for lang in ("en", "es"):
                 val = s.get(f"{skey}_{lang}")
@@ -300,6 +478,40 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
                             tab[tk] = val; hit = True
                 if not hit:
                     warnings.append(f"{kind}: no captured variable matched {skey}_{lang}")
+        # Language-independent fields, held once in the `common` tab.
+        for skey, stems in (("icon", ("icon",)),
+                            # the pop-up's artwork is a background image, not an
+                            # icon — a chain that set only `icon` still shipped
+                            # the captured campaign's picture
+                            ("image", ("background_image_src", "backgroundimagesrc")),
+                            ("deeplink", ("deeplink",))):
+            val = s.get(skey)
+            if val is None:
+                continue
+            for v in vars_:
+                if (v.get("name") or "").lower() in stems:
+                    note(v["name"], v.get("value"), val); v["value"] = val
+            for tab in tabs.values():
+                if isinstance(tab, dict):
+                    for tk in list(tab):
+                        if tk.lower() in stems:
+                            tab[tk] = val
+    elif kind == "dextra_email":
+        # The email node is copied whole, so without this it keeps the captured
+        # campaign's template — and the inherited-content guard (rightly) refuses
+        # to build a comms journey that would email players the old promotion.
+        es = init.get("emailSettings") or {}
+        if "template" in s and es:
+            tpl = es.get("template") or {}
+            note("emailSettings.template.id", tpl.get("id"), s["template"])
+            tpl["id"] = s["template"]
+            es["template"] = tpl
+            # displayData is what the builder shows on the card; leaving the old
+            # id there is how a reviewer sees the wrong template name.
+            init["displayData"] = [str(s["template"])]
+        if "from_name" in s and es:
+            note("emailSettings.fromLineText", es.get("fromLineText"), s["from_name"])
+            es["fromLineText"] = s["from_name"]
     elif kind == "dextra_sms":
         for lang in ("en", "es"):
             val = s.get(f"text_{lang}")
@@ -351,21 +563,56 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
         report.append(f"dwh_source: segment <- {frag_path.name} "
                       f"({(frag.get('currentTemplate') or {}).get('name')!r})")
 
-    # unknown keys: loud, never silent
+    # DUAL STORAGE: the editor mirror keeps its own copy of the activity config,
+    # and the setters above edit only initializationData. Without this sync the
+    # journey RUNS with the new copy while the builder still SHOWS the captured
+    # campaign's — the notification content set on a wheel-prize journey landed
+    # on the activity and left "🏆 La Gran Copa JugaBet" in the mirror.
+    if cfg is not None:
+        for mirror_key in list(cfg.keys()):
+            if mirror_key in init:
+                cfg[mirror_key] = copy.deepcopy(init[mirror_key])
+    # displayData is the label the builder prints on the node, and it lives at
+    # the mirror entry's TOP level, a sibling of `data` — so the loop above never
+    # reached it and a renamed promocode still showed "Promo codes: VAMOSBULLA".
+    conf = node.get("config")
+    if isinstance(conf, dict):
+        for top_key in ("displayData",):
+            if top_key in conf and top_key in init:
+                conf[top_key] = copy.deepcopy(init[top_key])
+
+    # Unknown keys are REFUSED, not warned about. A warning here meant a spec
+    # that nested its values under "settings", or used a recipe knob name like
+    # spin_bet_clp instead of bet_amount, composed cleanly and shipped the
+    # captured template's own values — 50 spins on La Gran Copa when the brief
+    # asked for 30 on Big Bass, "VERIFIED OK", exit 0.
     known = {
         "deposit": {"min_deposit", "timeout"},
-        "freespin_bonus": {"spins", "game", "bet_amount"},
+        "freespin_bonus": {"spins", "game", "bet_amount", "with_wagering",
+                           "spins_expiration_ms"},
+        "freebet": {"amount", "max_odds", "expire_days"},
+        "registration": {"promocode"},
         "casino_bonus_v2": {"bonus_percent", "wagering", "release_multiplier", "expiration_ms"},
-        "notification_center#contract1": {f"{a}_{l}" for a in ("title", "desc", "caption") for l in ("en", "es")},
-        "notification_center#contract5": {f"{a}_{l}" for a in ("title", "desc", "caption") for l in ("en", "es")},
+        "notification_center#contract1": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "image", "deeplink"},
+        "notification_center#contract5": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "image", "deeplink"},
         "dextra_sms": {"text_en", "text_es"},
+        "dextra_email": {"template", "from_name"},
         "wait_interval": {"wait"},
         "external_system_source": {"description"},
         "dwh_source": {"segment_file"},
     }.get(kind, set())
-    for k in s:
-        if k not in known and k not in UNIVERSAL_KEYS:
-            warnings.append(f"{kind}: setting {k!r} is not supported (known: {sorted(known)})")
+    bad = [k for k in s if k not in known and k not in UNIVERSAL_KEYS]
+    if bad:
+        hint = ""
+        if "settings" in bad:
+            hint = (" — put settings INLINE on the node "
+                    '({"type": "freespins", "spins": 30}), not nested under a '
+                    '"settings" key')
+        raise SystemExit(
+            f"{kind}: unsupported setting(s) {sorted(bad)}{hint}. "
+            f"Known for this activity: {sorted(known)} (plus {sorted(UNIVERSAL_KEYS)}). "
+            f"Refusing to build — an ignored setting ships the captured "
+            f"template's own value instead of the one you asked for.")
 
 
 # ── the composer ─────────────────────────────────────────────────────────────
@@ -381,6 +628,13 @@ def compose(spec: dict) -> dict:
     if src_kind not in SOURCE_TYPES:
         raise SystemExit(f"source.type must be one of csv/segment/api, got {src_spec.get('type')!r}")
     chain_specs = spec.get("chain") or []
+    # A spec often ends with an explicit terminal because that is how MODE 1/2
+    # writes the flow out ("... -> freespins -> end_of_journey"). The composer
+    # appends the terminal itself, so an explicit one is redundant, not wrong —
+    # refusing it made the model rewrite a correct chain to fix a non-problem.
+    _TERMINALS = {"end", "end_of_journey", "end_of_path", "exit", "endofjourney"}
+    while chain_specs and str((chain_specs[-1] or {}).get("type", "")).lower() in _TERMINALS:
+        chain_specs = chain_specs[:-1]
     if not chain_specs:
         raise SystemExit("chain must have at least one node")
 
@@ -408,6 +662,7 @@ def compose(spec: dict) -> dict:
     placed: list[dict] = []
     edges_wanted: list[tuple] = []     # (node_entry|"src", event, target_id)
     exits_drawn: list[tuple] = []      # (end_id, col, row)
+    parallel_blocks: list[dict] = []   # filled by build_level, drawn after layout
     col_counter = [0]
 
     def completion_events(kind: str) -> set:
@@ -451,12 +706,52 @@ def compose(spec: dict) -> dict:
             nxt = level[i + 1]["node"]["new_id"] if i + 1 < len(level) else term
             branch_heads = {bev: build_level(bspecs, node_upstream, row + 1 + list(branches).index(bev))
                             for bev, bspecs in branches.items()}
+
+            # PARALLEL: the follow event fans out into N simultaneous flows via
+            # split.paths instead of a single nextActivityId. Each flow is an
+            # ordinary chain; the wrap into a container element happens after
+            # layout, in _wrap_parallel().
+            parallel_specs = c.get("parallel") or []
+            parallel_plan = None
+            if parallel_specs:
+                if not isinstance(parallel_specs, list) or not all(
+                        isinstance(f, list) and f for f in parallel_specs):
+                    raise SystemExit(
+                        f"{k}: `parallel` must be a list of flows, each a non-empty "
+                        f"list of chain nodes — e.g. "
+                        f'"parallel": [[{{"type":"freespins","spins":100}}], [...], [...]]')
+                if branches:
+                    raise SystemExit(
+                        f"{k}: use either `branches` (one event each) or `parallel` "
+                        f"(one event, simultaneous flows), not both on one node.")
+                flows = []
+                for fi, fspecs in enumerate(parallel_specs):
+                    head = build_level(fspecs, node_upstream, row + 1 + fi)
+                    flows.append({"flow_id": str(uuid.uuid4()), "head": head,
+                                  "path_id": fi + 1, "name": f"Flow {fi + 1}"})
+                parallel_plan = {"owner": entry, "event": follow, "flows": flows, "after": nxt}
+                parallel_blocks.append(parallel_plan)
+
             for ev in node["activity"].get("events", []):
+                # A captured node can arrive with `split` already on one of its
+                # events — the original journey's parallel block. Its flowIds and
+                # nextActivityIds point at nodes that do not exist here, so it is
+                # a dangling reference on every event we are not fanning out on.
+                if not (parallel_plan and ev.get("eventName") == follow):
+                    ev.pop("split", None)
                 if ev.get("eventType") != "Completion":
                     ev.pop("nextActivityId", None)      # boundary events carry no next
                     continue
                 en = ev.get("eventName")
-                if en == follow:
+                if en == follow and parallel_plan:
+                    # The capture keeps nextActivityId alongside split; the split
+                    # is what the engine fans out on.
+                    ev["split"] = {"paths": [
+                        {"pathId": f["path_id"], "pathName": f["name"],
+                         "flowId": f["flow_id"], "nextActivityId": f["head"]}
+                        for f in parallel_plan["flows"]]}
+                    ev["nextActivityId"] = parallel_plan["flows"][0]["head"]
+                elif en == follow:
                     ev["nextActivityId"] = nxt
                     edges_wanted.append((entry, en, nxt))
                 elif en in branch_heads:
@@ -564,11 +859,105 @@ def compose(spec: dict) -> dict:
             "sourceHandle": f"{ev_name}-{sid}", "targetHandle": f"input-{tgt_id}",
         }
 
+    def port_edge(sid: str, tgt_id: str, source_handle: str, activity_name: str,
+                  event_name: str = "") -> dict:
+        """An edge whose source port is NOT an event handle — the container and
+        flowEntry connectors, which hang off named ports instead."""
+        return {
+            "id": str(uuid.uuid4()),
+            "data": {"isHidden": False, "eventName": event_name,
+                     "eventType": "Completion" if event_name else None,
+                     "activityName": activity_name, "isLabelHidden": True,
+                     "isReconnectable": False, "eventDisplayName": event_name,
+                     "isDisconnectable": False, "canBeUsedInChoosableFlow": False},
+            "type": "default", "style": {"strokeDasharray": "3"}, "hidden": False,
+            "source": sid, "target": tgt_id, "zIndex": 1,
+            "sourceHandle": source_handle, "targetHandle": f"input-{tgt_id}",
+            "labelBgPadding": [10, 3], "labelBgBorderRadius": 4,
+            "labelStyle": {"color": "#000", "fontSize": 14, "fontWeight": 700},
+            "labelBgStyle": {"fill": "#D2D2D2"},
+        }
+
     act_ev = next((e["eventName"] for e in src["activity"].get("events", [])
                    if e.get("eventType") == "Activation"), "PlayerAdded")
     elements.append(make_edge(src["new_id"], src_kind, act_ev, head_id))
     for entry, ev_name, tgt in edges_wanted:
         elements.append(make_edge(entry["node"]["new_id"], entry["kind"], ev_name, tgt))
+
+    # ── wrap parallel blocks: container element + flowEntry headers ──
+    # Done AFTER layout so each flow is laid out as an ordinary chain first and
+    # then re-parented, rather than teaching the grid about nested coordinates.
+    for block in parallel_blocks:
+        parts = load_parallel_parts()
+        if not parts:
+            warnings.append("parallel: gow.json has no captured parallelFlow container; "
+                            "flows are wired in the activities but not drawn")
+            continue
+        by_id = {e["id"]: e for e in elements if "source" not in e}
+        owner_id = block["owner"]["node"]["new_id"]
+        cont = copy.deepcopy(parts["container"])
+        cont_id = str(uuid.uuid4())
+        cont["id"] = cont_id
+        cont["data"] = dict(cont.get("data") or {})
+        cont["data"]["ports"] = [{"id": f"input-{cont_id}"},
+                                 {"id": f"parallel-flow-output-{cont_id}"}]
+        # Collect each flow's elements: its head plus everything downstream of it
+        # that layout put on the same row.
+        flow_members: list[list[dict]] = []
+        for flow in block["flows"]:
+            head_el = by_id.get(flow["head"])
+            row = next((e["row"] for e in placed
+                        if e["node"]["new_id"] == flow["head"]), None)
+            members = [by_id[e["node"]["new_id"]] for e in placed
+                       if e["row"] == row and e["node"]["new_id"] in by_id] if row is not None else []
+            if head_el and head_el not in members:
+                members.insert(0, head_el)
+            flow_members.append(members)
+
+        col_step, header_y, content_y = parts["col_step"], parts["header_y"], parts["content_y"]
+        base_x, base_y = 120, 300 + 260 * (max(
+            (e["row"] for e in placed), default=0) + 1)
+        cont["position"] = {"x": base_x, "y": base_y}
+        cont["positionAbsolute"] = dict(cont["position"])
+        cont["width"] = cont["data"]["width"] = max(col_step * len(block["flows"]) + 120, 600)
+        cont["height"] = cont["data"]["height"] = 602
+        cont["style"] = {"width": f"{cont['width']}px", "cursor": "pointer",
+                         "height": f"{cont['height']}px"}
+        elements.append(cont)
+
+        for fi, (flow, members) in enumerate(zip(block["flows"], flow_members)):
+            fx = 96 + fi * col_step
+            # flowEntry header — its id IS the flowId the split refers to.
+            fe = copy.deepcopy(parts["flow_entry"])
+            fe["id"] = flow["flow_id"]
+            fe["data"] = dict(fe.get("data") or {})
+            fe["data"]["order"] = fi + 1
+            fe["data"]["ports"] = [{"id": f"flow-entry-output-{flow['flow_id']}"}]
+            fe["data"]["parentNode"] = owner_id
+            fe["parentNode"] = cont_id
+            fe["extent"] = "parent"
+            fe["position"] = {"x": fx, "y": header_y}
+            fe["positionAbsolute"] = {"x": base_x + fx, "y": base_y + header_y}
+            elements.append(fe)
+            # re-parent the flow's own nodes into the container
+            for mi, el in enumerate(members):
+                el["parentNode"] = cont_id
+                el["extent"] = "parent"
+                el["position"] = {"x": fx, "y": content_y + mi * 120}
+                el["positionAbsolute"] = {"x": base_x + el["position"]["x"],
+                                          "y": base_y + el["position"]["y"]}
+            if members:
+                # flowEntry -> the flow's first node, off the header's own port
+                elements.append(port_edge(
+                    flow["flow_id"], members[0]["id"],
+                    f"flow-entry-output-{flow['flow_id']}", "flowEntry"))
+        # owner -> container (the event's handle into the container's input),
+        # then container -> whatever follows the whole block.
+        elements.append(port_edge(
+            owner_id, cont_id, f"{block['event']}-{owner_id}",
+            names_raw(block["owner"]["kind"]), event_name=block["event"]))
+        elements.append(port_edge(
+            cont_id, block["after"], f"parallel-flow-output-{cont_id}", "parallelFlow"))
 
     all_nodes = [src] + [e["node"] for e in placed]
     acfg = {n["new_id"]: n["config"] for n in all_nodes if n.get("config")}
@@ -710,7 +1099,7 @@ def captured_connections() -> list[dict]:
     connection grammar, straight from the templates (like build_catalog)."""
     conns: list[dict] = []
     seen: set = set()
-    for path in (GOW, COMMS):
+    for path in SOURCES:
         body = json.loads(path.read_text(encoding="utf-8-sig"))
         by_id = {a["activityId"]: a for a in body["activities"]}
         for a in body["activities"]:
@@ -728,7 +1117,13 @@ def captured_connections() -> list[dict]:
 
 
 # ── CLI ──────────────────────────────────────────────────────────────────────
-def cmd_options(as_json: bool) -> int:
+def options() -> dict:
+    """The composable palette as data: sources, activities, their captured
+    events and settings, the games registry and the spec shape.
+
+    Split out of cmd_options so it can be imported — compose.py's catalog()
+    publishes a compacted form into the planner prompt, which is what lets the
+    planner emit chain specs instead of only the four fixed recipes."""
     lib = load_library()
     have = sorted(k for k in lib["types"] if k not in ("end_of_journey", "end_of_path"))
 
@@ -738,9 +1133,12 @@ def cmd_options(as_json: bool) -> int:
                 "boundary": sorted(e["eventName"] for e in evs if e.get("eventType") == "Boundary"),
                 "activation": sorted(e["eventName"] for e in evs if e.get("eventType") == "Activation")}
 
-    out = {
+    return {
         "sources": {"csv/segment": "dwh_source (segment/CSV-seeded audience)",
-                    "api": "external_system_source (API entry)"},
+                    "api": "external_system_source (API entry) — use this for a "
+                           "journey a randomizer routes winners into",
+                    "promocode": "registration (Reference codes entry; takes "
+                                 "`promocode`)"},
         "chain_types": {k: {"aliases": sorted(a for a, v in ALIASES.items() if v == k),
                             "default_follow": HAPPY.get(k),
                             "events": events_of(k),
@@ -748,7 +1146,10 @@ def cmd_options(as_json: bool) -> int:
                             "captured_in": lib["types"][k]["template"]}
                         for k in have if k not in SOURCE_TYPES},
         "captured_connections": captured_connections(),
-        "games": {k: v["gameTranslationKey"] for k, v in GAMES.items()},
+        # The full registry, so a caller (or an LLM) can resolve a brief's game
+        # name without guessing. Keyed by lobbyGameId -> display name.
+        "games": {e["lobbyGameId"]: e.get("gameTranslationKey") or e["lobbyGameId"]
+                  for e in _game_index().values()},
         "spec_shape": {"name": "str", "source": {"type": "segment|csv|api", "...settings": "?"},
                        "chain": [{"type": "<chain type>", "...settings": "?",
                                   "follow": "optional Completion event that continues the chain (default: default_follow)",
@@ -756,6 +1157,10 @@ def cmd_options(as_json: bool) -> int:
                        "date": "YYYY-MM-DD (stop anchor)", "days": "int (default 1)",
                        "immediately": "bool (default true)"},
     }
+
+
+def cmd_options(as_json: bool) -> int:
+    out = options()
     if as_json:
         print(json.dumps(out, ensure_ascii=False, indent=2))
     else:
@@ -792,9 +1197,33 @@ def emit_console_script(body: dict, out_path: Path) -> str:
     return str(out_path)
 
 
-def cmd_compose(spec: dict, as_json: bool, script: bool) -> int:
+def _inherited_content_errors(body: dict) -> list[str]:
+    """Campaign content this chain still shares with the templates it was cloned
+    from. A chain picks its own activities, but a communication node is copied
+    whole — so an SMS node the spec gave no text to still carries the captured
+    campaign's message, links and email template."""
+    try:
+        from compose import audit_inherited_content
+    except Exception:
+        return []
+    leaks: dict[str, None] = {}
+    for path in SOURCES:
+        try:
+            ref = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError):
+            continue
+        for line in audit_inherited_content(body, ref):
+            leaks.setdefault(line, None)
+    return list(leaks)
+
+
+def cmd_compose(spec: dict, as_json: bool, script: bool, basename: str | None = None) -> int:
     res = compose(spec)
     errs = verify(res["body"])
+    # Treat leaked campaign content as a verification failure: a journey that
+    # messages players with another campaign's copy is not a usable draft, and
+    # "VERIFIED OK" on one is exactly how the wrong SMS reached a real draft.
+    errs = errs + [f"inherited content — {line}" for line in _inherited_content_errors(res["body"])]
     OUT.mkdir(exist_ok=True)
     slug = re.sub(r"[^\w]+", "_", res["name"].lower()).strip("_")[:60]
     out_path = OUT / f"{slug}.journey.json"
@@ -802,7 +1231,14 @@ def cmd_compose(spec: dict, as_json: bool, script: bool) -> int:
 
     js_path = None
     if script and not errs:
-        js_path = emit_console_script(res["body"], OUT / f"{slug}.console.js")
+        if basename:
+            # Called by the backoffice runner, which reads back exactly
+            # console_scripts/<basename>_console.js — same convention as every
+            # other generator. Bare CLI runs keep the name-derived out/ path.
+            CONSOLE_OUT.mkdir(parents=True, exist_ok=True)
+            js_path = emit_console_script(res["body"], CONSOLE_OUT / f"{basename}_console.js")
+        else:
+            js_path = emit_console_script(res["body"], OUT / f"{slug}.console.js")
 
     summary = {
         "ok": not errs,
@@ -847,13 +1283,24 @@ def main() -> int:
     pc = sub.add_parser("compose"); pc.add_argument("spec"); pc.add_argument("--json", action="store_true")
     pc.add_argument("--script", action="store_true",
                     help="also emit the paste-ready browser console script (reserve id -> POST)")
+    pc.add_argument("--name", default=None,
+                    help="emit console_scripts/<name>_console.js instead of a "
+                         "name-derived path under out/ (used by the backoffice runner)")
     a = p.parse_args()
     if a.mode == "options":
         return cmd_options(a.json)
-    spec = json.loads(sys.stdin.read() if a.spec == "-" else Path(a.spec).read_text(encoding="utf-8"))
+    raw = sys.stdin.read() if a.spec == "-" else Path(a.spec).read_text(encoding="utf-8")
+    # Tolerate a planner reply verbatim: ```json fences and prose lead-ins are
+    # what the model actually emits, and a bare json.loads turns that into a
+    # traceback instead of a usable message.
+    from compose import _extract_json, SpecError
+    try:
+        spec = _extract_json(raw)
+    except SpecError as exc:
+        raise SystemExit(f"⛔ REFUSED — {exc}")
     if a.mode == "describe":
         return cmd_describe(spec)
-    return cmd_compose(spec, a.json, a.script)
+    return cmd_compose(spec, a.json, a.script, a.name)
 
 
 if __name__ == "__main__":
