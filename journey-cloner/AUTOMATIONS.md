@@ -240,7 +240,29 @@ whatever you leave unset stays the captured campaign's:
 | `icon` | `nc` | the old promotion's card artwork |
 | `image` | `popup` | the old pop-up background (`background_image_src`, *not* `icon`) |
 | `template` | `email` | the old campaign's content-studio email |
-| `link_en/es` | `nc` | players sent to the old promo page |
+| `link_en/es` | `nc`, `popup` | players sent to the old promo page |
+
+`icon` and `image` take a URL **or** the literal `PICK`. A brief carries files,
+not media-library URLs, so `PICK` writes a placeholder that the emitted console
+script resolves at paste time: it opens a file picker, uploads to the media
+library, and substitutes the returned `absolute_link`. It is not a way to skip
+the artwork — the script refuses to POST while any placeholder survives, and a
+`PICK` build with no `--script` fails, since the placeholder would otherwise sit
+where a URL belongs.
+
+Two things about that table are easy to get wrong, and both shipped a draft that
+reported VERIFIED OK:
+
+- **The pop-up's link is language-independent.** It keeps one `link` in the
+  `common` tab (`buttons_1_link` is the `%link%` indirection), so `link_en` /
+  `link_es` both write that one slot. Before they did, neither matched and the
+  pop-up button kept sending players to the captured campaign's promo page.
+- **`deeplink` now defaults to the link.** Unset, it was the reference's own
+  in-app URL — so the card was right on web and wrong in the app.
+
+`desc_en` vs `desc_es` is matched on the language **suffix**, not by substring:
+`"es" in "des-en"` is true, and that made the Spanish pass overwrite every
+English description, so the EN notification shipped the ES copy.
 
 The inherited-content check refuses a build that still shares any content value
 with its reference, so an unset one is a failed build rather than a cosmetic

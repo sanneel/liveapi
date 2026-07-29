@@ -58,6 +58,7 @@ import json
 import re
 import sys
 import uuid
+from collections import OrderedDict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -188,6 +189,11 @@ ALIASES = {
     "notification_center": "notification_center#contract1",
     "onsite": "notification_center#contract1",
     "popup": "notification_center#contract5",
+    # The contract-suffixed wire names must round-trip too: plan_lint.py
+    # normalises every plan to these before the composer sees it, so a plan that
+    # linted clean was then refused as an unknown chain type.
+    "notification_center#contract1": "notification_center#contract1",
+    "notification_center#contract5": "notification_center#contract5",
     # Sport activities, available since the udch captures joined SOURCES.
     "freebet": "freebet", "free_bet": "freebet", "sport_freebet": "freebet",
     "sport_bonus": "sport_bonus", "sportbonus": "sport_bonus",
@@ -234,6 +240,59 @@ HAPPY = {
     "ams_decision_split": "DecisionSplitPassedPath01",
 }
 
+# Artwork the operator will choose at paste time instead of naming a URL.
+# A brief almost never carries a media-library URL — the images are files on the
+# operator's desktop — so demanding a URL up front made every comms build stall
+# on "artwork missing". Setting icon/image to PICK writes a sentinel that the
+# emitted console script resolves by opening a file picker and uploading, then
+# substitutes the real URL. It is not a way to skip the artwork: the script
+# refuses to POST while any sentinel survives, so the captured campaign's
+# picture can still never ship.
+PICK_VALUES = {"pick", "@pick", "PICK", "upload", "@upload"}
+PICK_PREFIX = "@@PICK:"
+PICK_SUFFIX = "@@"
+# What the picker calls each slot in the console prompt.
+PICK_LABELS = {
+    ("notification_center#contract1", "icon"): "NC ICON (the bell card artwork)",
+    ("notification_center#contract1", "image"): "NC IMAGE",
+    ("notification_center#contract5", "icon"): "POP-UP ICON",
+    ("notification_center#contract5", "image"): "POP-UP BACKGROUND",
+}
+_pick_counter = [0]
+
+
+def _lang_suffix(name: str, lang: str) -> bool:
+    """Does this captured variable name carry `lang` as its language suffix?
+
+    A plain `lang in name` test silently mismatched: "des-en" contains "es"
+    (the tail of "des"), so the Spanish pass overwrote every English
+    description — the EN notification shipped the ES copy under a green build.
+    The language is a suffix behind a delimiter, so match it as one.
+    """
+    return re.search(rf"(?:^|[^a-z]){lang}$", name) is not None
+
+
+def is_pick_request(value) -> bool:
+    return isinstance(value, str) and value.strip().lower() in {
+        v.lower() for v in PICK_VALUES}
+
+
+def pick_sentinel(label: str) -> str:
+    """A unique token per slot: two nodes asking for artwork must not collide."""
+    _pick_counter[0] += 1
+    return f"{PICK_PREFIX}{_pick_counter[0]}|{label}{PICK_SUFFIX}"
+
+
+def pick_slots(body: dict) -> list[dict]:
+    """The artwork slots left for paste time, in the order they appear."""
+    text = json.dumps(body, ensure_ascii=False)
+    found: "OrderedDict[str, str]" = OrderedDict()
+    for m in re.finditer(re.escape(PICK_PREFIX) + r"(\d+)\|(.*?)" + re.escape(PICK_SUFFIX),
+                         text):
+        found.setdefault(m.group(0), m.group(2))
+    return [{"token": t, "label": lbl} for t, lbl in found.items()]
+
+
 # Per-node settings the composer knows how to apply (documented for `options`).
 SETTINGS_DOC = {
     "dwh_source": {"segment_file": "path to a captured dwh initializationData fragment (default segment_cs_301.json)"},
@@ -256,13 +315,20 @@ SETTINGS_DOC = {
     "casino_bonus_v2": {"bonus_percent": "deposit-match %", "wagering": "wagering requirement (x)",
                         "release_multiplier": "releaseLimitMultiplier", "expiration_ms": "bonusExpirationTime in ms"},
     "notification_center#contract1": {"title_en/es, desc_en/es, caption_en/es": "on-site notification copy",
-                                      "icon": "notification artwork URL — set it, or the card shows "
-                                              "the captured campaign's image",
+                                      "icon": "notification artwork: a URL, or PICK to choose the "
+                                              "file when the script is pasted — set one, or the "
+                                              "card shows the captured campaign's image",
                                       "link_en/es": "where the card sends the player",
-                                      "deeplink": "app deeplink, when there is one"},
+                                      "deeplink": "app deeplink (defaults to link_es/link_en, so it "
+                                                  "cannot keep the captured campaign's)"},
     "notification_center#contract5": {"title_en/es, desc_en/es, caption_en/es": "pop-up (Cat-fish) copy",
-                                      "image": "pop-up background artwork URL — set it, or the "
-                                               "journey shows the captured campaign's picture"},
+                                      "image": "pop-up background artwork: a URL, or PICK to choose "
+                                               "the file when the script is pasted — set one, or the "
+                                               "journey shows the captured campaign's picture",
+                                      "link_en/es": "where the button sends the player. This template "
+                                                    "holds ONE language-independent link, so en and es "
+                                                    "write the same slot",
+                                      "deeplink": "app deeplink (defaults to the link)"},
     "dextra_sms": {"text_en/es": "SMS body"},
     "dextra_email": {"template": "content-studio email id (e.g. CSE-0-14458). Set it, or the "
                                  "journey emails the CAPTURED campaign's template — which the "
@@ -467,17 +533,47 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
                 hit = False
                 for v in vars_:
                     n = (v.get("name") or "").lower()
-                    if stem in n and lang in n:
+                    if stem in n and _lang_suffix(n, lang):
                         note(v["name"], v.get("value"), val); v["value"] = val; hit = True
                 for tab in tabs.values():
                     if not isinstance(tab, dict):
                         continue
                     for tk in tab:
                         tn = tk.lower()
-                        if stem in tn and lang in tn:
+                        if stem in tn and _lang_suffix(tn, lang):
                             tab[tk] = val; hit = True
+                if not hit and skey == "link":
+                    # The pop-up holds ONE language-independent `link` in the
+                    # common tab (its buttons_1_link is the `%link%` indirection),
+                    # so a per-language link matched nothing and the captured
+                    # campaign's promo URL survived under a green build — the
+                    # pop-up button sent players to the previous promotion.
+                    for v in vars_:
+                        if (v.get("name") or "").lower() == "link":
+                            note(v["name"], v.get("value"), val); v["value"] = val; hit = True
+                    for tab in tabs.values():
+                        if isinstance(tab, dict) and "link" in tab:
+                            tab["link"] = val; hit = True
+                    if hit:
+                        other = s.get(f"{skey}_{'es' if lang == 'en' else 'en'}")
+                        if other is not None and other != val:
+                            warnings.append(
+                                f"{kind}: this template has a single language-independent "
+                                f"`link`; link_en and link_es differ, so the last one "
+                                f"written ({lang}) is what ships")
                 if not hit:
                     warnings.append(f"{kind}: no captured variable matched {skey}_{lang}")
+        # An unset deeplink is not a neutral omission: it is the captured
+        # campaign's own in-app URL, so a player tapping the card in the app
+        # landed on the previous promotion while the web link was correct.
+        # Brief give one destination, so fall back to the link rather than keep
+        # the reference's — and report it, since it was not asked for explicitly.
+        if "deeplink" not in s:
+            fallback = s.get("link_es") or s.get("link_en")
+            if fallback:
+                s = dict(s, deeplink=fallback)
+                report.append(f"{kind}: deeplink not given — using the link "
+                              f"({fallback}) so it cannot keep the captured campaign's")
         # Language-independent fields, held once in the `common` tab.
         for skey, stems in (("icon", ("icon",)),
                             # the pop-up's artwork is a background image, not an
@@ -488,6 +584,8 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
             val = s.get(skey)
             if val is None:
                 continue
+            if is_pick_request(val):
+                val = pick_sentinel(PICK_LABELS.get((kind, skey), f"{kind} {skey}"))
             for v in vars_:
                 if (v.get("name") or "").lower() in stems:
                     note(v["name"], v.get("value"), val); v["value"] = val
@@ -541,6 +639,13 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
                         if isinstance(item, dict) and str(item.get("languageCode", "")).lower() == lang:
                             note(f"localizedMessageTexts[{lang}].messageText", item.get("messageText"), val)
                             item["messageText"] = val
+        # displayData is the label the builder prints on the card. Same reason as
+        # the email node: left alone, a reviewer opening the draft reads the
+        # PREVIOUS campaign's SMS next to this campaign's correct messageText.
+        body_text = s.get("text_es") or s.get("text_en")
+        if body_text and isinstance(init.get("displayData"), list):
+            note("displayData", init["displayData"], [body_text])
+            init["displayData"] = [body_text]
     elif kind == "wait_interval":
         if "wait" in s:
             note("waitPeriod", init.get("waitPeriod"), s["wait"]); init["waitPeriod"] = s["wait"]
@@ -621,6 +726,7 @@ def compose(spec: dict) -> dict:
     types = lib["types"]
     report: list[str] = []
     warnings: list[str] = []
+    _pick_counter[0] = 0     # per-build, so the same spec yields the same tokens
 
     # resolve source
     src_spec = spec.get("source") or {}
@@ -671,6 +777,13 @@ def compose(spec: dict) -> dict:
 
     def build_level(specs: list[dict], upstream: list[tuple], row: int) -> str:
         """Clone+wire one chain level; returns the head node's new id."""
+        # A branch that is only a terminal — "branches": {"...Path01":
+        # [{"type": "end_of_path"}]} — is how both the planner and the operator
+        # say "this path just ends", and the composer already ends every level
+        # with its own terminal. Strip them here as well as on the top-level
+        # chain, or that spelling is refused as an unknown chain type.
+        specs = [c for c in specs
+                 if str((c or {}).get("type", "")).lower() not in _TERMINALS]
         level: list[dict] = []
         for c in specs:
             k = resolve_kind(c)
@@ -760,7 +873,8 @@ def compose(spec: dict) -> dict:
                 else:
                     ev["nextActivityId"] = fresh_end()  # undrawn end, like the capture
         exits_drawn.append((term, col0 + len(level), row))
-        return level[0]["node"]["new_id"]
+        # Nothing but terminals: the branch routes straight to its end node.
+        return level[0]["node"]["new_id"] if level else term
 
     head_id = build_level(chain_specs, [(src_kind, src["new_id"])], 0)
 
@@ -1193,8 +1307,79 @@ def emit_console_script(body: dict, out_path: Path) -> str:
     from casino_journey import build_js  # the battle-tested JS template
     # body already carries the DRY-RUN-CASINO placeholder the script swaps
     js = build_js(body)
+    js = _inject_pickers(js, pick_slots(body))
     out_path.write_text(js, encoding="utf-8")
     return str(out_path)
+
+
+# Injected only when a build left artwork for paste time. Mirrors the upload
+# mechanic proven in comms_campaign.py / sport_comms_campaign.py: pick the file,
+# read its real dimensions (the media library wants them in the URL), PUT it to
+# the folder, then use the absolute_link it answers with.
+_PICKER_JS = """
+  // --- paste-time artwork ---------------------------------------------------
+  const PICK_SLOTS = @PICK_SLOTS@;
+  const FOLDER_ID = @FOLDER_ID@;
+  const CRM_BASE = BASE.replace(/\\/journey-builder\\/v0$/, '');
+  function pickFile(label) {
+    return new Promise((resolve, reject) => {
+      const input = document.createElement('input');
+      input.type = 'file'; input.accept = 'image/*';
+      Object.assign(input.style, { position: 'fixed', top: '12px', left: '12px', zIndex: 999999, background: '#fff', padding: '8px', border: '3px solid #22c55e', borderRadius: '6px' });
+      document.body.appendChild(input);
+      console.log('%cSelect the image for ' + label + ' (picker is at the top-left of the page).', 'color:#eab308;font-weight:bold');
+      input.addEventListener('change', () => { const f = input.files && input.files[0]; input.remove(); if (!f) { reject(new Error('No file selected for ' + label)); return; } resolve(f); });
+    });
+  }
+  function imageDims(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file); const img = new Image();
+      img.onload = () => { URL.revokeObjectURL(url); resolve({ width: img.naturalWidth, height: img.naturalHeight }); };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read image dimensions for ' + file.name)); };
+      img.src = url;
+    });
+  }
+  async function uploadArtwork(file, label) {
+    const dims = await imageDims(file);
+    const base = (file.name || 'image').replace(/\\.[^./]+$/, '');
+    const url = CRM_BASE + '/media-library/v0/folder/' + FOLDER_ID + '/upload/' + encodeURIComponent(base) + '.png?height=' + dims.height + '&width=' + dims.width;
+    const fd = new FormData(); fd.append('file', file, file.name);
+    const up = { accept: 'application/json, text/plain, */*', authorization: auth, 'x-brand': BRAND };
+    const r = await fetch(url, { method: 'PUT', headers: up, credentials: 'include', body: fd });
+    const t = await r.text();
+    if (!r.ok) throw new Error(label + ' upload failed HTTP ' + r.status + ' ' + t);
+    const asset = JSON.parse(t);
+    const tfd = new FormData(); tfd.append('file', file, file.name);
+    await fetch(CRM_BASE + '/media-library/v0/asset/thumb/' + asset.id + '.png', { method: 'PUT', headers: up, credentials: 'include', body: tfd }).catch(() => {});
+    if (!asset.absolute_link) throw new Error(label + ' upload returned no absolute_link: ' + t);
+    console.log('    ' + label + ' -> ' + asset.absolute_link);
+    return asset.absolute_link;
+  }
+  for (const slot of PICK_SLOTS) {
+    if (!text.includes(slot.token)) throw new Error('artwork placeholder for ' + slot.label + ' is not in the payload — regenerate the script.');
+    const link = await uploadArtwork(await pickFile(slot.label), slot.label);
+    text = text.split(slot.token).join(link);
+  }
+  // A surviving placeholder means a node would ship the captured campaign's
+  // picture. Refuse, the same way the composer refuses unset artwork.
+  if (text.indexOf('@@PICK:') !== -1) throw new Error('unresolved artwork placeholder — refusing to create the draft.');
+"""
+
+
+def _inject_pickers(js: str, slots: list[dict]) -> str:
+    if not slots:
+        return js
+    from comms_campaign import DEFAULT_FOLDER_ID
+    block = (_PICKER_JS
+             .replace("@PICK_SLOTS@", json.dumps(slots, ensure_ascii=False))
+             .replace("@FOLDER_ID@", json.dumps(DEFAULT_FOLDER_ID)))
+    # After the ids are regenerated and before the body is parsed and POSTed:
+    # substituting on the serialised text hits the compiled activities and the
+    # rawJourneyData mirror in one pass, which is what keeps them byte-identical.
+    anchor = "  const body = JSON.parse(text);"
+    if anchor not in js:
+        raise SystemExit("console scaffold changed — cannot inject artwork pickers")
+    return js.replace(anchor, block + "\n" + anchor, 1)
 
 
 def _inherited_content_errors(body: dict) -> list[str]:
@@ -1224,6 +1409,14 @@ def cmd_compose(spec: dict, as_json: bool, script: bool, basename: str | None = 
     # messages players with another campaign's copy is not a usable draft, and
     # "VERIFIED OK" on one is exactly how the wrong SMS reached a real draft.
     errs = errs + [f"inherited content — {line}" for line in _inherited_content_errors(res["body"])]
+    # A PICK sentinel is only ever resolved by the console script's file picker.
+    # In a JSON-only build it is an unresolved placeholder sitting where a URL
+    # belongs, so it must fail rather than look like a composed value.
+    slots = pick_slots(res["body"])
+    if slots and not script:
+        errs = errs + [f"artwork left for paste time ({s['label']}) but no script was "
+                       f"requested — re-run with --script, or give a URL instead of PICK"
+                       for s in slots]
     OUT.mkdir(exist_ok=True)
     slug = re.sub(r"[^\w]+", "_", res["name"].lower()).strip("_")[:60]
     out_path = OUT / f"{slug}.journey.json"
