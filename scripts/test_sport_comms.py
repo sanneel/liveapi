@@ -211,9 +211,26 @@ def main() -> int:
         check(False, f"{label} -> NOT refused")
 
     raises(lambda: G.prepare(campaign(expires_at=None), spec),
-           "campaign with no expiry")
+           "campaign with no expiry and no stop date")
     raises(lambda: G.prepare(campaign(expires_at=datetime.now(timezone.utc) - timedelta(days=1)), spec),
            "campaign already expired")
+    raises(lambda: G.prepare(campaign(), spec, stop_at="not-a-date"),
+           "an unparseable stop date")
+    raises(lambda: G.prepare(campaign(expires_at=None), spec, stop_at="2020-01-01T00:00"),
+           "a stop date in the past")
+
+    print("\nstop date:")
+    # The whole point of the field: a campaign with no expiry is still usable,
+    # which is what an eligibility filter on the dropdown took away.
+    future = (datetime.now() + timedelta(days=5)).strftime("%Y-%m-%dT%H:%M")
+    b2, _ = G.prepare(campaign(expires_at=None), spec, stop_at=future)
+    check(b2["journey_save"]["rawJourneyData"]["infoValues"]["stopAt"].startswith(future[:10]),
+          f"a campaign with no expiry builds when given a stop date ({future[:10]})")
+    b3, _ = G.prepare(campaign(), spec)
+    check(bool(b3["journey_save"]["stopAt"]), "campaign expiry is still the default stop date")
+    b4, _ = G.prepare(campaign(), spec, stop_at=future)
+    check(b4["journey_save"]["rawJourneyData"]["infoValues"]["stopAt"].startswith(future[:10]),
+          "an explicit stop date overrides the campaign expiry")
     raises(lambda: G.read_spec(_write_tmp("Sms\tTRUE\nSms Text\tonly this")),
            "sheet with no Link row / missing channels")
 

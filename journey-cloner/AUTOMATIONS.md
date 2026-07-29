@@ -134,9 +134,16 @@ python sport_comms_campaign.py --campaign <liveapi-slug> --spec -   # sheet on s
 campaign is a **dropdown read live from the liveapi database**, not a slug typed
 from memory, and the sheet is a textarea piped to the generator over stdin
 (`--spec -`) so a pasted sheet never touches disk. Each option shows the
-campaign's sport, match count and expiry, and the list holds only campaigns that
-are enabled *and* carry an expiry — the two things the generator refuses
-without, so the dropdown cannot offer a choice that fails on submit. Route:
+campaign's sport and expiry; **every enabled campaign is listed**, including
+ones with no expiry date.
+
+The stop date is its own optional field (`--stop-at`), prefilled from the
+selected campaign's expiry and overridable per run. That is deliberate: an
+earlier version listed only campaigns that already carried an expiry, and on a
+database where nobody sets expiry dates the dropdown came up empty with no way
+forward. An expiry is the *default* stop date, not an eligibility rule — the
+generator still refuses when it has neither, which is a refusal the operator can
+now act on. Route:
 `POST /admin/promotions/sport-comms` → `generate_sport_comms_console_script`
 (`app/services/journey_cloner_runner.py`). Dry run writes the four request
 bodies to `out/` instead of a script. A refusal renders the failing check in the

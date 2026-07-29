@@ -315,23 +315,29 @@
         <p class="card-sub">One journey carrying SMS, Notification Center, Cat-fish pop-up and email for a fixture scratch-card promo. Two inputs: the campaign, and the content sheet.</p>
       </div>
 
-      <div class="field">
-        <span class="lbl">Campaign (created in liveapi)</span>
-        {% if scomms.load_error %}
-          <p class="help" style="color:var(--danger,#b91c1c)">Could not read campaigns: {{ scomms.load_error }}</p>
-        {% elif not scomms.campaigns %}
-          <p class="help">No campaign is eligible. A campaign needs to be <b>enabled</b> and carry an <b>expiry date</b> — the expiry becomes the journey's stop date, so the comms cannot outlive the page they link to. <a href="/admin/campaigns/new">Create one</a>.</p>
-        {% else %}
-          <select class="input mono" name="campaign" required>
-            <option value="">— pick a campaign —</option>
-            {% for c in scomms.campaigns %}
-              <option value="{{ c.slug }}" {% if scomms.campaign == c.slug %}selected{% endif %}>
-                {{ c.title }} — /{{ c.slug }} · {{ c.sport }} · {{ c.match_count }} match{% if c.match_count != 1 %}es{% endif %} · until {{ c.expires_at }}
-              </option>
-            {% endfor %}
-          </select>
-          <p class="help" style="margin-top:6px">Supplies the journey name, the stop date, and the email hero image (the campaign's rendered card).</p>
-        {% endif %}
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+        <div class="field">
+          <span class="lbl">Campaign (created in liveapi)</span>
+          {% if scomms.load_error %}
+            <p class="help" style="color:var(--danger,#b91c1c)">Could not read campaigns: {{ scomms.load_error }}</p>
+          {% elif not scomms.campaigns %}
+            <input class="input mono" name="campaign" value="{{ scomms.campaign or '' }}" placeholder="eng-arg-final" required/>
+            <p class="help" style="margin-top:6px">No enabled campaign found — type the slug, or <a href="/admin/campaigns/new">create one</a>.</p>
+          {% else %}
+            <select class="input mono" id="scomms-campaign" name="campaign" required>
+              <option value="">— pick a campaign —</option>
+              {% for c in scomms.campaigns %}
+                <option value="{{ c.slug }}" data-expires="{{ c.expires_at }}" {% if scomms.campaign == c.slug %}selected{% endif %}>{{ c.title }} — /{{ c.slug }} · {{ c.sport }} · {{ c.expires_label }}</option>
+              {% endfor %}
+            </select>
+            <p class="help" style="margin-top:6px">Gives the journey name and the email hero (its rendered card).</p>
+          {% endif %}
+        </div>
+        <div class="field">
+          <span class="lbl">Stop date <span style="color:var(--t-faint)">(optional)</span></span>
+          <input class="input" id="scomms-stop-at" name="stop_at" type="datetime-local" value="{{ scomms.stop_at or '' }}"/>
+          <p class="help" style="margin-top:6px">Chile local. Defaults to the campaign's expiry — leave blank to use it.</p>
+        </div>
       </div>
 
       <div class="field">
@@ -348,6 +354,22 @@
       <button class="btn primary" style="justify-content:center">Generate console script</button>
       <p class="help">Every check must pass before anything is written — a refusal names the field.</p>
     </form>
+    <script>
+      (function () {
+        // Picking a campaign prefills its expiry as the stop date. Only when
+        // the operator has not typed one -- their value always wins.
+        var sel = document.getElementById('scomms-campaign');
+        var stop = document.getElementById('scomms-stop-at');
+        if (!sel || !stop) return;
+        var touched = stop.value !== '';
+        stop.addEventListener('input', function () { touched = true; });
+        sel.addEventListener('change', function () {
+          if (touched) return;
+          var opt = sel.options[sel.selectedIndex];
+          stop.value = (opt && opt.getAttribute('data-expires')) || '';
+        });
+      })();
+    </script>
 
     <div class="col-main stack">
       {% if scomms.console_script %}

@@ -184,27 +184,42 @@ def load_campaign(slug: str) -> dict:
     return campaign
 
 
-def _schedule(campaign: dict) -> tuple[str, str]:
+def _schedule(campaign: dict, stop_at: str = "") -> tuple[str, str]:
     """(plain-UTC stopAt for the body strings, .NET stopAt for the top level).
 
     The captured journey starts immediately on publish and runs to a fixed stop.
-    The stop comes from the campaign so the comms cannot outlive the campaign
-    URL every one of them links to.
+    `stop_at` wins when given (the form field); otherwise it falls back to the
+    campaign's expiry, so by default the comms cannot outlive the page every one
+    of them links to. Naive values are read as Chile local, like every other
+    date in this repo.
     """
-    expires = campaign.get("expires_at")
-    if expires is None:
+    chosen, source = None, ""
+    if stop_at.strip():
+        try:
+            chosen = datetime.fromisoformat(stop_at.strip().replace("Z", "+00:00"))
+        except ValueError:
+            raise Refused(
+                f"stop date {stop_at!r} is not a date I can read. Use "
+                f"YYYY-MM-DD or YYYY-MM-DDTHH:MM."
+            )
+        source = "the stop date given"
+    elif campaign.get("expires_at") is not None:
+        chosen = campaign["expires_at"]
+        source = f"campaign {campaign['slug']!r} expiry"
+
+    if chosen is None:
         raise Refused(
-            f"campaign {campaign['slug']!r} has no expiry date. Set one in "
-            f"liveapi (it becomes the journey's stopAt), or the comms would "
-            f"outlive the page they link to."
+            f"no stop date. Either set one on this run, or give campaign "
+            f"{campaign['slug']!r} an expiry date in liveapi — without one the "
+            f"comms would outlive the page they link to."
         )
-    if expires.tzinfo is None:
-        expires = expires.replace(tzinfo=LOCAL_TZ)
-    stop = expires.astimezone(UTC)
+    if chosen.tzinfo is None:
+        chosen = chosen.replace(tzinfo=LOCAL_TZ)
+    stop = chosen.astimezone(UTC)
     if stop <= datetime.now(UTC):
         raise Refused(
-            f"campaign {campaign['slug']!r} expired at {stop:%Y-%m-%d %H:%M} UTC "
-            f"— nothing to announce."
+            f"{source} is {stop:%Y-%m-%d %H:%M} UTC, already past — nothing to "
+            f"announce. Pick a stop date in the future."
         )
     return stop.strftime("%Y-%m-%dT%H:%M:%SZ"), utc_api(stop, dotnet_fraction=True)
 
@@ -251,10 +266,11 @@ def _sms_text(raw: str, slug: str) -> str:
 
 
 # ── prepare ─────────────────────────────────────────────────────────────
-def prepare(campaign: dict, spec, now: datetime | None = None) -> tuple[dict, list[str]]:
+def prepare(campaign: dict, spec, now: datetime | None = None,
+            stop_at: str = "") -> tuple[dict, list[str]]:
     now = now or datetime.now(LOCAL_TZ)
     slug = spec.promo_slug
-    stop_plain, stop_dotnet = _schedule(campaign)
+    stop_plain, stop_dotnet = _schedule(campaign, stop_at)
 
     label = campaign["title"].strip()
     stamp = f"{now:%d.%m}"
@@ -334,7 +350,7 @@ def prepare(campaign: dict, spec, now: datetime | None = None) -> tuple[dict, li
         f"campaign      {campaign['slug']!r} — {label!r} ({campaign['sport']})",
         f"journeyName   {journey_sp!r}",
         f"promo slug    {slug}  ->  {PROMO_URL.format(slug=slug)}",
-        f"stopAt        {stop_plain}  (campaign expires_at)",
+        f"stopAt        {stop_plain}  ({'given on this run' if stop_at.strip() else 'campaign expires_at'})",
         f"email         {email_name!r}  (created first, id wired into the journey)",
         f"hero image    {campaign['image_url'] or '(no PUBLIC_BASE_URL — file picker)'}",
         f"sms es        {sms_es[:78]!r}",
@@ -650,6 +666,9 @@ def main() -> int:
     p.add_argument("--campaign", required=True, help="liveapi campaign slug")
     p.add_argument("--spec", required=True, type=Path,
                    help="content sheet (tab-separated); '-' reads stdin")
+    p.add_argument("--stop-at", default="",
+                   help="journey stop date (YYYY-MM-DD or YYYY-MM-DDTHH:MM, Chile local). "
+                        "Defaults to the campaign's expiry.")
     p.add_argument("--name", default="sport_comms", help="output basename")
     p.add_argument("--dry-run", action="store_true",
                    help="write the prepared bodies to out/ instead of a console script")
@@ -657,7 +676,7 @@ def main() -> int:
 
     campaign = load_campaign(args.campaign)
     spec = read_spec(args.spec)
-    bundle, report = prepare(campaign, spec)
+    bundle, report = prepare(campaign, spec, stop_at=args.stop_at)
 
     print("Sport scratch-card comms:")
     for line in report:

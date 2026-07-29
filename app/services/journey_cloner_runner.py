@@ -553,6 +553,7 @@ def generate_sport_comms_console_script(
     *,
     campaign_slug: str,
     sheet_text: str,
+    stop_at: str = "",
     name: str = "",
     dry_run: bool = False,
 ) -> Tuple[int, str, str, str | None, str]:
@@ -584,6 +585,8 @@ def generate_sport_comms_console_script(
         "--spec", "-",
         "--name", basename,
     ]
+    if stop_at.strip():
+        cmd += ["--stop-at", stop_at.strip()]
     if dry_run:
         cmd.append("--dry-run")
 
