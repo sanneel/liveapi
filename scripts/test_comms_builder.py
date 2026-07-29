@@ -176,6 +176,47 @@ for text, iso in (("30m", "P0Y0M0DT0H30M0S"), ("2h", "P0Y0M0DT2H0M0S"),
                   ("P0Y0M1DT0H0M0S", "P0Y0M1DT0H0M0S")):
     check(f"{text} -> {iso}", CB.parse_wait(text) == iso, CB.parse_wait(text))
 
+print("\nthe variants are the shapes that used to be a script each")
+check("every variant declares what it replaces",
+      all(v.get("replaces") and v.get("what") for v in CB.VARIANTS.values()),
+      str(sorted(CB.VARIANTS)))
+for name, v in sorted(CB.VARIANTS.items()):
+    bad = [c for c in v["channels"] if c not in CB.CHANNELS]
+    check(f"{name}: channels are real", not bad, str(bad))
+    bad = [s for s in v["splits"] if s not in CB.SPLIT_NODE]
+    check(f"{name}: splits are possible", not bad, str(bad))
+    orphan = [s for s in v["splits"] if s not in v["channels"]]
+    check(f"{name}: splits sit on its own channels", not orphan, str(orphan))
+    orphan = [w for w in v["waits"] if w not in v["channels"]]
+    check(f"{name}: waits sit on its own channels", not orphan, str(orphan))
+    try:
+        spec, _ = build(channels=list(v["channels"]), splits=set(v["splits"]),
+                        waits=dict(v["waits"]))
+        check(f"{name}: builds from the sheet", bool(spec["chain"]))
+    except BaseException as exc:
+        check(f"{name}: builds from the sheet", False, f"{type(exc).__name__}: {exc}")
+
+check("no variant claims a brand the node library cannot build",
+      not [k for k, v in CB.VARIANTS.items() if "pmcl" in k.lower()],
+      "PMCL needs its own capture in journey_composer.SOURCES first")
+
+print("\nthe registry points at one comms entry point")
+sys.path.insert(0, str(REPO))
+from app.services.promotions_catalog import GENERATORS, unlisted_generators  # noqa: E402
+check("no script is unregistered", not unlisted_generators(), str(unlisted_generators()))
+entry = [g for g in GENERATORS if g["key"] == "comms_builder"]
+check("the comms builder is registered", len(entry) == 1)
+superseded = [g for g in GENERATORS if g.get("superseded_by")]
+check("superseded generators name their replacement",
+      all(any(x["key"] == g["superseded_by"] for x in GENERATORS) for g in superseded),
+      str([g["key"] for g in superseded]))
+check("the JBCL comms scripts are marked superseded",
+      {g["key"] for g in superseded} >= {"gow_comms", "sport_comms", "nc_discount"},
+      str(sorted(g["key"] for g in superseded)))
+check("no PMCL generator is marked superseded",
+      not [g for g in superseded if g["brand"] == "PMCL"],
+      str([g["key"] for g in superseded if g["brand"] == "PMCL"]))
+
 print("\nthe built spec actually composes and verifies")
 try:
     import journey_composer as JC

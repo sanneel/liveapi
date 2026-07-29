@@ -46,6 +46,48 @@ from spec_parser import parse_spec     # noqa: E402
 CHANNELS = ("nc", "popup", "email", "sms")
 CHANNEL_LABELS = {"nc": "Notification (bell)", "popup": "Pop-up (Cat-fish)",
                   "email": "Email", "sms": "SMS"}
+
+# The comms shapes that used to be a script each. A variant is only defaults —
+# anything given on the command line still wins — so this replaces four
+# near-identical generators with four rows of data rather than four code paths.
+#
+# All of these are JBCL. The PMCL comms shapes (tournament_pmcl_campaign.py,
+# nc_discount_pmcl_campaign.py) are deliberately absent: journey_composer's whole
+# node library is JBCL-captured, so a PMCL run here would build PMCL copy into
+# JBCL nodes. That is the brand swap the email guard already refuses, and mixing
+# a second brand's capture into the node library is the blank-canvas risk
+# COMPOSER_RULES.md is about. Those two stay separate until a PMCL capture is
+# added to SOURCES deliberately.
+VARIANTS = {
+    "tournament": {
+        "what": "NC -> pop-up -> email -> SMS for a tournament (the Olimpo shape)",
+        "channels": ["nc", "popup", "email", "sms"],
+        "splits": ["nc", "popup", "email"],
+        "waits": {"nc": "2h", "popup": "1d", "email": "1d"},
+        "replaces": "hand-written specs",
+    },
+    "gow": {
+        "what": "Game of the Week comms: NC -> pop-up -> SMS, copy from the GOW sheet",
+        "channels": ["nc", "popup", "sms"],
+        "splits": [],
+        "waits": {},
+        "replaces": "comms_campaign.py (the comms half of the GOW tab)",
+    },
+    "scratch_card": {
+        "what": "Scratch-card comms: NC -> pop-up -> email, link is the randomizer page",
+        "channels": ["nc", "popup", "email"],
+        "splits": [],
+        "waits": {},
+        "replaces": "sport_comms_campaign.py",
+    },
+    "nc_only": {
+        "what": "One notification per day, nothing else (the Discount NC shape)",
+        "channels": ["nc"],
+        "splits": [],
+        "waits": {},
+        "replaces": "nc_discount_campaign.py",
+    },
+}
 # Which composer node an engagement split after each channel maps to. SMS has no
 # engagement event captured, so a split cannot follow it — asking is a refusal,
 # not a silently dropped option.
@@ -231,9 +273,13 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--sheet", required=True, help="file with the pasted sheet ('-' for stdin)")
-    ap.add_argument("--channels", default="nc,popup,email,sms",
-                    help=f"comma-separated, from {','.join(CHANNELS)}")
-    ap.add_argument("--splits", default="", help="channels to add an engagement split after")
+    ap.add_argument("--variant", choices=sorted(VARIANTS),
+                    help="start from a known comms shape: "
+                         + "; ".join(f"{k} = {v['what']}" for k, v in VARIANTS.items()))
+    ap.add_argument("--channels", default=None,
+                    help=f"comma-separated, from {','.join(CHANNELS)} "
+                         f"(default: the variant's, else all four)")
+    ap.add_argument("--splits", default=None, help="channels to add an engagement split after")
     ap.add_argument("--wait", action="append", default=[], metavar="CHAN=DUR",
                     help="wait after a channel, e.g. --wait nc=2h (repeatable)")
     ap.add_argument("--date", default="", help="start date YYYY-MM-DD (default: the sheet's)")
@@ -258,10 +304,24 @@ def main() -> int:
         k, v = item.split("=", 1)
         waits[k.strip()] = v.strip()
 
+    # A variant only fills what was not asked for, so --channels/--splits/--wait
+    # stay authoritative and a variant can never quietly override a choice.
+    base = VARIANTS.get(args.variant or "", {})
+    if args.variant:
+        print(f"  variant {args.variant} — {base['what']}")
+    channels = ([c.strip() for c in args.channels.split(",") if c.strip()]
+                if args.channels is not None
+                else list(base.get("channels") or CHANNELS))
+    splits = ({s.strip() for s in args.splits.split(",") if s.strip()}
+              if args.splits is not None
+              else set(base.get("splits") or ()))
+    if not args.wait:
+        waits = dict(base.get("waits") or {})
+
     spec, notes = build_spec(
         sheet_text=text,
-        channels=[c.strip() for c in args.channels.split(",") if c.strip()],
-        splits={s.strip() for s in args.splits.split(",") if s.strip()},
+        channels=channels,
+        splits=splits,
         waits=waits,
         date=args.date,
         days=args.days,

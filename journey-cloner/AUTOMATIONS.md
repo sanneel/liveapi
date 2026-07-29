@@ -312,9 +312,35 @@ slip. That check exists because a "Physical Prize" journey once shipped carrying
 the Game of the Week SMS, email and promo link.
 
 ### Comms builder — `comms_builder.py` → shell
-Pick the channels, say where you want engagement splits and waits, paste the
-sheet, get the script. **No model is involved**, which is the point: a comms
-chain is not something worth inferring.
+**The JBCL comms entry point.** Pick the channels, say where you want engagement
+splits and waits, paste the sheet, get the script. **No model is involved**,
+which is the point: a comms chain is not something worth inferring.
+
+`--variant` starts from a shape that used to be a script of its own. A variant is
+only defaults — anything on the command line still wins — so four near-identical
+generators became four rows of data, not four code paths:
+
+| `--variant` | chain | replaces |
+| --- | --- | --- |
+| `tournament` | NC → wait → split → pop-up → wait → split → email → wait → split → SMS | hand-written specs |
+| `gow` | NC → pop-up → SMS | `comms_campaign.py` (standalone use) |
+| `scratch_card` | NC → pop-up → email | `sport_comms_campaign.py` |
+| `nc_only` | NC | `nc_discount_campaign.py` |
+
+The superseded generators still exist and still work — the GOW tab calls
+`comms_campaign.py`, and `nc_discount_campaign.py` owns the baked calendar. They
+are marked `superseded_by` in the registry so the Optimization list says which to
+reach for. Reach for the builder for anything new.
+
+**PMCL comms is deliberately not here.** `journey_composer`'s node library is
+entirely JBCL-captured (`SOURCES` is `gow`, `gow_comms` and the two `udch`
+files); `tournament_pmcl_comms.json` is PMCL and excluded. Routing PMCL through
+the builder would build PMCL copy into JBCL nodes — the brand swap the email
+guard already refuses — and adding a second brand's capture to the node library
+is the node-schema-mixing risk `COMPOSER_RULES.md` exists for. So
+`tournament_pmcl_campaign.py` and `nc_discount_pmcl_campaign.py` stay separate
+until that capture is added to `SOURCES` on purpose, with the blank-canvas checks
+re-run.
 
 ```bash
 .venv/bin/python journey-cloner/comms_builder.py --sheet sheet.tsv \

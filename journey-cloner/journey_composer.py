@@ -1638,7 +1638,7 @@ _EMAIL_JS = """
 def _inject_pickers(js: str, slots: list[dict], email_content: dict | None = None) -> str:
     if not slots and not email_content:
         return js
-    from comms_campaign import DEFAULT_FOLDER_ID
+    from media_library import DEFAULT_FOLDER_ID
     block = (_PICKER_JS
              .replace("@PICK_SLOTS@", json.dumps(slots, ensure_ascii=False))
              .replace("@FOLDER_ID@", json.dumps(DEFAULT_FOLDER_ID)))

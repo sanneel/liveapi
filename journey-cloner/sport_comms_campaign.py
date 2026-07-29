@@ -61,7 +61,7 @@ sys.path.insert(0, str(HERE))
 
 from create_journeys import BRAND, LOCAL_TZ, UTC, utc_api  # noqa: E402
 from casino_journey import DEFAULT_BASE_URL  # noqa: E402
-from comms_campaign import DEFAULT_FOLDER_ID  # noqa: E402
+from media_library import DEFAULT_FOLDER_ID  # noqa: E402
 from compose import audit_inherited_content  # noqa: E402
 from spec_parser import parse_spec, _PROMO_SLUG_RE  # noqa: E402
 
