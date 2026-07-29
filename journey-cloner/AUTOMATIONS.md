@@ -297,6 +297,42 @@ with its reference, so an unset one is a failed build rather than a cosmetic
 slip. That check exists because a "Physical Prize" journey once shipped carrying
 the Game of the Week SMS, email and promo link.
 
+### Comms builder — `comms_builder.py` → shell
+Pick the channels, say where you want engagement splits and waits, paste the
+sheet, get the script. **No model is involved**, which is the point: a comms
+chain is not something worth inferring.
+
+```bash
+.venv/bin/python journey-cloner/comms_builder.py --sheet sheet.tsv \
+    --channels nc,popup,email,sms --splits nc,popup,email \
+    --wait nc=2h --wait popup=1d --wait email=1d --script
+```
+
+Where each input comes from — nothing else is consulted:
+
+| | |
+| --- | --- |
+| the chain shape | `--channels` / `--splits` / `--wait`, verbatim |
+| every word of copy | `spec_parser.py` reading the pasted sheet |
+| the link, date, journey name | the sheet's `Link`, `Start date`, `Event` rows |
+| the journey body | `journey_composer.py` cloning captured nodes |
+
+Waits take shorthand (`30m`, `2h`, `1d`, `1w`) or an ISO-8601 duration. A split
+after a channel ends the *engaged* path and continues down the unengaged one.
+Artwork defaults to `PICK`, so the script prompts for each image at paste time.
+
+Every gap refuses instead of being filled:
+
+- **A channel picked with no copy in the sheet.** This was the whole risk — an
+  empty channel ships the captured campaign's words.
+- **A split on SMS.** No SMS engagement event is captured, so it would branch on
+  nothing. Splits exist for `nc`, `popup` and `email`.
+- A split or wait naming a channel that was not picked; a channel picked twice;
+  no channels; an unreadable wait; no link, date, or email heading anywhere.
+
+`scripts/test_comms_builder.py` asserts the copy reaching the spec is the
+sheet's cells byte for byte, and that each refusal above fires.
+
 ### GOW comms — `comms_campaign.py` → built with GOW
 The comms half of a GOW campaign; runs as part of that tab by default.
 
