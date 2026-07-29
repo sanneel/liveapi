@@ -267,19 +267,73 @@ _pick_counter = [0]
 # journey's email activity at the id that comes back. The email's copy is not
 # inline on the activity, which is why setting `template` alone can only ever
 # reuse someone else's creative.
-EMAIL_AUTHORING_KEYS = {"subject_es", "preheader_es", "heading", "hero",
-                        "promo_page_id", "hero_link", "email_name"}
-# The captured creative's call to action is the hero image, wrapped in a link to
-# a promo page. A campaign whose CTA is not a promo page (a game launch URL, say)
+EMAIL_AUTHORING_KEYS = {"subject_es", "preheader_es", "heading", "hero", "desc_es",
+                        "cta", "creative", "promo_page_id", "hero_link", "email_name"}
+# The GOW creative's call to action is the hero image, wrapped in a link to a
+# promo page. A campaign whose CTA is not a promo page (a game launch URL, say)
 # sets hero_link instead and the whole href is replaced.
 EMAIL_PROMO_HREF = "https://jugabet.cl/services/promo/offers/promoPage/@@PROMO_PAGE_ID@@"
 # Filled by the console script once the content exists, exactly like the
 # reserved journey id. Shared with email_content.py so both spell it the same.
 EMAIL_CONTENT_ID_TOKEN = "@@EMAIL_CONTENT_ID@@"
 EMAIL_HERO_TOKEN = "@@EMAIL_HERO_URL@@"
+EMAIL_DESC_TOKEN = "@@EMAIL_DESC@@"
+EMAIL_CTA_TOKEN = "@@EMAIL_CTA_URL@@"
+EMAIL_LINK_TOKEN = "@@EMAIL_LINK@@"
+# The captured creatives, and which slots each actually has. They are real
+# captures, not a layout invented per campaign, so a setting the chosen creative
+# has nowhere to put is a refusal — silently dropping it is how a brief's body
+# copy "shipped" while the email showed only a picture.
+EMAIL_CREATIVES = {
+    # One uppercase heading line above a hero image that is itself the CTA.
+    "hero_only": {"file": "gow_email.json",
+                  "slots": {"heading", "hero"},
+                  "what": "heading line + hero image (the copy lives in the image)"},
+    # A text body, a hero image and a separate CTA button image.
+    "text_body": {"file": "jbcl_tournament_email.json",
+                  "slots": {"desc_es", "hero", "cta"},
+                  "what": "text body + hero image + CTA button image"},
+}
+# Image slots a creative can leave for paste time, and what the picker calls them.
+EMAIL_IMAGE_LABELS = {
+    "@@EMAIL_HERO_URL@@": "the EMAIL HERO image",
+    EMAIL_CTA_TOKEN: "the EMAIL CTA BUTTON image",
+}
 
 
-EMAIL_TEMPLATE_PATH = HERE / "templates" / "casino" / "gow_email.json"
+def _desc_to_html(text: str) -> str:
+    """Blank-line-separated paragraphs -> the <br><br> form the creative uses.
+
+    The operator's text is escaped: it comes from a spreadsheet cell, and a stray
+    '<' or '&' would otherwise break the email body rather than show up in it.
+    """
+    escaped = (str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+    paras = [p.strip() for p in re.split(r"\n\s*\n", escaped.strip()) if p.strip()]
+    return "\n<br><br>\n".join(p.replace("\n", " ") for p in paras)
+
+
+def pick_email_creative(s: dict) -> str:
+    """Which captured creative this email needs. Explicit wins; otherwise the one
+    whose slots cover the settings given."""
+    named = s.get("creative")
+    if named:
+        if named not in EMAIL_CREATIVES:
+            raise SystemExit(f"dextra_email: unknown creative {named!r}. Known: "
+                             + ", ".join(f"{k} ({v['what']})"
+                                         for k, v in EMAIL_CREATIVES.items()))
+        return named
+    asked = {k for k in ("desc_es", "cta", "heading") if s.get(k)}
+    fits = [k for k, v in EMAIL_CREATIVES.items() if asked <= v["slots"]]
+    if not fits:
+        raise SystemExit(
+            f"dextra_email: no captured creative has slots for {sorted(asked)}. "
+            + "; ".join(f"{k} has {sorted(v['slots'])}" for k, v in EMAIL_CREATIVES.items()))
+    # Prefer the creative that uses the most of what was asked for, so a spec
+    # giving desc_es does not land on the creative with no body.
+    return max(fits, key=lambda k: len(asked & EMAIL_CREATIVES[k]["slots"]))
+
+
+EMAIL_TEMPLATE_DIR = HERE / "templates" / "casino"
 EMAIL_HEADING_TOKEN = "@@EMAIL_HEADING@@"
 EMAIL_PROMO_PAGE_TOKEN = "@@PROMO_PAGE_ID@@"
 # Authoring settings collected while the chain is applied; the content itself is
@@ -290,30 +344,44 @@ _email_authoring: list[dict] = []
 def build_email_content(s: dict, journey_name: str, date_str: str) -> dict:
     """The payload for POST .../content-studio/.../email/contents.
 
-    Substitutes the captured JBCL creative rather than inventing HTML: the
-    heading line, the hero image and the promo page the hero links to are the
-    only slots that creative has. Everything else stays exactly as captured.
+    Substitutes a captured creative rather than inventing HTML. Which slots exist
+    depends on which creative: `hero_only` is a heading line above a hero image
+    that is itself the CTA; `text_body` has a text body, a hero image and a
+    separate CTA button image. Everything not substituted stays as captured.
     """
     from create_journeys import BRAND      # lazy, like every other cross-import here
 
-    content = json.loads(EMAIL_TEMPLATE_PATH.read_text(encoding="utf-8"))
+    creative = pick_email_creative(s)
+    spec_slots = EMAIL_CREATIVES[creative]
+    content = json.loads((EMAIL_TEMPLATE_DIR / spec_slots["file"]).read_text(encoding="utf-8"))
     tpl_brand = str(content.get("brand") or "")
     if tpl_brand and BRAND and tpl_brand.upper() != str(BRAND).upper():
         raise SystemExit(
-            f"dextra_email: the only captured email creative is {tpl_brand}'s and this "
-            f"run is {BRAND}. Emailing {BRAND} players a {tpl_brand} creative is a "
-            f"brand swap, not a substitution — capture a {BRAND} email and add it as a "
-            f"template, or set `template` to an existing {BRAND} CSE id instead.")
+            f"dextra_email: the {creative} creative is {tpl_brand}'s and this run is "
+            f"{BRAND}. Emailing {BRAND} players a {tpl_brand} creative is a brand swap, "
+            f"not a substitution — capture a {BRAND} email and add it as a template, or "
+            f"set `template` to an existing {BRAND} CSE id instead.")
+
+    # A setting this creative cannot place would otherwise be dropped in silence,
+    # which is how a brief's body copy "shipped" while the email showed a picture.
+    unusable = sorted({k for k in ("heading", "desc_es", "cta") if s.get(k)}
+                      - spec_slots["slots"])
+    if unusable:
+        raise SystemExit(
+            f"dextra_email: the {creative} creative ({spec_slots['what']}) has nowhere to "
+            f"put {unusable}. Pick a creative that does — "
+            + "; ".join(f"{k}: {sorted(v['slots'])}" for k, v in EMAIL_CREATIVES.items()))
+
     if s.get("promo_page_id") and s.get("hero_link"):
         raise SystemExit("dextra_email: give either `promo_page_id` or `hero_link`, not "
                          "both — they set the same href.")
     if not s.get("promo_page_id") and not s.get("hero_link"):
         raise SystemExit(
-            "dextra_email: authoring needs `promo_page_id` or `hero_link` — in this "
-            "captured creative the hero image IS the call to action, and its href is a "
-            "promo page. Left unset that link ships dead. Use `promo_page_id` for a promo "
-            "page, `hero_link` for any other destination (a game launch URL), or set "
-            "`template` to point at an email content that already has what you want.")
+            "dextra_email: authoring needs `promo_page_id` or `hero_link` — in these "
+            "creatives the images ARE the call to action. Left unset that link ships "
+            "dead. Use `promo_page_id` for a promo page, `hero_link` for any other "
+            "destination (a game launch URL), or set `template` to point at an email "
+            "content that already has what you want.")
 
     content["name"] = s.get("email_name") or f"{journey_name} — {date_str}"
     comp = content["translations"]["es"]["composition"]
@@ -322,25 +390,46 @@ def build_email_content(s: dict, journey_name: str, date_str: str) -> dict:
     if s.get("preheader_es"):
         comp["preHeader"] = s["preheader_es"]
     src = comp["body"]["source"]
-    src = src.replace(EMAIL_HEADING_TOKEN, str(s.get("heading") or "").strip())
-    if s.get("hero_link"):
-        before = src.count(EMAIL_PROMO_HREF)
-        src = src.replace(EMAIL_PROMO_HREF, str(s["hero_link"]))
-        if not before:
+
+    if "heading" in spec_slots["slots"]:
+        src = src.replace(EMAIL_HEADING_TOKEN, str(s.get("heading") or "").strip())
+    if "desc_es" in spec_slots["slots"]:
+        if not s.get("desc_es"):
+            raise SystemExit(
+                f"dextra_email: the {creative} creative has a text body and no copy was "
+                f"given for it. Set `desc_es`, or use the hero_only creative whose copy "
+                f"lives in the image — an empty body would ship as a blank panel.")
+        src = src.replace(EMAIL_DESC_TOKEN, _desc_to_html(s["desc_es"]))
+
+    # The destination. hero_only bakes the promo path around a token; text_body
+    # holds the whole href, so a promo page id has to be expanded into one.
+    link = str(s.get("hero_link") or "")
+    if EMAIL_LINK_TOKEN in src:
+        if not link:
+            link = f"https://jugabet.cl/services/promo/offers/promoPage/{s['promo_page_id']}"
+        src = src.replace(EMAIL_LINK_TOKEN, link)
+    elif link:
+        if EMAIL_PROMO_HREF not in src:
             raise SystemExit("dextra_email: the captured creative's promo-page href has "
                              "changed shape — `hero_link` matched nothing, so the email "
                              "would keep the captured destination")
+        src = src.replace(EMAIL_PROMO_HREF, link)
     else:
         src = src.replace(EMAIL_PROMO_PAGE_TOKEN, str(s["promo_page_id"]))
-    hero = s.get("hero")
-    if hero and not is_pick_request(hero):
-        src = src.replace(EMAIL_HERO_TOKEN, str(hero))
+
+    # Images: a URL is substituted now, PICK is left for the script's file picker.
+    for skey, token in (("hero", EMAIL_HERO_TOKEN), ("cta", EMAIL_CTA_TOKEN)):
+        if token not in src:
+            continue
+        val = s.get(skey)
+        if val and not is_pick_request(val):
+            src = src.replace(token, str(val))
     comp["body"]["source"] = src
 
     left = sorted(set(re.findall(r"@@[A-Z_]+@@", json.dumps(content))))
-    # EMAIL_HERO_URL is filled at paste time after the upload; anything else
+    # The image tokens are filled at paste time after the upload; anything else
     # unresolved would ship as literal text in a real email.
-    stray = [t for t in left if t != EMAIL_HERO_TOKEN]
+    stray = [t for t in left if t not in EMAIL_IMAGE_LABELS]
     if stray:
         raise SystemExit(f"dextra_email: unresolved placeholders in the authored "
                          f"content: {stray}")
@@ -425,7 +514,13 @@ SETTINGS_DOC = {
                                    "subject line. Implies the create -> save -> publish flow, "
                                    "and the journey is repointed at the id it returns",
                      "preheader_es": "the pre-header line of the authored content",
-                     "heading": "the one uppercase heading line above the hero image",
+                     "creative": "which captured creative: hero_only (heading + hero image, "
+                                 "copy lives in the image) or text_body (text body + hero + "
+                                 "CTA button image). Default: whichever fits the settings given",
+                     "heading": "hero_only: the one uppercase heading line above the image",
+                     "desc_es": "text_body: the email body. Blank lines separate paragraphs; "
+                                "the text is escaped, so it cannot carry markup",
+                     "cta": "text_body: the CTA button image — a URL, or PICK",
                      "hero": "hero image: a URL, or PICK to choose the file at paste time",
                      "promo_page_id": "the promo page the hero image links to — the captured "
                                       "creative's own CTA shape",
@@ -1504,17 +1599,19 @@ _EMAIL_JS = """
   // journey at the id — the flow comms_campaign.py proved. The captured content
   // is never edited; this always makes a new one.
   const EMAIL_CONTENT = @EMAIL_CONTENT@;
-  const EMAIL_HERO_TOKEN = @EMAIL_HERO_TOKEN@;
+  const EMAIL_IMAGE_SLOTS = @EMAIL_IMAGE_SLOTS@;
   const EMAIL_CONTENT_ID_TOKEN = @EMAIL_CONTENT_ID_TOKEN@;
   const CONTENT_BASE = CRM_BASE + '/content-studio/v0/eb-backoffice/email/contents';
   async function authorEmail() {
     let cText = JSON.stringify(EMAIL_CONTENT);
-    if (cText.indexOf(EMAIL_HERO_TOKEN) !== -1) {
-      const asset = await uploadAsset(await pickFile('the EMAIL HERO image'), 'EMAIL HERO');
+    for (const slot of EMAIL_IMAGE_SLOTS) {
+      if (cText.indexOf(slot.token) === -1) continue;
+      const asset = await uploadAsset(await pickFile(slot.label), slot.label);
       // The body references images as https://{{cdn_hostname}}<relative>, not the
       // absolute URL — the absolute one does not resolve for every recipient.
-      cText = cText.split(EMAIL_HERO_TOKEN).join('https://{{cdn_hostname}}' + asset.relative_link);
+      cText = cText.split(slot.token).join('https://{{cdn_hostname}}' + asset.relative_link);
     }
+    if (/@@EMAIL_[A-Z_]+@@/.test(cText)) throw new Error('an email image placeholder was left unfilled — refusing to create the content.');
     const content = JSON.parse(cText);
     let r = await fetch(CONTENT_BASE, { method: 'POST', headers: { ...upHeaders(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(content) });
     let t = await r.text();
@@ -1546,9 +1643,12 @@ def _inject_pickers(js: str, slots: list[dict], email_content: dict | None = Non
              .replace("@PICK_SLOTS@", json.dumps(slots, ensure_ascii=False))
              .replace("@FOLDER_ID@", json.dumps(DEFAULT_FOLDER_ID)))
     if email_content is not None:
+        ctext = json.dumps(email_content, ensure_ascii=False)
+        slots = [{"token": t, "label": lbl} for t, lbl in EMAIL_IMAGE_LABELS.items()
+                 if t in ctext]
         block += (_EMAIL_JS
-                  .replace("@EMAIL_CONTENT@", json.dumps(email_content, ensure_ascii=False))
-                  .replace("@EMAIL_HERO_TOKEN@", json.dumps(EMAIL_HERO_TOKEN))
+                  .replace("@EMAIL_CONTENT@", ctext)
+                  .replace("@EMAIL_IMAGE_SLOTS@", json.dumps(slots, ensure_ascii=False))
                   .replace("@EMAIL_CONTENT_ID_TOKEN@", json.dumps(EMAIL_CONTENT_ID_TOKEN)))
     # After the ids are regenerated and before the body is parsed and POSTed:
     # substituting on the serialised text hits the compiled activities and the

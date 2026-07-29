@@ -298,6 +298,9 @@
         ],
         "follow": "SuccessEmailSend",
         "inline_keys": [
+          "creative",
+          "cta",
+          "desc_es",
           "email_name",
           "from_name",
           "heading",

@@ -277,20 +277,34 @@ create → save → publish flow `comms_campaign.py` uses for GOW. The content t
 spec names is never edited; a new one is always created. `template` and the
 authoring settings are mutually exclusive, and asking for both is refused.
 
-What that creative can and cannot carry, because it is a real capture and not a
-layout we invent per campaign:
+Two captured JBCL creatives, with different slots. `creative` picks one; left
+unset, whichever fits the settings given is used and reported:
 
-- **The hero image is the call to action.** There is one uppercase `heading`
-  line, one hero image, and the footer. A brief's body paragraphs and text
-  button have nowhere to go — in this design that copy lives *in the image*.
-  A campaign that genuinely needs a text body needs a capture that has one.
-- **`hero_link` vs `promo_page_id`.** The captured href is a promo page; use
-  `promo_page_id` for one, or `hero_link` to replace the href outright when the
-  destination is anything else (a game launch URL). One is required — unset, the
-  email ships a dead link.
-- **The brand must match.** The only captured creative is JBCL's; a PMCL run
-  authoring it is refused. Emailing one brand's players another brand's creative
-  is a brand swap, not a substitution.
+| creative | template | slots | when |
+| --- | --- | --- | --- |
+| `hero_only` | `gow_email.json` | `heading`, `hero` | the copy is *in* the image (how GOW works) |
+| `text_body` | `jbcl_tournament_email.json` | `desc_es`, `hero`, `cta` | the brief has body paragraphs |
+
+`desc_es` takes the brief's Description verbatim — blank lines become the
+`<br><br>` breaks the creative uses, and the text is **escaped**, so a stray `<`
+in a spreadsheet cell shows up instead of breaking the body. `cta` is the button
+image *below* the text; both it and `hero` accept a URL or `PICK`.
+
+What these creatives can and cannot carry, because they are real captures and
+not a layout invented per campaign:
+
+- **A setting the chosen creative has no slot for is refused**, never dropped.
+  Giving `desc_es` to `hero_only` is a refusal — silently ignoring it is how a
+  brief's body copy "shipped" while the email showed only a picture.
+- **The CTA is an image in `text_body`.** A sheet's email Button *text* has
+  nowhere to go: it has to be part of the button image. `comms_builder.py` says
+  so rather than dropping it quietly.
+- **`hero_link` vs `promo_page_id`.** One is required — unset, the email ships a
+  dead link. `hero_only` bakes the promo path around an id token, `text_body`
+  holds the whole href, so a promo id is expanded into one.
+- **The brand must match.** Both captures are JBCL's; a PMCL run authoring one is
+  refused. Emailing one brand's players another brand's creative is a brand swap,
+  not a substitution.
 
 The inherited-content check refuses a build that still shares any content value
 with its reference, so an unset one is a failed build rather than a cosmetic

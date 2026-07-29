@@ -93,6 +93,8 @@ def _copy_for(channel: str, parsed) -> dict:
             out["subject_es"] = c.subject_es
         if c.preheader_es:
             out["preheader_es"] = c.preheader_es
+        if c.desc_es:
+            out["desc_es"] = c.desc_es
         return out
     c = parsed.nc if channel == "nc" else parsed.popup
     out = {}
@@ -182,11 +184,22 @@ def build_spec(
                     notes.append("email: hero links the sheet's Link row "
                                  f"({resolved_link})")
                 settings["hero"] = artwork
-                settings["heading"] = email_heading or parsed.event_name
-                if not settings["heading"]:
-                    raise SystemExit(
-                        "email: no heading — the sheet has no 'Event' row and none was "
-                        "given. That line is the only text above the hero image.")
+                if settings.get("desc_es"):
+                    # The sheet has body copy, so use the creative that has a body:
+                    # a hero image, that text, and a CTA button image under it.
+                    settings["cta"] = artwork
+                    if parsed.email.button_es:
+                        notes.append(
+                            "email: the CTA is an image in this creative, so the sheet's "
+                            f"Button text ({parsed.email.button_es!r}) is not placed — it "
+                            "has to be part of the button image you pick")
+                else:
+                    settings["heading"] = email_heading or parsed.event_name
+                    if not settings["heading"]:
+                        raise SystemExit(
+                            "email: the sheet has no Description row for the email and no "
+                            "'Event' row to use as a heading. Add the email's Description, "
+                            "or give --email-heading — otherwise the email has no words.")
         chain.append(dict({"type": channel}, **settings))
 
         wait = waits.get(channel)

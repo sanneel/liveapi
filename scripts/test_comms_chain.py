@@ -230,6 +230,50 @@ try:
 except BaseException as exc:
     check("an authored-email chain composes", False, f"{type(exc).__name__}: {exc}")
 
+print("\nthe text_body creative carries the brief's own paragraphs")
+DESC = ("⚡ Los dioses te llaman.\n\n🎰 Juega Olympus 1000, apuesta mínima $25.\n\n"
+        "🏆 49 posiciones se reparten $3.000.000.\n\n⏳ Del 1 al 31 de agosto.")
+try:
+    res = JC.compose(email_spec(subject_es="SUBJ", preheader_es="PRE", desc_es=DESC,
+                                hero="PICK", cta="PICK", hero_link=LINK))
+    src = res["email_content"]["translations"]["es"]["composition"]["body"]["source"]
+    check("the creative with a text body was chosen", "@@EMAIL_CTA_URL@@" in src)
+    check("all four paragraphs are in the body", src.count("<br><br>") == 3,
+          f"{src.count('<br><br>')} separators")
+    for frag in ("Los dioses te llaman", "apuesta mínima $25", "49 posiciones",
+                 "1 al 31 de agosto"):
+        check(f"body carries {frag!r}", frag in src)
+    check("the captured campaign's copy is gone",
+          "Leyendas Ganadoras" not in src and "8.000.000" not in src)
+    check("both hrefs are the operator's link", src.count(LINK) == 2,
+          f"{src.count(LINK)} occurrences")
+    check("the shared footer block is kept", "[[block(CSE-0-6615)]]" in src)
+    check("hero and CTA are both left for the picker",
+          JC.EMAIL_HERO_TOKEN in src and JC.EMAIL_CTA_TOKEN in src)
+    check("markup in the copy is escaped, not injected",
+          "&lt;script&gt;" in JC._desc_to_html("<script>x</script>"),
+          JC._desc_to_html("<script>x</script>"))
+    out = REPO / "journey-cloner" / "out" / "_test_textbody.console.js"
+    JC.emit_console_script(res["body"], out, res["email_content"])
+    js = out.read_text(encoding="utf-8")
+    check("the script asks for both email images",
+          js.count('"label": "the EMAIL HERO image"') == 1
+          and js.count('"label": "the EMAIL CTA BUTTON image"') == 1)
+    check("an unfilled email image refuses",
+          "email image placeholder was left unfilled" in js)
+    out.unlink(missing_ok=True)
+except BaseException as exc:
+    check("a text_body email composes", False, f"{type(exc).__name__}: {exc}")
+
+refuses("a body given to the creative that has no body slot",
+        subject_es="S", desc_es=DESC, hero_link=LINK, creative="hero_only")
+refuses("a heading given to the creative that has no heading slot",
+        subject_es="S", heading="H", hero_link=LINK, creative="text_body")
+refuses("the text_body creative with no body copy",
+        subject_es="S", hero="PICK", hero_link=LINK, creative="text_body")
+refuses("an unknown creative name",
+        subject_es="S", hero_link=LINK, creative="fancy")
+
 print("\na brand's players are never sent another brand's creative")
 import os
 import subprocess
