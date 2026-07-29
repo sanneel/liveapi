@@ -227,7 +227,7 @@
             <button type="button" class="chip" data-starter="brief">＋ Birthday brief</button>
             <button type="button" class="chip" data-starter="specs">Specs of each journey</button>
             <button type="button" class="chip" data-starter="script">Full script</button>
-            <button type="button" class="chip" data-starter="wheel">Build the wheel</button>
+            <button type="button" class="chip" data-starter="comms">Comms from content</button>
           </div>
         </div>
       </div>
@@ -362,6 +362,11 @@ NOTES
          + "operator has to type into each activity.",
     script: "Now give me the full script for this campaign.",
     wheel: "Build the wheel — the randomizer spec, with the weights from the brief.",
+    comms: "Build the comms journey from this content — one journey per date, with the "
+         + "NC, pop-up, SMS and email nodes carrying the copy below. Ask me for anything "
+         + "you need that I have not given you (artwork URL, email template id, link).\n\n"
+         + "NC title (es/en):\nNC text (es/en):\nPop-up title (es/en):\n"
+         + "Pop-up text (es/en):\nSMS (es/en):\nEmail template id:\nLink:\nDates:",
   };
 
   function esc(s){ return String(s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }

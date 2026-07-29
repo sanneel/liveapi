@@ -298,7 +298,8 @@
         ],
         "follow": "SuccessEmailSend",
         "inline_keys": [
-          "(none)"
+          "from_name",
+          "template"
         ]
       },
       "dextra_sms": {
@@ -378,6 +379,9 @@
         ],
         "follow": "NotificationSent",
         "inline_keys": [
+          "deeplink",
+          "icon",
+          "link_en/es",
           "title_en/es, desc_en/es, caption_en/es"
         ]
       },
@@ -387,6 +391,7 @@
         ],
         "follow": "NotificationSent",
         "inline_keys": [
+          "image",
           "title_en/es, desc_en/es, caption_en/es"
         ]
       },

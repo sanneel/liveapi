@@ -1,9 +1,8 @@
 """
 REA Journey Planner — in-backoffice chat.
 
-  GET  /admin/planner         redirects to the Optimization page's Planner tab
-                              (/admin/promotions?tab=planner), where the chat
-                              widget actually lives (partials/_planner_panel.html)
+  GET  /admin/ai              the planner's own page (partials/_planner_panel.html)
+  GET  /admin/planner         redirects to /admin/ai (old bookmarks)
   POST /admin/planner/api     Gemini proxy — assembles the system prompt from the
                               journey-planner docs and forwards the conversation
 
@@ -28,7 +27,7 @@ from pathlib import Path
 
 import requests
 from fastapi import APIRouter, Body, Depends, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from ..auth.dependencies import require_role
 from ..config import get_settings
@@ -385,14 +384,33 @@ def planner_view_context() -> dict:
     }
 
 
+@router.get("/admin/ai", response_class=HTMLResponse)
+def ai_page(
+    request: Request,
+    user: User = Depends(require_role("editor")),
+):
+    """The AI planner on its own page.
+
+    It lived as a tab on the Optimization hub, sharing that page with nine
+    generator forms — which meant a cropped panel for the one thing here that is
+    a workspace rather than a form. Optimization is now only generators.
+    """
+    from ..routes.admin_views import templates
+    # Same call shape as every other page here: (request, name, context).
+    return templates.TemplateResponse(request, "ai.html", {
+        "active_page": "ai",
+        "current_user": user,
+        "pl": planner_view_context(),
+    })
+
+
 @router.get("/admin/planner")
 def planner_page(
     request: Request,
     user: User = Depends(require_role("editor")),
 ) -> RedirectResponse:
-    """Planner moved into the Optimization hub as a tab — keep the old URL
-    working for bookmarks/links instead of 404ing."""
-    return RedirectResponse(url="/admin/promotions?tab=planner", status_code=307)
+    """Old bookmarks and the old Optimization tab link both land here."""
+    return RedirectResponse(url="/admin/ai", status_code=307)
 
 
 def _detect_mode(text: str, fallback: str) -> str:

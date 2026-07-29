@@ -255,10 +255,19 @@ SETTINGS_DOC = {
     "registration": {"promocode": "the promocode players redeem to enter"},
     "casino_bonus_v2": {"bonus_percent": "deposit-match %", "wagering": "wagering requirement (x)",
                         "release_multiplier": "releaseLimitMultiplier", "expiration_ms": "bonusExpirationTime in ms"},
-    "notification_center#contract1": {"title_en/es, desc_en/es, caption_en/es": "on-site notification copy"},
-    "notification_center#contract5": {"title_en/es, desc_en/es, caption_en/es": "pop-up (Cat-fish) copy"},
+    "notification_center#contract1": {"title_en/es, desc_en/es, caption_en/es": "on-site notification copy",
+                                      "icon": "notification artwork URL — set it, or the card shows "
+                                              "the captured campaign's image",
+                                      "link_en/es": "where the card sends the player",
+                                      "deeplink": "app deeplink, when there is one"},
+    "notification_center#contract5": {"title_en/es, desc_en/es, caption_en/es": "pop-up (Cat-fish) copy",
+                                      "image": "pop-up background artwork URL — set it, or the "
+                                               "journey shows the captured campaign's picture"},
     "dextra_sms": {"text_en/es": "SMS body"},
-    "dextra_email": {"(none)": "email references a content-studio CSE id; swap it after creating email content"},
+    "dextra_email": {"template": "content-studio email id (e.g. CSE-0-14458). Set it, or the "
+                                 "journey emails the CAPTURED campaign's template — which the "
+                                 "inherited-content check refuses to build",
+                     "from_name": "from-line text (default: the reference's)"},
     "wait_interval": {"wait": "ISO-8601 duration, e.g. P0Y0M0DT1H0M0S"},
     "event_detector": {"(none)": "captured deposit-band watcher kept as-is"},
     "multipurpose_promotion": {"(none)": "captured choosable-flow drip kept as-is (see warning on compose)"},
@@ -470,7 +479,12 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
                 if not hit:
                     warnings.append(f"{kind}: no captured variable matched {skey}_{lang}")
         # Language-independent fields, held once in the `common` tab.
-        for skey, stems in (("icon", ("icon",)), ("deeplink", ("deeplink",))):
+        for skey, stems in (("icon", ("icon",)),
+                            # the pop-up's artwork is a background image, not an
+                            # icon — a chain that set only `icon` still shipped
+                            # the captured campaign's picture
+                            ("image", ("background_image_src", "backgroundimagesrc")),
+                            ("deeplink", ("deeplink",))):
             val = s.get(skey)
             if val is None:
                 continue
@@ -482,6 +496,22 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
                     for tk in list(tab):
                         if tk.lower() in stems:
                             tab[tk] = val
+    elif kind == "dextra_email":
+        # The email node is copied whole, so without this it keeps the captured
+        # campaign's template — and the inherited-content guard (rightly) refuses
+        # to build a comms journey that would email players the old promotion.
+        es = init.get("emailSettings") or {}
+        if "template" in s and es:
+            tpl = es.get("template") or {}
+            note("emailSettings.template.id", tpl.get("id"), s["template"])
+            tpl["id"] = s["template"]
+            es["template"] = tpl
+            # displayData is what the builder shows on the card; leaving the old
+            # id there is how a reviewer sees the wrong template name.
+            init["displayData"] = [str(s["template"])]
+        if "from_name" in s and es:
+            note("emailSettings.fromLineText", es.get("fromLineText"), s["from_name"])
+            es["fromLineText"] = s["from_name"]
     elif kind == "dextra_sms":
         for lang in ("en", "es"):
             val = s.get(f"text_{lang}")
@@ -563,9 +593,10 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
         "freebet": {"amount", "max_odds", "expire_days"},
         "registration": {"promocode"},
         "casino_bonus_v2": {"bonus_percent", "wagering", "release_multiplier", "expiration_ms"},
-        "notification_center#contract1": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "deeplink"},
-        "notification_center#contract5": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "deeplink"},
+        "notification_center#contract1": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "image", "deeplink"},
+        "notification_center#contract5": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "image", "deeplink"},
         "dextra_sms": {"text_en", "text_es"},
+        "dextra_email": {"template", "from_name"},
         "wait_interval": {"wait"},
         "external_system_source": {"description"},
         "dwh_source": {"segment_file"},

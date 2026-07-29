@@ -256,6 +256,45 @@ MODE 5 hard rules — each of these is REFUSED by the composer, not ignored:
 After emitting, tell the human:
   "Run `python journey-cloner/journey_composer.py compose <file> --script` to
    get the console script."
+COMMS JOURNEYS ARE MODE 5 WITH THE CONTENT IN THE CHAIN. A brief that gives you
+message copy ("NC + Email + SMS + Pop Up on both days, here is the text") wants
+one or two comms journeys, and the `comms` RECIPE cannot express them — it has
+zero knobs, so it reproduces its reference verbatim, live copy and all. Build the
+chain and put the copy on the nodes:
+  {
+    "name": "PMCL | Ruletazo | Comms Sat",
+    "source": {"type": "segment"},
+    "chain": [
+      {"type": "nc",
+       "title_es": "¡El Ruletazo está aquí!", "title_en": "Ruletazo is here!",
+       "desc_es": "Deposita y gira la ruleta.", "desc_en": "Deposit and spin.",
+       "caption_es": "Jugar ahora", "caption_en": "Play now",
+       "link_es": "https://fortunazo.cl/promo/ruletazo",
+       "link_en": "https://fortunazo.cl/promo/ruletazo",
+       "icon": "<artwork URL>"},
+      {"type": "popup", "title_es": "…", "title_en": "…", "desc_es": "…",
+       "desc_en": "…", "caption_es": "…", "caption_en": "…",
+       "image": "<background artwork URL>"},
+      {"type": "sms", "text_es": "…", "text_en": "…"},
+      {"type": "email", "template": "CSE-0-99001", "from_name": "Fortunazo"}
+    ],
+    "date": "2026-09-12", "days": 2
+  }
+Three of those settings are not decoration — a comms node is copied whole, so
+whatever you leave unset stays the CAPTURED campaign's:
+  * `icon` / `image` — the artwork on the card. Unset ships the old promotion's
+    picture.
+  * `template` on the email — the content-studio CSE id. Unset ships the old
+    campaign's email.
+  * `link_en/es` — where the card sends players. Unset points at the old promo
+    page.
+The composer REFUSES a build that still shares any of these with its reference,
+so an unset one is a failed build, not a cosmetic slip. If the brief does not
+give you an artwork URL or an email id, say so with ❓ and leave the node out
+rather than inventing an id.
+A comms matrix ("NC/Email/SMS/Pop-up × Saturday and Sunday") is ONE journey per
+DATE, not one per channel — the four channels are four nodes in the same chain.
+
 MODE 6 — RANDOMIZER. Use this when the user asks for the wheel / scratch card
 itself. Wheels are NOT journeys and NOT ⛔ UNCAPTURED — they are built by
 randomizer_campaign.py from a captured template. Output ONLY a JSON object.

@@ -642,7 +642,7 @@ def figma_run(
     return templates.TemplateResponse(request, "figma.html", ctx)
 
 
-_PROMO_TABS = {"overview", "gow", "tournament_pmcl", "bet_and_get", "journey_cloner", "randomizers", "nc_discount", "scripts", "prediction", "planner", "slot_cards"}
+_PROMO_TABS = {"overview", "gow", "tournament_pmcl", "bet_and_get", "journey_cloner", "randomizers", "nc_discount", "scripts", "prediction", "slot_cards"}
 _JC_TYPES = ["followup", "bfr", "two_hours", "aft"]
 
 
@@ -750,6 +750,9 @@ def _promotions_context(*, user, active_tab="overview", gow=None, tournament=Non
         "active_tab": tab,
         "meta": cat.get("meta", {}),
         "automations": pc.automations(),
+        # what this page can build, and the drift alarm for scripts with no home
+        "generator_groups": pc.generator_groups(),
+        "unlisted": pc.unlisted_generators(),
         "all_scripts": pc.all_scripts(),
         "gow": gow if gow is not None else _gow_ns(),
         "tournament": tournament if tournament is not None else _tournament_ns(),
@@ -758,7 +761,6 @@ def _promotions_context(*, user, active_tab="overview", gow=None, tournament=Non
         "rnd": rnd if rnd is not None else _rnd_ns(),
         "nc": nc if nc is not None else _nc_ns(),
         "pred": pred if pred is not None else _pred_ns(),
-        "pl": _planner_ns(),
         "sc": _slot_ns(),
     }
 
@@ -771,9 +773,13 @@ def promotions_page(
     template_saved: str = "",
     template_error: str = "",
     user: User = Depends(require_role("editor")),
-) -> HTMLResponse:
-    """Promotions hub: automation graph + the GOW and Journey Cloner generators
-    (as tabs) + every generator script and captured template."""
+):
+    """Promotions hub: automation graph + every campaign generator (as tabs) +
+    every generator script and captured template."""
+    # The planner used to be a tab here; anything still linking to it lands on
+    # its own page instead of a blank Overview.
+    if tab == "planner":
+        return RedirectResponse(url="/admin/ai", status_code=307)
     ctx = _promotions_context(
         user=user,
         active_tab=tab,

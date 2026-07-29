@@ -75,6 +75,28 @@ with the DB snapshot + `git reset` commands printed by that script.
   ⛔ claiming a game is unregistered when it is not. Not in CI: it needs a live key
   and spends ~35K tokens per brief. Run it before and after a prompt change.
 
+- **AI has its own page (`/admin/ai`)** with a sidebar entry, instead of a tab
+  sharing the Optimization page with nine generator forms. `/admin/planner` and
+  `/admin/promotions?tab=planner` redirect to it, so old links keep working.
+- **A generator registry** (`promotions_catalog.GENERATORS`) — one place that says
+  what campaign generators exist, which brand each is for, and where it is driven
+  from (a tab, a page, or the shell). The Optimization overview renders it grouped
+  Casino / Sport / Wheels / Comms / Assets / Tools, and `unlisted_generators()`
+  flags any generator script the registry does not name. Before this, the answer
+  to "what can this build?" was split across catalog.json (5 automations), the tab
+  list (10) and journey-cloner/ (20+ scripts) — which is how PMCL Bet & Get looked
+  missing when it had already shipped, and how `casino_journey.py` sat with no UI.
+- **Comms journeys from content, for the AI.** The chain engine could already
+  build NC + pop-up + SMS + email, but three settings had no way in — so every
+  attempt was refused by the inherited-content guard for still carrying the
+  captured campaign's artwork, links and email template. Added `template` /
+  `from_name` on `dextra_email` and `image` on the pop-up (the pop-up's artwork is
+  `background_image_src`, not `icon`), and taught the planner the pattern with a
+  worked example. A comms journey with your own copy now composes clean —
+  verified end to end, with none of the reference campaign's content leaking.
+  Also fixes a duplicate `dextra_email` key in the palette dict that silently
+  overwrote its settings with "(none)", which is why the model never learned them.
+
 ### Fixed
 - **Free-spin activities shipped the reference template's caps and labels.**
   `casino_instant_freespin` / `casino_deposit_freespins` had no knob for the
