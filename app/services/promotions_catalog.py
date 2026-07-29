@@ -179,6 +179,10 @@ GENERATORS: List[dict] = [
      "label": "Prediction",
      "what": "Multi-number prediction promo from a pasted sheet",
      "script": "prediction_campaign.py", "tab": "prediction"},
+    {"key": "sport_comms", "group": "Sport", "brand": "JBCL",
+     "label": "Scratch Card Comms",
+     "what": "SMS + notification + pop-up + email for a liveapi campaign",
+     "script": "sport_comms_campaign.py", "tab": None},
 
     # ── Wheels & cards ────────────────────────────────────────────────────
     {"key": "randomizers", "group": "Wheels & cards", "brand": "JBCL/PMCL",

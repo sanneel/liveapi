@@ -57,6 +57,7 @@ Offline, no key, safe to run any time:
 .venv/bin/python scripts/test_composer_contract.py   # planner -> composer contract
 .venv/bin/python scripts/test_journey_design.py      # design-board renderer
 .venv/bin/python scripts/test_har_analyse.py         # HAR analyser + secret scrubbing
+.venv/bin/python scripts/test_sport_comms.py         # sport scratch-card comms generator
 .venv/bin/python -m compileall -q app server.py journey-cloner journey-planner
 ```
 

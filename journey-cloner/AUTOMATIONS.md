@@ -107,6 +107,55 @@ date, Chile kick-off time and promocode. Per-team templates under
 `templates/udch/` and `templates/colocolo/`; a team with no file of its own
 inherits the base team's.
 
+### Scratch Card Comms — `sport_comms_campaign.py` — shell only
+The fixture scratch-card promo announced on four channels from **one** journey:
+SMS, Notification Center, Cat-fish pop-up and email, with waits, two decision
+splits and a `deposit.approved` detector between them. Built from a HAR of the
+15.07 ENG vs ARG run; templates in `templates/sportcomms/` (four bodies, because
+the capture creates the draft, saves it, creates the email content and saves
+that).
+
+Two inputs, both of which the operator already has:
+
+```bash
+python sport_comms_campaign.py --campaign <liveapi-slug> --spec sheet.tsv
+```
+
+- **the liveapi campaign** (`app/models/campaign.py`) gives the journey name
+  (its title), the schedule (`expires_at` → `stopAt`, so the comms cannot
+  outlive the page they link to) and the email hero image (its rendered card,
+  `/r/<slug>.png`, uploaded to the media library at paste time);
+- **the content sheet** gives every channel's EN/ES copy through
+  `spec_parser.py`, and its `Link` row gives the randomizer promo slug that all
+  four channels point at.
+
+The notification icon and the pop-up background are still picked by hand at
+paste time — they are per-campaign artwork, and leaving them as captured would
+ship the previous promotion's images.
+
+Two things the capture did that this generator deliberately does not:
+
+| the recording | why it is not reproduced |
+| --- | --- |
+| created email content `CSE-0-16076` but left the journey pointing at `CSE-0-15619` | that is the copied campaign's email. The order is reversed here — content first, its returned id substituted into the journey — and `verify()` refuses while the captured id survives |
+| pointed `link-en` at `/randomizer/sf-sc-2026` and `link-es` at `/randomizer/arg-eng-sc` | a leftover from the earlier semifinal campaign. Both languages get the sheet's one slug, and the sheet's own SMS copy has any stale randomizer URL rewritten |
+
+Because the EN and ES slots hold *identical* strings in the capture for several
+fields, substitution writes EN into the first occurrence and ES into the rest
+(`replace_lang`) — replacing ES first would rewrite both and the EN copy would
+silently never land.
+
+This is a **parallel** journey, so its canvas carries `dropEdge` / `mergeEdge` /
+`flowEntry` scaffolding beside the activity nodes. `COMPOSER_RULES.md`'s
+position rule applies to the activity nodes only; the scaffolding has no
+position in the capture either, so `verify()` checks position on activity nodes
+and refuses any canvas node that is neither an activity nor known scaffolding.
+
+Contract: `scripts/test_sport_comms.py` — offline, no key. It asserts the
+prepared body differs from the template only in leaves holding a value the
+generator meant to write, and feeds `verify()` eight bodies that each break one
+rule to prove it refuses rather than warns.
+
 ### Prediction — `prediction_campaign.py` → Optimization ▸ Prediction
 Updates a Multi Number Prediction promo from a pasted Google Sheets table:
 uploads SPA + widget content, both manifests, SPA + widget settings, then PUTs

@@ -90,6 +90,7 @@ class ParsedSpec:
     tournament_end_date: str = ""    # ISO format YYYY-MM-DD, or empty if not in spec
     event_name: str = ""             # Specifications "Event" row, quotes/parens stripped
     tournament_id: str = ""          # id=... from the Specifications "Link" row
+    promo_slug: str = ""             # /randomizer/<slug> from the "Link" row
     nc: ChannelCopy = field(default_factory=ChannelCopy)
     popup: ChannelCopy = field(default_factory=ChannelCopy)
     sms: SmsCopy = field(default_factory=SmsCopy)
@@ -148,6 +149,10 @@ def _parse_date(date_str: str) -> str:
 
 _EVENT_RE = re.compile(r'^\s*"([^"]+)"')
 _LINK_ID_RE = re.compile(r"[?&]id=(\d+)")
+# A sport-comms sheet's Link row is the randomizer promo page rather than a
+# tournament deeplink, so the id regex above never matches it. The slug is the
+# only per-run value in that URL and every channel links to it.
+_PROMO_SLUG_RE = re.compile(r"/randomizer/([A-Za-z0-9][A-Za-z0-9._-]*)")
 
 
 def _parse_event_name(raw: str) -> str:
@@ -220,9 +225,13 @@ def parse_spec(text: str, *, expect_game_offer: bool = True) -> ParsedSpec:
         if label.lower().startswith("link"):
             # "Link (Other)" carries the canonical deeplink; don't let a later
             # blank/odd Link row clobber an id already found.
-            m = _LINK_ID_RE.search(_first_value(row))
+            link = _first_value(row)
+            m = _LINK_ID_RE.search(link)
             if m and not spec.tournament_id:
                 spec.tournament_id = m.group(1)
+            slug = _PROMO_SLUG_RE.search(link)
+            if slug and not spec.promo_slug:
+                spec.promo_slug = slug.group(1)
             continue
 
         if label.lower() == "start date":
