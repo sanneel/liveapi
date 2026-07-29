@@ -230,6 +230,42 @@ try:
 except BaseException as exc:
     check("an authored-email chain composes", False, f"{type(exc).__name__}: {exc}")
 
+print("\nthe email content name is one Content Studio will accept")
+# It rejects *@#?|&<>"'/ with 422 RESTRICTED_SYMBOLS_IN_CONTENT_NAME. Journey
+# names here are pipe-separated and the default content name is derived from one,
+# so every authored email failed at paste time — after four images were uploaded.
+for raw, want_clean in [
+    ("JBCL | Torneo del Olimpo Legendario | Comms — 2026-08-01", True),
+    ("Promo #1 & friends <today>", True),
+    ('Torneo "Olimpo"/x?y*z@w', True),
+]:
+    got = JC.clean_email_name(raw)
+    bad = [ch for ch in got if ch in JC.EMAIL_NAME_FORBIDDEN]
+    check(f"cleaned {raw[:34]!r}", not bad and bool(got), f"{got!r} left {bad}")
+check("a real hyphen and date survive cleaning",
+      JC.clean_email_name("JBCL | x — 2026-08-01").endswith("2026-08-01"),
+      JC.clean_email_name("JBCL | x — 2026-08-01"))
+check("a name of nothing but forbidden symbols cleans to empty",
+      JC.clean_email_name("|||") == "", repr(JC.clean_email_name("|||")))
+
+try:
+    res = JC.compose(email_spec(subject_es="S", preheader_es="P", desc_es="D",
+                                hero="PICK", cta="PICK", hero_link=LINK))
+    nm = res["email_content"]["name"]
+    check("the built content name carries no forbidden symbol",
+          not [ch for ch in nm if ch in JC.EMAIL_NAME_FORBIDDEN], repr(nm))
+    check("the rename is reported, not silent",
+          any("content name" in line for line in res["report"]),
+          str(res["report"][-2:]))
+    check("the journey keeps its own pipe-separated name",
+          "|" in res["body"]["journeyName"], res["body"]["journeyName"])
+except BaseException as exc:
+    check("an authored email names its content acceptably", False,
+          f"{type(exc).__name__}: {exc}")
+
+refuses("a content name that is only forbidden symbols",
+        subject_es="S", desc_es="D", hero_link=LINK, email_name="|||")
+
 print("\nthe composed-body artefact never costs the operator their script")
 # The name-derived out/ path is shared by every run for a campaign. A file left
 # there by a run under another user (a root shell run, say) made every later

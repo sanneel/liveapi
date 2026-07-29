@@ -301,6 +301,25 @@ EMAIL_IMAGE_LABELS = {
 }
 
 
+# Content Studio rejects these in a content name outright:
+#   422 CONTENT_ERROR / RESTRICTED_SYMBOLS_IN_CONTENT_NAME
+# Journey names here are pipe-separated ("JBCL | Torneo … | Comms"), and the
+# default content name is derived from one, so every authored email 422'd at
+# paste time — after the operator had already picked and uploaded four images.
+EMAIL_NAME_FORBIDDEN = '*@#?|&<>"\'/'
+
+
+def clean_email_name(raw: str) -> str:
+    """A content name Content Studio will accept, as close to `raw` as possible."""
+    # Mark the removals first: collapsing on "-" afterwards would also chew
+    # through hyphens that were always there, turning 2026-08-01 into
+    # "2026 - 08 - 01".
+    sep = "\x00"
+    out = "".join(sep if ch in EMAIL_NAME_FORBIDDEN else ch for ch in str(raw))
+    out = re.sub(rf"\s*{sep}+\s*", " - ", out)
+    return re.sub(r"[ \t]+", " ", out).strip(" -")
+
+
 def _desc_to_html(text: str) -> str:
     """Blank-line-separated paragraphs -> the <br><br> form the creative uses.
 
@@ -341,7 +360,8 @@ EMAIL_PROMO_PAGE_TOKEN = "@@PROMO_PAGE_ID@@"
 _email_authoring: list[dict] = []
 
 
-def build_email_content(s: dict, journey_name: str, date_str: str) -> dict:
+def build_email_content(s: dict, journey_name: str, date_str: str,
+                        report: list | None = None) -> dict:
     """The payload for POST .../content-studio/.../email/contents.
 
     Substitutes a captured creative rather than inventing HTML. Which slots exist
@@ -383,7 +403,15 @@ def build_email_content(s: dict, journey_name: str, date_str: str) -> dict:
             "destination (a game launch URL), or set `template` to point at an email "
             "content that already has what you want.")
 
-    content["name"] = s.get("email_name") or f"{journey_name} — {date_str}"
+    raw_name = s.get("email_name") or f"{journey_name} — {date_str}"
+    content["name"] = clean_email_name(raw_name)
+    if not content["name"]:
+        raise SystemExit(f"dextra_email: {raw_name!r} leaves nothing usable as a content "
+                         f"name once Content Studio's restricted symbols "
+                         f"({EMAIL_NAME_FORBIDDEN}) are removed — set `email_name`.")
+    if content["name"] != raw_name and report is not None:
+        report.append(f"dextra_email: content name {raw_name!r} -> {content['name']!r} "
+                      f"(Content Studio rejects {EMAIL_NAME_FORBIDDEN})")
     comp = content["translations"]["es"]["composition"]
     if s.get("subject_es"):
         comp["subject"] = s["subject_es"]
@@ -426,6 +454,11 @@ def build_email_content(s: dict, journey_name: str, date_str: str) -> dict:
             src = src.replace(token, str(val))
     comp["body"]["source"] = src
 
+    bad = sorted({ch for ch in str(content.get("name") or "") if ch in EMAIL_NAME_FORBIDDEN})
+    if bad:
+        raise SystemExit(f"dextra_email: content name {content['name']!r} still contains "
+                         f"{bad} — Content Studio rejects it with 422 at paste time, "
+                         f"which is after the operator has uploaded the images.")
     left = sorted(set(re.findall(r"@@[A-Z_]+@@", json.dumps(content))))
     # The image tokens are filled at paste time after the upload; anything else
     # unresolved would ship as literal text in a real email.
@@ -1357,7 +1390,7 @@ def compose(spec: dict) -> dict:
             raise SystemExit("more than one email node authors a content; the script "
                              "creates one, so give the others an existing `template` id")
         email_content = build_email_content(_email_authoring[0], name,
-                                           str(spec.get("date") or ""))
+                                           str(spec.get("date") or ""), report)
         report.append(f"dextra_email: authoring content {email_content['name']!r} "
                       f"(created + published at paste time, journey repointed at it)")
 
