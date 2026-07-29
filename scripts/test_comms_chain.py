@@ -230,6 +230,64 @@ try:
 except BaseException as exc:
     check("an authored-email chain composes", False, f"{type(exc).__name__}: {exc}")
 
+print("\nthe composed-body artefact never costs the operator their script")
+# The name-derived out/ path is shared by every run for a campaign. A file left
+# there by a run under another user (a root shell run, say) made every later
+# admin run die with EACCES on a path nobody asked about, after the journey had
+# already composed and verified.
+import os
+import stat
+import subprocess
+_basename = "test_comms_chain_perm"
+_json = REPO / "journey-cloner" / "out" / f"{_basename}.journey.json"
+_js = REPO / "journey-cloner" / "console_scripts" / f"{_basename}_console.js"
+try:
+    # A full spec: cmd_compose also runs the inherited-content audit, which
+    # (rightly) refuses a chain whose nodes still carry the reference's copy.
+    spec = spec()
+    spec["chain"].append({"type": "email", "subject_es": "S", "preheader_es": "P",
+                          "desc_es": "D", "hero": "PICK", "cta": "PICK",
+                          "hero_link": LINK})
+    rc = subprocess.run(
+        [sys.executable, "-c",
+         "import sys; sys.path.insert(0, %r); import json, journey_composer as JC; "
+         "JC.cmd_compose(json.loads(sys.stdin.read()), as_json=False, script=True, "
+         "basename=%r)" % (str(REPO / "journey-cloner"), _basename)],
+        input=json.dumps(spec), capture_output=True, text=True, cwd=REPO / "journey-cloner")
+    check("a basename run writes its own out/ file, not the shared slug path",
+          _json.exists(), f"exit {rc.returncode}: {rc.stderr[-160:]}")
+    check("the console script was written", _js.exists())
+
+    # Now make out/ unwritable and confirm the script still arrives.
+    outdir = REPO / "journey-cloner" / "out"
+    mode = stat.S_IMODE(outdir.stat().st_mode)
+    _json.unlink(missing_ok=True)
+    _js.unlink(missing_ok=True)
+    try:
+        outdir.chmod(0o555)
+        writable = os.access(outdir, os.W_OK)
+        rc = subprocess.run(
+            [sys.executable, "-c",
+             "import sys; sys.path.insert(0, %r); import json, journey_composer as JC; "
+             "JC.cmd_compose(json.loads(sys.stdin.read()), as_json=False, script=True, "
+             "basename=%r)" % (str(REPO / "journey-cloner"), _basename)],
+            input=json.dumps(spec), capture_output=True, text=True,
+            cwd=REPO / "journey-cloner")
+        if writable:
+            # Running as root: chmod cannot make it unwritable, so this half of
+            # the check is not exercised. Say so instead of passing silently.
+            print("  [SKIP] unwritable out/ — running as a user chmod cannot restrict")
+        else:
+            check("an unwritable out/ still yields the console script", _js.exists(),
+                  f"exit {rc.returncode}: {rc.stderr[-200:]}")
+            check("it warns rather than raising", "WARN" in rc.stdout and not rc.stderr.strip(),
+                  f"stdout={rc.stdout[-120:]!r} stderr={rc.stderr[-120:]!r}")
+    finally:
+        outdir.chmod(mode)
+finally:
+    _json.unlink(missing_ok=True)
+    _js.unlink(missing_ok=True)
+
 print("\nthe text_body creative carries the brief's own paragraphs")
 DESC = ("⚡ Los dioses te llaman.\n\n🎰 Juega Olympus 1000, apuesta mínima $25.\n\n"
         "🏆 49 posiciones se reparten $3.000.000.\n\n⏳ Del 1 al 31 de agosto.")

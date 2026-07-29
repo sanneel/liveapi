@@ -1696,8 +1696,21 @@ def cmd_compose(spec: dict, as_json: bool, script: bool, basename: str | None = 
                        for s in slots]
     OUT.mkdir(exist_ok=True)
     slug = re.sub(r"[^\w]+", "_", res["name"].lower()).strip("_")[:60]
-    out_path = OUT / f"{slug}.journey.json"
-    out_path.write_text(json.dumps(res["body"], ensure_ascii=False, indent=2), encoding="utf-8")
+    # The name-derived path is shared: every run for the same campaign writes the
+    # same file. That is fine for a shell run, but for a caller that passes a
+    # basename (the admin, which already uniquifies to survive concurrent
+    # requests) it means two operators building one campaign overwrite each
+    # other — and a file left behind by a run under a different user makes every
+    # later run fail with EACCES on a path nobody asked about.
+    out_path = OUT / (f"{basename}.journey.json" if basename else f"{slug}.journey.json")
+    try:
+        out_path.write_text(json.dumps(res["body"], ensure_ascii=False, indent=2),
+                            encoding="utf-8")
+    except OSError as exc:
+        # The composed body is a debugging artefact, not the deliverable. Losing
+        # it must not cost the operator the console script they asked for.
+        print(f"  WARN  could not write {out_path}: {exc}")
+        out_path = None
 
     js_path = None
     if script and not errs:
@@ -1714,7 +1727,7 @@ def cmd_compose(spec: dict, as_json: bool, script: bool, basename: str | None = 
 
     summary = {
         "ok": not errs,
-        "output": str(out_path),
+        "output": str(out_path) if out_path else None,
         "console_script": js_path,
         "chain": res["chain"],
         "activities": len(res["body"]["activities"]),
@@ -1733,7 +1746,8 @@ def cmd_compose(spec: dict, as_json: bool, script: bool, basename: str | None = 
         print(json.dumps(summary, ensure_ascii=False, indent=2))
     else:
         print(f"chain    : {' -> '.join(res['chain'])} -> end")
-        print(f"output   : {out_path}")
+        if out_path:
+            print(f"output   : {out_path}")
         if js_path:
             print(f"script   : {js_path}")
         print(f"activities {summary['activities']}, elements {summary['elements']}")
