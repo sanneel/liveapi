@@ -298,7 +298,14 @@
         ],
         "follow": "SuccessEmailSend",
         "inline_keys": [
+          "email_name",
           "from_name",
+          "heading",
+          "hero",
+          "hero_link",
+          "preheader_es",
+          "promo_page_id",
+          "subject_es",
           "template"
         ]
       },

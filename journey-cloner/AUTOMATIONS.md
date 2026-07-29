@@ -240,6 +240,7 @@ whatever you leave unset stays the captured campaign's:
 | `icon` | `nc` | the old promotion's card artwork |
 | `image` | `popup` | the old pop-up background (`background_image_src`, *not* `icon`) |
 | `template` | `email` | the old campaign's content-studio email |
+| `subject_es` + `hero` + `hero_link`/`promo_page_id` | `email` | *(authors a new content instead — see below)* |
 | `link_en/es` | `nc`, `popup` | players sent to the old promo page |
 
 `icon` and `image` take a URL **or** the literal `PICK`. A brief carries files,
@@ -263,6 +264,33 @@ reported VERIFIED OK:
 `desc_en` vs `desc_es` is matched on the language **suffix**, not by substring:
 `"es" in "des-en"` is true, and that made the Spanish pass overwrite every
 English description, so the EN notification shipped the ES copy.
+
+#### The email: author a content, don't borrow one
+
+An email's copy is not inline on the activity — the activity references a
+content-studio content by id, which is why `template` alone can only ever reuse
+someone else's creative. Setting `subject_es` / `preheader_es` / `heading` /
+`hero` / `hero_link` (or `promo_page_id`) instead **authors a new content**: the
+composer substitutes the captured JBCL creative, and the console script creates
+it, publishes it, and repoints the journey at the id it gets back — the same
+create → save → publish flow `comms_campaign.py` uses for GOW. The content the
+spec names is never edited; a new one is always created. `template` and the
+authoring settings are mutually exclusive, and asking for both is refused.
+
+What that creative can and cannot carry, because it is a real capture and not a
+layout we invent per campaign:
+
+- **The hero image is the call to action.** There is one uppercase `heading`
+  line, one hero image, and the footer. A brief's body paragraphs and text
+  button have nowhere to go — in this design that copy lives *in the image*.
+  A campaign that genuinely needs a text body needs a capture that has one.
+- **`hero_link` vs `promo_page_id`.** The captured href is a promo page; use
+  `promo_page_id` for one, or `hero_link` to replace the href outright when the
+  destination is anything else (a game launch URL). One is required — unset, the
+  email ships a dead link.
+- **The brand must match.** The only captured creative is JBCL's; a PMCL run
+  authoring it is refused. Emailing one brand's players another brand's creative
+  is a brand swap, not a substitution.
 
 The inherited-content check refuses a build that still shares any content value
 with its reference, so an unset one is a failed build rather than a cosmetic

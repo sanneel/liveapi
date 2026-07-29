@@ -261,6 +261,92 @@ PICK_LABELS = {
 _pick_counter = [0]
 
 
+# Authoring an email means creating a NEW content-studio content rather than
+# pointing at an existing one — the flow comms_campaign.py proved: substitute the
+# captured creative, create -> save -> publish at paste time, then repoint the
+# journey's email activity at the id that comes back. The email's copy is not
+# inline on the activity, which is why setting `template` alone can only ever
+# reuse someone else's creative.
+EMAIL_AUTHORING_KEYS = {"subject_es", "preheader_es", "heading", "hero",
+                        "promo_page_id", "hero_link", "email_name"}
+# The captured creative's call to action is the hero image, wrapped in a link to
+# a promo page. A campaign whose CTA is not a promo page (a game launch URL, say)
+# sets hero_link instead and the whole href is replaced.
+EMAIL_PROMO_HREF = "https://jugabet.cl/services/promo/offers/promoPage/@@PROMO_PAGE_ID@@"
+# Filled by the console script once the content exists, exactly like the
+# reserved journey id. Shared with email_content.py so both spell it the same.
+EMAIL_CONTENT_ID_TOKEN = "@@EMAIL_CONTENT_ID@@"
+EMAIL_HERO_TOKEN = "@@EMAIL_HERO_URL@@"
+
+
+EMAIL_TEMPLATE_PATH = HERE / "templates" / "casino" / "gow_email.json"
+EMAIL_HEADING_TOKEN = "@@EMAIL_HEADING@@"
+EMAIL_PROMO_PAGE_TOKEN = "@@PROMO_PAGE_ID@@"
+# Authoring settings collected while the chain is applied; the content itself is
+# built in compose(), which is where the journey name and date are known.
+_email_authoring: list[dict] = []
+
+
+def build_email_content(s: dict, journey_name: str, date_str: str) -> dict:
+    """The payload for POST .../content-studio/.../email/contents.
+
+    Substitutes the captured JBCL creative rather than inventing HTML: the
+    heading line, the hero image and the promo page the hero links to are the
+    only slots that creative has. Everything else stays exactly as captured.
+    """
+    from create_journeys import BRAND      # lazy, like every other cross-import here
+
+    content = json.loads(EMAIL_TEMPLATE_PATH.read_text(encoding="utf-8"))
+    tpl_brand = str(content.get("brand") or "")
+    if tpl_brand and BRAND and tpl_brand.upper() != str(BRAND).upper():
+        raise SystemExit(
+            f"dextra_email: the only captured email creative is {tpl_brand}'s and this "
+            f"run is {BRAND}. Emailing {BRAND} players a {tpl_brand} creative is a "
+            f"brand swap, not a substitution — capture a {BRAND} email and add it as a "
+            f"template, or set `template` to an existing {BRAND} CSE id instead.")
+    if s.get("promo_page_id") and s.get("hero_link"):
+        raise SystemExit("dextra_email: give either `promo_page_id` or `hero_link`, not "
+                         "both — they set the same href.")
+    if not s.get("promo_page_id") and not s.get("hero_link"):
+        raise SystemExit(
+            "dextra_email: authoring needs `promo_page_id` or `hero_link` — in this "
+            "captured creative the hero image IS the call to action, and its href is a "
+            "promo page. Left unset that link ships dead. Use `promo_page_id` for a promo "
+            "page, `hero_link` for any other destination (a game launch URL), or set "
+            "`template` to point at an email content that already has what you want.")
+
+    content["name"] = s.get("email_name") or f"{journey_name} — {date_str}"
+    comp = content["translations"]["es"]["composition"]
+    if s.get("subject_es"):
+        comp["subject"] = s["subject_es"]
+    if s.get("preheader_es"):
+        comp["preHeader"] = s["preheader_es"]
+    src = comp["body"]["source"]
+    src = src.replace(EMAIL_HEADING_TOKEN, str(s.get("heading") or "").strip())
+    if s.get("hero_link"):
+        before = src.count(EMAIL_PROMO_HREF)
+        src = src.replace(EMAIL_PROMO_HREF, str(s["hero_link"]))
+        if not before:
+            raise SystemExit("dextra_email: the captured creative's promo-page href has "
+                             "changed shape — `hero_link` matched nothing, so the email "
+                             "would keep the captured destination")
+    else:
+        src = src.replace(EMAIL_PROMO_PAGE_TOKEN, str(s["promo_page_id"]))
+    hero = s.get("hero")
+    if hero and not is_pick_request(hero):
+        src = src.replace(EMAIL_HERO_TOKEN, str(hero))
+    comp["body"]["source"] = src
+
+    left = sorted(set(re.findall(r"@@[A-Z_]+@@", json.dumps(content))))
+    # EMAIL_HERO_URL is filled at paste time after the upload; anything else
+    # unresolved would ship as literal text in a real email.
+    stray = [t for t in left if t != EMAIL_HERO_TOKEN]
+    if stray:
+        raise SystemExit(f"dextra_email: unresolved placeholders in the authored "
+                         f"content: {stray}")
+    return content
+
+
 def _lang_suffix(name: str, lang: str) -> bool:
     """Does this captured variable name carry `lang` as its language suffix?
 
@@ -330,10 +416,23 @@ SETTINGS_DOC = {
                                                     "write the same slot",
                                       "deeplink": "app deeplink (defaults to the link)"},
     "dextra_sms": {"text_en/es": "SMS body"},
-    "dextra_email": {"template": "content-studio email id (e.g. CSE-0-14458). Set it, or the "
-                                 "journey emails the CAPTURED campaign's template — which the "
-                                 "inherited-content check refuses to build",
-                     "from_name": "from-line text (default: the reference's)"},
+    "dextra_email": {"template": "content-studio email id (e.g. CSE-0-14458) to point at as-is. "
+                                 "Set this or the authoring settings below, or the journey emails "
+                                 "the CAPTURED campaign's template — which the inherited-content "
+                                 "check refuses to build",
+                     "from_name": "from-line text (default: the reference's)",
+                     "subject_es": "AUTHOR a new email content instead of reusing one: the "
+                                   "subject line. Implies the create -> save -> publish flow, "
+                                   "and the journey is repointed at the id it returns",
+                     "preheader_es": "the pre-header line of the authored content",
+                     "heading": "the one uppercase heading line above the hero image",
+                     "hero": "hero image: a URL, or PICK to choose the file at paste time",
+                     "promo_page_id": "the promo page the hero image links to — the captured "
+                                      "creative's own CTA shape",
+                     "hero_link": "use instead of promo_page_id when the CTA is not a promo "
+                                  "page (a game launch URL): replaces the hero's href outright",
+                     "email_name": "the content's name in Content Studio (default: derived from "
+                                   "the journey name and date)"},
     "wait_interval": {"wait": "ISO-8601 duration, e.g. P0Y0M0DT1H0M0S"},
     "event_detector": {"(none)": "captured deposit-band watcher kept as-is"},
     "multipurpose_promotion": {"(none)": "captured choosable-flow drip kept as-is (see warning on compose)"},
@@ -599,7 +698,25 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
         # campaign's template — and the inherited-content guard (rightly) refuses
         # to build a comms journey that would email players the old promotion.
         es = init.get("emailSettings") or {}
-        if "template" in s and es:
+        authoring = sorted(EMAIL_AUTHORING_KEYS & set(s))
+        if authoring and "template" in s:
+            raise SystemExit(
+                f"dextra_email: `template` points at an existing content while "
+                f"{authoring} author a new one — pick one. Reusing CSE "
+                f"{s['template']} means the copy in this spec is ignored; "
+                f"authoring means that content is left untouched.")
+        if authoring:
+            # The real id only exists once the script has created the content, so
+            # leave the token here and let it be swapped in — the same handling
+            # the journey's own reserved id gets.
+            _email_authoring.append({k: s[k] for k in EMAIL_AUTHORING_KEYS if k in s})
+            tpl = es.get("template") or {}
+            note("emailSettings.template.id", tpl.get("id"), EMAIL_CONTENT_ID_TOKEN)
+            tpl["id"] = EMAIL_CONTENT_ID_TOKEN
+            es["template"] = tpl
+            es["emailSource"] = "Template"
+            init["displayData"] = [EMAIL_CONTENT_ID_TOKEN]
+        elif "template" in s and es:
             tpl = es.get("template") or {}
             note("emailSettings.template.id", tpl.get("id"), s["template"])
             tpl["id"] = s["template"]
@@ -701,7 +818,7 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
         "notification_center#contract1": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "image", "deeplink"},
         "notification_center#contract5": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "image", "deeplink"},
         "dextra_sms": {"text_en", "text_es"},
-        "dextra_email": {"template", "from_name"},
+        "dextra_email": {"template", "from_name"} | EMAIL_AUTHORING_KEYS,
         "wait_interval": {"wait"},
         "external_system_source": {"description"},
         "dwh_source": {"segment_file"},
@@ -727,6 +844,7 @@ def compose(spec: dict) -> dict:
     report: list[str] = []
     warnings: list[str] = []
     _pick_counter[0] = 0     # per-build, so the same spec yields the same tokens
+    _email_authoring.clear()
 
     # resolve source
     src_spec = spec.get("source") or {}
@@ -1138,8 +1256,19 @@ def compose(spec: dict) -> dict:
 
     _strip_key_everywhere(body, "promotionDisplayId")
 
+    email_content = None
+    if _email_authoring:
+        if len(_email_authoring) > 1:
+            raise SystemExit("more than one email node authors a content; the script "
+                             "creates one, so give the others an existing `template` id")
+        email_content = build_email_content(_email_authoring[0], name,
+                                           str(spec.get("date") or ""))
+        report.append(f"dextra_email: authoring content {email_content['name']!r} "
+                      f"(created + published at paste time, journey repointed at it)")
+
     return {"body": body, "report": report, "warnings": warnings,
-            "chain": [src_kind] + kinds, "name": name}
+            "chain": [src_kind] + kinds, "name": name,
+            "email_content": email_content}
 
 
 def _walk_dicts(obj):
@@ -1299,7 +1428,7 @@ def cmd_describe(spec: dict) -> int:
     return 0
 
 
-def emit_console_script(body: dict, out_path: Path) -> str:
+def emit_console_script(body: dict, out_path: Path, email_content: dict | None = None) -> str:
     """Render the paste-ready browser console script using the PROVEN scaffold
     from casino_journey.py (token auto-capture -> reserve JRN id -> regenerate
     activity uuids at paste time -> POST /journey-drafts -> aggregatedError log).
@@ -1307,7 +1436,7 @@ def emit_console_script(body: dict, out_path: Path) -> str:
     from casino_journey import build_js  # the battle-tested JS template
     # body already carries the DRY-RUN-CASINO placeholder the script swaps
     js = build_js(body)
-    js = _inject_pickers(js, pick_slots(body))
+    js = _inject_pickers(js, pick_slots(body), email_content)
     out_path.write_text(js, encoding="utf-8")
     return str(out_path)
 
@@ -1339,26 +1468,28 @@ _PICKER_JS = """
       img.src = url;
     });
   }
-  async function uploadArtwork(file, label) {
+  // No content-type: the media library wants the multipart boundary the browser
+  // sets itself.
+  const upHeaders = () => ({ accept: 'application/json, text/plain, */*', authorization: auth, 'x-brand': BRAND });
+  async function uploadAsset(file, label) {
     const dims = await imageDims(file);
     const base = (file.name || 'image').replace(/\\.[^./]+$/, '');
     const url = CRM_BASE + '/media-library/v0/folder/' + FOLDER_ID + '/upload/' + encodeURIComponent(base) + '.png?height=' + dims.height + '&width=' + dims.width;
     const fd = new FormData(); fd.append('file', file, file.name);
-    const up = { accept: 'application/json, text/plain, */*', authorization: auth, 'x-brand': BRAND };
-    const r = await fetch(url, { method: 'PUT', headers: up, credentials: 'include', body: fd });
+    const r = await fetch(url, { method: 'PUT', headers: upHeaders(), credentials: 'include', body: fd });
     const t = await r.text();
     if (!r.ok) throw new Error(label + ' upload failed HTTP ' + r.status + ' ' + t);
     const asset = JSON.parse(t);
     const tfd = new FormData(); tfd.append('file', file, file.name);
-    await fetch(CRM_BASE + '/media-library/v0/asset/thumb/' + asset.id + '.png', { method: 'PUT', headers: up, credentials: 'include', body: tfd }).catch(() => {});
-    if (!asset.absolute_link) throw new Error(label + ' upload returned no absolute_link: ' + t);
+    await fetch(CRM_BASE + '/media-library/v0/asset/thumb/' + asset.id + '.png', { method: 'PUT', headers: upHeaders(), credentials: 'include', body: tfd }).catch(() => {});
+    if (!asset.absolute_link || !asset.relative_link) throw new Error(label + ' upload returned no link: ' + t);
     console.log('    ' + label + ' -> ' + asset.absolute_link);
-    return asset.absolute_link;
+    return asset;
   }
   for (const slot of PICK_SLOTS) {
     if (!text.includes(slot.token)) throw new Error('artwork placeholder for ' + slot.label + ' is not in the payload — regenerate the script.');
-    const link = await uploadArtwork(await pickFile(slot.label), slot.label);
-    text = text.split(slot.token).join(link);
+    const asset = await uploadAsset(await pickFile(slot.label), slot.label);
+    text = text.split(slot.token).join(asset.absolute_link);
   }
   // A surviving placeholder means a node would ship the captured campaign's
   // picture. Refuse, the same way the composer refuses unset artwork.
@@ -1366,13 +1497,59 @@ _PICKER_JS = """
 """
 
 
-def _inject_pickers(js: str, slots: list[dict]) -> str:
-    if not slots:
+_EMAIL_JS = """
+  // --- author the email content ---------------------------------------------
+  // The email's copy is not inline on the activity: it lives in a content-studio
+  // content the activity references. So create one, publish it, and repoint the
+  // journey at the id — the flow comms_campaign.py proved. The captured content
+  // is never edited; this always makes a new one.
+  const EMAIL_CONTENT = @EMAIL_CONTENT@;
+  const EMAIL_HERO_TOKEN = @EMAIL_HERO_TOKEN@;
+  const EMAIL_CONTENT_ID_TOKEN = @EMAIL_CONTENT_ID_TOKEN@;
+  const CONTENT_BASE = CRM_BASE + '/content-studio/v0/eb-backoffice/email/contents';
+  async function authorEmail() {
+    let cText = JSON.stringify(EMAIL_CONTENT);
+    if (cText.indexOf(EMAIL_HERO_TOKEN) !== -1) {
+      const asset = await uploadAsset(await pickFile('the EMAIL HERO image'), 'EMAIL HERO');
+      // The body references images as https://{{cdn_hostname}}<relative>, not the
+      // absolute URL — the absolute one does not resolve for every recipient.
+      cText = cText.split(EMAIL_HERO_TOKEN).join('https://{{cdn_hostname}}' + asset.relative_link);
+    }
+    const content = JSON.parse(cText);
+    let r = await fetch(CONTENT_BASE, { method: 'POST', headers: { ...upHeaders(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(content) });
+    let t = await r.text();
+    if (!r.ok) throw new Error('Email content create failed HTTP ' + r.status + ' ' + t);
+    const cseId = JSON.parse(t).id;
+    if (!cseId) throw new Error('email create returned no id: ' + t);
+    console.log('    created email content', cseId);
+    r = await fetch(CONTENT_BASE + '/' + cseId, { method: 'POST', headers: { ...upHeaders(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(content) });
+    if (!r.ok) throw new Error('Email content save failed HTTP ' + r.status + ' ' + await r.text());
+    r = await fetch(CONTENT_BASE + '/' + cseId + '/publish', { method: 'PATCH', headers: { ...upHeaders(), 'content-type': 'application/json' }, credentials: 'include', body: '{}' });
+    if (!r.ok) throw new Error('Email content publish failed HTTP ' + r.status + ' ' + await r.text());
+    console.log('    published email content', cseId);
+    return cseId;
+  }
+  const cseId = await authorEmail();
+  if (!text.includes(EMAIL_CONTENT_ID_TOKEN)) throw new Error('the journey has no email repoint token — regenerate the script.');
+  text = text.split(EMAIL_CONTENT_ID_TOKEN).join(cseId);
+  // An unswapped token would leave the email activity pointing at a literal
+  // placeholder, which the builder shows as a valid-looking card.
+  if (text.indexOf('@@EMAIL_CONTENT_ID@@') !== -1) throw new Error('email repoint incomplete — refusing to create the draft.');
+"""
+
+
+def _inject_pickers(js: str, slots: list[dict], email_content: dict | None = None) -> str:
+    if not slots and not email_content:
         return js
     from comms_campaign import DEFAULT_FOLDER_ID
     block = (_PICKER_JS
              .replace("@PICK_SLOTS@", json.dumps(slots, ensure_ascii=False))
              .replace("@FOLDER_ID@", json.dumps(DEFAULT_FOLDER_ID)))
+    if email_content is not None:
+        block += (_EMAIL_JS
+                  .replace("@EMAIL_CONTENT@", json.dumps(email_content, ensure_ascii=False))
+                  .replace("@EMAIL_HERO_TOKEN@", json.dumps(EMAIL_HERO_TOKEN))
+                  .replace("@EMAIL_CONTENT_ID_TOKEN@", json.dumps(EMAIL_CONTENT_ID_TOKEN)))
     # After the ids are regenerated and before the body is parsed and POSTed:
     # substituting on the serialised text hits the compiled activities and the
     # rawJourneyData mirror in one pass, which is what keeps them byte-identical.
@@ -1429,9 +1606,11 @@ def cmd_compose(spec: dict, as_json: bool, script: bool, basename: str | None = 
             # console_scripts/<basename>_console.js — same convention as every
             # other generator. Bare CLI runs keep the name-derived out/ path.
             CONSOLE_OUT.mkdir(parents=True, exist_ok=True)
-            js_path = emit_console_script(res["body"], CONSOLE_OUT / f"{basename}_console.js")
+            js_path = emit_console_script(res["body"], CONSOLE_OUT / f"{basename}_console.js",
+                                          res.get("email_content"))
         else:
-            js_path = emit_console_script(res["body"], OUT / f"{slug}.console.js")
+            js_path = emit_console_script(res["body"], OUT / f"{slug}.console.js",
+                                          res.get("email_content"))
 
     summary = {
         "ok": not errs,

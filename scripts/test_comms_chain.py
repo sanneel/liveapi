@@ -167,6 +167,88 @@ if body:
     check("the refusal names the artwork", "artwork left for paste time" in buf.getvalue(),
           buf.getvalue()[-160:])
 
+print("\nthe email's copy is authored, not borrowed")
+
+
+def email_spec(**email):
+    return {"name": "test | email", "source": {"type": "segment"},
+            "chain": [{"type": "nc", "desc_es": "D", "link_es": LINK,
+                       "icon": "https://example.com/i.png"},
+                      dict({"type": "email"}, **email),
+                      {"type": "sms", "text_es": "JugaBet | S"}],
+            "date": "2026-08-01"}
+
+
+def refuses(label: str, **email) -> None:
+    try:
+        JC.compose(email_spec(**email))
+        check(label, False, "composed instead of refusing")
+    except SystemExit:
+        check(label, True)
+    except BaseException as exc:
+        check(label, False, f"{type(exc).__name__}: {exc}")
+
+
+refuses("reusing a CSE and authoring at once is refused",
+        template="CSE-0-14726", subject_es="S")
+refuses("authoring without promo_page_id is refused (the hero IS the CTA)",
+        subject_es="S", preheader_es="P", hero="PICK")
+
+try:
+    res = JC.compose(email_spec(subject_es="SUBJ", preheader_es="PRE", heading="HEAD",
+                                hero="PICK", promo_page_id="abc-123"))
+    content = res["email_content"]
+    check("a content payload was built", isinstance(content, dict))
+    comp = content["translations"]["es"]["composition"]
+    check("the subject is the operator's", comp["subject"] == "SUBJ", comp["subject"])
+    check("the pre-header is the operator's", comp["preHeader"] == "PRE", comp["preHeader"])
+    check("the heading reached the HTML", "HEAD" in comp["body"]["source"])
+    check("the promo page reached the HTML", "promoPage/abc-123" in comp["body"]["source"])
+    check("the hero is left for paste time",
+          JC.EMAIL_HERO_TOKEN in comp["body"]["source"])
+    check("no other placeholder survived in the HTML",
+          not [t for t in set(__import__("re").findall(r"@@[A-Z_]+@@", comp["body"]["source"]))
+               if t != JC.EMAIL_HERO_TOKEN])
+    body = res["body"]
+    check("the journey is repointed at the id the script will get",
+          JC.EMAIL_CONTENT_ID_TOKEN in json.dumps(body))
+    check("verify() passes on an authored-email chain", not JC.verify(body),
+          str(JC.verify(body)))
+
+    out = REPO / "journey-cloner" / "out" / "_test_email.console.js"
+    JC.emit_console_script(body, out, content)
+    js = out.read_text(encoding="utf-8")
+    check("the script creates the content", "/email/contents" in js)
+    check("the script publishes it", "/publish" in js)
+    check("the hero is referenced via cdn_hostname, not the absolute URL",
+          "{{cdn_hostname}}' + asset.relative_link" in js)
+    check("the email is authored before the draft is POSTed",
+          js.index("authorEmail") < js.index("const body = JSON.parse(text)"))
+    check("an incomplete repoint refuses", "email repoint incomplete" in js)
+    check("no bearer token was written into the script", "Bearer ey" not in js)
+    out.unlink(missing_ok=True)
+except BaseException as exc:
+    check("an authored-email chain composes", False, f"{type(exc).__name__}: {exc}")
+
+print("\na brand's players are never sent another brand's creative")
+import os
+import subprocess
+probe = (
+    "import sys; sys.path.insert(0,'journey-cloner');"
+    "import journey_composer as JC;"
+    "spec={'name':'p','source':{'type':'segment'},'chain':["
+    "{'type':'nc','desc_es':'x','link_es':'https://jugabet.cl/x','icon':'https://e/i.png'},"
+    "{'type':'email','subject_es':'S','heading':'H','promo_page_id':'abc'}],'date':'2026-08-01'};"
+    "JC.compose(spec)"
+)
+env = dict(os.environ, BRAND="PMCL")
+rc = subprocess.run([sys.executable, "-c", probe], cwd=REPO, env=env,
+                    capture_output=True, text=True)
+check("a PMCL run refuses the JBCL email creative", rc.returncode != 0,
+      f"exit {rc.returncode}")
+check("the refusal names the brand mismatch", "brand swap" in rc.stderr,
+      rc.stderr.strip()[-160:])
+
 print()
 if FAILURES:
     print(f"FAILED ({len(FAILURES)}):")
