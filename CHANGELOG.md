@@ -97,6 +97,21 @@ with the DB snapshot + `git reset` commands printed by that script.
   Also fixes a duplicate `dextra_email` key in the palette dict that silently
   overwrote its settings with "(none)", which is why the model never learned them.
 
+- **HAR in → automation out.** `journey-cloner/har_analyse.py` reads a HAR of one
+  manual backoffice run and reports the automation inside it: the mutating calls
+  in order with repeats collapsed into loops, the call carrying the payload (your
+  template), the ids that must flow from one step's response into a later step's
+  request, and the leaves that look per-run — classified by the same code the
+  recipes use. On the reference HAR: 158 entries → 4 steps, one 154 KB payload,
+  3 dependency edges, 171 candidate inputs out of 4,804 leaves.
+  `HAR_TO_AUTOMATION.md` is the runbook a Claude session follows to turn that into
+  a registered generator, and `CLAUDE.md` routes any session there the moment a
+  HAR arrives — so the procedure does not depend on remembering to explain it.
+  Credentials are scrubbed in memory before anything else and the raw file is
+  never persisted; `scripts/test_har_analyse.py` (in CI) proves a token, session
+  cookie, Set-Cookie and password planted in a HAR reach neither the report nor
+  the parsed analysis, alongside 16 checks that the flow is read correctly.
+
 ### Fixed
 - **Free-spin activities shipped the reference template's caps and labels.**
   `casino_instant_freespin` / `casino_deposit_freespins` had no knob for the

@@ -197,10 +197,10 @@ The comms half of a GOW campaign; runs as part of that tab by default.
 
 ## Adding a new automation
 
-> **Planned:** `HAR_TO_AUTOMATION.md` — drop a HAR of one manual run into the
-> admin and get the generator, the template and the input form back, instead of
-> the hand-build below. Not built yet; the plan is grounded in the real
-> `raw_fetches/journey.har`.
+> **Faster path:** `HAR_TO_AUTOMATION.md` is a runbook a Claude session executes
+> — hand it a HAR of one manual run and it analyses the flow, asks you the
+> questions only you can answer, and writes the template + generator. Start with
+> `har_analyse.py`; the hand-build below is what it automates.
 
 
 1. **Capture** the flow by hand with DevTools open; save the request bodies.
