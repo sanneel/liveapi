@@ -40,7 +40,10 @@ the script. `AUTOMATIONS.md` has the detail.
 
 ## Environment
 
-- Python: **`.venv/bin/python`** (not bare `python`).
+- Python: **`.venv/bin/python`** (not bare `python`) — **but only on the deploy
+  server.** A fresh clone (any web session) has no `.venv`; there, use `python3`
+  and `pip install` deps on demand. `journey-cloner/har_analyse.py` is pure
+  stdlib and runs on either. See `HAR_TO_AUTOMATION.md` Step 0.
 - The service is `jugabet.service`; it runs from this working tree, so
   **do not `git checkout` another branch here** — merge into the current one
   instead. Restart with `sudo systemctl restart jugabet`.

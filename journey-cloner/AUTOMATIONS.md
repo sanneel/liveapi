@@ -46,6 +46,17 @@ Two consequences worth internalising:
   emit a draft that looks right and grants the wrong thing. If one refuses, the
   message names the field and what to do.
 
+**Substitute copy structurally, not by string replacement.** A whole-body
+`.replace()` is safe only for a value unambiguous in the serialized body (an id,
+a slug, a date). For channel copy it is dangerous: the captured EN and ES slots
+hold identical strings, each value appears 8–16 times, and different channels
+reuse the same literal — so a replace writes one language everywhere and gives
+one channel another's copy, while every leftover check still passes. Address each
+field by name, in both storages. The full trap list — copy, the `displayData`
+label, the email body, a live-data image, testing for the wrong value not the
+captured one — is in **`HAR_TO_AUTOMATION.md` Step 4**, and every one of them is
+worked in `sport_comms_campaign.py`. Read that before adding a comms generator.
+
 Where output lands: `console_scripts/<name>_console.js`, plus `out/` for
 intermediate JSON when a generator writes one.
 
