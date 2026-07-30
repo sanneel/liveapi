@@ -659,6 +659,18 @@ def clone_with_fresh_id(entry: dict) -> dict:
         "paths": entry["paths"],
     }, ensure_ascii=False).replace(old, new)
     out = json.loads(blob)
+    # De-nest the lift (COMPOSER_RULES rule 3). load_library takes each element
+    # straight out of its captured journey, and in gow_comms the comms nodes live
+    # inside a parallelFlow container — so every cloned nc / pop-up / wait / split
+    # arrived still pointing at a container this journey does not have. The editor
+    # reads the missing parent's position and throws, which is a draft that saves
+    # and then will not open. _wrap_parallel re-adds these when it really wraps.
+    el = out.get("element")
+    if isinstance(el, dict):
+        el.pop("parentNode", None)
+        el.pop("extent", None)
+        if isinstance(el.get("data"), dict):
+            el["data"].pop("parentNode", None)
     out["new_id"] = new
     out["captured_id"] = old
     return out
@@ -1448,6 +1460,24 @@ def verify(body: dict) -> list[str]:
     for k in raw.get("activitiesConfiguration", {}):
         if k not in idset:
             errs.append("activitiesConfiguration key not an activity id")
+    # COMPOSER_RULES rule 3. A node kept inside a container it was lifted out of
+    # saves fine and then will not open: the editor reads the absent parent's
+    # position and throws. Nothing checked it, so it shipped.
+    all_el_ids = {e.get("id") for e in raw["elements"]}
+    for e in raw["elements"]:
+        parent = e.get("parentNode") or (e.get("data") or {}).get("parentNode")
+        if parent and parent not in all_el_ids:
+            errs.append(f"element {str(e.get('id'))[:8]} is nested in parent "
+                        f"{str(parent)[:8]}, which is not in this journey — "
+                        f"the editor cannot lay it out (blank canvas)")
+    # Rule 1: the synthesized terminal is the easy one to forget.
+    for e in raw["elements"]:
+        if "source" in e:               # an edge, not a node
+            continue
+        for key in ("position", "positionAbsolute"):
+            pos = e.get(key)
+            if not isinstance(pos, dict) or "x" not in pos or "y" not in pos:
+                errs.append(f"element {str(e.get('id'))[:8]} has no usable {key}")
     if not body.get("journeyName"):
         errs.append("journeyName missing")
     if body.get("duplicatedFromId"):

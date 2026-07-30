@@ -230,6 +230,71 @@ try:
 except BaseException as exc:
     check("an authored-email chain composes", False, f"{type(exc).__name__}: {exc}")
 
+print("\nthe canvas opens: no node is nested in a container this journey lacks")
+# COMPOSER_RULES rule 3. load_library lifts each element straight out of its
+# captured journey, and gow_comms keeps the comms nodes inside a parallelFlow
+# container — so every cloned nc / pop-up / wait / split arrived still pointing at
+# a parent that does not exist here. The draft saved and then would not open: the
+# editor reads the absent parent's position and throws. Nothing checked it.
+try:
+    res = JC.compose(spec())
+    body = res["body"]
+    els = body["rawJourneyData"]["elements"]
+    el_ids = {e.get("id") for e in els}
+    nested = [e for e in els
+              if (e.get("parentNode") or (e.get("data") or {}).get("parentNode"))]
+    orphan = [e for e in nested
+              if (e.get("parentNode") or (e["data"]).get("parentNode")) not in el_ids]
+    check("no element points at an absent parent", not orphan,
+          str([str(e.get("id"))[:8] for e in orphan]))
+    check("no lifted element kept `extent`", not [e for e in els if e.get("extent")],
+          str([str(e.get("id"))[:8] for e in els if e.get("extent")][:4]))
+    nodes = [e for e in els if "source" not in e]
+    nopos = [e for e in nodes
+             if not (isinstance(e.get("position"), dict)
+                     and isinstance(e.get("positionAbsolute"), dict)
+                     and {"x", "y"} <= set(e["position"])
+                     and {"x", "y"} <= set(e["positionAbsolute"]))]
+    check("every node has position and positionAbsolute", not nopos,
+          str([str(e.get("id"))[:8] for e in nopos][:4]))
+    check("verify() passes the whole chain", not JC.verify(body), str(JC.verify(body)))
+
+    # verify() must REFUSE a body with the old defect, or it ships again.
+    broken = json.loads(json.dumps(body))
+    victim = [e for e in broken["rawJourneyData"]["elements"] if "source" not in e][1]
+    victim["parentNode"] = "00000000-dead-beef-0000-000000000000"
+    victim["extent"] = "parent"
+    errs = JC.verify(broken)
+    check("verify() refuses a node nested in a missing parent",
+          any("blank canvas" in e for e in errs), str(errs[:2]))
+    broken2 = json.loads(json.dumps(body))
+    victim2 = [e for e in broken2["rawJourneyData"]["elements"] if "source" not in e][1]
+    victim2.pop("positionAbsolute", None)
+    check("verify() refuses a node with no positionAbsolute",
+          any("positionAbsolute" in e for e in JC.verify(broken2)),
+          str(JC.verify(broken2)[:2]))
+except BaseException as exc:
+    check("the chain composes with an openable canvas", False,
+          f"{type(exc).__name__}: {exc}")
+
+print("\na parallel block still nests inside the container it creates")
+try:
+    par = spec()
+    par["chain"] = [dict(par["chain"][0],
+                         parallel=[[{"type": "sms", "text_en": "S1", "text_es": "S1"}],
+                                   [{"type": "sms", "text_en": "S2", "text_es": "S2"}]])]
+    res = JC.compose(par)
+    els = res["body"]["rawJourneyData"]["elements"]
+    ids = {e.get("id") for e in els}
+    nested = [e for e in els if e.get("parentNode")]
+    check("the parallel children are nested", len(nested) > 0, str(len(nested)))
+    check("their container is present in the journey",
+          all(e["parentNode"] in ids for e in nested))
+    check("verify() passes a parallel chain", not JC.verify(res["body"]),
+          str(JC.verify(res["body"])[:2]))
+except BaseException as exc:
+    check("a parallel chain composes", False, f"{type(exc).__name__}: {exc}")
+
 print("\nthe email content name is one Content Studio will accept")
 # It rejects *@#?|&<>"'/ with 422 RESTRICTED_SYMBOLS_IN_CONTENT_NAME. Journey
 # names here are pipe-separated and the default content name is derived from one,
