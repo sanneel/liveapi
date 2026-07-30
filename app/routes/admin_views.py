@@ -1215,25 +1215,29 @@ def promotions_tournament_pmcl(
     request: Request,
     date: str = Form(...),
     spec: str = Form(...),
+    tournament_link: str = Form(""),
     tournament_id: str = Form(""),
     folder_id: str = Form(""),
     journey_name: str = Form(""),
     tournament_start: str = Form(""),
     tournament_end: str = Form(""),
+    email_content_id: str = Form(""),
     no_photos: str = Form(""),
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
-    """Generate the PMCL (Fortunazo) Tournament comms console script — the same
-    paste-a-sheet → console-script flow as GOW comms, wired to the Smartico
-    tournament deeplink instead of a promo page."""
+    """Generate the JBCL Tournament comms console script — paste-a-sheet →
+    console-script, wired to the tournament page (/page/<slug>) and its Smartico
+    id. The script creates the draft AND saves it (POST then PUT)."""
     form = {
         "date": date,
         "spec": spec,
+        "tournament_link": tournament_link,
         "tournament_id": tournament_id,
         "folder_id": folder_id,
         "journey_name": journey_name,
         "tournament_start": tournament_start,
         "tournament_end": tournament_end,
+        "email_content_id": email_content_id,
         "no_photos": bool(no_photos),
     }
     error = ""
@@ -1249,11 +1253,13 @@ def promotions_tournament_pmcl(
         exit_code, output, display_cmd, js_text, js_name = generate_tournament_pmcl_console_script(
             date=date,
             spec_text=spec,
+            tournament_link=tournament_link,
             tournament_id=tournament_id,
             folder_id=folder_id,
             journey_name=journey_name,
             tournament_start=tournament_start,
             tournament_end=tournament_end,
+            email_content_id=email_content_id,
             no_photos=bool(no_photos),
         )
         result = {

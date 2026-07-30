@@ -157,13 +157,37 @@ campaign's journeys.
 
 ## Comms
 
-### PMCL Tournament — `tournament_pmcl_campaign.py` → Optimization ▸ PMCL Tournament
-Notification + pop-up + SMS wired to the Smartico tournament deeplink
-(`#_smartico_dp=dp:<slug>&id=<id>`), driven from a pasted sheet. The email is
-part of this run: `tournament_pmcl_email.py` is a **module it imports**, not a
-separate generator — it builds the substituted email *content*, and the console
-script creates + publishes it at paste time, then swaps the resulting content id
-into the journey.
+### Tournament comms — `tournament_pmcl_campaign.py` → Optimization ▸ PMCL Tournament
+JBCL tournament announced on Notification Center + Cat-fish pop-up + SMS + email,
+one journey, gated by two `wait_date` activities on the tournament window.
+Rebuilt from a fresh capture (`templates/tournament/`) on the `comms_engine`
+shared with `sport_comms` — so the same structural-copy rules apply and cannot
+drift. Driven from a pasted sheet plus a **tournament link** (its `/page/<slug>`
+is what every channel points at, its `&id=` is the Smartico id) and an **email
+content id** (an existing `CSE-*` the email node points at — this flow does not
+create email content, and a run keeping the captured id is refused).
+
+Why it was rebuilt — the previous version created "shit comms, nodes not
+connected":
+
+- **It only POSTed the draft, never the follow-up PUT (save).** The capture does
+  create *then* save, and the save is what the editor writes back to finalise the
+  canvas; without it nodes render unconnected. The console script now does both,
+  regenerating ids from the union of the two bodies so they describe one journey.
+- **A capture can carry `positionAbsolute: null`** (this one had three) — the
+  blank-canvas crash of COMPOSER_RULES rule 1. `comms_engine.backfill_position_
+  absolute` repairs it on load.
+- **Copy was string-replaced**, shipping one language into every slot. Now it is
+  structural (`set_channel_copy`), and `verify()` reads it back per node and per
+  language.
+
+`verify()` refuses a build that leaves a captured slug, tournament id, email id
+or copy behind, has a dangling `nextActivityId`, a canvas edge to a missing node,
+or an activity node without `positionAbsolute`. Contract:
+`scripts/test_tournament_comms.py` — asserts the graph stays connected after the
+same id-regen the console script runs, plus per-language copy and one-broken-rule
+refusals. (`tournament_pmcl_email.py` — the old email-content builder — is no
+longer used; this flow references an existing content instead.)
 
 ### Comms journey from content — `journey_composer.py` → **AI** page
 Composes an arbitrary comms chain from captured nodes with **your** copy:

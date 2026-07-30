@@ -21,8 +21,20 @@
       <div class="field">
         <span class="lbl">Tournament ID <span style="color:var(--t-faint)">(optional override)</span></span>
         <input class="input mono" name="tournament_id" value="{{ form.tournament_id or '' }}" placeholder="5431"/>
-        <p class="help" style="margin-top:6px">Leave blank — it's read from the sheet's <span class="mono">Link</span> row (<span class="mono">…&amp;id=5555</span>).</p>
+        <p class="help" style="margin-top:6px">Leave blank — it's read from the tournament link (<span class="mono">…&amp;id=5555</span>).</p>
       </div>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Tournament link</span>
+      <input class="input mono" name="tournament_link" value="{{ form.tournament_link or '' }}" placeholder="https://jugabet.cl/page/torneo-x#_smartico_dp=dp:gf_tournaments&amp;id=5431"/>
+      <p class="help" style="margin-top:6px">The tournament page URL. Its <span class="mono">/page/&lt;slug&gt;</span> is what <b>every channel</b> links to, and its <span class="mono">&amp;id=</span> is the Smartico id. Overrides the sheet's <span class="mono">Link</span> row.</p>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Email content ID <span style="color:var(--t-faint)">(existing CSE-*)</span></span>
+      <input class="input mono" name="email_content_id" value="{{ form.email_content_id or '' }}" placeholder="CSE-0-14726"/>
+      <p class="help" style="margin-top:6px">The email node points at an existing published content. <b>Required</b> — a draft that keeps the captured campaign's email is refused.</p>
     </div>
 
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">

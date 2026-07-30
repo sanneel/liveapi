@@ -187,9 +187,9 @@ GENERATORS: List[dict] = [
      "script": "randomizer_campaign.py", "tab": "randomizers"},
 
     # ── Comms ─────────────────────────────────────────────────────────────
-    {"key": "tournament_pmcl", "group": "Comms", "brand": "PMCL",
-     "label": "PMCL Tournament",
-     "what": "NC + pop-up + SMS wired to the Smartico deeplink",
+    {"key": "tournament_pmcl", "group": "Comms", "brand": "JBCL",
+     "label": "Tournament comms",
+     "what": "NC + pop-up + SMS + email for a tournament, one journey (create + save)",
      "script": "tournament_pmcl_campaign.py", "tab": "tournament_pmcl"},
     {"key": "comms_chain", "group": "Comms", "brand": "JBCL/PMCL",
      "label": "Comms journey from content",
@@ -235,6 +235,7 @@ _NOT_GENERATORS = {
     "gow_campaign.py", "comms_campaign.py", "build_catalog.py",
     "build_games_registry.py", "nc_discount_campaign.py",
     "nc_discount_pmcl_campaign.py", "tournament_pmcl_email.py",
+    "comms_engine.py",
 }
 
 

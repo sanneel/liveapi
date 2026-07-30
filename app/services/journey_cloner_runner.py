@@ -421,23 +421,27 @@ def generate_tournament_pmcl_console_script(
     *,
     date: str,
     spec_text: str,
+    tournament_link: str = "",
     tournament_id: str = "",
     folder_id: str = "",
     journey_name: str = "",
     tournament_start: str = "",
     tournament_end: str = "",
+    email_content_id: str = "",
     no_photos: bool = False,
 ) -> Tuple[int, str, str, str | None, str]:
-    """Generate the paste-into-DevTools console script for the PMCL (Fortunazo)
-    tournament communications journey (Notification Center + Pop-up + SMS; email
-    left untouched). Copy comes from the pasted spec blob; every channel's link
-    is pointed at the Smartico tournament deeplink. When a media-library
-    ``folder_id`` is given the script uploads a fresh NC icon + Pop-up
-    background, otherwise the template's existing images are kept.
+    """Generate the paste-into-DevTools console script for the JBCL tournament
+    communications journey (Notification Center + Pop-up + SMS + email), rebuilt
+    from a fresh capture. Copy comes from the pasted spec blob; every channel's
+    link is pointed at the tournament page (``--tournament-link`` → ``/page/<slug>``
+    plus the Smartico ``&id=``). The console script CREATES the draft (POST) and
+    then SAVES it (PUT) — the save is what finalises the canvas.
 
-    ``tournament_start`` / ``tournament_end`` (YYYY-MM-DD) set the two Wait/Date
-    activities and the notification revoke period to the exact tournament run.
-    Both override the spec's own "Start date"/"End date" rows when given.
+    ``tournament_start`` / ``tournament_end`` (YYYY-MM-DD) set the two wait_date
+    gates to the tournament window. ``email_content_id`` is an existing CSE-*
+    the email node points at; a run keeping the captured id is refused. When a
+    media-library ``folder_id`` is given the script uploads a fresh NC icon +
+    Pop-up background, otherwise the template's images are kept.
 
     Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
     """
@@ -445,13 +449,12 @@ def generate_tournament_pmcl_console_script(
     cmd = [
         python_executable(),
         str(TOURNAMENT_PMCL_SCRIPT_PATH),
-        "--date",
-        date.strip(),
-        "--spec",
-        "-",
-        "--name",
-        basename,
+        "--date", date.strip(),
+        "--spec", "-",
+        "--name", basename,
     ]
+    if tournament_link.strip():
+        cmd += ["--tournament-link", tournament_link.strip()]
     if tournament_id.strip():
         cmd += ["--tournament-id", tournament_id.strip()]
     if folder_id.strip():
@@ -459,9 +462,11 @@ def generate_tournament_pmcl_console_script(
     if journey_name.strip():
         cmd += ["--journey-name", journey_name.strip()]
     if tournament_start.strip():
-        cmd += ["--tournament-start", tournament_start.strip()]
+        cmd += ["--start", tournament_start.strip()]
     if tournament_end.strip():
-        cmd += ["--tournament-end", tournament_end.strip()]
+        cmd += ["--end", tournament_end.strip()]
+    if email_content_id.strip():
+        cmd += ["--email-content-id", email_content_id.strip()]
     if no_photos:
         cmd += ["--no-photos"]
     return _run_gow_cli(cmd, spec_text=spec_text, basename=basename)
