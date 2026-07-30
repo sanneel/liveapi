@@ -428,6 +428,7 @@ def generate_tournament_pmcl_console_script(
     tournament_start: str = "",
     tournament_end: str = "",
     email_content_id: str = "",
+    email_link: str = "",
     no_photos: bool = False,
 ) -> Tuple[int, str, str, str | None, str]:
     """Generate the paste-into-DevTools console script for the JBCL tournament
@@ -467,6 +468,8 @@ def generate_tournament_pmcl_console_script(
         cmd += ["--end", tournament_end.strip()]
     if email_content_id.strip():
         cmd += ["--email-content-id", email_content_id.strip()]
+    if email_link.strip():
+        cmd += ["--email-link", email_link.strip()]
     if no_photos:
         cmd += ["--no-photos"]
     return _run_gow_cli(cmd, spec_text=spec_text, basename=basename)

@@ -164,8 +164,16 @@ Rebuilt from a fresh capture (`templates/tournament/`) on the `comms_engine`
 shared with `sport_comms` — so the same structural-copy rules apply and cannot
 drift. Driven from a pasted sheet plus a **tournament link** (its `/page/<slug>`
 is what every channel points at, its `&id=` is the Smartico id) and an **email
-content id** (an existing `CSE-*` the email node points at — this flow does not
-create email content, and a run keeping the captured id is refused).
+link** (the game the email CTA opens, `/launch/slots/iframe/<game>`).
+
+The email is **built and published** the way GOW/sport_comms do it: the console
+script uploads the hero photo, POSTs the content (create → save) to
+content-studio, and swaps the returned `CSE-*` id into the journey's email node —
+email created FIRST, journey wired to it. Body, subject and pre-header come from
+the sheet's Email rows; templates in
+`templates/tournament/tournament_email_{create,save}.json`. Passing an existing
+`--email-content-id` instead skips the build; either way a run keeping the
+captured `CSE-0-14726` is refused.
 
 Why it was rebuilt — the previous version created "shit comms, nodes not
 connected":

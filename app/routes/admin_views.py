@@ -1222,6 +1222,7 @@ def promotions_tournament_pmcl(
     tournament_start: str = Form(""),
     tournament_end: str = Form(""),
     email_content_id: str = Form(""),
+    email_link: str = Form(""),
     no_photos: str = Form(""),
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
@@ -1238,6 +1239,7 @@ def promotions_tournament_pmcl(
         "tournament_start": tournament_start,
         "tournament_end": tournament_end,
         "email_content_id": email_content_id,
+        "email_link": email_link,
         "no_photos": bool(no_photos),
     }
     error = ""
@@ -1260,6 +1262,7 @@ def promotions_tournament_pmcl(
             tournament_start=tournament_start,
             tournament_end=tournament_end,
             email_content_id=email_content_id,
+            email_link=email_link,
             no_photos=bool(no_photos),
         )
         result = {

@@ -43,7 +43,13 @@ SHEET = "\n".join([
     "Notification Pop-up (Cat-fish) Button\tGo EN\tIr ES",
     "Sms\tTRUE\tTRUE",
     "Sms Text\tJugaBet | tournament sms EN\tJugaBet | torneo sms ES",
+    "Email\tTRUE\tTRUE",
+    "Email Tittle\tTournament subject EN\tAsunto torneo ES",
+    "Email Pre-header\tPreheader EN\tPre-encabezado ES",
+    "Email Description\t⚡ Los dioses te llaman.\\nJuega y gana ES.",
 ])
+
+EMAIL_LINK = "https://jugabet.cl/launch/slots/iframe/pragmatic-test-game-1000"
 
 
 def _spec():
@@ -68,7 +74,7 @@ def main() -> int:
 
     bundle, report = T.prepare(
         spec, date_str="2026-07-20", tournament_start="2026-07-20",
-        tournament_end="2026-07-27", email_content_id="CSE-0-99999", upload_photos=True)
+        tournament_end="2026-07-27", email_game=EMAIL_LINK, upload_photos=True)
     create, save = bundle["create"], bundle["save"]
 
     print("\nnodes stay connected — after the SAME id-regen the console script runs:")
@@ -125,6 +131,18 @@ def main() -> int:
     wd = [a["initializationData"]["waitTo"] for a in save["activities"] if a.get("activityName") == "wait_date"]
     check(wd == ["2026-07-27T16:00:00Z", "2026-07-20T16:00:00Z"], f"wait_date gates = tournament window ({wd})")
 
+    print("\nemail content is built (hero token, sheet copy, game link):")
+    ec, es = bundle["email_create"], bundle["email_save"]
+    check(ec is not None and es is not None, "email create + save bodies built")
+    html = es["translations"]["es"]["composition"]["body"]["source"]
+    check("%%EMAIL_HERO%%" in html and "f4323497" not in html, "hero is a token, captured hero gone")
+    check("/launch/slots/iframe/pragmatic-test-game-1000" in html, "email CTA links to this run's game")
+    check("pragmatic-jugabet-leyendas-del-olympus" not in html, "captured game link gone")
+    check("Los dioses te llaman" in html, "sheet email body copy is in the HTML")
+    check(es["translations"]["es"]["composition"]["subject"] == "Asunto torneo ES", "email subject from the sheet")
+    check("%%EMAIL_CONTENT_ID%%" in json.dumps(save), "journey email node is the paste-time token")
+    check("CSE-0-14726" not in json.dumps(save), "captured email content id gone from the journey")
+
     print("\nverify (happy path):")
     for ok, msg in T.verify(bundle):
         check(ok, msg)
@@ -143,7 +161,9 @@ def main() -> int:
     refuses(keep_slug, "a captured page slug survives")
 
     def keep_email(b):
-        s = json.dumps(b["save"], ensure_ascii=False).replace("CSE-0-99999", T.TPL_EMAIL_CONTENT_ID)
+        # in the build-email path the journey holds the paste-time token; a body
+        # that still names the captured content must refuse
+        s = json.dumps(b["save"], ensure_ascii=False).replace(T.EMAIL_ID_TOKEN, T.TPL_EMAIL_CONTENT_ID)
         b["save"] = json.loads(s)
     refuses(keep_email, "the email keeps the captured content id")
 

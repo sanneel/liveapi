@@ -32,9 +32,15 @@
     </div>
 
     <div class="field">
-      <span class="lbl">Email content ID <span style="color:var(--t-faint)">(existing CSE-*)</span></span>
+      <span class="lbl">Email link <span style="color:var(--t-faint)">(the game the email opens)</span></span>
+      <input class="input mono" name="email_link" value="{{ form.email_link or '' }}" placeholder="https://jugabet.cl/launch/slots/iframe/pragmatic-...-olympus-1000"/>
+      <p class="help" style="margin-top:6px">The email is <b>built and published</b> here (hero uploaded, body + subject/pre-header from the sheet's Email rows), and its CTA opens this game. Leave the field below blank when using this.</p>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Email content ID <span style="color:var(--t-faint)">(alternative: an existing CSE-*)</span></span>
       <input class="input mono" name="email_content_id" value="{{ form.email_content_id or '' }}" placeholder="CSE-0-14726"/>
-      <p class="help" style="margin-top:6px">The email node points at an existing published content. <b>Required</b> — a draft that keeps the captured campaign's email is refused.</p>
+      <p class="help" style="margin-top:6px">Skip building the email and point the node at an existing published content instead. One of the two is required — a draft keeping the captured campaign's email is refused.</p>
     </div>
 
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">

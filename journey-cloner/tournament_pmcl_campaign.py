@@ -76,6 +76,20 @@ TPL_PAGE_SLUG = "torneo-leyendas-ganadoras"      # /page/<slug> — per tourname
 TPL_TOURNAMENT_ID = "5196"                        # #_smartico_dp=…&id=<n>
 TPL_EMAIL_CONTENT_ID = "CSE-0-14726"              # the captured campaign's email
 
+# ── email content (built + published the way sport_comms/GOW do it) ─────
+TPL_EMAIL_CREATE = TEMPLATE_DIR / "tournament_email_create.json"
+TPL_EMAIL_SAVE = TEMPLATE_DIR / "tournament_email_save.json"
+EMAIL_ID_TOKEN = "%%EMAIL_CONTENT_ID%%"           # journey email node ← created id
+EMAIL_HERO_TOKEN = "%%EMAIL_HERO%%"               # hero photo, uploaded at paste
+EMAIL_NAME_TOKEN = "%%EMAIL_NAME%%"
+EMAIL_SUBJECT_TOKEN = "%%EMAIL_SUBJECT%%"
+EMAIL_PREHEADER_TOKEN = "%%EMAIL_PREHEADER%%"
+EMAIL_BODY_TOKEN = "EMAIL_BODY_COPY_PLACEHOLDER"
+# The captured hero image and game-launch link in the email HTML, per tournament.
+TPL_EMAIL_HERO = "https://{{cdn_hostname}}/c93ad623-44ae-40f6-9aa5-b1aef7fd931a/f4323497-5894-43ae-935c-0be3ef5c5056.png"
+TPL_EMAIL_GAME = "pragmatic-jugabet-leyendas-del-olympus-1000"
+_GAME_RE = re.compile(r"/launch/slots/iframe/([A-Za-z0-9][A-Za-z0-9._-]*)")
+
 TPL_RESERVED = "JRN-0-636011"
 TPL_DUPLICATED_FROM = "JRN-0-590173"
 TPL_STOPAT = "2026-08-02T04:00:00Z"
@@ -174,14 +188,33 @@ def _iso_utc(date_str: str, hh: int = 16) -> str:
 
 
 # ── prepare ─────────────────────────────────────────────────────────────
+def parse_game_slug(value: str) -> str:
+    """The game slug the email CTA links to, from a launch URL or a bare slug."""
+    v = (value or "").strip()
+    if not v:
+        return ""
+    m = _GAME_RE.search(v)
+    if m:
+        return m.group(1)
+    if "/" in v or ":" in v:
+        raise Refused(
+            f"email game link {v!r} is not a launch URL. Expected "
+            f"…/launch/slots/iframe/<game-slug> (or just the slug)."
+        )
+    if not _SLUG_OK.match(v):
+        raise Refused(f"game slug {v!r} is not usable.")
+    return v
+
+
 def prepare(spec, *, date_str: str, tournament_start: str, tournament_end: str,
-            journey_name: str = "", email_content_id: str = "",
+            journey_name: str = "", email_content_id: str = "", email_game: str = "",
             upload_photos: bool = True, now: datetime | None = None
             ) -> tuple[dict, list[str]]:
     now = now or datetime.now(LOCAL_TZ)
     slug = spec.promo_slug
     tid = (spec.tournament_id or "").strip() or TPL_TOURNAMENT_ID
     start_at, stop_at = chile_window(date_str)
+    make_email = not email_content_id.strip()
 
     if journey_name.strip():
         name = journey_name.strip()
@@ -214,8 +247,11 @@ def prepare(spec, *, date_str: str, tournament_start: str, tournament_end: str,
         # console script fills them from an upload or restores the captured one.
         s = s.replace(TPL_NC_ICON_A, NC_ICON_TOKEN).replace(TPL_NC_ICON_B, NC_ICON_TOKEN)
         s = s.replace(TPL_POPUP_BG, POPUP_BG_TOKEN)
-        if email_content_id.strip():
-            s = s.replace(TPL_EMAIL_CONTENT_ID, email_content_id.strip())
+        # The journey's email node: point it at the created content (token filled
+        # at paste) or at the existing id the operator gave. Either way the
+        # captured CSE-0-14726 must be gone.
+        s = s.replace(TPL_EMAIL_CONTENT_ID,
+                      EMAIL_ID_TOKEN if make_email else email_content_id.strip())
         return s
 
     create = json.loads(string_swaps(TPL_CREATE.read_text(encoding="utf-8")))
@@ -257,13 +293,53 @@ def prepare(spec, *, date_str: str, tournament_start: str, tournament_end: str,
     save["journeyName"] = name
     create["journeyName"] = name
 
+    # ── the email content, created before the journey so its id can be wired ──
+    email_create = email_save = None
+    email_name = ""
+    email_body_copy = ""
+    game = ""
+    if make_email:
+        if not spec.email.desc_es.strip():
+            raise Refused(
+                'the sheet has no "Email Description" row and no --email-content-id '
+                "was given. Either supply the email body copy or point the node at "
+                "an existing CSE-* — a draft keeping the captured email is refused."
+            )
+        game = parse_game_slug(email_game)
+        if not game:
+            raise Refused(
+                "no --email-link (the game the email CTA opens, "
+                "…/launch/slots/iframe/<game-slug>). The captured game must not ship."
+            )
+        stamp = f"{now:%d.%m}"
+        email_name = f"JBCL - Tournament - {spec.event_name or slug} - {stamp} {now:%d.%m.%Y %H:%M:%S}"
+        email_body_copy = "\n<br><br>\n".join(
+            line.strip() for line in spec.email.desc_es.splitlines() if line.strip()
+        )
+
+        def swap_email(text: str) -> str:
+            s = text
+            s = s.replace(EMAIL_NAME_TOKEN, json_escape(email_name))
+            s = s.replace(EMAIL_SUBJECT_TOKEN, json_escape(spec.email.subject_es))
+            s = s.replace(EMAIL_PREHEADER_TOKEN, json_escape(spec.email.preheader_es))
+            s = s.replace(EMAIL_BODY_TOKEN, json_escape(email_body_copy))
+            s = s.replace(TPL_EMAIL_GAME, game)            # /launch/slots/iframe/<game>
+            s = s.replace(TPL_EMAIL_HERO, EMAIL_HERO_TOKEN)  # hero → uploaded at paste
+            return s
+
+        email_create = json.loads(swap_email(TPL_EMAIL_CREATE.read_text(encoding="utf-8")))
+        email_save = json.loads(swap_email(TPL_EMAIL_SAVE.read_text(encoding="utf-8")))
+
     bundle = {
         "create": create, "save": save,
+        "email_create": email_create, "email_save": email_save,
+        "make_email": make_email, "email_name": email_name, "email_game": game,
         "slug": slug, "tournament_id": tid, "journey_name": name,
         "email_content_id": email_content_id.strip(),
         "upload_photos": upload_photos,
         "expected": {NC_NODE: nc_copy, POPUP_NODE: popup_copy,
-                     "sms": {"en": spec.sms.text_en, "es": spec.sms.text_es}},
+                     "sms": {"en": spec.sms.text_en, "es": spec.sms.text_es},
+                     "email_body": email_body_copy},
     }
     report = [
         f"journeyName   {name!r}",
@@ -271,7 +347,8 @@ def prepare(spec, *, date_str: str, tournament_start: str, tournament_end: str,
         f"tournament id {tid}  (#_smartico_dp=dp:gf_tournaments&id={tid})",
         f"send window   {start_at} → {stop_at}",
         f"tournament    {tournament_start or '?'} → {tournament_end or '?'} (wait_date gates)",
-        f"email content {(email_content_id or '(none given — must not keep captured)')}",
+        (f"email         creating {email_name!r} (hero uploaded, links → /launch/slots/iframe/{game})"
+         if make_email else f"email content {email_content_id} (existing, wired into the journey)"),
         f"nc title es   {spec.nc.title_es[:56]!r}",
         f"popup title   {spec.popup.title_es[:56]!r}",
         f"sms es        {spec.sms.text_es[:56]!r}",
@@ -342,6 +419,37 @@ def verify(bundle: dict) -> list[tuple[bool, str]]:
     broken = E.canvas_edges_to_missing_node(save)
     iv = save.get("rawJourneyData", {}).get("infoValues", {})
 
+    # ── email content, when this run builds it ──
+    email_checks: list[tuple[bool, str]] = []
+    if bundle.get("make_email"):
+        ec, es = bundle["email_create"], bundle["email_save"]
+        s_email = json.dumps(ec, ensure_ascii=False) + json.dumps(es, ensure_ascii=False)
+        game = bundle.get("email_game", "")
+        html = ""
+        for tr in (es.get("translations") or {}).values():
+            src = ((tr.get("composition") or {}).get("body") or {}).get("source")
+            if isinstance(src, str):
+                html += src
+        want_body = (expected.get("email_body") or "")
+        email_checks = [
+            (EMAIL_ID_TOKEN in s_create and EMAIL_ID_TOKEN in s_save,
+             "journey email node is a placeholder (filled from the created content)"),
+            (EMAIL_HERO_TOKEN in s_email and TPL_EMAIL_HERO not in s_email,
+             "email hero is a placeholder (uploaded at paste)"),
+            (TPL_EMAIL_GAME not in s_email,
+             f"email no longer links to the captured game ({TPL_EMAIL_GAME})"),
+            (game and s_email.count(f"/launch/slots/iframe/{game}") >= 2,
+             f"email CTA links to this run's game ({game})"),
+            (bool(want_body) and want_body in html,
+             "email body carries the sheet's copy"),
+            (EMAIL_BODY_TOKEN not in s_email,
+             "email body placeholder filled"),
+            (EMAIL_NAME_TOKEN not in s_email and EMAIL_SUBJECT_TOKEN not in s_email
+             and EMAIL_PREHEADER_TOKEN not in s_email
+             and (es["translations"]["es"]["composition"].get("subject") or "").strip(),
+             "email name / subject / pre-header filled"),
+        ]
+
     return [
         (page_slugs == {slug}, f"every channel links to /page/{slug}"
          + (f" (ALSO: {sorted(page_slugs - {slug})})" if page_slugs - {slug} else "")),
@@ -380,7 +488,7 @@ def verify(bundle: dict) -> list[tuple[bool, str]]:
          "a terminal activity exists"),
         (not leaked, "no content still shared with the capture"
          + (f" (LEAK: {leaked[:2]})" if leaked else "")),
-    ]
+    ] + email_checks
 
 
 # ── emit ────────────────────────────────────────────────────────────────
@@ -396,9 +504,13 @@ JS_TEMPLATE = r"""// JBCL Tournament comms — @JOURNEY@ — generated @GENERATE
   const FOLDER_ID = @FOLDER_ID@;
   const CAPTURED_NC_ICON = @CAPTURED_NC_ICON@;   // restored when no folder is set
   const CAPTURED_POPUP_BG = @CAPTURED_POPUP_BG@;
+  const MAKE_EMAIL = @MAKE_EMAIL@;               // build + publish email content, then wire it
+  const EMAIL_CREATE = @EMAIL_CREATE@;
+  const EMAIL_SAVE = @EMAIL_SAVE@;
   const CREATE = @CREATE@;
   const SAVE = @SAVE@;
   const CRM_BASE = BASE.replace(/\/journey-builder\/v0$/, '');
+  const CS_BASE = CRM_BASE + '/content-studio/v0/eb-backoffice/email/contents';
 
   const decodeJwt = (t) => { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); } catch (e) { return null; } };
   const usableAuth = (v) => {
@@ -463,6 +575,7 @@ JS_TEMPLATE = r"""// JBCL Tournament comms — @JOURNEY@ — generated @GENERATE
 
   console.log('%cJBCL Tournament comms', 'color:#3b82f6;font-weight:bold;font-size:14px');
   try {
+    // 1. artwork
     let iconUrl = CAPTURED_NC_ICON, bgUrl = CAPTURED_POPUP_BG;   // defaults: keep template art
     if (FOLDER_ID) {
       iconUrl = await upload(await pickFile('the NOTIFICATION ICON (200x200)'), 'notification icon');
@@ -470,9 +583,27 @@ JS_TEMPLATE = r"""// JBCL Tournament comms — @JOURNEY@ — generated @GENERATE
     } else {
       console.log('%cNo FOLDER_ID — keeping the template artwork (no pickers).', 'color:#eab308');
     }
+
+    // 2. email content FIRST — the journey needs its id
+    let emailContentId = null;
+    if (MAKE_EMAIL) {
+      if (!FOLDER_ID) throw new Error('email needs a media-library folder for the hero upload — set Folder ID.');
+      const heroUrl = await upload(await pickFile('the EMAIL HERO IMAGE'), 'email hero');
+      let body = JSON.stringify(EMAIL_CREATE).split('%%EMAIL_HERO%%').join(heroUrl);
+      let er = await fetch(CS_BASE, { method: 'POST', headers: H('application/json'), credentials: 'include', body: body });
+      let et = await er.text(); if (!er.ok) throw new Error('email create HTTP ' + er.status + ' ' + et);
+      emailContentId = JSON.parse(et).id; if (!emailContentId) throw new Error('no email content id: ' + et);
+      console.log('%c    email content created ' + emailContentId, 'color:#22c55e');
+      body = JSON.stringify(EMAIL_SAVE).split('%%EMAIL_HERO%%').join(heroUrl);
+      er = await fetch(CS_BASE + '/' + emailContentId, { method: 'POST', headers: H('application/json'), credentials: 'include', body: body });
+      et = await er.text(); if (!er.ok) throw new Error('email save HTTP ' + er.status + ' ' + et);
+      console.log('    email content saved (subject + pre-header + body)');
+    }
+
+    // 3. the journey, wired to the email that was just created
     const jid = await reserveId();
     console.log('    reserved ' + jid);
-    const fill = (s) => s.split('%%RESERVED%%').join(jid).split('%%NC_ICON%%').join(iconUrl).split('%%POPUP_BG%%').join(bgUrl);
+    const fill = (s) => { s = s.split('%%RESERVED%%').join(jid).split('%%NC_ICON%%').join(iconUrl).split('%%POPUP_BG%%').join(bgUrl); if (emailContentId) s = s.split('%%EMAIL_CONTENT_ID%%').join(emailContentId); return s; };
     let createStr = fill(JSON.stringify(CREATE)), saveStr = fill(JSON.stringify(SAVE));
     const map = idMap(createStr + saveStr);
     createStr = applyMap(createStr, map); saveStr = applyMap(saveStr, map);
@@ -485,7 +616,7 @@ JS_TEMPLATE = r"""// JBCL Tournament comms — @JOURNEY@ — generated @GENERATE
     r = await fetch(BASE + '/journey-drafts/' + numId, { method: 'PUT', headers: H('application/json'), credentials: 'include', body: saveStr });
     t = await r.text(); if (!r.ok) throw new Error('draft ' + jid + ' created but SAVE failed HTTP ' + r.status + ' ' + t);
 
-    console.log('%cDONE — ' + jid + ' (draft ' + numId + ')', 'color:#22c55e;font-weight:bold;font-size:14px');
+    console.log('%cDONE — ' + jid + ' (draft ' + numId + ')' + (emailContentId ? ', email ' + emailContentId : ''), 'color:#22c55e;font-weight:bold;font-size:14px');
     console.log('The draft is unpublished — review it in the Journeys UI, check the canvas, then publish.');
   } catch (e) {
     console.error('%cFAILED — ' + ((e && e.message) || e), 'color:#ef4444;font-weight:bold');
@@ -504,6 +635,9 @@ def build_js(bundle: dict, folder_id: str) -> str:
     js = js.replace("@FOLDER_ID@", json.dumps(folder_id if bundle["upload_photos"] else ""))
     js = js.replace("@CAPTURED_NC_ICON@", json.dumps(TPL_NC_ICON_A))
     js = js.replace("@CAPTURED_POPUP_BG@", json.dumps(TPL_POPUP_BG))
+    js = js.replace("@MAKE_EMAIL@", "true" if bundle.get("make_email") else "false")
+    js = js.replace("@EMAIL_CREATE@", json.dumps(bundle.get("email_create") or {}, ensure_ascii=False))
+    js = js.replace("@EMAIL_SAVE@", json.dumps(bundle.get("email_save") or {}, ensure_ascii=False))
     js = js.replace("@CREATE@", json.dumps(bundle["create"], ensure_ascii=False))
     js = js.replace("@SAVE@", json.dumps(bundle["save"], ensure_ascii=False))
     return js
@@ -526,7 +660,11 @@ def main() -> int:
     p.add_argument("--start", default="", help="tournament start YYYY-MM-DD")
     p.add_argument("--end", default="", help="tournament end YYYY-MM-DD")
     p.add_argument("--journey-name", default="", help="override the journey name")
-    p.add_argument("--email-content-id", default="", help="existing CSE-* content id for the email node")
+    p.add_argument("--email-content-id", default="",
+                   help="existing CSE-* content id — use INSTEAD of building the email")
+    p.add_argument("--email-link", default="",
+                   help="the game the email CTA opens (…/launch/slots/iframe/<slug>). "
+                        "Required when the email is built (no --email-content-id).")
     p.add_argument("--folder-id", default=DEFAULT_FOLDER_ID, help="media-library folder for uploads")
     p.add_argument("--no-photos", action="store_true", help="keep template artwork; no file pickers")
     p.add_argument("--name", default="tournament_comms", help="output basename")
@@ -539,7 +677,7 @@ def main() -> int:
     bundle, report = prepare(
         spec, date_str=args.date, tournament_start=args.start, tournament_end=args.end,
         journey_name=args.journey_name, email_content_id=args.email_content_id,
-        upload_photos=not args.no_photos)
+        email_game=args.email_link, upload_photos=not args.no_photos)
 
     print("JBCL Tournament comms:")
     for line in report:
@@ -557,7 +695,8 @@ def main() -> int:
     if args.dry_run:
         out = HERE / "out"; out.mkdir(exist_ok=True)
         path = out / f"{args.name}_bodies.json"
-        path.write_text(json.dumps({"create": bundle["create"], "save": bundle["save"]},
+        path.write_text(json.dumps({k: bundle[k] for k in
+                                    ("create", "save", "email_create", "email_save")},
                                    ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"\nDry run — bodies written: {path}")
         return 0
