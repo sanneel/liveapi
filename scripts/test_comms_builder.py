@@ -211,6 +211,29 @@ check("the real copy either side of the error cell survived",
 check("the negative Left-symb counter is still filtered",
       q.nc.desc_es == "ES DESC", repr(q.nc.desc_es))
 
+# A channel section can repeat "Tittle"/"Description" with empty text further
+# down (spare rows carrying only their symbol counters). Those blanks used to
+# overwrite the copy two rows above, and the generator then refused for a
+# "Notification title/description" that was plainly there in the paste.
+_CLOBBER = "\n".join([
+    "\u0421ommunication channels",
+    "Notification\t\tTRUE",
+    "Tittle\t\t\tEN TITLE\t50\t-5\t\t\tES TITLE\t50\t5",
+    "Description\t\t\tEN DESC\t65\t-12\t\t\tES DESC\t65\t1",
+    "Button\t\t\tPLAY NOW\t20\t12\t\t\tJUEGA AHORA\t20\t9",
+    "Tittle\t\t\t\t80\t80\t\t\t\t80\t80",
+    "Description\t\t\t\t90\t90\t\t\t\t90\t90",
+])
+cl = parse_spec(_CLOBBER, expect_game_offer=False)
+check("a later blank row does not wipe the title", cl.nc.title_en == "EN TITLE",
+      repr(cl.nc.title_en))
+check("a later blank row does not wipe the description", cl.nc.desc_en == "EN DESC",
+      repr(cl.nc.desc_en))
+check("the ES side survives it too",
+      cl.nc.title_es == "ES TITLE" and cl.nc.desc_es == "ES DESC",
+      f"{cl.nc.title_es!r}/{cl.nc.desc_es!r}")
+check("the caption is untouched", cl.nc.caption_en == "PLAY NOW", repr(cl.nc.caption_en))
+
 print("\nthe variants are the shapes that used to be a script each")
 check("every variant declares what it replaces",
       all(v.get("replaces") and v.get("what") for v in CB.VARIANTS.values()),

@@ -309,36 +309,49 @@ def parse_spec(text: str, *, expect_game_offer: bool = True) -> ParsedSpec:
             flagged_rows.add(current_channel)
         field_rows[current_channel].append((label.lower(), en, es))
 
+    def _set(target, field: str, value: str) -> None:
+        """Fill a field, but never blank one that already has copy.
+
+        A real sheet repeats "Tittle"/"Description" with empty text further down a
+        channel's section (spare rows for a variant, carrying only their symbol
+        counters). Assigning unconditionally meant those blanks overwrote the copy
+        two rows above, and the generator then refused for "Notification
+        title/description/caption" that was plainly there in the paste.
+        """
+        if value or not getattr(target, field, ""):
+            setattr(target, field, value)
+
     def _fill_channel(target: ChannelCopy, rows_for_channel: list) -> None:
         for label, en, es in rows_for_channel:
             if label.startswith("tit"):
                 # Matches both "Title" and the sheet's "Tittle" spelling.
-                target.title_en, target.title_es = en, es
+                _set(target, "title_en", en); _set(target, "title_es", es)
             elif "desc" in label:
-                target.desc_en, target.desc_es = en, es
+                _set(target, "desc_en", en); _set(target, "desc_es", es)
             elif "button" in label or "caption" in label:
-                target.caption_en, target.caption_es = en, es
+                _set(target, "caption_en", en); _set(target, "caption_es", es)
 
     _fill_channel(spec.nc, field_rows.get(_NOTIFICATION, []))
     _fill_channel(spec.popup, field_rows.get(_POPUP, []))
 
-    sms_rows = field_rows.get(_SMS, [])
-    if sms_rows:
-        _, en, es = sms_rows[0]
-        spec.sms.text_en, spec.sms.text_es = en, es
+    # The first SMS row with actual text: a section can carry spare blank rows.
+    for _label, en, es in field_rows.get(_SMS, []):
+        if en or es:
+            spec.sms.text_en, spec.sms.text_es = en, es
+            break
 
     for label, en, es in field_rows.get(_EMAIL, []):
         if label.startswith("tit"):
             # "Tittle"/"Title" row = the email subject line.
-            spec.email.subject_en, spec.email.subject_es = en, es
+            _set(spec.email, "subject_en", en); _set(spec.email, "subject_es", es)
         elif "header" in label:
             # "Pre-header" row.
-            spec.email.preheader_en, spec.email.preheader_es = en, es
+            _set(spec.email, "preheader_en", en); _set(spec.email, "preheader_es", es)
         elif "desc" in label:
             # "Description" row = the email body copy (may be multi-line).
-            spec.email.desc_en, spec.email.desc_es = en, es
+            _set(spec.email, "desc_en", en); _set(spec.email, "desc_es", es)
         elif "button" in label or "caption" in label:
-            spec.email.button_en, spec.email.button_es = en, es
+            _set(spec.email, "button_en", en); _set(spec.email, "button_es", es)
 
     # A channel whose section row carries no TRUE, but whose own field rows do,
     # is still ticked — one sheet puts the flag on the "Description (all sms
