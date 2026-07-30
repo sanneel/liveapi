@@ -183,6 +183,7 @@ NC_DISCOUNT_SCRIPT_PATH = CLONER_DIR / "nc_discount_campaign.py"
 NC_DISCOUNT_PMCL_SCRIPT_PATH = CLONER_DIR / "nc_discount_pmcl_campaign.py"
 PREDICTION_SCRIPT_PATH = CLONER_DIR / "prediction_campaign.py"
 TOURNAMENT_PMCL_SCRIPT_PATH = CLONER_DIR / "tournament_pmcl_campaign.py"
+TOURNAMENT_JBCL_SCRIPT_PATH = CLONER_DIR / "tournament_jbcl_campaign.py"
 COMPOSE_SCRIPT_PATH = CLONER_DIR / "compose.py"
 CHAIN_COMPOSER_SCRIPT_PATH = CLONER_DIR / "journey_composer.py"
 BET_AND_GET_PMCL_SCRIPT_PATH = CLONER_DIR / "bet_and_get_pmcl_campaign.py"
@@ -417,55 +418,46 @@ def generate_randomizer_console_script(
     return _run_gow_cli(cmd, basename=basename)
 
 
-def generate_tournament_pmcl_console_script(
+def _generate_tournament_console_script(
     *,
+    script_path,
+    tag: str,
     date: str,
     spec_text: str,
-    tournament_link: str = "",
-    tournament_id: str = "",
-    folder_id: str = "",
+    link: str = "",
     journey_name: str = "",
-    tournament_start: str = "",
-    tournament_end: str = "",
     email_content_id: str = "",
     email_link: str = "",
     no_photos: bool = False,
 ) -> Tuple[int, str, str, str | None, str]:
-    """Generate the paste-into-DevTools console script for the JBCL tournament
-    communications journey (Notification Center + Pop-up + SMS + email), rebuilt
-    from a fresh capture. Copy comes from the pasted spec blob; every channel's
-    link is pointed at the tournament page (``--tournament-link`` → ``/page/<slug>``
-    plus the Smartico ``&id=``). The console script CREATES the draft (POST) and
-    then SAVES it (PUT) — the save is what finalises the canvas.
+    """Generate the paste-into-DevTools console script for one brand's tournament
+    comms journey (Notification Center + Pop-up + SMS + email).
 
-    ``tournament_start`` / ``tournament_end`` (YYYY-MM-DD) set the two wait_date
-    gates to the tournament window. ``email_content_id`` is an existing CSE-*
-    the email node points at; a run keeping the captured id is refused. When a
-    media-library ``folder_id`` is given the script uploads a fresh NC icon +
-    Pop-up background, otherwise the template's images are kept.
+    Everything else the journey needs comes from the pasted sheet, not from an
+    operator field: its ``Start date``/``End date`` rows set the two Wait/Date
+    gates, the notification revoke period and the journey name, and its copy
+    fills every channel. ``link`` is any promo URL — its path is what the
+    notification and pop-up open, and the SMS carries it behind
+    ``https://{{BrandDomain}}``. The media-library folder is a property of the
+    brand and is baked into the generator.
+
+    The console script CREATES the draft (POST) and then SAVES it (PUT) — the
+    save is what finalises the canvas.
 
     Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
     """
-    basename = _unique_basename("tournament_pmcl", date)
+    basename = _unique_basename(tag, date)
     cmd = [
         python_executable(),
-        str(TOURNAMENT_PMCL_SCRIPT_PATH),
+        str(script_path),
         "--date", date.strip(),
         "--spec", "-",
         "--name", basename,
     ]
-    if tournament_link.strip():
-        cmd += ["--tournament-link", tournament_link.strip()]
-    if tournament_id.strip():
-        cmd += ["--tournament-id", tournament_id.strip()]
-    if folder_id.strip():
-        cmd += ["--folder-id", folder_id.strip()]
+    if link.strip():
+        cmd += ["--link", link.strip()]
     if journey_name.strip():
         cmd += ["--journey-name", journey_name.strip()]
-    if tournament_start.strip():
-        cmd += ["--start", tournament_start.strip()]
-    if tournament_end.strip():
-        cmd += ["--end", tournament_end.strip()]
     if email_content_id.strip():
         cmd += ["--email-content-id", email_content_id.strip()]
     if email_link.strip():
@@ -473,6 +465,18 @@ def generate_tournament_pmcl_console_script(
     if no_photos:
         cmd += ["--no-photos"]
     return _run_gow_cli(cmd, spec_text=spec_text, basename=basename)
+
+
+def generate_tournament_pmcl_console_script(**kw) -> Tuple[int, str, str, str | None, str]:
+    """PMCL (Fortunazo) tournament comms."""
+    return _generate_tournament_console_script(
+        script_path=TOURNAMENT_PMCL_SCRIPT_PATH, tag="tournament_pmcl", **kw)
+
+
+def generate_tournament_jbcl_console_script(**kw) -> Tuple[int, str, str, str | None, str]:
+    """JBCL (JugaBet) tournament comms."""
+    return _generate_tournament_console_script(
+        script_path=TOURNAMENT_JBCL_SCRIPT_PATH, tag="tournament_jbcl", **kw)
 
 
 def generate_nc_discount_pmcl_console_script(folder_id: str) -> Tuple[int, str, str, str | None, str]:

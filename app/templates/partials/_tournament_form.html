@@ -1,0 +1,104 @@
+{# Shared Tournament comms form. Callers pass: brand ("PMCL"/"JBCL"), brand_name,
+   action, sms_prefix, email_hint, folder_note. Both brands run the same engine —
+   only the capture behind them differs. #}
+{% if error %}<div class="alert err">{{ error }}</div>{% endif %}
+{% if result %}
+  <div class="alert {% if result.ok %}ok{% else %}err{% endif %}">
+    {% if result.ok %}Console script generated.{% else %}Generation exited with code {{ result.exit_code }}.{% endif %}
+  </div>
+{% endif %}
+
+<div class="row-flex">
+  <form method="post" action="{{ action }}" class="card card-pad col-rail" style="display:flex; flex-direction:column; gap:14px">
+    <div>
+      <h2 class="card-title">Create {{ brand }} Tournament Comms</h2>
+      <p class="card-sub">{{ brand_name }} tournament promo — Notification + Pop-up (Cat-fish) + SMS + Email, one journey. Paste the <b>whole sheet</b>: its Specifications block (Event, Start date, End date) and its Communication channels block (EN/ES copy per channel) are what build the draft.</p>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Date <span style="color:var(--t-faint)">(when the comms go out)</span></span>
+      <input class="input" name="date" type="date" required value="{{ form.date or '' }}"/>
+      <p class="help" style="margin-top:6px">The journey <b>starts on this date at 12:00</b> Chile and stops at 19:00 the same day. It is not set to "immediately after publish", so publishing early does not fire it early.</p>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Link <span style="color:var(--t-faint)">(any URL — every channel opens it)</span></span>
+      <input class="input mono" name="link" required value="{{ form.link or '' }}" placeholder="https://{{ domain }}/xxx/yy/gg"/>
+      <p class="help" style="margin-top:6px">Only the <b>path</b> ships. A link of <span class="mono">{{ domain }}/xxx/yy/gg</span> gives the notification and pop-up <span class="mono">/xxx/yy/gg</span> and the SMS <span class="mono">https://{{'{{'}}BrandDomain{{'}}'}}/xxx/yy/gg</span>. Any query or <span class="mono">#_smartico_dp=…</span> fragment is dropped — there is no tournament id to fill in any more.</p>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Email link{% if brand == 'JBCL' %} <span style="color:var(--t-faint)">(the game the email opens)</span>{% endif %}</span>
+      {% if brand == 'JBCL' %}
+        <input class="input mono" name="email_link" value="{{ form.email_link or '' }}" placeholder="https://jugabet.cl/launch/slots/iframe/pragmatic-...-olympus-1000"/>
+        <p class="help" style="margin-top:6px">The email is <b>built and published</b> (hero uploaded, body + subject/pre-header from the sheet's Email rows) and its CTA opens this game. Leave the field below blank when using this.</p>
+      {% else %}
+        <p class="help" style="margin:0">The {{ brand }} email's CTA opens the <b>same promo link</b> as every other channel — nothing extra to fill in. The email itself is built and published from the sheet's Email rows (hero uploaded at paste time).</p>
+      {% endif %}
+    </div>
+
+    <div class="field">
+      <span class="lbl">Email content ID <span style="color:var(--t-faint)">(alternative: an existing CSE-*)</span></span>
+      <input class="input mono" name="email_content_id" value="{{ form.email_content_id or '' }}" placeholder="{{ email_cse }}"/>
+      <p class="help" style="margin-top:6px">Skip building the email and point the node at an existing published content instead. A draft keeping the captured campaign's email is refused either way.</p>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Journey name <span style="color:var(--t-faint)">(optional override)</span></span>
+      <input class="input" name="journey_name" value="{{ form.journey_name or '' }}" placeholder="{{ name_example }}"/>
+      <p class="help" style="margin-top:6px">Leave blank — it is built from the sheet's <span class="mono">Event</span> row and its tournament dates, e.g. <span class="mono">{{ name_example }}</span>.</p>
+    </div>
+
+    <div class="field">
+      <label class="help" style="display:flex; align-items:center; gap:7px; cursor:pointer">
+        <input type="checkbox" name="no_photos" value="1" {% if form.no_photos %}checked{% endif %}/>
+        Keep the template's existing images (no file pickers)
+      </label>
+      <p class="help" style="margin-top:6px">{{ folder_note }} Normally leave this unticked: the script pops file pickers for a fresh NC icon, Pop-up background and Email hero. Ticking it also means <b>no email can be built</b> — the hero needs an upload.</p>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Spec (paste the whole sheet — Specifications <i>and</i> Communication channels)</span>
+      <textarea class="input mono" name="spec" required rows="16" spellcheck="false" style="font-size:12px" placeholder="Paste the sheet here (tab-separated, as copied): Event / Start date / End date, then Notification, Notification pop-up (Cat-fish), Sms and Email rows with their EN/ES copy.">{{ form.spec or '' }}</textarea>
+      <p class="help" style="margin-top:6px">The <span class="mono">Start date</span> and <span class="mono">End date</span> rows are <b>required</b>: they set both <b>Wait / Date</b> gates and the <b>notification revoke period</b> to the exact tournament length, so a notification never outlives its tournament. A missing or reversed window is refused, not guessed.</p>
+    </div>
+
+    <button class="btn primary" style="justify-content:center">Generate console script</button>
+    <p class="help">No token needed — the script grabs it from the {{ brand }} backoffice tab on paste, then creates the tournament comms journey draft.</p>
+  </form>
+
+  <div class="col-main stack">
+    {% with console_script=console_script,
+            steps=["Open the <b>" ~ brand ~ "</b> backoffice — Chrome, logged in — before pasting.",
+                   "Paste the script and press Enter, then pick the NC icon, the Pop-up background and the Email hero image as each picker pops up."],
+            final_step="Watch for the green <b>DONE</b> with the created JRN id (and the published email content id, when the paste included an Email)." %}
+      {% include "partials/_console_script.html" %}
+    {% endwith %}
+
+    {% if result %}
+      <section class="card" style="overflow:hidden">
+        <div class="card-head"><h2 class="card-title">Run Output</h2></div>
+        <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+          <div>
+            <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Command</div>
+            <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0">{{ result.command }}</pre>
+          </div>
+          <div>
+            <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Output</div>
+            <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:32rem; margin:0">{{ result.output }}</pre>
+          </div>
+        </div>
+      </section>
+    {% else %}
+      <section class="card card-pad">
+        <h2 class="card-title" style="margin-bottom:8px">How it works</h2>
+        <div class="help" style="line-height:1.7">
+          <p style="margin:0 0 8px">This clones the captured {{ brand_name }} tournament comms journey and swaps in the copy from your pasted sheet: the <b>Notification</b> (contract 1), the <b>Pop-up</b> (Cat-fish, contract 5), the <b>SMS</b> (behind its required <span class="mono">{{ sms_prefix }}</span> prefix) and the <b>Email</b> — EN &amp; ES, each field written by name so one language never lands in the other's slot.</p>
+          <p style="margin:0 0 8px">Every channel is pointed at your link's path. The old Smartico deeplink (<span class="mono">#_smartico_dp=dp:gf_tournaments&amp;id=…</span>) is gone — it only ever addressed the captured tournament.</p>
+          <p style="margin:0 0 8px">The script CREATES the draft and then SAVES it (POST then PUT). The save is what finalises the canvas; skipping it was what left nodes unconnected.</p>
+          <p style="margin:0">If any required field is missing from the spec — including the tournament window — the script stops with a clear error and nothing is created.</p>
+        </div>
+      </section>
+    {% endif %}
+  </div>
+</div>

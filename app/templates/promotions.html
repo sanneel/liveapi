@@ -18,6 +18,7 @@
     <div class="tab-group-btns">
       <button type="button" class="tab" data-tab="gow">GOW</button>
       <button type="button" class="tab" data-tab="tournament_pmcl">PMCL Tournament</button>
+      <button type="button" class="tab" data-tab="tournament_jbcl">JBCL Tournament</button>
       <button type="button" class="tab" data-tab="sport_comms">Scratch Card Comms</button>
       <button type="button" class="tab" data-tab="bet_and_get">PMCL Bet &amp; Get</button>
       <button type="button" class="tab" data-tab="journey_cloner">Promo Codes</button>
@@ -169,8 +170,22 @@
 
 {# ── PMCL Tournament comms generator ─────────────────────────────────── #}
 <section data-panel="tournament_pmcl" hidden>
-  {% with form=tournament.form, error=tournament.error, result=tournament.result, console_script=tournament.console_script %}
-    {% include "partials/_tournament_pmcl_form.html" %}
+  {% with form=tournament.form, error=tournament.error, result=tournament.result, console_script=tournament.console_script,
+          brand="PMCL", brand_name="PMCL (Fortunazo)", action="/admin/promotions/tournament-pmcl",
+          domain="fortunazo.cl", sms_prefix="Fortunazo |", email_cse="CSE-0-15017",
+          name_example="FTCL | CS | Torneo Ola de Dinero 27.07-02.08",
+          folder_note="Uploads go to the PMCL comms media-library folder, which is baked into the generator." %}
+    {% include "partials/_tournament_form.html" %}
+  {% endwith %}
+</section>
+
+<section data-panel="tournament_jbcl" hidden>
+  {% with form=tournament_jbcl.form, error=tournament_jbcl.error, result=tournament_jbcl.result, console_script=tournament_jbcl.console_script,
+          brand="JBCL", brand_name="JBCL (JugaBet)", action="/admin/promotions/tournament-jbcl",
+          domain="jugabet.cl", sms_prefix="JugaBet |", email_cse="CSE-0-14726",
+          name_example="JBCL | CS&SP | Torneo Ola de Dinero 27.07-02.08",
+          folder_note="Uploads go to the JBCL comms media-library folder, which is baked into the generator." %}
+    {% include "partials/_tournament_form.html" %}
   {% endwith %}
 </section>
 

@@ -187,10 +187,14 @@ GENERATORS: List[dict] = [
      "script": "randomizer_campaign.py", "tab": "randomizers"},
 
     # ── Comms ─────────────────────────────────────────────────────────────
-    {"key": "tournament_pmcl", "group": "Comms", "brand": "JBCL",
-     "label": "Tournament comms",
-     "what": "NC + pop-up + SMS + email for a tournament, one journey (create + save)",
+    {"key": "tournament_pmcl", "group": "Comms", "brand": "PMCL",
+     "label": "PMCL Tournament comms",
+     "what": "NC + pop-up + SMS + email for a Fortunazo tournament, one journey (create + save)",
      "script": "tournament_pmcl_campaign.py", "tab": "tournament_pmcl"},
+    {"key": "tournament_jbcl", "group": "Comms", "brand": "JBCL",
+     "label": "JBCL Tournament comms",
+     "what": "NC + pop-up + SMS + email for a JugaBet tournament, one journey (create + save)",
+     "script": "tournament_jbcl_campaign.py", "tab": "tournament_jbcl"},
     {"key": "comms_chain", "group": "Comms", "brand": "JBCL/PMCL",
      "label": "Comms journey from content",
      "what": "NC + pop-up + SMS + email with your copy, one journey per date",
@@ -234,8 +238,8 @@ _NOT_GENERATORS = {
     "generate_console_script.py", "ai_campaign_builder.py", "casino_journey.py",
     "gow_campaign.py", "comms_campaign.py", "build_catalog.py",
     "build_games_registry.py", "nc_discount_campaign.py",
-    "nc_discount_pmcl_campaign.py", "tournament_pmcl_email.py",
-    "comms_engine.py",
+    "nc_discount_pmcl_campaign.py",
+    "comms_engine.py", "tournament_comms_base.py",
 }
 
 

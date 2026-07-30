@@ -91,6 +91,8 @@ class ParsedSpec:
     event_name: str = ""             # Specifications "Event" row, quotes/parens stripped
     tournament_id: str = ""          # id=... from the Specifications "Link" row
     promo_slug: str = ""             # /randomizer/<slug> from the "Link" row
+    raw_link: str = ""               # the "Link" row verbatim — any URL
+    link_path: str = ""              # its path, set by the tournament generators
     nc: ChannelCopy = field(default_factory=ChannelCopy)
     popup: ChannelCopy = field(default_factory=ChannelCopy)
     sms: SmsCopy = field(default_factory=SmsCopy)
@@ -226,6 +228,8 @@ def parse_spec(text: str, *, expect_game_offer: bool = True) -> ParsedSpec:
             # "Link (Other)" carries the canonical deeplink; don't let a later
             # blank/odd Link row clobber an id already found.
             link = _first_value(row)
+            if link.strip() and not spec.raw_link:
+                spec.raw_link = link.strip()
             m = _LINK_ID_RE.search(link)
             if m and not spec.tournament_id:
                 spec.tournament_id = m.group(1)

@@ -130,6 +130,56 @@ def set_sms_text(body: dict, en: str, es: str) -> int:
     return writes
 
 
+# Link fields a comms node carries. `link`/`deeplink` live once in the `common`
+# tab; `link-en`/`link-es` are the per-language copies the notification node
+# keeps. Everything else that mentions a link (`buttons_1_link`,
+# `buttons_1_deeplink`) holds a `%reference%` to one of these, never a URL.
+_LINK_FIELDS = {"link", "deeplink", "link-en", "link-es", "link_en", "link_es"}
+
+
+def set_channel_link(body: dict, node_name: str, url: str) -> int:
+    """Point one comms node's every link field at `url`, in both storages.
+
+    A `%…%` value is a template reference (`%link-en%?%$utm_tags%`) that resolves
+    to one of the fields written here — rewriting it would break the reference,
+    so it is left alone. Returns the number of slots written; 0 means the node
+    was not found and the caller must refuse rather than ship the captured link.
+    """
+    writes = 0
+    for store in storages(body, comms_node(node_name)):
+        tabs = (store.get("singleChannel") or {}).get("localizedLanguagesTab") or {}
+        for lang_tab in tabs.values():
+            if not isinstance(lang_tab, dict):
+                continue
+            for key, value in list(lang_tab.items()):
+                if key in _LINK_FIELDS and not str(value).startswith("%"):
+                    lang_tab[key] = url
+                    writes += 1
+        for var in (store.get("objectForSend") or {}).get("variables") or []:
+            if var.get("name") in _LINK_FIELDS and not str(var.get("value", "")).startswith("%"):
+                var["value"] = url
+                writes += 1
+    return writes
+
+
+def set_expire_after(body: dict, days: int) -> int:
+    """Set every notification node's revoke period, in both storages.
+
+    `objectForSend.expire_after` is a .NET timespan ("9.00:00:00.000"): how long
+    the notification stays in the player's centre before it is revoked. It has to
+    match the tournament's length, or a tournament that ended last week is still
+    sitting in the centre — the capture's own 9/18 days shipped otherwise.
+    """
+    value = f"{max(int(days), 1)}.00:00:00.000"
+    writes = 0
+    for store in storages(body, lambda a: a.get("activityName") == "notification_center"):
+        obj = store.get("objectForSend")
+        if isinstance(obj, dict) and "expire_after" in obj:
+            obj["expire_after"] = value
+            writes += 1
+    return writes
+
+
 def set_display_data(body: dict, predicate, new_value: str) -> int:
     """Rewrite a node's canvas label, in both the activity and the mirror.
 

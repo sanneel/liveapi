@@ -40,6 +40,7 @@ from ..services.journey_cloner_runner import (
     generate_gow_console_script,
     generate_bet_and_get_pmcl_console_script,
     generate_tournament_pmcl_console_script,
+    generate_tournament_jbcl_console_script,
     missing_templates,
     run_journey_cloner,
     save_template_from_fetch,
@@ -642,7 +643,7 @@ def figma_run(
     return templates.TemplateResponse(request, "figma.html", ctx)
 
 
-_PROMO_TABS = {"overview", "gow", "tournament_pmcl", "bet_and_get", "journey_cloner", "randomizers", "nc_discount", "scripts", "prediction", "slot_cards", "sport_comms"}
+_PROMO_TABS = {"overview", "gow", "tournament_pmcl", "tournament_jbcl", "bet_and_get", "journey_cloner", "randomizers", "nc_discount", "scripts", "prediction", "slot_cards", "sport_comms"}
 _JC_TYPES = ["followup", "bfr", "two_hours", "aft"]
 
 
@@ -777,7 +778,8 @@ def _slot_ns() -> dict:
 def _bag_ns(*, form=None, error="", result=None, console_script=None) -> dict:
     return {"form": form or {}, "error": error, "result": result, "console_script": console_script}
 
-def _promotions_context(*, user, active_tab="overview", gow=None, tournament=None, bag=None, jc=None,
+def _promotions_context(*, user, active_tab="overview", gow=None, tournament=None,
+                        tournament_jbcl=None, bag=None, jc=None,
                         rnd=None, nc=None, pred=None, scomms=None) -> dict:
     """Full context for the unified Optimization page: automation graph + the
     embedded generators (GOW, Tournament Comms, Journey Cloner, Randomizers,
@@ -799,6 +801,7 @@ def _promotions_context(*, user, active_tab="overview", gow=None, tournament=Non
         "all_scripts": pc.all_scripts(),
         "gow": gow if gow is not None else _gow_ns(),
         "tournament": tournament if tournament is not None else _tournament_ns(),
+        "tournament_jbcl": tournament_jbcl if tournament_jbcl is not None else _tournament_ns(),
         "bag": bag if bag is not None else _bag_ns(),
         "jc": jc if jc is not None else _jc_ns(),
         "rnd": rnd if rnd is not None else _rnd_ns(),
@@ -1210,34 +1213,18 @@ def gow_console_script(
     return templates.TemplateResponse(request, "promotions.html", ctx)
 
 
-@router.post("/admin/promotions/tournament-pmcl", response_class=HTMLResponse)
-def promotions_tournament_pmcl(
-    request: Request,
-    date: str = Form(...),
-    spec: str = Form(...),
-    tournament_link: str = Form(""),
-    tournament_id: str = Form(""),
-    folder_id: str = Form(""),
-    journey_name: str = Form(""),
-    tournament_start: str = Form(""),
-    tournament_end: str = Form(""),
-    email_content_id: str = Form(""),
-    email_link: str = Form(""),
-    no_photos: str = Form(""),
-    user: User = Depends(require_role("editor")),
-) -> HTMLResponse:
-    """Generate the JBCL Tournament comms console script — paste-a-sheet →
-    console-script, wired to the tournament page (/page/<slug>) and its Smartico
-    id. The script creates the draft AND saves it (POST then PUT)."""
+def _run_tournament_tab(*, request, user, tab, generate, date, spec, link,
+                        journey_name, email_content_id, email_link, no_photos):
+    """Shared handler for both brands' Tournament comms tabs.
+
+    The two differ only in which generator runs and which panel the result goes
+    back to — every rule (any link, sheet-owned tournament window, hardcoded
+    media-library folder) lives in the generator, not here."""
     form = {
         "date": date,
         "spec": spec,
-        "tournament_link": tournament_link,
-        "tournament_id": tournament_id,
-        "folder_id": folder_id,
+        "link": link,
         "journey_name": journey_name,
-        "tournament_start": tournament_start,
-        "tournament_end": tournament_end,
         "email_content_id": email_content_id,
         "email_link": email_link,
         "no_photos": bool(no_photos),
@@ -1249,18 +1236,14 @@ def promotions_tournament_pmcl(
         if not date.strip():
             raise ValueError("Date is required.")
         if not spec.strip():
-            raise ValueError("Paste the spec blob (Communication channels table from the sheet).")
-        if bool(tournament_start.strip()) != bool(tournament_end.strip()):
-            raise ValueError("Tournament start and end dates must be filled in together (or both left blank).")
-        exit_code, output, display_cmd, js_text, js_name = generate_tournament_pmcl_console_script(
+            raise ValueError("Paste the spec blob (Specifications + Communication channels from the sheet).")
+        if not link.strip():
+            raise ValueError("The promo link is required — every channel points at it.")
+        exit_code, output, display_cmd, js_text, js_name = generate(
             date=date,
             spec_text=spec,
-            tournament_link=tournament_link,
-            tournament_id=tournament_id,
-            folder_id=folder_id,
+            link=link,
             journey_name=journey_name,
-            tournament_start=tournament_start,
-            tournament_end=tournament_end,
             email_content_id=email_content_id,
             email_link=email_link,
             no_photos=bool(no_photos),
@@ -1278,13 +1261,51 @@ def promotions_tournament_pmcl(
     except Exception as exc:  # noqa: BLE001
         error = str(exc)
 
+    ns = _tournament_ns(form=form, error=error, result=result, console_script=console_script)
     ctx = _promotions_context(
-        user=user,
-        active_tab="tournament_pmcl",
-        tournament=_tournament_ns(form=form, error=error, result=result, console_script=console_script),
-    )
+        user=user, active_tab=tab,
+        **({"tournament": ns} if tab == "tournament_pmcl" else {"tournament_jbcl": ns}))
     return templates.TemplateResponse(request, "promotions.html", ctx)
 
+
+@router.post("/admin/promotions/tournament-pmcl", response_class=HTMLResponse)
+def promotions_tournament_pmcl(
+    request: Request,
+    date: str = Form(...),
+    spec: str = Form(...),
+    link: str = Form(""),
+    journey_name: str = Form(""),
+    email_content_id: str = Form(""),
+    email_link: str = Form(""),
+    no_photos: str = Form(""),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """PMCL (Fortunazo) Tournament comms — paste a sheet, get a console script."""
+    return _run_tournament_tab(
+        request=request, user=user, tab="tournament_pmcl",
+        generate=generate_tournament_pmcl_console_script,
+        date=date, spec=spec, link=link, journey_name=journey_name,
+        email_content_id=email_content_id, email_link=email_link, no_photos=no_photos)
+
+
+@router.post("/admin/promotions/tournament-jbcl", response_class=HTMLResponse)
+def promotions_tournament_jbcl(
+    request: Request,
+    date: str = Form(...),
+    spec: str = Form(...),
+    link: str = Form(""),
+    journey_name: str = Form(""),
+    email_content_id: str = Form(""),
+    email_link: str = Form(""),
+    no_photos: str = Form(""),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """JBCL (JugaBet) Tournament comms — paste a sheet, get a console script."""
+    return _run_tournament_tab(
+        request=request, user=user, tab="tournament_jbcl",
+        generate=generate_tournament_jbcl_console_script,
+        date=date, spec=spec, link=link, journey_name=journey_name,
+        email_content_id=email_content_id, email_link=email_link, no_photos=no_photos)
 
 
 @router.post("/admin/promotions/bet-and-get", response_class=HTMLResponse)

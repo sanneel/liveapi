@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
-"""Contract for tournament_pmcl_campaign.py — offline, no key, no network.
+"""Contract for the tournament comms generators — offline, no key, no network.
 
-Pins the two failures the rebuild fixes: nodes that must stay connected (the
-graph is checked after the same id-regen the console script does), and copy that
-must land per node and per language (the string-replace trap). Also feeds
-verify() one-broken-rule bodies to prove it refuses.
+Runs the SAME suite against both brands (PMCL and JBCL), because the whole point
+of `tournament_comms_base` is that they cannot drift. Pins:
+
+  * any link works and no Smartico id survives — the notification/pop-up get the
+    path, the SMS gets https://{{BrandDomain}}<path>;
+  * the sheet's Start/End dates own the two Wait/Date gates AND the notification
+    revoke period;
+  * the journey starts on its date at 12:00 Chile, not on publish;
+  * nodes stay connected after the same id-regen the console script runs;
+  * copy lands per node and per language (the string-replace trap);
+  * verify() refuses on one broken rule at a time.
 """
 from __future__ import annotations
 
@@ -17,9 +24,10 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE / "journey-cloner"))
 
-import tournament_pmcl_campaign as T  # noqa: E402
+import tournament_comms_base as B  # noqa: E402
+import tournament_jbcl_campaign as JBCL_MOD  # noqa: E402
+import tournament_pmcl_campaign as PMCL_MOD  # noqa: E402
 import comms_engine as E  # noqa: E402
-from spec_parser import parse_spec  # noqa: E402
 
 FAILURES: list[str] = []
 
@@ -32,7 +40,11 @@ def check(ok: bool, label: str) -> None:
 
 SHEET = "\n".join([
     "Event\tTorneo Test Copa",
-    "Link (Other)\thttps://jugabet.cl/page/torneo-test-copa#_smartico_dp=dp:gf_tournaments&id=7777",
+    "Start date\t20.07.2026",
+    "End date\t26.07.2026",
+    # Deliberately a Smartico link with an id: the run must keep the PATH and
+    # drop the deeplink entirely.
+    "Link (Other)\thttps://jugabet.cl/xxx/yy/gg#_smartico_dp=dp:gf_tournaments&id=7777",
     "Notification\tTRUE\tTRUE",
     "Notification Title\tTournament EN\tTorneo ES",
     "Notification Description\tCompete now EN\tCompite ya ES",
@@ -42,19 +54,16 @@ SHEET = "\n".join([
     "Notification Pop-up (Cat-fish) Description\tPopup desc EN\tPopup desc ES",
     "Notification Pop-up (Cat-fish) Button\tGo EN\tIr ES",
     "Sms\tTRUE\tTRUE",
-    "Sms Text\tJugaBet | tournament sms EN\tJugaBet | torneo sms ES",
+    "Sms Text\tBrand | tournament sms EN\tBrand | torneo sms ES",
     "Email\tTRUE\tTRUE",
     "Email Tittle\tTournament subject EN\tAsunto torneo ES",
     "Email Pre-header\tPreheader EN\tPre-encabezado ES",
-    "Email Description\t⚡ Los dioses te llaman.\\nJuega y gana ES.",
+    "Email Description\t⚡ Los dioses te llaman.",
 ])
 
+LINK = "https://jugabet.cl/xxx/yy/gg"
+PATH = "/xxx/yy/gg"
 EMAIL_LINK = "https://jugabet.cl/launch/slots/iframe/pragmatic-test-game-1000"
-
-
-def _spec():
-    p = _tmp(SHEET)
-    return T.read_spec(p, "https://jugabet.cl/page/torneo-test-copa#_smartico_dp=dp:gf_tournaments&id=7777")
 
 
 def _tmp(text: str) -> Path:
@@ -64,24 +73,68 @@ def _tmp(text: str) -> Path:
     return p
 
 
-def main() -> int:
-    print("tournament_pmcl_campaign contract\n")
+def run_brand(mod, brand: B.Brand) -> None:
+    print(f"\n{'=' * 62}\n{brand.title} tournament comms\n{'=' * 62}")
+    spec = mod.read_spec(_tmp(SHEET), LINK)
 
-    spec = _spec()
-    print("sheet parsing:")
-    check(spec.promo_slug == "torneo-test-copa", f"page slug from the link ({spec.promo_slug!r})")
-    check(spec.tournament_id == "7777", f"tournament id from the link ({spec.tournament_id!r})")
+    print("\nsheet parsing:")
+    check(spec.link_path == PATH, f"the link's path is what ships ({spec.link_path!r})")
+    check(spec.tournament_start_date == "2026-07-20"
+          and spec.tournament_end_date == "2026-07-26",
+          "the tournament window comes from the sheet, not an operator field")
 
-    bundle, report = T.prepare(
-        spec, date_str="2026-07-20", tournament_start="2026-07-20",
-        tournament_end="2026-07-27", email_game=EMAIL_LINK, upload_photos=True)
+    bundle, _report = mod.prepare(spec, date_str="2026-07-18", email_game=EMAIL_LINK)
     create, save = bundle["create"], bundle["save"]
+    both = json.dumps(create, ensure_ascii=False) + json.dumps(save, ensure_ascii=False)
+
+    print("\nany link, no Smartico id:")
+    check(not B.SMARTICO_RE.search(both), "no Smartico deeplink anywhere")
+    check("7777" not in both and "5431" not in both and "5196" not in both,
+          "no tournament id anywhere")
+    nc_link = f"{PATH}?%$utm_tags%"
+    for node in (brand.nc_node, brand.popup_node):
+        vals = set()
+        for store in E.storages(save, E.comms_node(node)):
+            tabs = (store.get("singleChannel") or {}).get("localizedLanguagesTab") or {}
+            for tab in tabs.values():
+                if isinstance(tab, dict):
+                    for k, v in tab.items():
+                        if k in E._LINK_FIELDS and not str(v).startswith("%"):
+                            vals.add(v)
+        check(vals == {nc_link}, f"{node}: every link field is {nc_link} ({sorted(vals)})")
+    sms_texts = {e["messageText"] for a in save["activities"]
+                 if a.get("activityName") == "dextra_sms"
+                 for e in a["initializationData"]["smsSettings"]["localizedMessageTexts"]}
+    want_sms_link = "https://{{BrandDomain}}" + PATH
+    check(bool(sms_texts) and all(t.endswith("\n" + want_sms_link) for t in sms_texts),
+          f"the SMS carries {want_sms_link} on its own line")
+    check(all(t.startswith(brand.sms_prefix) for t in sms_texts),
+          f"the SMS keeps its {brand.sms_prefix.strip()} prefix")
+    check(len(sms_texts) == 2, "SMS EN and ES are distinct")
+
+    print("\nthe sheet's window drives the gates AND the revoke period:")
+    gates = sorted({a["initializationData"]["waitTo"] for a in save["activities"]
+                    if a.get("activityName") == "wait_date"})
+    check(gates == sorted({B._gate("2026-07-20"), B._gate("2026-07-26")}),
+          f"both Wait/Date gates sit on the tournament window ({gates})")
+    revoke = sorted(set(re.findall(r'"expire_after"\s*:\s*"([^"]*)"', both)))
+    check(revoke == ["7.00:00:00.000"],
+          f"the revoke period is the tournament's 7 days ({revoke})")
+
+    print("\nthe journey starts on its date, not on publish:")
+    iv = save["rawJourneyData"]["infoValues"]
+    check(save["isImmediatelyAfterPublish"] is False
+          and iv["isImmediatelyAfterPublish"] is False,
+          "isImmediatelyAfterPublish is false in BOTH storages")
+    check(save["startAt"].startswith("2026-07-18") and "T16:00" in save["startAt"],
+          f"startAt is the send date at 12:00 Chile ({save['startAt']})")
+    check(save["stopAt"].startswith("2026-07-18") and "T23:00" in save["stopAt"],
+          f"stopAt is 19:00 the same day ({save['stopAt']})")
 
     print("\nnodes stay connected — after the SAME id-regen the console script runs:")
-    # regen from the union, applied to both (what applyMap does at paste time)
     txt = json.dumps(create) + json.dumps(save)
-    old = set(re.findall(r'"(?:activityId|id)"\s*:\s*"([0-9a-fA-F-]{36})"', txt))
-    m = {o: str(uuid.uuid4()) for o in old}
+    m = {o: str(uuid.uuid4())
+         for o in set(re.findall(r'"(?:activityId|id)"\s*:\s*"([0-9a-fA-F-]{36})"', txt))}
 
     def apply(b):
         s = json.dumps(b)
@@ -94,78 +147,76 @@ def main() -> int:
         check(not E.dangling_edges(b), f"{label}: every nextActivityId resolves")
         check(not E.canvas_edges_to_missing_node(b), f"{label}: every canvas edge connects two real nodes")
         check(not E.activity_nodes_without_position(b), f"{label}: every activity node has positionAbsolute")
-    ca = {a["activityId"] for a in rc["activities"]}
-    sa = {a["activityId"] for a in rs["activities"]}
-    check(ca == sa, "create and save share the same activity ids after the shared regen")
+    check({a["activityId"] for a in rc["activities"]} == {a["activityId"] for a in rs["activities"]},
+          "create and save share the same activity ids after the shared regen")
 
     print("\nper-node, per-language copy (the string-replace trap):")
-    def tabs(body, node):
-        got = {}
-        for a in body["activities"]:
-            init = a.get("initializationData") or {}
-            if a.get("activityName") == "notification_center" and (init.get("singleChannel") or {}).get("activityName") == node:
-                for tab in init["singleChannel"]["localizedLanguagesTab"].values():
-                    if isinstance(tab, dict):
-                        for k, v in tab.items():
-                            if E._LANG_FIELD_RE.match(k) and not str(v).startswith("%"):
-                                got[k] = v
+    def values_of(body, node):
+        got = set()
+        for store in E.storages(body, E.comms_node(node)):
+            for tab in ((store.get("singleChannel") or {}).get("localizedLanguagesTab") or {}).values():
+                if isinstance(tab, dict):
+                    for k, v in tab.items():
+                        if E._LANG_FIELD_RE.match(k) and not str(v).startswith("%"):
+                            got.add(v)
         return got
-    nc = tabs(save, T.NC_NODE)
-    pop = tabs(save, T.POPUP_NODE)
-    check(nc.get("title-en") == "Tournament EN" and nc.get("title-es") == "Torneo ES", "NC title EN/ES distinct + correct")
-    check(nc.get("caption-en") == "Enter EN" and nc.get("caption-es") == "Entrar ES", "NC caption EN/ES distinct + correct")
-    check(pop.get("caption_en") == "Go EN" and pop.get("caption_es") == "Ir ES", "pop-up caption EN/ES distinct + correct")
-    check(pop.get("caption_es") != nc.get("caption-es"), "pop-up is not wearing the notification's caption")
-    sms = {}
-    for a in save["activities"]:
-        if a.get("activityName") == "dextra_sms":
-            for e in a["initializationData"]["smsSettings"]["localizedMessageTexts"]:
-                sms[e["languageCode"]] = e["messageText"]
-    check(sms.get("en") != sms.get("es") and "EN" in sms.get("en", ""), "SMS EN/ES distinct + correct")
+    nc = values_of(save, brand.nc_node)
+    pop = values_of(save, brand.popup_node)
+    check({"Tournament EN", "Torneo ES"} <= nc, "NC title EN/ES distinct + correct")
+    check({"Enter EN", "Entrar ES"} <= nc, "NC caption EN/ES distinct + correct")
+    check({"Go EN", "Ir ES"} <= pop, "pop-up caption EN/ES distinct + correct")
+    check("Entrar ES" not in pop, "pop-up is not wearing the notification's caption")
 
-    print("\nlinks + schedule:")
-    both = json.dumps(create, ensure_ascii=False) + json.dumps(save, ensure_ascii=False)
-    check(set(re.findall(r"/page/([a-z-]+)", both)) == {"torneo-test-copa"}, "one page slug everywhere")
-    check(set(re.findall(r"[?&]id=(\d+)", both)) <= {"7777"}, "one tournament id everywhere")
-    check(save["stopAt"].startswith("2026-07-20"), "stopAt is the send-day window")
-    wd = [a["initializationData"]["waitTo"] for a in save["activities"] if a.get("activityName") == "wait_date"]
-    check(wd == ["2026-07-27T16:00:00Z", "2026-07-20T16:00:00Z"], f"wait_date gates = tournament window ({wd})")
-
-    print("\nemail content is built (hero token, sheet copy, game link):")
+    print("\nemail content is built (hero token, sheet copy, CTA):")
     ec, es = bundle["email_create"], bundle["email_save"]
     check(ec is not None and es is not None, "email create + save bodies built")
     html = es["translations"]["es"]["composition"]["body"]["source"]
-    check("%%EMAIL_HERO%%" in html and "f4323497" not in html, "hero is a token, captured hero gone")
-    check("/launch/slots/iframe/pragmatic-test-game-1000" in html, "email CTA links to this run's game")
-    check("pragmatic-jugabet-leyendas-del-olympus" not in html, "captured game link gone")
+    check(B.EMAIL_HERO_TOKEN in html and brand.tpl_email_hero not in html,
+          "hero is a token, captured hero gone")
+    check(brand.tpl_email_cta not in html, "captured CTA target gone")
     check("Los dioses te llaman" in html, "sheet email body copy is in the HTML")
-    check(es["translations"]["es"]["composition"]["subject"] == "Asunto torneo ES", "email subject from the sheet")
-    check("%%EMAIL_CONTENT_ID%%" in json.dumps(save), "journey email node is the paste-time token")
-    check("CSE-0-14726" not in json.dumps(save), "captured email content id gone from the journey")
+    check(es["translations"]["es"]["composition"]["subject"] == "Asunto torneo ES",
+          "email subject from the sheet")
+    check(B.EMAIL_ID_TOKEN in json.dumps(save), "journey email node is the paste-time token")
+    check(brand.tpl_email_content_id not in both, "captured email content id gone from the journey")
 
     print("\nverify (happy path):")
-    for ok, msg in T.verify(bundle):
+    for ok, msg in mod.verify(bundle):
         check(ok, msg)
 
     print("\nverify refuses (one broken rule each):")
     def refuses(mutate, label):
         import copy
-        b = copy.deepcopy(bundle)
+        b = dict(bundle)
+        b["save"] = copy.deepcopy(bundle["save"])
         mutate(b)
-        fails = [m for ok, m in T.verify(b) if not ok]
+        fails = [msg for ok, msg in mod.verify(b) if not ok]
         check(bool(fails), f"{label} -> refused ({fails[0][:46] if fails else 'NOT REFUSED'})")
 
-    def keep_slug(b):
-        s = json.dumps(b["save"], ensure_ascii=False).replace("/page/torneo-test-copa", "/page/" + T.TPL_PAGE_SLUG, 1)
+    def keep_smartico(b):
+        s = json.dumps(b["save"], ensure_ascii=False).replace(
+            nc_link, "https://x?%$utm_tags%#_smartico_dp=dp:gf_tournaments&id=5431", 1)
         b["save"] = json.loads(s)
-    refuses(keep_slug, "a captured page slug survives")
+    refuses(keep_smartico, "a Smartico deeplink survives")
 
-    def keep_email(b):
-        # in the build-email path the journey holds the paste-time token; a body
-        # that still names the captured content must refuse
-        s = json.dumps(b["save"], ensure_ascii=False).replace(T.EMAIL_ID_TOKEN, T.TPL_EMAIL_CONTENT_ID)
-        b["save"] = json.loads(s)
-    refuses(keep_email, "the email keeps the captured content id")
+    def wrong_revoke(b):
+        for a in b["save"]["activities"]:
+            obj = (a.get("initializationData") or {}).get("objectForSend") or {}
+            if "expire_after" in obj:
+                obj["expire_after"] = "30.00:00:00.000"
+                return
+    refuses(wrong_revoke, "the revoke period is not the tournament's length")
+
+    def wrong_gate(b):
+        for a in b["save"]["activities"]:
+            if a.get("activityName") == "wait_date":
+                a["initializationData"]["waitTo"] = "2030-01-01T16:00:00Z"
+                return
+    refuses(wrong_gate, "a Wait/Date gate is off the tournament window")
+
+    def start_on_publish(b):
+        b["save"]["isImmediatelyAfterPublish"] = True
+    refuses(start_on_publish, "the journey would start on publish")
 
     def break_edge(b):
         for a in b["save"]["activities"]:
@@ -176,14 +227,14 @@ def main() -> int:
     refuses(break_edge, "a nextActivityId points nowhere")
 
     def wrong_lang(b):
-        for a in b["save"]["activities"]:
-            init = a.get("initializationData") or {}
-            if (init.get("singleChannel") or {}).get("activityName") == T.NC_NODE:
-                tab = init["singleChannel"]["localizedLanguagesTab"].get("en", {})
-                for k in tab:
-                    if k == "caption-en":
-                        tab[k] = "wrong"
-                        return
+        for store in E.storages(b["save"], E.comms_node(brand.nc_node)):
+            tabs = (store.get("singleChannel") or {}).get("localizedLanguagesTab") or {}
+            for tab in tabs.values():
+                if isinstance(tab, dict):
+                    for k, v in tab.items():
+                        if E._LANG_FIELD_RE.match(k) and not str(v).startswith("%"):
+                            tab[k] = "wrong"
+                            return
     refuses(wrong_lang, "a channel field no longer matches the sheet")
 
     print("\nrefusals on bad input:")
@@ -191,11 +242,33 @@ def main() -> int:
         try:
             fn()
         except SystemExit as exc:
-            check(True, f"{label} -> refused ({str(exc)[:42]})")
+            check(True, f"{label} -> refused ({str(exc)[:44]})")
             return
         check(False, f"{label} -> NOT refused")
-    raises(lambda: T.read_spec(_tmp(SHEET), "https://jugabet.cl/es/promo"), "a link that is not a tournament page")
-    raises(lambda: T.read_spec(_tmp("Sms\tTRUE\nSms Text\tonly this"), ""), "a sheet missing the link + channels")
+    raises(lambda: mod.read_spec(_tmp(SHEET), "https://jugabet.cl"),
+           "a link with no path")
+    raises(lambda: mod.read_spec(_tmp("Sms\tTRUE\nSms Text\tonly this"), LINK),
+           "a sheet with no dates and no channels")
+    no_dates = "\n".join(l for l in SHEET.splitlines()
+                         if not l.startswith(("Start date", "End date")))
+    raises(lambda: mod.read_spec(_tmp(no_dates), LINK),
+           "a sheet missing the tournament window")
+    backwards = SHEET.replace("End date\t26.07.2026", "End date\t10.07.2026")
+    raises(lambda: mod.read_spec(_tmp(backwards), LINK),
+           "an End date before the Start date")
+    no_email_copy = SHEET.replace("Email Description\t⚡ Los dioses te llaman.", "")
+    raises(lambda: mod.prepare(mod.read_spec(_tmp(no_email_copy), LINK),
+                               date_str="2026-07-18", email_game=EMAIL_LINK),
+           "no email body copy and no existing content id")
+    if brand.email_cta_kind == "game":
+        raises(lambda: mod.prepare(spec, date_str="2026-07-18", email_game=""),
+               "no game for the email CTA")
+
+
+def main() -> int:
+    print("tournament comms contract — one suite, both brands")
+    run_brand(PMCL_MOD, PMCL_MOD.PMCL)
+    run_brand(JBCL_MOD, JBCL_MOD.JBCL)
 
     print()
     if FAILURES:

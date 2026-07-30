@@ -157,45 +157,80 @@ campaign's journeys.
 
 ## Comms
 
-### Tournament comms — `tournament_pmcl_campaign.py` → Optimization ▸ PMCL Tournament
-JBCL tournament announced on Notification Center + Cat-fish pop-up + SMS + email,
-one journey, gated by two `wait_date` activities on the tournament window.
-Rebuilt from a fresh capture (`templates/tournament/`) on the `comms_engine`
-shared with `sport_comms` — so the same structural-copy rules apply and cannot
-drift. Driven from a pasted sheet plus a **tournament link** (its `/page/<slug>`
-is what every channel points at, its `&id=` is the Smartico id) and an **email
-link** (the game the email CTA opens, `/launch/slots/iframe/<game>`).
+### Tournament comms — two brands, one engine
+`tournament_pmcl_campaign.py` → Optimization ▸ **PMCL Tournament**
+`tournament_jbcl_campaign.py` → Optimization ▸ **JBCL Tournament**
 
-The email is **built and published** the way GOW/sport_comms do it: the console
+A tournament announced on Notification Center + Cat-fish pop-up + SMS + email,
+one journey, gated by two `wait_date` activities on the tournament window.
+
+The two brands are **separate entries against separate backoffices** — PMCL
+(Fortunazo) at `pmi.rea-backoffice…`, JBCL (JugaBet) at the shared host — with
+separate captures, node names, email templates, SMS prefixes and media-library
+folders. For a while a JBCL capture had replaced the PMCL generator, which pointed
+Fortunazo operators at the wrong brand; do not merge them again. Every *rule*
+lives once in `tournament_comms_base.py`, and each brand file is only what its
+capture happens to contain, so the two cannot drift. The structural-copy engine
+underneath is `comms_engine`, shared with `sport_comms`.
+
+**The four rules the engine enforces**
+
+1. **Any link, no Smartico id.** The operator pastes whatever URL the promo lives
+   at. Only its *path* ships: the notification and pop-up get
+   `/xxx/yy/gg?%$utm_tags%`, the SMS gets `https://{{BrandDomain}}/xxx/yy/gg`,
+   and the PMCL email's CTA opens the same promo. The captured
+   `#_smartico_dp=dp:gf_tournaments&id=<n>` deeplink is **removed**, not patched —
+   it only ever addressed one tournament on one product, and a run that kept it
+   silently pointed every channel at the captured tournament. There is no
+   tournament-id field any more, and `verify()` refuses a body where the pattern
+   survives anywhere.
+2. **The sheet owns the tournament window.** Its `Start date` / `End date` rows
+   set both **Wait/Date** gates, the **notification revoke period**
+   (`objectForSend.expire_after` = the tournament's length in days — otherwise a
+   tournament that ended last week is still sitting in the player's centre) and
+   the journey name. There are no operator start/end fields to disagree with
+   them; a missing or reversed window is refused, not guessed.
+3. **The journey starts on its date at 12:00 Chile** and stops at 19:00 the same
+   day. `isImmediatelyAfterPublish` is forced **false** in both storages —
+   left true, publishing a draft early fired it early.
+4. **The media-library folder is a property of the brand**, baked into the
+   generator (PMCL `67e37e66-…`, JBCL `c5c7c614-…`), not an operator field. It
+   was possible to paste one brand's folder into the other's form and upload a
+   tournament's artwork into the wrong library.
+
+**Inputs**: the send `--date`, `--link` (any URL), the pasted `--spec` sheet, and
+— JBCL only — `--email-link`, the game the email CTA opens
+(`/launch/slots/iframe/<game>`). Everything else is optional.
+
+**The email** is built and published the way GOW/sport_comms do it: the console
 script uploads the hero photo, POSTs the content (create → save) to
 content-studio, and swaps the returned `CSE-*` id into the journey's email node —
 email created FIRST, journey wired to it. Body, subject and pre-header come from
-the sheet's Email rows; templates in
-`templates/tournament/tournament_email_{create,save}.json`. Passing an existing
-`--email-content-id` instead skips the build; either way a run keeping the
-captured `CSE-0-14726` is refused.
+the sheet's Email rows; templates in `templates/tournament/`
+(`tournament_email_{create,save}.json` for JBCL, `pmcl_email_{create,save}.json`
+for PMCL). Passing an existing `--email-content-id` instead skips the build;
+either way a run keeping the captured content is refused.
 
-Why it was rebuilt — the previous version created "shit comms, nodes not
-connected":
+**Why the shared engine exists** — the version this replaced created "shit comms,
+nodes not connected":
 
 - **It only POSTed the draft, never the follow-up PUT (save).** The capture does
   create *then* save, and the save is what the editor writes back to finalise the
   canvas; without it nodes render unconnected. The console script now does both,
   regenerating ids from the union of the two bodies so they describe one journey.
-- **A capture can carry `positionAbsolute: null`** (this one had three) — the
-  blank-canvas crash of COMPOSER_RULES rule 1. `comms_engine.backfill_position_
-  absolute` repairs it on load.
+  (The PMCL capture is a single body: it is POSTed and then PUT back unchanged.)
+- **A capture can carry `positionAbsolute: null`** — the blank-canvas crash of
+  COMPOSER_RULES rule 1. `comms_engine.backfill_position_absolute` repairs it.
 - **Copy was string-replaced**, shipping one language into every slot. Now it is
   structural (`set_channel_copy`), and `verify()` reads it back per node and per
   language.
 
-`verify()` refuses a build that leaves a captured slug, tournament id, email id
-or copy behind, has a dangling `nextActivityId`, a canvas edge to a missing node,
-or an activity node without `positionAbsolute`. Contract:
-`scripts/test_tournament_comms.py` — asserts the graph stays connected after the
-same id-regen the console script runs, plus per-language copy and one-broken-rule
-refusals. (`tournament_pmcl_email.py` — the old email-content builder — is no
-longer used; this flow references an existing content instead.)
+`verify()` refuses a build that leaves a captured link, Smartico id, email id,
+journey name or copy behind, whose revoke period or gates disagree with the
+sheet's window, that would start on publish, or that has a dangling
+`nextActivityId`, a canvas edge to a missing node or an activity node without
+`positionAbsolute`. Contract: `scripts/test_tournament_comms.py` — the **same
+suite runs against both brands**, so a change that only fixes one fails.
 
 ### Comms journey from content — `journey_composer.py` → **AI** page
 Composes an arbitrary comms chain from captured nodes with **your** copy:
