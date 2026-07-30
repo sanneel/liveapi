@@ -45,6 +45,10 @@ PRIZES = "\n".join([
     "10% extra free bet\tApuesta gratis 10% extra",
 ])
 
+# The realistic run: only the brand-new slice needs copy, the other six inherit
+# the previous wheel's.
+ONE_LINE = "7\t10% extra free bet\tApuesta gratis 10% extra"
+
 CFG = R.KINDS["sport_wof"]
 
 
@@ -87,6 +91,32 @@ def main() -> int:
     named = {f["rel"].rsplit("/", 1)[-1] for f in uploads if "/content/" in f["rel"]}
     check(all(v in named for m in manifests.values() for v in m.values()),
           f"every manifest points at a file that is actually uploaded ({manifests})")
+
+    print("\nthe re-pointed slices inherit the previous wheel's copy:")
+    b1, _ = R.prepare_visual("sport_wof", "2026-08-03", prize_text=ONE_LINE)
+    spa = R.content_files(b1["uploads"])
+    check(len(spa) == 2, f"prize copy lives in the spa content pair only ({len(spa)})")
+    widget = [f for f in b1["uploads"] if f["rel"].startswith("widget/content/")]
+    check(all(not any(k.startswith("prize_") for k in f["data"]) for f in widget),
+          "no prize key is invented in the widget teaser, which has none")
+    en1 = next(f["data"] for f in spa if "-en-" in f["rel"])
+    es1 = next(f["data"] for f in spa if "-es-" in f["rel"])
+    ids1 = b1["prize_ids"]
+    check(R.strip_html(en1[f"prize_{ids1[1]}.prizeTextKey"]).startswith("For Free:"),
+          "the re-pointed Free|Bonuses slice inherited its real copy")
+    check(R.strip_html(en1[f"prize_{ids1[2]}.prizeTextKey"]) == "Bonuses for deposit",
+          "the re-pointed Dep|Bonus slice inherited its real copy")
+    check(R.strip_html(en1[f"prize_{ids1[4]}.prizeTextKey"]) == "Free bets for deposit",
+          "the re-pointed Dep|Freebet slice inherited its real copy")
+    # The captured ES file held copy for only three of the seven slices, so a
+    # build that wrote only over EXISTING keys dropped Spanish silently.
+    blank_es = [i + 1 for i, a in enumerate(ids1)
+                if not R.strip_html(es1.get(f"prize_{a}.prizeTextKey", ""))]
+    check(not blank_es, f"no slice is blank in Spanish ({blank_es})")
+    check(R.strip_html(es1[f"prize_{ids1[6]}.prizeTextKey"]) == "Apuesta gratis 10% extra",
+          "the operator's ES copy reaches the ES file, not just the EN one")
+    for ok, msg in R.verify_visual(b1):
+        check(ok, "one-line run: " + msg)
 
     print("\nprize copy — refused rather than warned:")
     ids = b["prize_ids"]
@@ -133,7 +163,11 @@ def main() -> int:
         check(False, f"{label} -> NOT refused")
 
     raises(lambda: R.prepare_visual("sport_wof", "2026-08-03"),
-           "no prize copy (the capture's internal names)")
+           "the brand-new slice left without copy")
+    raises(lambda: R.prepare_visual("sport_wof", "2026-08-03", prize_text="9\tx\ty"),
+           "copy aimed at a slice number the wheel does not have")
+    raises(lambda: R.prepare_visual("sport_wof", "2026-08-03", prize_text="7\tx\ty\nplain line"),
+           "numbered and unnumbered lines mixed")
     raises(lambda: R.prepare_visual("sport_wof", "2026-08-03",
                                     prize_text="only\tone line"),
            "fewer copy lines than slices")

@@ -120,6 +120,20 @@ KINDS: dict[str, dict] = {
 # captured campaign's leftovers cannot ship.
 INTERNAL_COPY_RE = re.compile(r"\b[A-Z]{4}\s*\|\s*[A-Z]{2}\s*\|", re.I)
 
+# The new capture re-cut the wheel: three slices kept their prize but were
+# re-pointed at fresh journeys, so their copy was orphaned under the OLD
+# activityId while the new one inherited the editor's placeholder. Same prize,
+# same slot, same description in both templates — so the real copy is carried
+# across rather than being retyped. The fourth changed slice ("10%- Dep |
+# Freebet") is genuinely new and has no predecessor: it is the only one that
+# still needs the operator.
+INHERITED_COPY = {
+    # old activityId                      -> new activityId
+    "2db95ef0-2098-4eb6-a078-28e779620026": "2226976c-110a-4f2b-b440-e96ee736c43a",  # Free | Bonuses
+    "1faa001a-f221-4f53-b184-75e564aa1a60": "1415c53b-f14f-4e1d-a21b-07d6975f4a08",  # Dep  | Bonus
+    "ff2e626c-7ec7-4c1c-859e-078ef18004be": "5e0fafd0-bd8d-4dfa-9b42-1d7798c30bc7",  # Dep  | Freebet
+}
+
 CONTENT_ID_TOKEN = "%%CONTENT_ID%%"
 FRONT_ID_TOKEN = "%%FRONT_ID%%"
 
@@ -135,20 +149,34 @@ def live_prize_ids(body: dict) -> list[str]:
             for p in body.get("prizes", [])]
 
 
+def content_files(uploads: list) -> list:
+    """The files a slice's copy must appear in: the spa content pair, EN and ES.
+
+    Prize copy is a spa concern only. The widget content file is the teaser that
+    sits beside the wheel ("Open Wheel", "A lot of prizes") and carries no
+    `prize_*` key at all — writing one there invents a field the surface does
+    not read.
+    """
+    return [f for f in uploads if f.get("rel", "").startswith("spa/content/")
+            and isinstance(f.get("data"), dict)]
+
+
 def set_prize_text(uploads: list, activity_id: str, en: str, es: str) -> int:
     """Write one slice's player-facing copy into all four content files.
 
-    A wheel's copy lives four times — spa and widget, each EN and ES — keyed by
-    `prize_<activityId>.prizeTextKey`. Writing one and not the others shows the
-    right text on the wheel and the wrong text in the widget beside it.
+    A slice's copy lives twice, EN and ES, keyed by
+    `prize_<activityId>.prizeTextKey`. Writing one and not the other leaves the
+    slice blank in the language that was missed.
+
+    The key is CREATED where the capture lacks it. It does lack it: the captured
+    ES files carry copy for only three of the seven slices, so a version of this
+    that wrote only over existing keys dropped the operator's Spanish silently
+    and left those slices blank for every Spanish-speaking player.
     """
     key = f"prize_{activity_id}.prizeTextKey"
     writes = 0
-    for f in uploads:
-        data = f.get("data")
-        if not isinstance(data, dict) or key not in data:
-            continue
-        data[key] = es if "-es-" in f["rel"] else en
+    for f in content_files(uploads):
+        f["data"][key] = es if "-es-" in f["rel"] else en
         writes += 1
     return writes
 
@@ -264,6 +292,22 @@ def parse_prize_text(text: str) -> list[tuple[str, str]]:
     return rows
 
 
+def parse_prize_numbered(text: str) -> list[tuple[int, str, str]]:
+    """"<slice number><TAB>EN<TAB>ES" lines — set only the slices that need copy."""
+    out = []
+    for line in (text or "").splitlines():
+        if not line.strip():
+            continue
+        parts = [c.strip() for c in line.split("\t")]
+        if len(parts) < 2:
+            raise SystemExit(f"prize copy line {line.strip()!r} needs <n><TAB>EN[<TAB>ES].")
+        n = int(parts[0])
+        en = parts[1]
+        es = parts[2] if len(parts) > 2 and parts[2] else en
+        out.append((n, en, es))
+    return out
+
+
 def prepare_visual(kind: str, date_str: str, *, days: int | None = None,
                    internal_name: str = "", url_short: str = "",
                    weights: list[str] | None = None, journeys: list[str] | None = None,
@@ -286,20 +330,55 @@ def prepare_visual(kind: str, date_str: str, *, days: int | None = None,
     ids = live_prize_ids(create)
     if not all(ids):
         raise SystemExit("a prize slice has no activityId — the template changed shape.")
+
+    inherited = set()
+    for old_id, new_id in INHERITED_COPY.items():
+        if new_id not in ids:
+            continue
+        old_key, new_key = f"prize_{old_id}.prizeTextKey", f"prize_{new_id}.prizeTextKey"
+        for f in content_files(uploads):
+            data = f["data"]
+            # inherit over the editor's placeholder or a missing key, never over
+            # real copy the capture already had for this slice
+            current = data.get(new_key)
+            if old_key in data and (current is None or INTERNAL_COPY_RE.search(strip_html(current))):
+                data[new_key] = data[old_key]
+                inherited.add(new_id)
+    if inherited:
+        report.append(f"carried the previous wheel's copy across {len(inherited)} re-pointed slice(s)")
+
     dropped = prune_dead_prize_keys(uploads, set(ids))
     if dropped:
         report.append(f"dropped copy for {len(dropped)} slice(s) this wheel no longer has")
 
+    # Two accepted shapes: one line per slice in wheel order, or "<n><TAB>EN<TAB>ES"
+    # to set just the slices that need it (usually only the brand-new one).
     rows = parse_prize_text(prize_text)
-    if rows:
+    numbered = [r for r in rows if re.fullmatch(r"\d+", r[0])]
+    if numbered and len(numbered) != len(rows):
+        raise SystemExit("mix of numbered and unnumbered --prize-text lines. Use either "
+                         "one line per slice in wheel order, or '<n><TAB>EN<TAB>ES' for all.")
+    written = 0
+    if numbered:
+        for line in parse_prize_numbered(prize_text):
+            n, en, es = line
+            if not 1 <= n <= len(ids):
+                raise SystemExit(f"--prize-text names slice {n}; this wheel has {len(ids)}.")
+            if not set_prize_text(uploads, ids[n - 1], en, es):
+                raise SystemExit(f"slice {n} has no copy slot in the visual content.")
+            written += 1
+    elif rows:
         if len(rows) != len(ids):
             raise SystemExit(f"--prize-text has {len(rows)} line(s) but the wheel has "
-                             f"{len(ids)} prize slice(s), one line each (EN<TAB>ES).")
+                             f"{len(ids)} prize slice(s). Give one line per slice in wheel "
+                             f"order, or use '<n><TAB>EN<TAB>ES' to set only some.")
         for activity_id, (en, es) in zip(ids, rows):
             if not set_prize_text(uploads, activity_id, en, es):
                 raise SystemExit(f"prize {activity_id} has no copy slot in the visual "
                                  f"content — the template changed shape.")
-        report.append(f"prize copy written for {len(rows)} slice(s)")
+            written += 1
+    if written:
+        report.append(f"prize copy written for {written} slice(s)")
 
     # refuse rather than warn: a slice still wearing its journey's internal name
     internal = []
@@ -312,11 +391,15 @@ def prepare_visual(kind: str, date_str: str, *, days: int | None = None,
                 internal.append(f"{activity_id} ({label.strip()[:40]}): {strip_html(data[key])[:44]!r}")
                 break
     if internal:
+        listing = "\n".join(
+            f"    {n}. {(p.get('journeyPrizeSettings') or {}).get('activityDescription', '').strip()}"
+            for n, p in enumerate(create.get("prizes", []), 1))
         raise SystemExit(
             "these prize slices would show your INTERNAL journey name to players:\n  - "
             + "\n  - ".join(internal)
-            + "\n\nGive player-facing copy for every slice with --prize-text "
-              "(one line per slice, in wheel order, EN<TAB>ES)."
+            + "\n\nThis wheel's slices, in order:\n" + listing
+            + "\n\nGive player-facing copy with --prize-text. Set just the ones above with "
+              "'<n><TAB>EN<TAB>ES' lines, or pass one line per slice in wheel order."
         )
 
     bundle = {"kind": kind, "create": create, "save": save, "uploads": uploads,
@@ -346,10 +429,13 @@ def verify_visual(bundle: dict) -> list[tuple[bool, str]]:
              and k[len("prize_"):-len(".prizeTextKey")] not in set(ids)]
     out.append((not stale, "no copy left for slices this wheel does not have"
                 + (f" (STALE: {stale[:2]})" if stale else "")))
-    missing = [i for i in ids
-               if not any(f"prize_{i}.prizeTextKey" in (f.get("data") or {}) for f in uploads)]
-    out.append((not missing, "every prize slice has copy"
-                + (f" (MISSING: {missing[:2]})" if missing else "")))
+    files = content_files(uploads)
+    missing = [f"{i[:8]}…@{f['rel'].rsplit('/', 1)[-1]}" for i in ids for f in files
+               if f"prize_{i}.prizeTextKey" not in f["data"]
+               or not strip_html(f["data"][f"prize_{i}.prizeTextKey"])]
+    out.append((len(files) == 2, f"the spa content pair carries the copy ({len(files)})"))
+    out.append((not missing, "every prize slice has copy in EVERY language and surface"
+                + (f" (MISSING: {missing[:3]})" if missing else "")))
     internal = [k for f in uploads if isinstance(f.get("data"), dict)
                 for k, v in f["data"].items()
                 if k.endswith(".prizeTextKey") and INTERNAL_COPY_RE.search(strip_html(v))]

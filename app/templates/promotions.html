@@ -435,10 +435,10 @@
       </div>
 
       <div class="field">
-        <span class="lbl">Prize copy <span style="color:var(--t-faint)">(Sport Wheel of Fortune)</span></span>
-        <textarea class="input mono" name="prize_text" rows="8" spellcheck="false" style="font-size:12px"
-                  placeholder="One line per prize slice, in wheel order &#8212; English&#9;Spanish&#10;Money bonus $5.000&#9;Bono de dinero $5.000&#10;Free bonuses&#9;Bonos gratis&#10;...">{{ rnd.prize_text or '' }}</textarea>
-        <p class="help" style="margin-top:6px">What <b>players</b> see on each slice. One tab-separated <span class="mono">EN&nbsp;&#8594;&nbsp;ES</span> line per slice, in wheel order &#8212; <b>7 lines</b> for the current wheel. The captured wheel shipped four slices showing their journey&#39;s internal name (<span class="mono">JBCL | SP | RB - Wheel of fortune | &#8230;</span>) to players, so a build whose copy still looks like that is <b>refused</b>. Leave blank for the Casino types, which do not use it.</p>
+        <span class="lbl">Prize copy <span style="color:var(--t-faint)">(Sport Wheel of Fortune &mdash; usually one line)</span></span>
+        <textarea class="input mono" name="prize_text" rows="5" spellcheck="false" style="font-size:12px"
+                  placeholder="7&#9;10% extra free bet&#9;Apuesta gratis 10% extra">{{ rnd.prize_text or '' }}</textarea>
+        <p class="help" style="margin-top:6px">Six of the seven slices <b>inherit the previous wheel&#39;s copy automatically</b>. Only the new <span class="mono">10%- Dep | Freebet</span> slice needs a line: <span class="mono">7&#9;English&#9;Spanish</span> (tab-separated). To rewrite others, add a line each; to rewrite all seven, paste seven lines in wheel order with no numbers. Leave blank for the Casino types. A build where any slice still shows its journey&#39;s internal name to players is <b>refused</b>, and the error lists the wheel&#39;s slices in order.</p>
       </div>
 
       <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:2px">

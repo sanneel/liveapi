@@ -172,11 +172,22 @@ Two more things the rebuild corrected:
   `currencyMode: null` and `hasCsv: false`.
 - **Four of the seven slices showed the operator's INTERNAL journey name to
   players** (`JBCL | SP | RB - Wheel of fortune | Free | Bonuses`) because the
-  wheel editor pre-fills the copy field with it and nobody replaced it. Prize
-  copy is now a required input — one tab-separated `EN<TAB>ES` line per slice,
-  in wheel order — and a build whose copy still matches that shape is
-  **refused**, not warned about. Copy for slices the wheel no longer has (three
+  wheel editor pre-fills the copy field with it and nobody replaced it.
+
+  Three of those four are the *same prize* re-pointed at a new journey, and
+  their real copy was still in the capture under the OLD activityId — so it is
+  carried across (`INHERITED_COPY`), never retyped. Only the genuinely new
+  `10%- Dep | Freebet` slice needs the operator: one
+  `<n><TAB>EN<TAB>ES` line. A build where any slice still matches the internal
+  shape is **refused**, and the error lists the wheel's slices in order so the
+  right number is obvious. Copy for slices the wheel no longer has (three
   removed activity ids plus four numeric orphans) is dropped.
+
+  Prize copy is a **spa** concern: it lives in `spa/content/content-{en,es}.json`
+  and the key is created where the capture lacks it — the captured ES file
+  carried copy for only three of the seven slices, so writing only over existing
+  keys left four slices blank for every Spanish-speaking player. The widget
+  content file is the teaser beside the wheel and holds no `prize_*` key at all.
 
 `urlShortName` stays date-derived (`sport-DD-MM-YYYY`). It is unique
 server-side, so a batch that repeated one would 409 on the second wheel *after*
