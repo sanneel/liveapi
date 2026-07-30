@@ -28,6 +28,10 @@ _BOOL_RE = re.compile(r"^(true|false)$", re.IGNORECASE)
 # its Spanish translation.
 _NUM_RE = re.compile(r"^[+-]?[\d.,]+$")
 _BET_RE = re.compile(r"bet\s*\$\s*([\d.,]+)", re.IGNORECASE)
+# Spreadsheet error cells. A formula that has not been fixed is not copy, and
+# these are what the sheet exports when one breaks.
+_ERROR_CELL_RE = re.compile(
+    r"^#(VALUE!|REF!|N/A|DIV/0!|NAME\?|NULL!|NUM!|GETTING_DATA)$", re.IGNORECASE)
 _TRADEMARK_RE = re.compile(r"[™®©]")
 
 # Channel section labels (lowercased, substring-matched) we care about.
@@ -102,7 +106,14 @@ class ParsedSpec:
 
 
 def _row_values(row: list, start_idx: int = 1) -> list:
-    """Non-empty, non-numeric, non-boolean cells after the label column."""
+    """Non-empty, non-numeric, non-boolean cells after the label column.
+
+    Spreadsheet error cells are dropped like empties. A real sheet arrived with
+    "#VALUE!" in the email Button column, and it survived every filter — so the
+    error text was picked up as the button's caption and would have shipped as
+    the words on a live button. parse_spec warns when it sees one, so the cell
+    reads as broken rather than blank.
+    """
     out = []
     for cell in row[start_idx:]:
         c = (cell or "").strip()
@@ -111,6 +122,8 @@ def _row_values(row: list, start_idx: int = 1) -> list:
         if _NUM_RE.match(c):
             continue
         if _BOOL_RE.match(c):
+            continue
+        if _ERROR_CELL_RE.match(c):
             continue
         out.append(c)
     return out
@@ -156,6 +169,10 @@ _LINK_ID_RE = re.compile(r"[?&]id=(\d+)")
 # tournament deeplink, so the id regex above never matches it. The slug is the
 # only per-run value in that URL and every channel links to it.
 _PROMO_SLUG_RE = re.compile(r"/randomizer/([A-Za-z0-9][A-Za-z0-9._-]*)")
+# The row carrying the destination is not always called just "Link": real sheets
+# label it "Offer Link" or "Link (Other)". A startswith test skipped "Offer Link"
+# outright, so an operator could fill it in and still be told the link was missing.
+_LINK_LABEL_RE = re.compile(r"\blink\b", re.IGNORECASE)
 
 
 def _parse_event_name(raw: str) -> str:
@@ -210,7 +227,9 @@ def parse_spec(text: str, *, expect_game_offer: bool = True) -> ParsedSpec:
         return ""
 
     current_channel = ""
-    field_rows: dict = {}  # channel -> list[(label, en, es)]
+    field_rows: dict = {}
+    # Channels whose TRUE sits on a field row rather than the section row.
+    flagged_rows: set = set()  # channel -> list[(label, en, es)]
 
     for row in rows:
         label = (row[0] or "").strip()
@@ -225,7 +244,7 @@ def parse_spec(text: str, *, expect_game_offer: bool = True) -> ParsedSpec:
             spec.event_name = _parse_event_name(_first_value(row))
             continue
 
-        if label.lower().startswith("link"):
+        if _LINK_LABEL_RE.search(label):
             # "Link (Other)" carries the canonical deeplink; don't let a later
             # blank/odd Link row clobber an id already found.
             link = _first_value(row)
@@ -286,6 +305,8 @@ def parse_spec(text: str, *, expect_game_offer: bool = True) -> ParsedSpec:
         values = _row_values(row)
         en = values[0] if len(values) >= 1 else ""
         es = values[1] if len(values) >= 2 else en
+        if _row_bool(row):
+            flagged_rows.add(current_channel)
         field_rows[current_channel].append((label.lower(), en, es))
 
     def _fill_channel(target: ChannelCopy, rows_for_channel: list) -> None:
@@ -318,6 +339,27 @@ def parse_spec(text: str, *, expect_game_offer: bool = True) -> ParsedSpec:
             spec.email.desc_en, spec.email.desc_es = en, es
         elif "button" in label or "caption" in label:
             spec.email.button_en, spec.email.button_es = en, es
+
+    # A channel whose section row carries no TRUE, but whose own field rows do,
+    # is still ticked — one sheet puts the flag on the "Description (all sms
+    # should begin from…)" row rather than the "Sms" header, and that read as
+    # disabled while its copy sat right there.
+    for label_key, channel in ((_NOTIFICATION, spec.nc), (_POPUP, spec.popup),
+                               (_SMS, spec.sms), (_EMAIL, spec.email)):
+        if channel.enabled:
+            continue
+        if label_key in flagged_rows:
+            channel.enabled = True
+            spec.warnings.append(
+                f"{label_key}: the TRUE is on a field row, not the section row — "
+                f"treating the channel as ticked.")
+
+    if any(_ERROR_CELL_RE.match((c or "").strip())
+           for row in rows for c in row):
+        spec.warnings.append(
+            "the sheet has spreadsheet error cells (#VALUE! / #REF! / …); they were "
+            "ignored rather than used as copy — fix the formulas if those fields "
+            "were meant to carry text.")
 
     if spec.nc.enabled and not (spec.nc.title_en and spec.nc.desc_en and spec.nc.caption_en):
         spec.warnings.append("Notification is ticked TRUE but some Notification fields are missing.")

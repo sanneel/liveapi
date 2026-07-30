@@ -176,6 +176,41 @@ for text, iso in (("30m", "P0Y0M0DT0H30M0S"), ("2h", "P0Y0M0DT2H0M0S"),
                   ("P0Y0M1DT0H0M0S", "P0Y0M1DT0H0M0S")):
     check(f"{text} -> {iso}", CB.parse_wait(text) == iso, CB.parse_wait(text))
 
+print("\nthe sheet's own quirks do not become copy")
+from spec_parser import parse_spec  # noqa: E402
+
+_QUIRKY = "\n".join([
+    "Specifications",
+    "Offer Link\t\t\thttps://jugabet.cl/services/promo/offers/randomizer/raspa-nov",
+    "\u0421ommunication channels",
+    "\t\tTo do\tText\tMax symb\tLeft symb\t\tTo do\tText\tMax symb\tLeft symb",
+    "Notification\t\tTRUE\t\t\t\t\tTRUE",
+    "Tittle\t\t\tEN TITLE\t50\t7\t\t\tES TITLE\t50\t9",
+    "Description\t\t\tEN DESC\t65\t-12\t\t\tES DESC\t65\t1",
+    "Button\t\t\t#VALUE!\t20\t#VALUE!\t\t\tES CTA\t20\t9",
+    "Sms ",
+    'Description (all sms should begin from: "JugaBet |")\t\tTRUE\tJugaBet | EN\t\t\t\tTRUE\tJugaBet | ES\t130\t31',
+])
+q = parse_spec(_QUIRKY, expect_game_offer=False)
+check("a spreadsheet error cell never becomes copy",
+      "#VALUE!" not in (q.nc.caption_en + q.nc.caption_es),
+      f"{q.nc.caption_en!r}/{q.nc.caption_es!r}")
+check("the error cell is reported, not silently dropped",
+      any("error cells" in w for w in q.warnings), str(q.warnings))
+check("an 'Offer Link' row is read as the link",
+      q.link.endswith("raspa-nov"), repr(q.link))
+check("its randomizer slug is still extracted", q.promo_slug == "raspa-nov",
+      repr(q.promo_slug))
+check("a TRUE on a field row still ticks the channel", q.sms.enabled,
+      "sms read as disabled with its copy sitting right there")
+check("that inference is reported", any("field row" in w for w in q.warnings),
+      str(q.warnings))
+check("the real copy either side of the error cell survived",
+      q.nc.title_en == "EN TITLE" and q.nc.title_es == "ES TITLE",
+      f"{q.nc.title_en!r}/{q.nc.title_es!r}")
+check("the negative Left-symb counter is still filtered",
+      q.nc.desc_es == "ES DESC", repr(q.nc.desc_es))
+
 print("\nthe variants are the shapes that used to be a script each")
 check("every variant declares what it replaces",
       all(v.get("replaces") and v.get("what") for v in CB.VARIANTS.values()),

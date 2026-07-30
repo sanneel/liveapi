@@ -80,12 +80,21 @@ def save_template_from_fetch(
 
 
 def python_executable() -> str:
-    if os.name == "nt":
-        candidate = CLONER_DIR / ".venv" / "Scripts" / "python.exe"
-    else:
-        candidate = CLONER_DIR / ".venv" / "bin" / "python"
-    if candidate.exists():
-        return str(candidate)
+    """The interpreter the generators run under.
+
+    The repo venv comes first. journey-cloner/.venv holds 8 packages (requests +
+    dotenv); the repo venv is a strict superset of it, so preferring the small one
+    could only ever fail where the big one works — and it did:
+    sport_comms_campaign.py reads campaigns by importing this app, and died on
+    "No module named 'pydantic_settings'" with no way for the operator to tell it
+    was an environment problem rather than their sheet.
+    """
+    sub = "Scripts" if os.name == "nt" else "bin"
+    exe = "python.exe" if os.name == "nt" else "python"
+    for root in (BASE_DIR, CLONER_DIR):
+        candidate = root / ".venv" / sub / exe
+        if candidate.exists():
+            return str(candidate)
     return sys.executable
 
 
