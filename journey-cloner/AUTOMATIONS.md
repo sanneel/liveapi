@@ -65,6 +65,12 @@ same run creates, and that id does not exist until mid-script. It is captured
 client-side between steps rather than typed in by hand. Images come from Figma
 (`figma_export.py`) or an upload.
 
+The tab's **Create Campaign** / **Create Communication** checkboxes pick which
+halves to build: both (the default, `gow_combined.py`), campaign only
+(`gow_campaign.py`), or comms only (`comms_campaign.py` — notification + pop-up +
+SMS against an existing promo page id). So there is no separate "GOW comms"
+generator; it is this tab with the campaign box unticked.
+
 ### Bet & Get — `bet_and_get_pmcl_campaign.py` → Optimization ▸ PMCL Bet & Get
 PMCL (Fortunazo) weekend promo as three linked drafts from one script: a promo
 page (its micro-frontend content copied from the captured template and
@@ -167,11 +173,6 @@ The inherited-content check refuses a build that still shares any content value
 with its reference, so an unset one is a failed build rather than a cosmetic
 slip. That check exists because a "Physical Prize" journey once shipped carrying
 the Game of the Week SMS, email and promo link.
-
-### GOW comms — `comms_campaign.py` → built with GOW
-The comms half of a GOW campaign; runs as part of that tab by default.
-
----
 
 ### Scratch Card Comms — `sport_comms_campaign.py` → Optimization ▸ Scratch Card Comms
 The fixture scratch-card promo announced on four channels from **one** journey:
