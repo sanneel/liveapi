@@ -61,7 +61,7 @@ sys.path.insert(0, str(HERE))
 
 from create_journeys import BRAND, LOCAL_TZ, UTC, utc_api  # noqa: E402
 from casino_journey import DEFAULT_BASE_URL  # noqa: E402
-from media_library import DEFAULT_FOLDER_ID  # noqa: E402
+from comms_campaign import DEFAULT_FOLDER_ID  # noqa: E402
 from compose import audit_inherited_content  # noqa: E402
 from spec_parser import parse_spec, _PROMO_SLUG_RE  # noqa: E402
 
@@ -133,6 +133,11 @@ TPL_EMAIL_HERO = (
 )
 
 TPL_EMAIL_CONTENT_ID = "CSE-0-15619"   # the copied campaign's email — must go
+# The canvas LABEL of the email node ("<content id> <content name>"). It is not
+# what a player receives, but leaving it means the journey builder shows the
+# previous campaign's email name on the node — and it sits in `displayData`,
+# outside the settings every other substitution walks.
+TPL_EMAIL_NODE_LABEL = "JBCL - Scratch Card - Arg vs Eng - 15.07"
 TPL_NC_ICON = (
     "https://static.contentin.cloud/c93ad623-44ae-40f6-9aa5-b1aef7fd931a/"
     "d8fad07f-b4d2-4204-a0f2-3b8b7bfd7588.png"
@@ -369,6 +374,13 @@ def prepare(campaign: dict, spec, now: datetime | None = None,
         written["nc"] = set_channel_copy(body, TPL_NC_NODE, nc_copy)
         written["popup"] = set_channel_copy(body, TPL_POPUP_NODE, popup_copy)
         written["sms"] = set_sms_text(body, sms_en, sms_es)
+        # Canvas labels. The NC/pop-up labels are "<template id>. <node name>",
+        # campaign-agnostic, so they stay as captured.
+        written["sms label"] = set_display_data(
+            body, lambda a: a.get("activityName") == "dextra_sms", sms_es)
+        written["email label"] = set_display_data(
+            body, lambda a: a.get("activityName") == "dextra_email",
+            f"{EMAIL_ID_TOKEN} {email_name}")
     # A node the capture no longer contains means the template changed under us
     # and this run would ship the captured copy. Refuse rather than emit.
     for chan, n in written.items():
@@ -461,6 +473,39 @@ _LANG_FIELD_RE = re.compile(r"^(title|des|description|caption)[-_](en|es)$")
 
 TPL_NC_NODE = "JBCL NC Dynamic 2026"
 TPL_POPUP_NODE = "JBCL Pop-up CatFish 2026"
+
+
+def set_display_data(body: dict, predicate, new_value: str) -> int:
+    """Rewrite a node's canvas label, in both the activity and the mirror.
+
+    `displayData` is what the journey builder prints on the node. It duplicates
+    the copy, and in the mirror it hangs off the config entry itself rather than
+    its `data` — so it is missed by anything that walks settings. Left alone, the
+    SMS node shows the previous campaign's message on the canvas.
+
+    Every string element is replaced rather than only ones matching the captured
+    text: for these nodes the label IS the value, and matching on content broke
+    as soon as an earlier substitution (the promo slug, which the SMS label
+    contains) had already rewritten part of it.
+    """
+    cfg = body.get("rawJourneyData", {}).get("activitiesConfiguration", {})
+    writes = 0
+    for a in body.get("activities", []):
+        if not predicate(a):
+            continue
+        holders = [a.get("initializationData") or {}]
+        mirror = cfg.get(a.get("activityId"))
+        if isinstance(mirror, dict):
+            holders.append(mirror)          # note: mirror itself, not mirror["data"]
+        for holder in holders:
+            dd = holder.get("displayData")
+            if not isinstance(dd, list):
+                continue
+            for i, item in enumerate(dd):
+                if isinstance(item, str):
+                    dd[i] = new_value
+                    writes += 1
+    return writes
 
 
 def _storages(body: dict, predicate):
@@ -568,6 +613,14 @@ def verify(bundle: dict) -> list[tuple[bool, str]]:
     reference = json.loads(TPL_SAVE.read_text(encoding="utf-8"))
     leaked = audit_inherited_content(save, reference)
 
+    journey_slugs = set(re.findall(r"/randomizer/([A-Za-z0-9._-]+)", both))
+    email_slugs = set(re.findall(r"/randomizer/([A-Za-z0-9._-]+)", s_email))
+    email_html = ""
+    for tr in (email_save.get("translations") or {}).values():
+        src = ((tr.get("composition") or {}).get("body") or {}).get("source")
+        if isinstance(src, str):
+            email_html += src
+
     # Read the copy back out of the built body, per node and per language, and
     # compare it with the sheet. This is the check that would have caught the
     # pop-up wearing the notification's caption.
@@ -629,13 +682,18 @@ def verify(bundle: dict) -> list[tuple[bool, str]]:
          f"journey no longer points at the copied campaign's email ({TPL_EMAIL_CONTENT_ID})"),
         (EMAIL_ID_TOKEN in s_create and EMAIL_ID_TOKEN in s_save,
          "email-content placeholder present in both bodies (filled at paste)"),
-        (TPL_SLUG_EN not in both and TPL_SLUG_ES not in both,
-         f"no captured promo slug left ({TPL_SLUG_EN} / {TPL_SLUG_ES})"),
+        # Every link must point at THIS run's slug — but the operator may
+        # legitimately choose the same promo page the capture used, so the test
+        # is "no OTHER slug survives", not "the captured string is absent".
+        (journey_slugs == {slug}, f"every channel links to /randomizer/{slug}"
+         + (f" (ALSO FOUND: {sorted(journey_slugs - {slug})})"
+            if journey_slugs - {slug} else "")),
         (both.count(f"/randomizer/{slug}") >= 6,
-         f"every channel links to /randomizer/{slug} "
+         f"the link reached every channel "
          f"({both.count('/randomizer/' + slug)} occurrences)"),
-        (s_email.count(f"/randomizer/{slug}") >= 1 and TPL_SLUG_ES not in s_email,
-         "email links to this run's promo page"),
+        (email_slugs == {slug}, "email links to this run's promo page"
+         + (f" (ALSO FOUND: {sorted(email_slugs - {slug})})"
+            if email_slugs - {slug} else "")),
         (RESERVED_TOKEN in s_create and TPL_RESERVED not in both,
          "reservedJourneyId is a placeholder, captured id gone"),
         (NC_ICON_TOKEN in both and TPL_NC_ICON not in both,
@@ -650,7 +708,9 @@ def verify(bundle: dict) -> list[tuple[bool, str]]:
         (create.get("duplicatedFromId") is None and TPL_DUPLICATED_FROM not in both,
          "lineage stripped (duplicatedFromId)"),
         (TPL_SMS_PRIMARY not in both and TPL_SMS_RAW not in both,
-         "both captured SMS strings replaced"),
+         "both captured SMS strings replaced (settings AND canvas label)"),
+        (TPL_EMAIL_NODE_LABEL not in both,
+         "the email node's canvas label no longer names the captured campaign"),
         (TPL_NC_TITLE not in both and TPL_POPUP_TITLE not in both,
          "notification and pop-up titles replaced"),
         (TPL_NC_DES not in both and TPL_POPUP_DES_ES not in both
@@ -662,7 +722,10 @@ def verify(bundle: dict) -> list[tuple[bool, str]]:
         # subject or pre-header may legitimately name the teams.
         (TPL_EMAIL_BODY_COPY not in s_email,
          "email body no longer carries the captured campaign's copy"),
-        (bool(expected.get("email_body")) and expected["email_body"] in s_email,
+        # Against the HTML source, not the JSON dump: the copy contains real
+        # newlines, which the dump escapes, so a substring test on the dump
+        # never matched however correct the body was.
+        (bool(expected.get("email_body")) and expected["email_body"] in email_html,
          "email body carries the sheet's copy"),
         (TPL_NC_CAPTION not in both,
          "notification/pop-up captions replaced (the shared 'Juega Ya ' literal)"),
