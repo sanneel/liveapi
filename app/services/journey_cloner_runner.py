@@ -387,6 +387,7 @@ def generate_randomizer_console_script(
     days: str = "",
     weights: str = "",
     journeys: str = "",
+    prize_text: str = "",
 ) -> Tuple[int, str, str, str | None, str]:
     """Generate the console script for one or MORE Randomizer promos (Sport WOF,
     Casino WOF, or Raspa y Gana scratch card). `date` may hold several dates
@@ -415,6 +416,10 @@ def generate_randomizer_console_script(
         cmd += ["--weights", *weights.split()]
     if journeys.strip():
         cmd += ["--journeys", *journeys.split()]
+    if prize_text.strip():
+        # Sport WOF only: one line per prize slice, EN<TAB>ES, read from stdin.
+        cmd += ["--prize-text", "-"]
+        return _run_gow_cli(cmd, spec_text=prize_text, basename=basename)
     return _run_gow_cli(cmd, basename=basename)
 
 

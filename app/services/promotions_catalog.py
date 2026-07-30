@@ -54,10 +54,8 @@ AUTOMATION_SCRIPTS: Dict[str, List[str]] = {
     "sport_wof": [
         "randomizer_campaign.py",
         "templates/sport/sport_wof_randomizer.json",
-        "templates/sport/wof_visual/content-en.json",
-        "templates/sport/wof_visual/content-es.json",
-        "templates/sport/wof_visual/settings.json",
-        "templates/sport/wof_visual/manifest.json",
+        "templates/sport/sport_wof_save.json",
+        "templates/sport/wof_visual/uploads.json",
     ],
     "casino_scratch_card": [
         "randomizer_campaign.py",

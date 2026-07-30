@@ -411,7 +411,7 @@
     <form method="post" action="/admin/promotions/randomizer" class="card card-pad col-rail" style="display:flex; flex-direction:column; gap:14px">
       <div>
         <h2 class="card-title">Create randomizer</h2>
-        <p class="card-sub">Prize slices, routed journeys, segment and the visual bundle come from the captured template — only the dates &amp; name change. Optionally override the weights and the routed journeys.</p>
+        <p class="card-sub">Prize slices, routed journeys and segment come from the captured template &mdash; the dates, name and prize copy change per run. <b>Sport Wheel of Fortune</b> clones its own visual content per wheel, so editing one wheel&#39;s artwork no longer rewrites every other. Optionally override the weights and the routed journeys.</p>
       </div>
 
       <div class="field">
@@ -432,6 +432,13 @@
         <div id="rnd-chips" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px"></div>
         <input type="hidden" name="date" id="rnd-dates" value="{{ rnd.date or '' }}"/>
         <p class="help" style="margin-top:6px">Pick a date from the calendar and click <b>Add</b> — repeat for as many promos as you want. Each date becomes one randomizer, all created in one paste.</p>
+      </div>
+
+      <div class="field">
+        <span class="lbl">Prize copy <span style="color:var(--t-faint)">(Sport Wheel of Fortune)</span></span>
+        <textarea class="input mono" name="prize_text" rows="8" spellcheck="false" style="font-size:12px"
+                  placeholder="One line per prize slice, in wheel order &#8212; English&#9;Spanish&#10;Money bonus $5.000&#9;Bono de dinero $5.000&#10;Free bonuses&#9;Bonos gratis&#10;...">{{ rnd.prize_text or '' }}</textarea>
+        <p class="help" style="margin-top:6px">What <b>players</b> see on each slice. One tab-separated <span class="mono">EN&nbsp;&#8594;&nbsp;ES</span> line per slice, in wheel order &#8212; <b>7 lines</b> for the current wheel. The captured wheel shipped four slices showing their journey&#39;s internal name (<span class="mono">JBCL | SP | RB - Wheel of fortune | &#8230;</span>) to players, so a build whose copy still looks like that is <b>refused</b>. Leave blank for the Casino types, which do not use it.</p>
       </div>
 
       <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:2px">

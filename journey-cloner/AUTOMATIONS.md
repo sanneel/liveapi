@@ -140,9 +140,56 @@ weighted set of prize slices, each routing a winner to a journey
 (`journeyId` + `activityId`).
 
 **The slices come from the captured template and cannot be added or removed** —
-today 6 (sport_wof), 4 (casino_wof), 5 (casino_scratch). A campaign wanting 7
-prizes cannot be built until a 7-slice wheel is captured. Weights must sum to
-100, and `journeys` needs exactly one entry per slice.
+today 7 (sport_wof), 4 (casino_wof), 5 (casino_scratch). A campaign wanting more
+prizes cannot be built until a wheel with that many slices is captured. Weights
+must sum to 100, and `journeys` needs exactly one entry per slice.
+
+#### Sport WOF runs the full captured flow (the other two do not, yet)
+
+Rebuilt from `45a1240c-wheeloffort_new.har`, which captured what the first HAR
+had missed. Every wheel now **owns its own visual content**:
+
+```
+1. POST /crm/contents/v1/copy         ×2   clone the master tree into a FRESH
+                                           contentId + frontId, minted per draft
+2. POST /promo/v2/promo-drafts/randomizer  create the draft
+3. POST /promo/v2/s3/upload           ×8   spa+widget content EN/ES, both
+                                           manifests, both settings — new tree
+4. PUT  /promo/v2/promo-drafts/randomizer/<id>?draftId=<id>   save
+```
+
+Why this matters: before the rebuild every Sport WOF ever generated shared one
+hardcoded `contentId`/`frontId`, so **editing this week's artwork rewrote every
+past and published wheel**. The `%%CONTENT_ID%%` token is filled at paste time
+from `crypto.randomUUID()` — including the ~48 media paths *inside* the payload,
+which otherwise point the new wheel at the captured wheel's images.
+
+Two more things the rebuild corrected:
+
+- **The fill endpoint was wrong.** The old script did
+  `POST /promo/v2/randomizer?draftId=<id>`; the capture does a `PUT` on
+  `/promo/v2/promo-drafts/randomizer/<id>`, with `id` as a string,
+  `currencyMode: null` and `hasCsv: false`.
+- **Four of the seven slices showed the operator's INTERNAL journey name to
+  players** (`JBCL | SP | RB - Wheel of fortune | Free | Bonuses`) because the
+  wheel editor pre-fills the copy field with it and nobody replaced it. Prize
+  copy is now a required input — one tab-separated `EN<TAB>ES` line per slice,
+  in wheel order — and a build whose copy still matches that shape is
+  **refused**, not warned about. Copy for slices the wheel no longer has (three
+  removed activity ids plus four numeric orphans) is dropped.
+
+`urlShortName` stays date-derived (`sport-DD-MM-YYYY`). It is unique
+server-side, so a batch that repeated one would 409 on the second wheel *after*
+the first was already created; the build refuses a repeat locally instead.
+
+The wheel background lives outside the per-wheel tree
+(`mf/v1/background/<uuid>.png`) and is kept as captured — the HAR's
+`POST /promo/v2/s3/upload-content` is a multipart image upload whose bytes a HAR
+does not carry.
+
+Contract: `scripts/test_sport_wof.py`. Casino WOF and Raspa y Gana still use the
+older create-then-fill path and **still share one visual pair each** — they need
+their own capture before they can be given the same treatment.
 
 Because prize routing needs journey ids that do not exist until the journeys are
 created, `compose.py --batch` can build the **whole promotion in one paste**:

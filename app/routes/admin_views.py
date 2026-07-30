@@ -686,7 +686,7 @@ def _jc_ns(*, team=DEFAULT_TEAM, form=None, selected_types=None, dry_run=True,
 
 
 def _rnd_ns(*, kind="sport_wof", date="", days="", weights="", journeys="",
-           error="", result=None, console_script=None) -> dict:
+           prize_text="", error="", result=None, console_script=None) -> dict:
     from ..services.journey_cloner_runner import RANDOMIZER_KINDS
     return {
         "kinds": RANDOMIZER_KINDS,
@@ -695,6 +695,7 @@ def _rnd_ns(*, kind="sport_wof", date="", days="", weights="", journeys="",
         "days": days,
         "weights": weights,
         "journeys": journeys,
+        "prize_text": prize_text,
         "error": error,
         "result": result,
         "console_script": console_script,
@@ -864,6 +865,7 @@ def promotions_randomizer(
     days: str = Form(""),
     weights: str = Form(""),
     journeys: str = Form(""),
+    prize_text: str = Form(""),
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
     """Generate a Randomizer console script (Sport WOF / Casino WOF / Scratch
@@ -884,6 +886,7 @@ def promotions_randomizer(
             int(days.strip())  # validate
         exit_code, output, display_cmd, js_text, js_name = generate_randomizer_console_script(
             kind=kind, date=date, days=days, weights=weights, journeys=journeys,
+            prize_text=prize_text,
         )
         result = {"exit_code": exit_code, "output": output, "command": display_cmd,
                   "ok": exit_code == 0 and js_text is not None}
@@ -900,6 +903,7 @@ def promotions_randomizer(
         user=user,
         active_tab="randomizers",
         rnd=_rnd_ns(kind=kind, date=date, days=days, weights=weights, journeys=journeys,
+                    prize_text=prize_text,
                     error=error, result=result, console_script=console_script),
     )
     return templates.TemplateResponse(request, "promotions.html", ctx)

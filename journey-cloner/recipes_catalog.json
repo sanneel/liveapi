@@ -470,14 +470,15 @@
       "sport_wof": {
         "label": "Sport Wheel of Fortune",
         "days_default": 1,
-        "prize_count": 6,
+        "prize_count": 7,
         "template_weights": [
-          "0.1",
-          "3",
-          "25",
-          "10",
-          "36.9",
-          "25"
+          0.1,
+          2.5,
+          10,
+          10,
+          14,
+          13.5,
+          49.9
         ]
       },
       "casino_wof": {

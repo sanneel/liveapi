@@ -60,7 +60,21 @@ KINDS: dict[str, dict] = {
     "sport_wof": {
         "label": "Sport Wheel of Fortune",
         "template": HERE / "templates" / "sport" / "sport_wof_randomizer.json",
-        "flow": "draftid_post",   # POST /promo/v2/randomizer?draftId=<id>
+        # Rebuilt from 45a1240c-wheeloffort_new.har, which captured the WHOLE
+        # flow the earlier HAR had missed: the wheel's visual content tree is
+        # CLONED to a fresh pair of ids per draft, then overwritten. Without it
+        # every wheel ever generated shared one contentId/frontId, so editing
+        # this week's artwork rewrote every past and published wheel.
+        "flow": "visual_clone",
+        "save_template": HERE / "templates" / "sport" / "sport_wof_save.json",
+        "visual": HERE / "templates" / "sport" / "wof_visual" / "uploads.json",
+        # The master tree each draft's content is copied FROM. Read-only: the
+        # copy's destination is a fresh uuid minted per draft at paste time.
+        "master_content": "75f9a86c-3b6a-42da-b631-cc726b8b1515",
+        "master_front": "a3d6d412-f4a1-41b2-8742-fde6dd223c20",
+        # The wheel background lives outside the per-wheel tree, in a shared
+        # folder, so it is kept unless the operator picks a new one.
+        "background": "mf/v1/background/3678a524-8573-4600-8b04-f7fa2cfaea2a.png",
         "name_prefix": "JBCL|SP|WOF|",
         "name_fmt": "%d.%m.%y",
         "days_default": 1,
@@ -96,6 +110,67 @@ KINDS: dict[str, dict] = {
         "url_short": lambda promo, end: f"raspa-{promo.day:02d}-{promo.month:02d}-{promo.year}",
     },
 }
+
+
+# The capture shipped four of its seven slices showing the operator's INTERNAL
+# journey name to players ("JBCL | SP | RB - Wheel of fortune | Free | Bonuses")
+# because whoever built it never replaced the placeholder the wheel editor
+# pre-fills with. Player-facing copy never looks like this, so it is refused
+# rather than warned about — the whole point of this generator is that the
+# captured campaign's leftovers cannot ship.
+INTERNAL_COPY_RE = re.compile(r"\b[A-Z]{4}\s*\|\s*[A-Z]{2}\s*\|", re.I)
+
+CONTENT_ID_TOKEN = "%%CONTENT_ID%%"
+FRONT_ID_TOKEN = "%%FRONT_ID%%"
+
+
+def strip_html(text: str) -> str:
+    """The bare words of a prizeTextKey, for comparing against an internal name."""
+    return re.sub(r"<[^>]+>", " ", text or "").replace("&nbsp;", " ").strip()
+
+
+def live_prize_ids(body: dict) -> list[str]:
+    """The activityId of every prize the draft actually routes to, in order."""
+    return [(p.get("journeyPrizeSettings") or {}).get("activityId") or ""
+            for p in body.get("prizes", [])]
+
+
+def set_prize_text(uploads: list, activity_id: str, en: str, es: str) -> int:
+    """Write one slice's player-facing copy into all four content files.
+
+    A wheel's copy lives four times — spa and widget, each EN and ES — keyed by
+    `prize_<activityId>.prizeTextKey`. Writing one and not the others shows the
+    right text on the wheel and the wrong text in the widget beside it.
+    """
+    key = f"prize_{activity_id}.prizeTextKey"
+    writes = 0
+    for f in uploads:
+        data = f.get("data")
+        if not isinstance(data, dict) or key not in data:
+            continue
+        data[key] = es if "-es-" in f["rel"] else en
+        writes += 1
+    return writes
+
+
+def prune_dead_prize_keys(uploads: list, keep: set) -> list:
+    """Drop prize copy for slices this wheel no longer has.
+
+    The capture carried copy for three removed slices plus four numeric orphans
+    (`prize_1`, `prize_2`, ...) left by earlier edits. They are content still
+    shared with the captured campaign, so they go.
+    """
+    dropped = []
+    for f in uploads:
+        data = f.get("data")
+        if not isinstance(data, dict):
+            continue
+        for key in [k for k in data if k.startswith("prize_") and k.endswith(".prizeTextKey")]:
+            who = key[len("prize_"):-len(".prizeTextKey")]
+            if who not in keep:
+                data.pop(key)
+                dropped.append(who)
+    return sorted(set(dropped))
 
 
 def _dt(promo: datetime, offset, days: int) -> datetime:
@@ -173,6 +248,238 @@ def verify(body: dict) -> list[tuple[bool, str]]:
     out.append((bool(body.get("urlShortName")), "urlShortName set"))
     out.append((bool(body.get("contentId") and body.get("frontId")), "visual contentId + frontId present"))
     return out
+
+
+# ── the visual-clone flow (Sport WOF) ───────────────────────────────────────
+def parse_prize_text(text: str) -> list[tuple[str, str]]:
+    """EN/ES prize copy, one tab-separated line per slice, in template order."""
+    rows = []
+    for line in (text or "").splitlines():
+        if not line.strip():
+            continue
+        parts = [c.strip() for c in line.split("\t")]
+        en = parts[0] if parts else ""
+        es = parts[1] if len(parts) > 1 and parts[1] else en
+        rows.append((en, es))
+    return rows
+
+
+def prepare_visual(kind: str, date_str: str, *, days: int | None = None,
+                   internal_name: str = "", url_short: str = "",
+                   weights: list[str] | None = None, journeys: list[str] | None = None,
+                   prize_text: str = "") -> tuple[dict, list[str]]:
+    """A Sport WOF draft plus its own freshly-cloned visual content tree."""
+    cfg = KINDS[kind]
+    create, report = prepare(kind, date_str, days=days, internal_name=internal_name,
+                             url_short=url_short, weights=weights, journeys=journeys)
+    save = json.loads(cfg["save_template"].read_text(encoding="utf-8"))
+    uploads = json.loads(cfg["visual"].read_text(encoding="utf-8"))
+
+    # the save body mirrors the create body's per-run values
+    for key in ("showDate", "startDate", "endDate", "hideDate",
+                "internalName", "urlShortName", "prizes"):
+        save[key] = json.loads(json.dumps(create[key]))
+    for prize in save.get("prizes", []):
+        prize["id"] = None                      # the save posts prizes without ids
+    save["initialShowDate"], save["initialEndDate"] = create["showDate"], create["endDate"]
+
+    ids = live_prize_ids(create)
+    if not all(ids):
+        raise SystemExit("a prize slice has no activityId — the template changed shape.")
+    dropped = prune_dead_prize_keys(uploads, set(ids))
+    if dropped:
+        report.append(f"dropped copy for {len(dropped)} slice(s) this wheel no longer has")
+
+    rows = parse_prize_text(prize_text)
+    if rows:
+        if len(rows) != len(ids):
+            raise SystemExit(f"--prize-text has {len(rows)} line(s) but the wheel has "
+                             f"{len(ids)} prize slice(s), one line each (EN<TAB>ES).")
+        for activity_id, (en, es) in zip(ids, rows):
+            if not set_prize_text(uploads, activity_id, en, es):
+                raise SystemExit(f"prize {activity_id} has no copy slot in the visual "
+                                 f"content — the template changed shape.")
+        report.append(f"prize copy written for {len(rows)} slice(s)")
+
+    # refuse rather than warn: a slice still wearing its journey's internal name
+    internal = []
+    for activity_id, prize in zip(ids, create.get("prizes", [])):
+        key = f"prize_{activity_id}.prizeTextKey"
+        for f in uploads:
+            data = f.get("data") or {}
+            if key in data and INTERNAL_COPY_RE.search(strip_html(data[key])):
+                label = (prize.get("journeyPrizeSettings") or {}).get("activityDescription", "")
+                internal.append(f"{activity_id} ({label.strip()[:40]}): {strip_html(data[key])[:44]!r}")
+                break
+    if internal:
+        raise SystemExit(
+            "these prize slices would show your INTERNAL journey name to players:\n  - "
+            + "\n  - ".join(internal)
+            + "\n\nGive player-facing copy for every slice with --prize-text "
+              "(one line per slice, in wheel order, EN<TAB>ES)."
+        )
+
+    bundle = {"kind": kind, "create": create, "save": save, "uploads": uploads,
+              "prize_ids": ids, "background": cfg["background"],
+              "master_content": cfg["master_content"], "master_front": cfg["master_front"]}
+    report.append(f"visual: {len(uploads)} file(s) uploaded into a freshly cloned tree")
+    return bundle, report
+
+
+def verify_visual(bundle: dict) -> list[tuple[bool, str]]:
+    create, save, uploads = bundle["create"], bundle["save"], bundle["uploads"]
+    blob = json.dumps(create) + json.dumps(save) + json.dumps(uploads, ensure_ascii=False)
+    cfg = KINDS[bundle["kind"]]
+    ids = bundle["prize_ids"]
+
+    out = list(verify(create))
+    weights = [float(p.get("weight")) for p in create.get("prizes", [])]
+    out.append((abs(sum(weights) - 100.0) < 0.01,
+                f"prize weights sum to 100 ({sum(weights):g})"))
+    out.append((create.get("contentId") == CONTENT_ID_TOKEN
+                and create.get("frontId") == FRONT_ID_TOKEN,
+                "contentId + frontId are per-draft placeholders, not the captured pair"))
+    out.append((cfg["master_content"] not in blob and cfg["master_front"] not in blob,
+                "the master content tree is only a copy SOURCE, never a destination"))
+    stale = [k for f in uploads if isinstance(f.get("data"), dict)
+             for k in f["data"] if k.startswith("prize_") and k.endswith(".prizeTextKey")
+             and k[len("prize_"):-len(".prizeTextKey")] not in set(ids)]
+    out.append((not stale, "no copy left for slices this wheel does not have"
+                + (f" (STALE: {stale[:2]})" if stale else "")))
+    missing = [i for i in ids
+               if not any(f"prize_{i}.prizeTextKey" in (f.get("data") or {}) for f in uploads)]
+    out.append((not missing, "every prize slice has copy"
+                + (f" (MISSING: {missing[:2]})" if missing else "")))
+    internal = [k for f in uploads if isinstance(f.get("data"), dict)
+                for k, v in f["data"].items()
+                if k.endswith(".prizeTextKey") and INTERNAL_COPY_RE.search(strip_html(v))]
+    out.append((not internal, "no slice shows an internal journey name to players"
+                + (f" (INTERNAL: {internal[:2]})" if internal else "")))
+    out.append((create["showDate"] == save["initialShowDate"]
+                and create["endDate"] == save["initialEndDate"],
+                "create and save agree on the wheel's window"))
+    out.append((create["internalName"] == save["internalName"]
+                and create["urlShortName"] == save["urlShortName"],
+                "create and save agree on the name"))
+    return out
+
+
+
+JS_VISUAL_TEMPLATE = r"""// Sport Wheel of Fortune — @INTERNAL_NAME@ — generated @GENERATED_AT@
+//
+// Paste into the DevTools console on a logged-in backoffice tab. Per wheel it:
+//   1. mints a FRESH contentId + frontId (so this wheel owns its own visual —
+//      sharing one pair across wheels meant editing today's artwork rewrote
+//      every past and published wheel),
+//   2. clones the master content tree into that pair (POST /contents/v1/copy),
+//   3. creates the draft (POST /promo/v2/promo-drafts/randomizer),
+//   4. uploads the 8 visual files into the new tree (POST /promo/v2/s3/upload),
+//   5. saves the draft (PUT /promo/v2/promo-drafts/randomizer/<id>?draftId=<id>).
+// Drafts only — nothing is published. One bad wheel does not stop the rest.
+// Set PREVIEW=true to log every request WITHOUT sending it.
+(async () => {
+  'use strict';
+  const PREVIEW = false;
+  const MANUAL_TOKEN = '';
+  const BASE = @BASE_URL@;
+  const BRAND = @BRAND@;
+  const WHEELS = @WHEELS@;              // one {create, save, uploads} per date
+  const MASTER_CONTENT = @MASTER_CONTENT@;
+  const MASTER_FRONT = @MASTER_FRONT@;
+  const CRM_BASE = BASE.replace(/\/journey-builder\/v0$/, '');
+
+  const decodeJwt = (t) => { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); } catch (e) { return null; } };
+  const usableAuth = (v) => {
+    if (!v || !/^Bearer\s+\S+/i.test(v)) return null;
+    const p = decodeJwt(v.replace(/^Bearer\s+/i, ''));
+    if (!p || p.typ !== 'Bearer' || p.exp - Date.now()/1000 < 30) return null;
+    return 'Bearer ' + v.replace(/^Bearer\s+/i, '');
+  };
+  async function obtainAuth() {
+    if (MANUAL_TOKEN.trim()) { const a = usableAuth('Bearer ' + MANUAL_TOKEN.trim()); if (!a) throw new Error('MANUAL_TOKEN invalid'); return a; }
+    return new Promise((resolve, reject) => {
+      let done = false; const of = window.fetch, oh = XMLHttpRequest.prototype.setRequestHeader;
+      const clean = () => { window.fetch = of; XMLHttpRequest.prototype.setRequestHeader = oh; };
+      const take = (v) => { const a = usableAuth(v); if (a && !done) { done = true; clean(); clearTimeout(t); console.log('%cToken captured.', 'color:#22c55e'); resolve(a); } };
+      window.fetch = function (i, n) { try { const h = (n && n.headers) || (i && i.headers); if (h) { if (typeof h.get === 'function') take(h.get('authorization')); else take(h.authorization || h.Authorization); } } catch (e) {} return of.apply(this, arguments); };
+      XMLHttpRequest.prototype.setRequestHeader = function (k, v) { try { if (/^authorization$/i.test(k)) take(v); } catch (e) {} return oh.apply(this, arguments); };
+      const t = setTimeout(() => { if (!done) { done = true; clean(); reject(new Error('No token in 3 min. Click around the UI and rerun.')); } }, 180000);
+      console.log('%cWaiting for a token — click anything in the backoffice UI.', 'color:#eab308');
+    });
+  }
+
+  const auth = await obtainAuth();
+  const H = () => ({ accept: 'application/json, text/plain, */*', authorization: auth, 'content-type': 'application/json', 'x-brand': BRAND });
+  const newUuid = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID()
+    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const r = Math.random()*16|0; return (c === 'x' ? r : (r&0x3)|0x8).toString(16); });
+
+  async function send(method, url, body) {
+    const r = await fetch(url, { method, headers: H(), credentials: 'include', body: body === undefined ? undefined : JSON.stringify(body) });
+    const t = await r.text();
+    if (!r.ok) throw new Error(method + ' ' + url.split('/crm/')[1] + ' HTTP ' + r.status + ' ' + t.slice(0, 300));
+    try { return JSON.parse(t); } catch (e) { return {}; }
+  }
+
+  async function buildOne(W) {
+    const contentId = newUuid(), frontId = newUuid();
+    const fill = (o) => JSON.parse(JSON.stringify(o).split('%%CONTENT_ID%%').join(contentId).split('%%FRONT_ID%%').join(frontId));
+    const create = fill(W.create), save = fill(W.save), uploads = fill(W.uploads);
+
+    if (PREVIEW) {
+      console.log('  would clone ' + MASTER_CONTENT + ' -> ' + contentId + ', ' + MASTER_FRONT + ' -> ' + frontId);
+      console.log('  create:', create); console.log('  uploads:', uploads.map((u) => u.rel)); console.log('  save:', save);
+      return 'PREVIEW';
+    }
+
+    // 1. the wheel's own visual tree, cloned from the master
+    await send('POST', CRM_BASE + '/contents/v1/copy', { sourcePath: 'mf/v1/' + MASTER_CONTENT, destinationPath: 'mf/v1/' + contentId });
+    await send('POST', CRM_BASE + '/contents/v1/copy', { sourcePath: 'mf/v1/' + MASTER_FRONT, destinationPath: 'mf/v1/' + frontId });
+
+    // 2. the draft
+    const created = await send('POST', CRM_BASE + '/promo/v2/promo-drafts/randomizer', create);
+    const id = created.id || created.draftId || created.promotionDraftId;
+    if (!id) throw new Error('no draft id in create response: ' + JSON.stringify(created).slice(0, 200));
+
+    // 3. the visual files, into the NEW tree
+    for (const u of uploads) {
+      const base = u.target === 'front' ? frontId : contentId;
+      await send('POST', CRM_BASE + '/promo/v2/s3/upload', { path: 'mf/v1/' + base + '/' + u.rel, data: u.data });
+    }
+
+    // 4. save
+    await send('PUT', CRM_BASE + '/promo/v2/promo-drafts/randomizer/' + id + '?draftId=' + id, { ...save, id: String(id) });
+    return id;
+  }
+
+  console.log('%cSport Wheel of Fortune — ' + WHEELS.length + ' wheel(s)', 'color:#3b82f6;font-weight:bold;font-size:14px');
+  const ok = [], fail = [];
+  for (const W of WHEELS) {
+    console.log('  ' + W.create.internalName + ' ...');
+    try { const id = await buildOne(W); ok.push({ name: W.create.internalName, id }); console.log('%c    ✓ draft ' + id, 'color:#22c55e'); }
+    catch (e) { const msg = String((e && e.message) || e); fail.push({ name: W.create.internalName, err: msg }); console.error('    ✗ ' + msg); }
+  }
+  console.log('%cDONE — ' + ok.length + ' created, ' + fail.length + ' failed.',
+              'color:' + (fail.length ? '#f59e0b' : '#22c55e') + ';font-weight:bold;font-size:14px');
+  ok.forEach((o) => console.log('  ✓ ' + o.id + '  (' + o.name + ')'));
+  fail.forEach((f) => console.log('  ✗ ' + f.name + ' — ' + f.err));
+  if (!PREVIEW) console.log('Drafts are unpublished — open each in the Promo UI, check the wheel, then publish.');
+})();
+"""
+
+
+def build_visual_js(bundles: list) -> str:
+    js = JS_VISUAL_TEMPLATE
+    first = bundles[0]
+    js = js.replace("@GENERATED_AT@", datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"))
+    js = js.replace("@INTERNAL_NAME@", ", ".join(b["create"]["internalName"] for b in bundles))
+    js = js.replace("@BASE_URL@", json.dumps(DEFAULT_BASE_URL))
+    js = js.replace("@BRAND@", json.dumps((first["create"].get("currencies") or [{}])[0].get("brand", "JBCL")))
+    js = js.replace("@MASTER_CONTENT@", json.dumps(first["master_content"]))
+    js = js.replace("@MASTER_FRONT@", json.dumps(first["master_front"]))
+    js = js.replace("@WHEELS@", json.dumps(
+        [{"create": b["create"], "save": b["save"], "uploads": b["uploads"]} for b in bundles],
+        ensure_ascii=False))
+    return js
 
 
 JS_TEMPLATE = r"""// Randomizer console script — @LABEL@ — generated @GENERATED_AT@
@@ -322,6 +629,10 @@ def main() -> int:
     p.add_argument("--url-short", default="", help="override urlShortName (single date only)")
     p.add_argument("--weights", nargs="+", help="prize weights, in template prize order (applied to every date)")
     p.add_argument("--journeys", nargs="+", help="routed journeyIds, in template prize order (applied to every date)")
+    p.add_argument("--prize-text", default=None, type=Path,
+                   help="Sport WOF: player-facing prize copy, one line per slice in wheel "
+                        "order, EN<TAB>ES. '-' reads stdin. Required whenever a slice still "
+                        "carries its journey's internal name.")
     p.add_argument("--name", default="", help="output basename (default: <kind>)")
     p.add_argument("--dry-run", action="store_true", help="write the prepared bodies to out/ instead of a script")
     p.add_argument("--debug", action="store_true", help="emit a script that creates ONE draft and logs the create "
@@ -337,26 +648,48 @@ def main() -> int:
               "(each date is auto-named); drop them for a batch.", file=sys.stderr)
         return 1
 
+    visual = KINDS[args.kind].get("flow") == "visual_clone"
+    prize_text = ""
+    if args.prize_text:
+        prize_text = (sys.stdin.read() if str(args.prize_text) == "-"
+                      else Path(args.prize_text).read_text(encoding="utf-8"))
+
     bodies: list[dict] = []
     print(f"{KINDS[args.kind]['label']} — {len(dates)} randomizer(s):")
     for d in dates:
-        body, report = prepare(
-            args.kind, d, days=args.days,
-            internal_name=args.internal_name, url_short=args.url_short,
-            weights=args.weights, journeys=args.journeys,
-        )
-        bodies.append(body)
+        if visual:
+            item, report = prepare_visual(
+                args.kind, d, days=args.days,
+                internal_name=args.internal_name, url_short=args.url_short,
+                weights=args.weights, journeys=args.journeys, prize_text=prize_text,
+            )
+        else:
+            item, report = prepare(
+                args.kind, d, days=args.days,
+                internal_name=args.internal_name, url_short=args.url_short,
+                weights=args.weights, journeys=args.journeys,
+            )
+        bodies.append(item)
         print(f"  • {d}:")
         for line in report:
             print("      " + line)
 
     print("Verification:")
     all_ok = True
-    for body in bodies:
-        for ok, msg in verify(body):
+    seen_urls: set = set()
+    for item in bodies:
+        body = item["create"] if visual else item
+        for ok, msg in (verify_visual(item) if visual else verify(body)):
             if not ok:
                 print(f"  FAIL [{body.get('internalName')}] {msg}")
             all_ok = all_ok and ok
+        # urlShortName is unique server-side; a batch that repeats one 409s on
+        # the second wheel, after the first has already been created.
+        url = body.get("urlShortName")
+        if url in seen_urls:
+            print(f"  FAIL two wheels in this batch share urlShortName {url!r}")
+            all_ok = False
+        seen_urls.add(url)
     print(f"  {'OK  ' if all_ok else 'FAIL'} {len(bodies)} body(ies) verified")
     if not all_ok:
         print("\nVERIFICATION FAILED — not writing output.", file=sys.stderr)
@@ -371,7 +704,7 @@ def main() -> int:
         print(f"\nDry run — {len(bodies)} body(ies) written: {path}")
         return 0
 
-    js = build_js(args.kind, bodies, debug=args.debug)
+    js = build_visual_js(bodies) if visual else build_js(args.kind, bodies, debug=args.debug)
     out = Path("console_scripts"); out.mkdir(exist_ok=True)
     path = out / f"{basename}_console.js"
     path.write_text(js, encoding="utf-8")
