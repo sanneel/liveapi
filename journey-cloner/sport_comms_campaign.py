@@ -114,6 +114,17 @@ TPL_EMAIL_PREHEADER = (
     "en una semana "
 )
 TPL_EMAIL_NAME = "JBCL - Scratch Card - Arg vs Eng - 15.07 29.07.2026 16:28:20"
+# The email BODY copy, verbatim from the capture. Without replacing this the
+# email still reads "la semifinal Inglaterra vs Argentina" whatever fixture the
+# run is for — the same failure as the journey keeping the old campaign's
+# template id, one layer down where nobody looks.
+TPL_EMAIL_BODY_COPY = (
+    "🎁 Raspa la tarjeta y ganái un bono con la semifinal <strong>Inglaterra vs "
+    "Argentina</strong>.\n<br><br>\n🎰 Depositá y activá tu bono como "
+    "<strong>Freebet</strong>.\n<br><br>\n🎉 Además, te llevái un <strong>Freebet "
+    "extra de $1.000</strong> que se activa el miércoles que viene.\n<br><br>\n"
+    "🔥 Solo raspa y probá tu suerte. <strong>¡Se viene la raja!</strong>"
+)
 # The full-width hero in the email body. The 40%-wide one below it is the CTA
 # button artwork and is campaign-agnostic, so it stays as captured.
 TPL_EMAIL_HERO = (
@@ -277,6 +288,12 @@ def read_spec(path: Path, promo_link: str = ""):
         missing.append("Pop-up (Cat-fish) title/description/caption")
     if not (spec.email.subject_es and spec.email.preheader_es):
         missing.append("Email subject/pre-header")
+    if not spec.email.desc_es.strip():
+        missing.append(
+            'Email Description (the body copy) — without it the email keeps the '
+            'captured campaign\'s body, still reading "la semifinal Inglaterra '
+            'vs Argentina" for a different fixture'
+        )
     if missing:
         raise Refused("missing input:\n  - " + "\n  - ".join(missing))
     return spec
@@ -321,18 +338,8 @@ def prepare(campaign: dict, spec, now: datetime | None = None,
         # Links: both captured slugs collapse onto this run's single slug.
         s = s.replace(TPL_SLUG_EN, slug)
         s = s.replace(TPL_SLUG_ES, slug)
-        # SMS — the two distinct strings, before any shorter copy replacement.
-        s = s.replace(json_escape(TPL_SMS_PRIMARY), json_escape(sms_es))
-        s = s.replace(json_escape(TPL_SMS_RAW), json_escape(sms_en))
-        # Notification / pop-up copy. EN slots first: the captured EN and ES
-        # values are identical for title/caption, so replacing ES first would
-        # also consume the EN slot and both languages would ship ES copy.
-        s = s.replace(json_escape(TPL_POPUP_DES_EN), json_escape(spec.popup.desc_en))
-        s = s.replace(json_escape(TPL_POPUP_DES_ES), json_escape(spec.popup.desc_es))
-        s = replace_lang(s, TPL_NC_TITLE, spec.nc.title_en, spec.nc.title_es)
-        s = replace_lang(s, TPL_NC_DES, spec.nc.desc_en, spec.nc.desc_es)
-        s = replace_lang(s, TPL_NC_CAPTION, spec.nc.caption_en, spec.nc.caption_es)
-        s = replace_lang(s, TPL_POPUP_TITLE, spec.popup.title_en, spec.popup.title_es)
+        # Channel copy is NOT string-replaced — see set_channel_copy. Only
+        # values that are unambiguous in the serialized body are swapped here.
         # Artwork + the email the journey points at: filled at paste time.
         s = s.replace(TPL_NC_ICON, NC_ICON_TOKEN)
         s = s.replace(TPL_POPUP_BG, POPUP_BG_TOKEN)
@@ -343,17 +350,47 @@ def prepare(campaign: dict, spec, now: datetime | None = None,
 
     create = json.loads(swap_journey(TPL_CREATE.read_text(encoding="utf-8")))
     save = json.loads(swap_journey(TPL_SAVE.read_text(encoding="utf-8")))
+
+    nc_copy = {
+        "title": {"en": spec.nc.title_en, "es": spec.nc.title_es},
+        "description": {"en": spec.nc.desc_en, "es": spec.nc.desc_es},
+        "caption": {"en": spec.nc.caption_en, "es": spec.nc.caption_es},
+    }
+    popup_copy = {
+        "title": {"en": spec.popup.title_en, "es": spec.popup.title_es},
+        "description": {"en": spec.popup.desc_en, "es": spec.popup.desc_es},
+        "caption": {"en": spec.popup.caption_en, "es": spec.popup.caption_es},
+    }
+    written = {}
     for body in (create, save):
         body["duplicatedFromId"] = None
         body["duplicatedFromVersion"] = None
         body.pop("changeHistory", None)
+        written["nc"] = set_channel_copy(body, TPL_NC_NODE, nc_copy)
+        written["popup"] = set_channel_copy(body, TPL_POPUP_NODE, popup_copy)
+        written["sms"] = set_sms_text(body, sms_en, sms_es)
+    # A node the capture no longer contains means the template changed under us
+    # and this run would ship the captured copy. Refuse rather than emit.
+    for chan, n in written.items():
+        if not n:
+            raise Refused(
+                f"wrote no {chan} copy — the {chan} node was not found in the "
+                f"template. The template changed shape; this build would ship "
+                f"the captured campaign's copy."
+            )
     save["stopAt"] = stop_dotnet
     save["rawJourneyData"]["infoValues"]["stopAt"] = stop_plain
 
     # ── the email content, created before the journey so its id can be wired ──
+    # The sheet's cell is plain text (often several lines); the body is HTML.
+    body_copy = "\n<br><br>\n".join(
+        line.strip() for line in spec.email.desc_es.splitlines() if line.strip()
+    )
+
     def swap_email(text: str) -> str:
         s = text
         s = s.replace(TPL_SLUG_EN, slug).replace(TPL_SLUG_ES, slug)
+        s = s.replace(json_escape(TPL_EMAIL_BODY_COPY), json_escape(body_copy))
         s = s.replace(json_escape(TPL_EMAIL_SUBJECT), json_escape(spec.email.subject_es))
         s = s.replace(json_escape(TPL_EMAIL_PREHEADER), json_escape(spec.email.preheader_es))
         s = s.replace(TPL_EMAIL_HERO, EMAIL_HERO_TOKEN)
@@ -370,6 +407,11 @@ def prepare(campaign: dict, spec, now: datetime | None = None,
         "email_save": email_save,
         "campaign": campaign,
         "promo_slug": slug,
+        # What the sheet asked for, so verify() can check the body against the
+        # brief rather than only against the capture's leftovers.
+        "expected": {TPL_NC_NODE: nc_copy, TPL_POPUP_NODE: popup_copy,
+                     "sms": {"en": sms_en, "es": sms_es},
+                     "email_body": body_copy},
         "journey_name": journey_sp,
         # The notification nodes label themselves with a "| CS&SP |" spelling of
         # the same journey. It is a second literal, so it is a second thing that
@@ -391,6 +433,13 @@ def prepare(campaign: dict, spec, now: datetime | None = None,
     ]
     for w in spec.warnings:
         report.append(f"sheet warning: {w}")
+    if spec.email.button_es.strip():
+        # Said out loud rather than dropped silently: the captured email's CTA is
+        # an image, not a text button, so there is no slot for this row.
+        report.append(
+            f"NOTE  the sheet's Email Button ({spec.email.button_es!r}) is not "
+            f"used — this email's CTA is the hero image, not a text button."
+        )
     return bundle, report
 
 
@@ -399,18 +448,111 @@ def json_escape(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)[1:-1]
 
 
-def replace_lang(text: str, captured: str, en: str, es: str) -> str:
-    """Write EN then ES into a field the capture holds twice with one value.
+# ── structural substitution ─────────────────────────────────────────────
+# Channel copy CANNOT be written by string replacement. The captured EN and ES
+# slots hold identical strings for title, description and caption, and each
+# value appears 8-16 times across the compiled activity, its
+# objectForSend.variables list and the rawJourneyData mirror. A global replace
+# therefore writes ONE language into every copy, and the pop-up's caption is the
+# same literal as the notification's, so it gets clobbered too. Both languages
+# and both nodes have to be addressed by NAME, which the template already
+# encodes: title-en / title-es, caption_en / caption_es, des-en, description_es.
+_LANG_FIELD_RE = re.compile(r"^(title|des|description|caption)[-_](en|es)$")
 
-    The captured EN and ES slots carry identical strings for several fields.
-    Replacing with the ES value first would rewrite both, and the EN copy from
-    the sheet would never land — the silent class of bug the runbook warns about.
+TPL_NC_NODE = "JBCL NC Dynamic 2026"
+TPL_POPUP_NODE = "JBCL Pop-up CatFish 2026"
+
+
+def _storages(body: dict, predicate):
+    """Every dict holding an activity's settings — compiled AND editor mirror.
+
+    A journey lives twice. Writing one and not the other is the blank-canvas
+    bug, so every structural write goes through here.
     """
-    cap = json_escape(captured)
-    if cap not in text:
-        return text
-    first, rest = text.split(cap, 1)
-    return first + json_escape(en) + rest.replace(cap, json_escape(es))
+    cfg = body.get("rawJourneyData", {}).get("activitiesConfiguration", {})
+    for a in body.get("activities", []):
+        if not predicate(a):
+            continue
+        yield a.get("initializationData") or {}
+        mirror = cfg.get(a.get("activityId"))
+        if isinstance(mirror, dict) and isinstance(mirror.get("data"), dict):
+            yield mirror["data"]
+
+
+def _comms_node(node_name: str):
+    def match(a: dict) -> bool:
+        init = a.get("initializationData") or {}
+        return (a.get("activityName") == "notification_center"
+                and (init.get("singleChannel") or {}).get("activityName") == node_name)
+    return match
+
+
+def set_channel_copy(body: dict, node_name: str, copy: dict) -> int:
+    """Write one comms node's per-language copy into both storages.
+
+    `copy` maps a field base name ("title", "description", "caption") to
+    {"en": ..., "es": ...}. Only names the template already carries are written,
+    and `%placeholder%` values are left alone — they are template references,
+    not copy.
+    """
+    writes = 0
+    for store in _storages(body, _comms_node(node_name)):
+        tabs = (store.get("singleChannel") or {}).get("localizedLanguagesTab") or {}
+        for lang_tab in tabs.values():
+            if not isinstance(lang_tab, dict):
+                continue
+            for key, value in list(lang_tab.items()):
+                m = _LANG_FIELD_RE.match(key)
+                if not m or (isinstance(value, str) and value.startswith("%")):
+                    continue
+                base, lang = m.group(1), m.group(2)
+                base = "description" if base in ("des", "description") else base
+                if base in copy and copy[base].get(lang):
+                    lang_tab[key] = copy[base][lang]
+                    writes += 1
+        for var in (store.get("objectForSend") or {}).get("variables") or []:
+            m = _LANG_FIELD_RE.match(var.get("name") or "")
+            if not m or str(var.get("value", "")).startswith("%"):
+                continue
+            base, lang = m.group(1), m.group(2)
+            base = "description" if base in ("des", "description") else base
+            if base in copy and copy[base].get(lang):
+                var["value"] = copy[base][lang]
+                writes += 1
+    return writes
+
+
+def set_sms_text(body: dict, en: str, es: str) -> int:
+    """Write the SMS copy into every place the capture keeps it, per language.
+
+    The capture holds the same string five times — `rawValues.messageText`, the
+    two `rawValues.localizedMessageTexts` entries and both
+    `smsSettings.localizedMessageTexts` entries — plus the mirror. Replacing the
+    literal wrote the Spanish text into the English slot too.
+    """
+    by_lang = {"en": en, "es": es}
+    writes = 0
+    for store in _storages(body, lambda a: a.get("activityName") == "dextra_sms"):
+        for holder_key in ("rawValues", "smsSettings"):
+            holder = store.get(holder_key)
+            if not isinstance(holder, dict):
+                continue
+            if isinstance(holder.get("messageText"), str):
+                holder["messageText"] = es          # the default/primary copy
+                writes += 1
+            loc = holder.get("localizedMessageTexts")
+            if isinstance(loc, dict):               # rawValues: {"en": {...}}
+                for lang, entry in loc.items():
+                    if isinstance(entry, dict) and by_lang.get(lang):
+                        entry["messageText"] = by_lang[lang]
+                        writes += 1
+            elif isinstance(loc, list):             # smsSettings: [{languageCode}]
+                for entry in loc:
+                    lang = entry.get("languageCode")
+                    if by_lang.get(lang):
+                        entry["messageText"] = by_lang[lang]
+                        writes += 1
+    return writes
 
 
 # ── verify — refuses, does not warn ─────────────────────────────────────
@@ -425,6 +567,35 @@ def verify(bundle: dict) -> list[tuple[bool, str]]:
 
     reference = json.loads(TPL_SAVE.read_text(encoding="utf-8"))
     leaked = audit_inherited_content(save, reference)
+
+    # Read the copy back out of the built body, per node and per language, and
+    # compare it with the sheet. This is the check that would have caught the
+    # pop-up wearing the notification's caption.
+    expected = bundle.get("expected") or {}
+    copy_mismatches: list[str] = []
+    for node_name in (TPL_NC_NODE, TPL_POPUP_NODE):
+        want = expected.get(node_name) or {}
+        for store in _storages(save, _comms_node(node_name)):
+            tabs = (store.get("singleChannel") or {}).get("localizedLanguagesTab") or {}
+            for lang_tab in tabs.values():
+                if not isinstance(lang_tab, dict):
+                    continue
+                for key, value in lang_tab.items():
+                    m = _LANG_FIELD_RE.match(key)
+                    if not m or (isinstance(value, str) and value.startswith("%")):
+                        continue
+                    base = "description" if m.group(1) in ("des", "description") else m.group(1)
+                    lang = m.group(2)
+                    target = (want.get(base) or {}).get(lang)
+                    if target and value != target:
+                        copy_mismatches.append(
+                            f"{node_name} {key}={value[:28]!r} want {target[:28]!r}")
+    sms_want = expected.get("sms") or {}
+    for store in _storages(save, lambda a: a.get("activityName") == "dextra_sms"):
+        for entry in ((store.get("smsSettings") or {}).get("localizedMessageTexts") or []):
+            lang, got = entry.get("languageCode"), entry.get("messageText")
+            if sms_want.get(lang) and got != sms_want[lang]:
+                copy_mismatches.append(f"sms[{lang}] wrong")
 
     iv = save.get("rawJourneyData", {}).get("infoValues", {})
     acts = {a.get("activityId") for a in save.get("activities", [])}
@@ -487,6 +658,20 @@ def verify(bundle: dict) -> list[tuple[bool, str]]:
          "notification and pop-up descriptions replaced"),
         (TPL_EMAIL_SUBJECT not in s_email and TPL_EMAIL_PREHEADER not in s_email,
          "email subject and pre-header replaced"),
+        # Only the captured literal, not the fixture's name: the operator's own
+        # subject or pre-header may legitimately name the teams.
+        (TPL_EMAIL_BODY_COPY not in s_email,
+         "email body no longer carries the captured campaign's copy"),
+        (bool(expected.get("email_body")) and expected["email_body"] in s_email,
+         "email body carries the sheet's copy"),
+        (TPL_NC_CAPTION not in both,
+         "notification/pop-up captions replaced (the shared 'Juega Ya ' literal)"),
+        # The bug this catches: a global string replace wrote one language into
+        # every slot, so EN and ES ended up identical and the pop-up inherited
+        # the notification's caption. Compare the two nodes AND the two
+        # languages against what the sheet actually said.
+        (not copy_mismatches, "every channel field matches the sheet"
+         + (f" (WRONG: {copy_mismatches[:3]})" if copy_mismatches else "")),
         (bool(iv.get("stopAt")) and save.get("stopAt", "").startswith(iv["stopAt"][:19]),
          f"both storages agree on stopAt ({iv.get('stopAt')})"),
         (iv.get("journeyName") == save.get("journeyName"),
