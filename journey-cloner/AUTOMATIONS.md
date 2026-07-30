@@ -107,6 +107,72 @@ date, Chile kick-off time and promocode. Per-team templates under
 `templates/udch/` and `templates/colocolo/`; a team with no file of its own
 inherits the base team's.
 
+### Prediction — `prediction_campaign.py` → Optimization ▸ Prediction
+Updates a Multi Number Prediction promo from a pasted Google Sheets table:
+uploads SPA + widget content, both manifests, SPA + widget settings, then PUTs
+the promo draft — nine requests in the exact sequence captured in
+`templates/prediction/multi_number_prediction.json`.
+
+---
+
+## Wheels & cards
+
+### Randomizers — `randomizer_campaign.py` → Optimization ▸ Randomizers
+Sport Wheel of Fortune, Casino Wheel of Fortune, Raspa y Gana. A randomizer is a
+weighted set of prize slices, each routing a winner to a journey
+(`journeyId` + `activityId`).
+
+**The slices come from the captured template and cannot be added or removed** —
+today 6 (sport_wof), 4 (casino_wof), 5 (casino_scratch). A campaign wanting 7
+prizes cannot be built until a 7-slice wheel is captured. Weights must sum to
+100, and `journeys` needs exactly one entry per slice.
+
+Because prize routing needs journey ids that do not exist until the journeys are
+created, `compose.py --batch` can build the **whole promotion in one paste**:
+give it `{"journeys": [...], "randomizer": {...}}` and the script creates the
+journeys, then creates and fills the wheel with the ids it just received. Each
+prize names its journey by `journey_name`; the script resolves the name at run
+time. It refuses rather than guess when the routing is unusable — silently
+keeping the template's own routing would point a live wheel at another
+campaign's journeys.
+
+---
+
+## Comms
+
+### PMCL Tournament — `tournament_pmcl_campaign.py` → Optimization ▸ PMCL Tournament
+Notification + pop-up + SMS wired to the Smartico tournament deeplink
+(`#_smartico_dp=dp:<slug>&id=<id>`), driven from a pasted sheet. The email is
+part of this run: `tournament_pmcl_email.py` is a **module it imports**, not a
+separate generator — it builds the substituted email *content*, and the console
+script creates + publishes it at paste time, then swaps the resulting content id
+into the journey.
+
+### Comms journey from content — `journey_composer.py` → **AI** page
+Composes an arbitrary comms chain from captured nodes with **your** copy:
+`nc` → `popup` → `sms` → `email`, one journey per date (the channels are nodes in
+one chain, not separate journeys).
+
+Four settings are not optional here, because a comms node is copied whole and
+whatever you leave unset stays the captured campaign's:
+
+| setting | on | leaving it unset ships |
+| --- | --- | --- |
+| `icon` | `nc` | the old promotion's card artwork |
+| `image` | `popup` | the old pop-up background (`background_image_src`, *not* `icon`) |
+| `template` | `email` | the old campaign's content-studio email |
+| `link_en/es` | `nc` | players sent to the old promo page |
+
+The inherited-content check refuses a build that still shares any content value
+with its reference, so an unset one is a failed build rather than a cosmetic
+slip. That check exists because a "Physical Prize" journey once shipped carrying
+the Game of the Week SMS, email and promo link.
+
+### GOW comms — `comms_campaign.py` → built with GOW
+The comms half of a GOW campaign; runs as part of that tab by default.
+
+---
+
 ### Scratch Card Comms — `sport_comms_campaign.py` → Optimization ▸ Scratch Card Comms
 The fixture scratch-card promo announced on four channels from **one** journey:
 SMS, Notification Center, Cat-fish pop-up and email, with waits, two decision
@@ -185,72 +251,6 @@ Contract: `scripts/test_sport_comms.py` — offline, no key. It asserts the
 prepared body differs from the template only in leaves holding a value the
 generator meant to write, and feeds `verify()` eight bodies that each break one
 rule to prove it refuses rather than warns.
-
-### Prediction — `prediction_campaign.py` → Optimization ▸ Prediction
-Updates a Multi Number Prediction promo from a pasted Google Sheets table:
-uploads SPA + widget content, both manifests, SPA + widget settings, then PUTs
-the promo draft — nine requests in the exact sequence captured in
-`templates/prediction/multi_number_prediction.json`.
-
----
-
-## Wheels & cards
-
-### Randomizers — `randomizer_campaign.py` → Optimization ▸ Randomizers
-Sport Wheel of Fortune, Casino Wheel of Fortune, Raspa y Gana. A randomizer is a
-weighted set of prize slices, each routing a winner to a journey
-(`journeyId` + `activityId`).
-
-**The slices come from the captured template and cannot be added or removed** —
-today 6 (sport_wof), 4 (casino_wof), 5 (casino_scratch). A campaign wanting 7
-prizes cannot be built until a 7-slice wheel is captured. Weights must sum to
-100, and `journeys` needs exactly one entry per slice.
-
-Because prize routing needs journey ids that do not exist until the journeys are
-created, `compose.py --batch` can build the **whole promotion in one paste**:
-give it `{"journeys": [...], "randomizer": {...}}` and the script creates the
-journeys, then creates and fills the wheel with the ids it just received. Each
-prize names its journey by `journey_name`; the script resolves the name at run
-time. It refuses rather than guess when the routing is unusable — silently
-keeping the template's own routing would point a live wheel at another
-campaign's journeys.
-
----
-
-## Comms
-
-### PMCL Tournament — `tournament_pmcl_campaign.py` → Optimization ▸ PMCL Tournament
-Notification + pop-up + SMS wired to the Smartico tournament deeplink
-(`#_smartico_dp=dp:<slug>&id=<id>`), driven from a pasted sheet. The email is
-part of this run: `tournament_pmcl_email.py` is a **module it imports**, not a
-separate generator — it builds the substituted email *content*, and the console
-script creates + publishes it at paste time, then swaps the resulting content id
-into the journey.
-
-### Comms journey from content — `journey_composer.py` → **AI** page
-Composes an arbitrary comms chain from captured nodes with **your** copy:
-`nc` → `popup` → `sms` → `email`, one journey per date (the channels are nodes in
-one chain, not separate journeys).
-
-Four settings are not optional here, because a comms node is copied whole and
-whatever you leave unset stays the captured campaign's:
-
-| setting | on | leaving it unset ships |
-| --- | --- | --- |
-| `icon` | `nc` | the old promotion's card artwork |
-| `image` | `popup` | the old pop-up background (`background_image_src`, *not* `icon`) |
-| `template` | `email` | the old campaign's content-studio email |
-| `link_en/es` | `nc` | players sent to the old promo page |
-
-The inherited-content check refuses a build that still shares any content value
-with its reference, so an unset one is a failed build rather than a cosmetic
-slip. That check exists because a "Physical Prize" journey once shipped carrying
-the Game of the Week SMS, email and promo link.
-
-### GOW comms — `comms_campaign.py` → built with GOW
-The comms half of a GOW campaign; runs as part of that tab by default.
-
----
 
 ## Assets
 

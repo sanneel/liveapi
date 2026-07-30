@@ -179,10 +179,6 @@ GENERATORS: List[dict] = [
      "label": "Prediction",
      "what": "Multi-number prediction promo from a pasted sheet",
      "script": "prediction_campaign.py", "tab": "prediction"},
-    {"key": "sport_comms", "group": "Sport", "brand": "JBCL",
-     "label": "Scratch Card Comms",
-     "what": "SMS + notification + pop-up + email for a liveapi campaign",
-     "script": "sport_comms_campaign.py", "tab": "sport_comms"},
 
     # ── Wheels & cards ────────────────────────────────────────────────────
     {"key": "randomizers", "group": "Wheels & cards", "brand": "JBCL/PMCL",
@@ -203,6 +199,10 @@ GENERATORS: List[dict] = [
      "label": "GOW comms",
      "what": "The comms half of a GOW campaign (built with it by default)",
      "script": "comms_campaign.py", "tab": "gow"},
+    {"key": "sport_comms", "group": "Comms", "brand": "JBCL",
+     "label": "Scratch Card Comms",
+     "what": "SMS + NC + pop-up + email for a fixture scratch card, one journey",
+     "script": "sport_comms_campaign.py", "tab": "sport_comms"},
 
     # ── Assets ────────────────────────────────────────────────────────────
     {"key": "slot_cards", "group": "Assets", "brand": "JBCL",
