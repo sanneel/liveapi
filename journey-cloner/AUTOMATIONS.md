@@ -190,8 +190,17 @@ python sport_comms_campaign.py --campaign <liveapi-slug> --spec -   # sheet on s
 
 - **the liveapi campaign** (`app/models/campaign.py`) gives the journey name
   (its title), the schedule (`expires_at` → `stopAt`, so the comms cannot
-  outlive the page they link to) and the email hero image (its rendered card,
-  `/r/<slug>.png`, uploaded to the media library at paste time);
+  outlive the page they link to) and — the point of the whole feature — the
+  **email banner**: the campaign's copy link (`/r/<slug>.png`) is written into
+  the banner slot the captured email already carries, keeping its
+  `?limit=1&v={{JourneyActivityId}}&u={{playerID}}` query, so the card renders
+  live odds on every open and each open is tracked per player. The capture
+  held that slot two ways — the literal placeholder `variable` in one body and
+  the PREVIOUS campaign's real URL (`engvsarg`) in the other — and un-replaced,
+  one is a broken image in the inbox and the other the wrong campaign's card.
+  `verify()` refuses both, and refuses when `PUBLIC_BASE_URL` is unset (the
+  banner needs an absolute URL a mail client can fetch). The email *hero* is
+  ordinary promo artwork, picked at paste time like the icon and background;
 - **the content sheet** gives every channel's EN/ES copy through
   `spec_parser.py`, and its `Link` row gives the randomizer promo slug that all
   four channels point at.

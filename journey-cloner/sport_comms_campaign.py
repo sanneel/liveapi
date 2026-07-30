@@ -11,8 +11,11 @@ Two inputs, both of which the operator already has:
 
   --campaign <slug>   a campaign created in liveapi (app/models/campaign.py).
                       Supplies the journey name (its title), the schedule (its
-                      expires_at) and the email hero image (its rendered card,
-                      /r/<slug>.png).
+                      expires_at) and — the point of the whole feature — the
+                      email banner: its copy link (/r/<slug>.png) is written
+                      into the email HTML's banner slot with the captured
+                      `v={{JourneyActivityId}}&u={{playerID}}` tracking params,
+                      so the card renders live odds on every open, per player.
   --spec <file>       the content sheet, pasted/saved as tab-separated text.
                       Supplies every channel's EN/ES copy and — from its "Link"
                       row — the randomizer promo slug all four channels use.
@@ -131,6 +134,15 @@ TPL_EMAIL_HERO = (
     "https://{{cdn_hostname}}/c93ad623-44ae-40f6-9aa5-b1aef7fd931a/"
     "3fe1396f-45c4-4335-964b-e36f054d4f6a.png"
 )
+# The banner before the footer is the POINT of the liveapi campaign: its img src
+# is the campaign's copy link — /r/<slug>.png, rendered live per open — with
+# `v={{JourneyActivityId}}&u={{playerID}}` so each open is tracked per player.
+# The capture holds the slot two ways: the create body still carries the
+# PREVIOUS run's real URL (engvsarg), the save body the reusable placeholder
+# ("variable"). Both must become this run's campaign URL; the query string
+# stays as captured (limit=1 — the email banner shows one match).
+TPL_BANNER_PLACEHOLDER = "variable?limit="
+TPL_BANNER_STALE = "https://jb-service.cl/r/engvsarg.png?limit="
 
 TPL_EMAIL_CONTENT_ID = "CSE-0-15619"   # the copied campaign's email — must go
 # The canvas LABEL of the email node ("<content id> <content name>"). It is not
@@ -399,12 +411,27 @@ def prepare(campaign: dict, spec, now: datetime | None = None,
         line.strip() for line in spec.email.desc_es.splitlines() if line.strip()
     )
 
+    # The banner needs an absolute URL the mail client can fetch, so a missing
+    # PUBLIC_BASE_URL is a refusal, not a broken image discovered in an inbox.
+    if not campaign["image_url"]:
+        raise Refused(
+            "PUBLIC_BASE_URL is not set, so there is no public URL for the "
+            "campaign card — the email banner would ship a broken image. "
+            "Set it in the liveapi environment."
+        )
+    banner_src = f"{campaign['image_url']}?limit="
+
     def swap_email(text: str) -> str:
         s = text
         s = s.replace(TPL_SLUG_EN, slug).replace(TPL_SLUG_ES, slug)
         s = s.replace(json_escape(TPL_EMAIL_BODY_COPY), json_escape(body_copy))
         s = s.replace(json_escape(TPL_EMAIL_SUBJECT), json_escape(spec.email.subject_es))
         s = s.replace(json_escape(TPL_EMAIL_PREHEADER), json_escape(spec.email.preheader_es))
+        # The live-odds banner: both the reusable placeholder (save body) and
+        # the previous run's real URL (create body) become this campaign's copy
+        # link. The captured query (&v=/&u= tracking, limit) stays as is.
+        s = s.replace(TPL_BANNER_PLACEHOLDER, banner_src)
+        s = s.replace(TPL_BANNER_STALE, banner_src)
         s = s.replace(TPL_EMAIL_HERO, EMAIL_HERO_TOKEN)
         s = s.replace(TPL_EMAIL_NAME, email_name)
         return s
@@ -423,7 +450,7 @@ def prepare(campaign: dict, spec, now: datetime | None = None,
         # brief rather than only against the capture's leftovers.
         "expected": {TPL_NC_NODE: nc_copy, TPL_POPUP_NODE: popup_copy,
                      "sms": {"en": sms_en, "es": sms_es},
-                     "email_body": body_copy},
+                     "email_body": body_copy, "banner_src": banner_src},
         "journey_name": journey_sp,
         # The notification nodes label themselves with a "| CS&SP |" spelling of
         # the same journey. It is a second literal, so it is a second thing that
@@ -437,7 +464,9 @@ def prepare(campaign: dict, spec, now: datetime | None = None,
         f"promo link    {PROMO_URL.format(slug=slug)}  (in all four channels)",
         f"stopAt        {stop_plain}  ({'given on this run' if stop_at.strip() else 'campaign expires_at'})",
         f"email         {email_name!r}  (created first, id wired into the journey)",
-        f"hero image    {campaign['image_url'] or '(no PUBLIC_BASE_URL — file picker)'}",
+        f"email banner  {banner_src}1&v={{{{JourneyActivityId}}}}&u={{{{playerID}}}}  "
+        f"(the campaign card, rendered live per open, tracked per player)",
+        f"email hero    picked at paste time (promo artwork)",
         f"sms es        {sms_es[:78]!r}",
         f"nc title es   {spec.nc.title_es[:60]!r}",
         f"popup title   {spec.popup.title_es[:60]!r}",
@@ -613,6 +642,8 @@ def verify(bundle: dict) -> list[tuple[bool, str]]:
     reference = json.loads(TPL_SAVE.read_text(encoding="utf-8"))
     leaked = audit_inherited_content(save, reference)
 
+    s_email_create = json.dumps(bundle["email_create"], ensure_ascii=False)
+    s_email_all = s_email + s_email_create
     journey_slugs = set(re.findall(r"/randomizer/([A-Za-z0-9._-]+)", both))
     email_slugs = set(re.findall(r"/randomizer/([A-Za-z0-9._-]+)", s_email))
     email_html = ""
@@ -701,7 +732,22 @@ def verify(bundle: dict) -> list[tuple[bool, str]]:
         (POPUP_BG_TOKEN in both and TPL_POPUP_BG not in both,
          "pop-up background replaced (uploaded at paste)"),
         (EMAIL_HERO_TOKEN in s_email and TPL_EMAIL_HERO not in s_email,
-         "email hero image replaced by the campaign card"),
+         "email hero placeholder present (artwork uploaded at paste)"),
+        # The banner is the campaign's whole contribution to the email: its live
+        # card URL, per-player tracked. Both bodies (create AND save) must carry
+        # it — the capture had the placeholder in one and a STALE campaign's URL
+        # in the other, and each is a broken or wrong image in a real inbox.
+        (TPL_BANNER_PLACEHOLDER not in s_email_all,
+         'banner placeholder ("variable?…") filled in both email bodies'),
+        (TPL_BANNER_STALE not in s_email_all,
+         "no stale campaign URL left in the banner (engvsarg)"),
+        (bool(expected.get("banner_src"))
+         and s_email.count(expected["banner_src"]) == 1
+         and s_email_create.count(expected["banner_src"]) == 1,
+         f"banner is this campaign's copy link, once per body "
+         f"({expected.get('banner_src', '?')}…)"),
+        ("v={{JourneyActivityId}}&u={{playerID}}" in email_html,
+         "banner keeps the per-player tracking parameters"),
         (TPL_JOURNEY_COPY not in both and TPL_JOURNEY_SP not in both
          and TPL_JOURNEY_CSSP not in both,
          'journey renamed (no "Copy of", no captured name)'),
@@ -767,7 +813,6 @@ JS_TEMPLATE = r"""// Sport scratch-card comms — @JOURNEY_NAME@ — generated @
   const BRAND = @BRAND@;
   const FOLDER_ID = @FOLDER_ID@;
   const CAMPAIGN = @CAMPAIGN@;
-  const HERO_URL = @HERO_URL@;          // liveapi campaign card, '' if unset
   const EMAIL_CREATE = @EMAIL_CREATE@;
   const EMAIL_SAVE = @EMAIL_SAVE@;
   const JOURNEY_CREATE = @JOURNEY_CREATE@;
@@ -813,20 +858,6 @@ JS_TEMPLATE = r"""// Sport scratch-card comms — @JOURNEY_NAME@ — generated @
       img.src = url;
     });
   }
-  // The campaign card lives on liveapi, not the backoffice CDN, so it has to be
-  // uploaded to the media library like any other asset. If the browser cannot
-  // fetch it cross-origin, fall back to picking the file by hand.
-  async function heroFile() {
-    if (HERO_URL) {
-      try {
-        const r = await fetch(HERO_URL, { mode: 'cors', credentials: 'omit' });
-        if (r.ok) { const b = await r.blob(); console.log('    campaign card fetched from liveapi'); return new File([b], CAMPAIGN + '.png', { type: b.type || 'image/png' }); }
-        console.warn('    campaign card HTTP ' + r.status + ' — falling back to a file picker');
-      } catch (e) { console.warn('    campaign card not fetchable (' + e.message + ') — falling back to a file picker'); }
-    }
-    return pickFile('the EMAIL HERO (the campaign card)');
-  }
-
   const auth = await obtainAuth();
   const H = (ct) => { const h = { accept: 'application/json, text/plain, */*', authorization: auth, 'x-brand': BRAND }; if (ct) h['content-type'] = ct; return h; };
 
@@ -865,8 +896,9 @@ JS_TEMPLATE = r"""// Sport scratch-card comms — @JOURNEY_NAME@ — generated @
 
   console.log('%cSport comms — campaign ' + CAMPAIGN, 'color:#3b82f6;font-weight:bold;font-size:14px');
   try {
-    // 1. artwork
-    const heroUrl = await upload(await heroFile(), 'email hero');
+    // 1. artwork — three pickers. The campaign's live card is NOT uploaded:
+    // it is already linked inside the email banner with per-player tracking.
+    const heroUrl = await upload(await pickFile('the EMAIL HERO (promo artwork)'), 'email hero');
     const iconUrl = await upload(await pickFile('the NOTIFICATION ICON (200x200)'), 'notification icon');
     const bgUrl = await upload(await pickFile('the POP-UP BACKGROUND'), 'pop-up background');
 
@@ -890,7 +922,7 @@ JS_TEMPLATE = r"""// Sport scratch-card comms — @JOURNEY_NAME@ — generated @
                          .split('%%NC_ICON%%').join(iconUrl)
                          .split('%%POPUP_BG%%').join(bgUrl);
     let createStr = fill(JOURNEY_CREATE), saveStr = fill(JOURNEY_SAVE);
-    const map = idMap(createStr);
+    const map = idMap(createStr + saveStr);
     createStr = applyMap(createStr, map); saveStr = applyMap(saveStr, map);
 
     r = await fetch(BASE + '/journey-drafts', { method: 'POST', headers: H('application/json'), credentials: 'include', body: createStr });
@@ -919,7 +951,6 @@ def build_js(bundle: dict) -> str:
     js = js.replace("@BRAND@", json.dumps(BRAND))
     js = js.replace("@FOLDER_ID@", json.dumps(DEFAULT_FOLDER_ID))
     js = js.replace("@CAMPAIGN@", json.dumps(bundle["campaign"]["slug"]))
-    js = js.replace("@HERO_URL@", json.dumps(bundle["campaign"]["image_url"]))
     for token, key in (
         ("@EMAIL_CREATE@", "email_create"),
         ("@EMAIL_SAVE@", "email_save"),
@@ -987,8 +1018,9 @@ def main() -> int:
     path = emit(bundle, args.name)
     print(f"\nConsole script written: {path}")
     print("Paste it into the DevTools console on a logged-in backoffice tab.")
-    print("It asks for the notification icon and the pop-up background; the email")
-    print("hero comes from the campaign card automatically.")
+    print("It asks for three images: the email hero (promo artwork), the notification")
+    print("icon and the pop-up background. The campaign's live card is already linked")
+    print("inside the email banner — nothing to upload for it.")
     return 0
 
 

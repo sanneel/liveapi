@@ -330,7 +330,7 @@
                 <option value="{{ c.slug }}" data-expires="{{ c.expires_at }}" {% if scomms.campaign == c.slug %}selected{% endif %}>{{ c.title }} — /{{ c.slug }} · {{ c.sport }} · {{ c.expires_label }}</option>
               {% endfor %}
             </select>
-            <p class="help" style="margin-top:6px">Gives the journey name and the email hero (its rendered card).</p>
+            <p class="help" style="margin-top:6px">Gives the journey name, the default stop date, and the <b>email banner</b> — its copy link (<span class="mono">/r/&lt;slug&gt;.png</span>) goes into the email with per-player tracking, so the card renders live on every open.</p>
           {% endif %}
         </div>
         <div class="field">
@@ -392,7 +392,7 @@
               <li>Click <b>Copy script</b> above.</li>
               <li>Open the backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
               <li>Paste and press Enter. If it says "Waiting for a token", click anything in the UI.</li>
-              <li>It asks for two images — the <b>notification icon</b> and the <b>pop-up background</b>. The email hero comes from the campaign card automatically.</li>
+              <li>It asks for three images — the <b>email hero</b> (promo artwork), the <b>notification icon</b> and the <b>pop-up background</b>. The campaign's live card is already linked inside the email banner; nothing to upload for it.</li>
               <li>Watch for the green line naming the journey id and the email content id.</li>
             </ol>
             <textarea id="scomms-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ scomms.console_script.text }}</textarea>
@@ -431,7 +431,7 @@
         <section class="card card-pad">
           <h2 class="card-title" style="margin-bottom:8px">How it works</h2>
           <div class="help" style="line-height:1.7">
-            <p style="margin:0 0 8px">Wraps <span class="mono">journey-cloner/sport_comms_campaign.py</span>, built from a HAR of the 15.07 ENG vs ARG run. The campaign gives the journey name, the stop date (its expiry) and the email hero; the sheet gives every channel's EN/ES copy and the promo slug.</p>
+            <p style="margin:0 0 8px">Wraps <span class="mono">journey-cloner/sport_comms_campaign.py</span>, built from a HAR of the 15.07 ENG vs ARG run. The campaign gives the journey name, the stop date (its expiry) and the <b>email banner</b> — its copy link with <span class="mono">v={{'{{'}}JourneyActivityId{{'}}'}}&amp;u={{'{{'}}playerID{{'}}'}}</span> tracking; the sheet gives every channel's EN/ES copy and the promo slug.</p>
             <p style="margin:0 0 8px">The email content is created <b>first</b>, and its id substituted into the journey. The recorded run skipped that step and left the journey pointing at the previous campaign's email — replayed as captured, every draft would have sent the wrong one.</p>
             <p style="margin:0">Drafts are left unpublished. A failed check writes nothing: an unreplaced link, a surviving captured id or artwork still shared with the capture is a refusal, not a warning.</p>
           </div>
