@@ -169,11 +169,29 @@ Two things the capture did that this generator deliberately does not:
 | --- | --- |
 | created email content `CSE-0-16076` but left the journey pointing at `CSE-0-15619` | that is the copied campaign's email. The order is reversed here — content first, its returned id substituted into the journey — and `verify()` refuses while the captured id survives |
 | pointed `link-en` at `/randomizer/sf-sc-2026` and `link-es` at `/randomizer/arg-eng-sc` | a leftover from the earlier semifinal campaign. Both languages get the sheet's one slug, and the sheet's own SMS copy has any stale randomizer URL rewritten |
+| left the email **body** as the previous campaign's copy | the body still read "la semifinal Inglaterra vs Argentina" whatever fixture the run was for. The sheet's `Email Description` row replaces it, and a sheet without that row is refused |
 
-Because the EN and ES slots hold *identical* strings in the capture for several
-fields, substitution writes EN into the first occurrence and ES into the rest
-(`replace_lang`) — replacing ES first would rewrite both and the EN copy would
-silently never land.
+The sheet's `Email Button` row is **not** used: this email's CTA is the hero
+image, not a text button, so there is no slot for it. The generator says so in
+its report rather than dropping the value silently.
+
+**Channel copy is written structurally, not by string replacement**, and this is
+the part to understand before changing anything. Each captured value appears
+8–16 times — in the compiled activity, in its `objectForSend.variables` list,
+and again in the `rawJourneyData` mirror — and the captured EN and ES slots hold
+*identical* strings for title, description and caption. Worse, the pop-up's
+caption is the same literal (`"Juega Ya "`) as the notification's. A global
+replace therefore wrote one language into every slot and gave the pop-up the
+notification's caption, while the sheet's pop-up caption was parsed and
+discarded. It looked fine: the captured literal was gone, so every
+leftover-detection check passed.
+
+`set_channel_copy` / `set_sms_text` address each field by **name** instead —
+the template already encodes the language (`title-en`, `caption_es`, `des-en`,
+`description_es`) — and write both storages. `verify()` then reads the copy back
+out per node and per language and compares it with the sheet, so a field that
+lands in the wrong language or the wrong node is a refusal rather than a
+draft that looks right.
 
 This is a **parallel** journey, so its canvas carries `dropEdge` / `mergeEdge` /
 `flowEntry` scaffolding beside the activity nodes. `COMPOSER_RULES.md`'s

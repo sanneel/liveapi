@@ -95,6 +95,69 @@ def main() -> int:
     check(G.TPL_EMAIL_CONTENT_ID not in both, "captured email content id gone")
     check(G.EMAIL_ID_TOKEN in both, "email id placeholder present")
 
+    print("\nper-node, per-language copy (the bug that shipped ES into EN slots):")
+    # Each captured literal appears 8-16 times across the compiled activity, its
+    # objectForSend.variables and the rawJourneyData mirror, and the pop-up's
+    # caption is the SAME literal as the notification's. A global string replace
+    # therefore wrote one language everywhere and gave the pop-up the
+    # notification's caption. Read the copy back out and compare with the sheet.
+    def node_tabs(body, node_name):
+        got = {}
+        for a in body["activities"]:
+            init = a.get("initializationData") or {}
+            if (a.get("activityName") == "notification_center"
+                    and (init.get("singleChannel") or {}).get("activityName") == node_name):
+                for lang, tab in init["singleChannel"]["localizedLanguagesTab"].items():
+                    if not isinstance(tab, dict):
+                        continue
+                    for k, v in tab.items():
+                        if G._LANG_FIELD_RE.match(k) and not str(v).startswith("%"):
+                            got[k] = v
+        return got
+
+    nc = node_tabs(save, G.TPL_NC_NODE)
+    pop = node_tabs(save, G.TPL_POPUP_NODE)
+    check(nc.get("title-en") == spec.nc.title_en, f"NC title-en is the sheet's EN ({nc.get('title-en')!r})")
+    check(nc.get("title-es") == spec.nc.title_es, "NC title-es is the sheet's ES")
+    check(nc.get("caption-en") == spec.nc.caption_en, f"NC caption-en is the sheet's EN ({nc.get('caption-en')!r})")
+    check(nc.get("caption-es") == spec.nc.caption_es, "NC caption-es is the sheet's ES")
+    check(nc.get("title-en") != nc.get("title-es"), "NC EN and ES titles are not the same string")
+    check(pop.get("title_en") == spec.popup.title_en, f"pop-up title_en is the sheet's EN ({pop.get('title_en')!r})")
+    check(pop.get("caption_en") == spec.popup.caption_en, f"pop-up caption_en is the sheet's EN ({pop.get('caption_en')!r})")
+    check(pop.get("caption_es") == spec.popup.caption_es, f"pop-up caption_es is the sheet's ES ({pop.get('caption_es')!r})")
+    check(pop.get("caption_es") != nc.get("caption-es"),
+          "the pop-up is NOT wearing the notification's caption")
+
+    smstexts = {}
+    for a in save["activities"]:
+        if a.get("activityName") == "dextra_sms":
+            for e in a["initializationData"]["smsSettings"]["localizedMessageTexts"]:
+                smstexts[e["languageCode"]] = e["messageText"]
+    check(smstexts.get("en") != smstexts.get("es"), "SMS EN and ES are different strings")
+    check(spec.sms.text_es.split(" http")[0] in smstexts.get("es", ""), "SMS ES is the sheet's ES")
+    check("Scratch and win" in smstexts.get("en", ""), "SMS EN is the sheet's EN")
+
+    # The mirror must agree, or the builder shows a blank canvas.
+    mirror_nc = {}
+    for aid, cfg in save["rawJourneyData"]["activitiesConfiguration"].items():
+        d = (cfg or {}).get("data") or {}
+        sc = d.get("singleChannel") or {}
+        if sc.get("activityName") == G.TPL_NC_NODE:
+            for lang, tab in (sc.get("localizedLanguagesTab") or {}).items():
+                if isinstance(tab, dict):
+                    for k, v in tab.items():
+                        if G._LANG_FIELD_RE.match(k) and not str(v).startswith("%"):
+                            mirror_nc[k] = v
+    check(mirror_nc.get("caption-en") == spec.nc.caption_en,
+          "the editor mirror got the same NC caption as the compiled activity")
+
+    print("\nemail body:")
+    check(G.TPL_EMAIL_BODY_COPY not in json.dumps(bundle["email_save"], ensure_ascii=False),
+          "the captured email body copy is gone")
+    body_html = bundle["email_save"]["translations"]["es"]["composition"]["body"]["source"]
+    check(spec.email.desc_es.splitlines()[0].strip() in body_html,
+          "the sheet's email body copy is in the HTML")
+
     print("\nverify (the happy path):")
     for ok, msg in G.verify(bundle):
         check(ok, msg)
@@ -244,6 +307,10 @@ def main() -> int:
            "a link that is not a randomizer promo page")
     raises(lambda: G.read_spec(no_link, ""),
            "no link in either the field or the sheet")
+    no_body = _write_tmp("\n".join(
+        l for l in SHEET.splitlines() if not l.startswith("Email Description")))
+    raises(lambda: G.read_spec(no_body, ""),
+           "a sheet with no Email Description row")
 
     print("\nstop date:")
     # The whole point of the field: a campaign with no expiry is still usable,
