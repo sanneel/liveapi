@@ -203,6 +203,19 @@ def main() -> int:
     check(spec.email.desc_es.splitlines()[0].strip() in body_html,
           "the sheet's email body copy is in the HTML")
 
+    print("\nemail banner (the campaign's copy link, per-player tracked):")
+    # The capture holds the slot two ways: "variable?limit=…" in the save body
+    # (the reusable placeholder) and the PREVIOUS campaign's real URL in the
+    # create body. Un-replaced, one ships a broken image and the other the wrong
+    # campaign's card.
+    create_html = bundle["email_create"]["translations"]["es"]["composition"]["body"]["source"]
+    want_src = f'{campaign()["image_url"]}?limit=1&v={{{{JourneyActivityId}}}}&u={{{{playerID}}}}'
+    for name, html in (("save", body_html), ("create", create_html)):
+        check("variable?limit=" not in html, f"{name} body: placeholder filled")
+        check(G.TPL_BANNER_STALE not in html, f"{name} body: no stale engvsarg URL")
+        check(want_src in html, f"{name} body: banner src is the campaign copy link + tracking")
+        check(html.count("/r/eng-arg-final.png") == 1, f"{name} body: exactly one banner")
+
     print("\nverify (the happy path):")
     for ok, msg in G.verify(bundle):
         check(ok, msg)
@@ -324,6 +337,8 @@ def main() -> int:
            "campaign already expired")
     raises(lambda: G.prepare(campaign(), spec, stop_at="not-a-date"),
            "an unparseable stop date")
+    raises(lambda: G.prepare(campaign(image_url=""), spec),
+           "no PUBLIC_BASE_URL (email banner would ship a broken image)")
     raises(lambda: G.prepare(campaign(expires_at=None), spec, stop_at="2020-01-01T00:00"),
            "a stop date in the past")
 
