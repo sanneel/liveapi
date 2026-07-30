@@ -375,7 +375,9 @@ def main() -> int:
     print("\nstop date:")
     # The whole point of the field: a campaign with no expiry is still usable,
     # which is what an eligibility filter on the dropdown took away.
-    future = (datetime.now() + timedelta(days=5)).strftime("%Y-%m-%dT%H:%M")
+    # Pin to 10:00 local so the UTC equivalent is 14:00-15:00 the same calendar
+    # day regardless of Chile DST offset — avoids midnight UTC rollover failures.
+    future = (datetime.now() + timedelta(days=5)).strftime("%Y-%m-%d") + "T10:00"
     b2, _ = G.prepare(campaign(expires_at=None), spec, stop_at=future)
     check(b2["journey_save"]["rawJourneyData"]["infoValues"]["stopAt"].startswith(future[:10]),
           f"a campaign with no expiry builds when given a stop date ({future[:10]})")
