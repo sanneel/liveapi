@@ -113,10 +113,22 @@ def run_brand(mod, brand: B.Brand) -> None:
     check(len(sms_texts) == 2, "SMS EN and ES are distinct")
 
     print("\nthe sheet's window drives the gates AND the revoke period:")
-    gates = sorted({a["initializationData"]["waitTo"] for a in save["activities"]
-                    if a.get("activityName") == "wait_date"})
-    check(gates == sorted({B._gate("2026-07-20"), B._gate("2026-07-26")}),
-          f"both Wait/Date gates sit on the tournament window ({gates})")
+    # As an ORDERED pair: the two brands store their gates in opposite order in
+    # activities[], so a set comparison would let a swapped pair pass.
+    gates = sorted(a["initializationData"]["waitTo"] for a in save["activities"]
+                   if a.get("activityName") == "wait_date")
+    check(gates == [B._gate("2026-07-20"), B._gate("2026-07-26")],
+          f"the earlier gate is the start and the later one the end ({gates})")
+    labels = sorted(a["initializationData"]["displayData"][0] for a in save["activities"]
+                    if a.get("activityName") == "wait_date")
+    check(labels == ["20.07.26", "26.07.26"],
+          f"both gates' canvas labels show this tournament's days ({labels})")
+    mirror = save["rawJourneyData"]["activitiesConfiguration"]
+    mlabels = sorted(mirror[a["activityId"]]["displayData"][0] for a in save["activities"]
+                     if a.get("activityName") == "wait_date"
+                     and isinstance(mirror.get(a["activityId"], {}).get("displayData"), list))
+    check(mlabels == ["20.07.26", "26.07.26"],
+          f"the editor mirror carries the same labels ({mlabels})")
     revoke = sorted(set(re.findall(r'"expire_after"\s*:\s*"([^"]*)"', both)))
     check(revoke == ["7.00:00:00.000"],
           f"the revoke period is the tournament's 7 days ({revoke})")
@@ -213,6 +225,13 @@ def run_brand(mod, brand: B.Brand) -> None:
                 a["initializationData"]["waitTo"] = "2030-01-01T16:00:00Z"
                 return
     refuses(wrong_gate, "a Wait/Date gate is off the tournament window")
+
+    def stale_gate_label(b):
+        for a in b["save"]["activities"]:
+            if a.get("activityName") == "wait_date":
+                a["initializationData"]["displayData"] = ["05.07.26"]
+                return
+    refuses(stale_gate_label, "a gate's canvas label is the captured tournament's")
 
     def start_on_publish(b):
         b["save"]["isImmediatelyAfterPublish"] = True

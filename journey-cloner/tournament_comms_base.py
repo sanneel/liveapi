@@ -280,8 +280,9 @@ def prepare(brand: Brand, spec, *, date_str: str, journey_name: str = "",
         written["revoke"] = E.set_expire_after(body, days)
         # canvas labels (displayData) — the hidden second copy
         E.set_display_data(body, lambda a: a.get("activityName") == "dextra_sms", sms_es)
-        # the two gates, in the order the templates store them (later first)
-        _set_wait_dates(body, _gate(end_date), _gate(start_date))
+        # the two gates — which is which is read from the capture, not assumed
+        written["wait_date gates"] = _set_wait_dates(
+            body, _gate(start_date), _gate(end_date))
         E.backfill_position_absolute(body)
 
     for what, n in written.items():
@@ -377,20 +378,36 @@ def prepare(brand: Brand, spec, *, date_str: str, journey_name: str = "",
     return bundle, report
 
 
-def _set_wait_dates(body: dict, late_iso: str, early_iso: str) -> None:
-    """Write the two wait_date gates in both storages, keeping capture order."""
-    order = [late_iso, early_iso]
+def _set_wait_dates(body: dict, early_iso: str, late_iso: str) -> int:
+    """Point the two wait_date gates at the tournament window, in both storages.
+
+    Which gate is which is read from the capture's own values, never from the
+    order they happen to sit in `activities[]` — the two brands store them in
+    OPPOSITE order (JBCL later-first, PMCL earlier-first), so an assumed order
+    swaps one brand's gates and the journey waits for the end before the start.
+    The earlier captured gate becomes the start, the later one the end.
+
+    `displayData` is the canvas label and duplicates the date; left alone, the
+    builder still shows the captured tournament's days on both nodes.
+    """
     cfg = body.get("rawJourneyData", {}).get("activitiesConfiguration", {})
-    seen = 0
-    for a in body.get("activities", []):
-        if a.get("activityName") != "wait_date":
-            continue
-        val = order[seen] if seen < len(order) else order[-1]
-        a.setdefault("initializationData", {})["waitTo"] = val
-        mirror = cfg.get(a.get("activityId"))
-        if isinstance(mirror, dict) and isinstance(mirror.get("data"), dict):
-            mirror["data"]["waitTo"] = val
-        seen += 1
+    gates = [a for a in body.get("activities", []) if a.get("activityName") == "wait_date"]
+    if len(gates) != 2:
+        return 0
+    order = sorted(gates, key=lambda a: (a.get("initializationData") or {}).get("waitTo") or "")
+    for activity, value in zip(order, (early_iso, late_iso)):
+        d = datetime.strptime(value[:10], "%Y-%m-%d")
+        label = [f"{d:%d.%m.%y}"]
+        init = activity.setdefault("initializationData", {})
+        init["waitTo"] = value
+        init["displayData"] = label
+        mirror = cfg.get(activity.get("activityId"))
+        if isinstance(mirror, dict):
+            if isinstance(mirror.get("data"), dict):
+                mirror["data"]["waitTo"] = value
+            if "displayData" in mirror:
+                mirror["displayData"] = list(label)
+    return 2
 
 
 # ── verify — refuses, does not warn ─────────────────────────────────────
@@ -449,10 +466,20 @@ def verify(bundle: dict) -> list[tuple[bool, str]]:
     iv = save.get("rawJourneyData", {}).get("infoValues", {})
     revoke = sorted(set(re.findall(r'"expire_after"\s*:\s*"([^"]*)"', both)))
     want_revoke = f'{bundle["days"]}.00:00:00.000'
-    gates = sorted({a["initializationData"]["waitTo"]
-                    for a in save.get("activities", [])
-                    if a.get("activityName") == "wait_date"})
-    want_gates = sorted({_gate(bundle["start_date"]), _gate(bundle["end_date"])})
+    # Ordered by the value each gate now holds: the earlier gate must be the
+    # tournament's start and the later one its end. Comparing as a SET would let
+    # a swapped pair pass, which is exactly the bug this catches.
+    gates = sorted(a["initializationData"]["waitTo"]
+                   for a in save.get("activities", [])
+                   if a.get("activityName") == "wait_date")
+    want_gates = [_gate(bundle["start_date"]), _gate(bundle["end_date"])]
+    gate_labels = [a["initializationData"].get("displayData")
+                   for a in save.get("activities", [])
+                   if a.get("activityName") == "wait_date"]
+    stale_labels = [l for l in gate_labels
+                    if not isinstance(l, list) or not l
+                    or l[0] not in {f'{datetime.strptime(g[:10], "%Y-%m-%d"):%d.%m.%y}'
+                                    for g in want_gates}]
 
     # ── email content, when this run builds it ──
     email_checks: list[tuple[bool, str]] = []
@@ -503,7 +530,11 @@ def verify(bundle: dict) -> list[tuple[bool, str]]:
          + (f" (WRONG: {copy_mismatch[:3]})" if copy_mismatch else "")),
         (revoke == [want_revoke],
          f"notification revoke period = the tournament's {bundle['days']} days ({revoke})"),
-        (gates == want_gates, f"both Wait/Date gates sit on the tournament window ({gates})"),
+        (gates == want_gates,
+         f"the Wait/Date gates are start then end, not swapped ({gates})"),
+        (not stale_labels,
+         "both Wait/Date canvas labels show this tournament's days"
+         + (f" (STALE: {stale_labels[:2]})" if stale_labels else "")),
         (not dangling, "every nextActivityId resolves"
          + (f" (DANGLING: {dangling[:2]})" if dangling else "")),
         (not broken, "every canvas edge connects two real nodes"
