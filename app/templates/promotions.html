@@ -238,39 +238,10 @@
     </form>
 
     <div class="col-main stack">
-      {% if pred.console_script %}
-        <section class="card" style="overflow:hidden">
-          <div class="card-head">
-            <div>
-              <h2 class="card-title">Console Script Ready</h2>
-              <p class="card-sub">{{ pred.console_script.name }}</p>
-            </div>
-            <button type="button" id="pred-copy" class="btn primary">Copy script</button>
-          </div>
-          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
-            <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
-              <li>Click <b>Copy script</b> above.</li>
-              <li>Open the backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
-              <li>Paste and press Enter. If it says "Waiting for a token", click anything in the UI.</li>
-              <li>Watch for the green confirmation that the draft was saved.</li>
-            </ol>
-            <textarea id="pred-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ pred.console_script.text }}</textarea>
-          </div>
-        </section>
-        <script>
-          (function () {
-            var btn = document.getElementById('pred-copy');
-            var area = document.getElementById('pred-script-text');
-            if (!btn || !area) return;
-            btn.addEventListener('click', function () {
-              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
-              if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); });
-              } else { area.select(); document.execCommand('copy'); done(); }
-            });
-          })();
-        </script>
-      {% endif %}
+      {% with console_script=pred.console_script,
+              final_step="Watch for the green confirmation that the draft was saved." %}
+        {% include "partials/_console_script.html" %}
+      {% endwith %}
 
       {% if pred.result %}
         <section class="card" style="overflow:hidden">
@@ -378,40 +349,11 @@
     </script>
 
     <div class="col-main stack">
-      {% if scomms.console_script %}
-        <section class="card" style="overflow:hidden">
-          <div class="card-head">
-            <div>
-              <h2 class="card-title">Console Script Ready</h2>
-              <p class="card-sub">{{ scomms.console_script.name }}</p>
-            </div>
-            <button type="button" id="scomms-copy" class="btn primary">Copy script</button>
-          </div>
-          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
-            <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
-              <li>Click <b>Copy script</b> above.</li>
-              <li>Open the backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
-              <li>Paste and press Enter. If it says "Waiting for a token", click anything in the UI.</li>
-              <li>It asks for three images — the <b>email hero</b> (promo artwork), the <b>notification icon</b> and the <b>pop-up background</b>. The campaign's live card is already linked inside the email banner; nothing to upload for it.</li>
-              <li>Watch for the green line naming the journey id and the email content id.</li>
-            </ol>
-            <textarea id="scomms-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ scomms.console_script.text }}</textarea>
-          </div>
-        </section>
-        <script>
-          (function () {
-            var btn = document.getElementById('scomms-copy');
-            var area = document.getElementById('scomms-script-text');
-            if (!btn || !area) return;
-            btn.addEventListener('click', function () {
-              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
-              if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); });
-              } else { area.select(); document.execCommand('copy'); done(); }
-            });
-          })();
-        </script>
-      {% endif %}
+      {% with console_script=scomms.console_script,
+              steps=["It asks for three images — the <b>email hero</b> (promo artwork), the <b>notification icon</b> and the <b>pop-up background</b>. The campaign's live card is already linked inside the email banner; nothing to upload for it."],
+              final_step="Watch for the green line naming the journey id and the email content id." %}
+        {% include "partials/_console_script.html" %}
+      {% endwith %}
 
       {% if scomms.result %}
         <section class="card" style="overflow:hidden">
@@ -546,39 +488,10 @@
     </script>
 
     <div class="col-main stack">
-      {% if rnd.console_script %}
-        <section class="card" style="overflow:hidden">
-          <div class="card-head">
-            <div>
-              <h2 class="card-title">Console Script Ready</h2>
-              <p class="card-sub">{{ rnd.console_script.name }}</p>
-            </div>
-            <button type="button" id="rnd-copy" class="btn primary">Copy script</button>
-          </div>
-          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
-            <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
-              <li>Click <b>Copy script</b> above.</li>
-              <li>Open the backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
-              <li>Paste and press Enter. If it says "Waiting for a token", click anything in the UI.</li>
-              <li>Watch for the green <b>DONE</b> with the created randomizer draft id.</li>
-            </ol>
-            <textarea id="rnd-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ rnd.console_script.text }}</textarea>
-          </div>
-        </section>
-        <script>
-          (function () {
-            var btn = document.getElementById('rnd-copy');
-            var area = document.getElementById('rnd-script-text');
-            if (!btn || !area) return;
-            btn.addEventListener('click', function () {
-              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
-              if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); });
-              } else { area.select(); document.execCommand('copy'); done(); }
-            });
-          })();
-        </script>
-      {% endif %}
+      {% with console_script=rnd.console_script,
+              final_step="Watch for the green <b>DONE</b> with the created randomizer draft id." %}
+        {% include "partials/_console_script.html" %}
+      {% endwith %}
 
       {% if rnd.result %}
         <section class="card" style="overflow:hidden">
@@ -694,70 +607,20 @@
 
     <div class="col-main stack">
       {# JBCL script output #}
-      {% if nc.console_script %}
-        <section class="card" style="overflow:hidden">
-          <div class="card-head">
-            <div>
-              <h2 class="card-title">JBCL Console Script Ready</h2>
-              <p class="card-sub">{{ nc.console_script.name }}</p>
-            </div>
-            <button type="button" id="nc-copy" class="btn primary">Copy script</button>
-          </div>
-          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
-            <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
-              <li>Click <b>Copy script</b> above.</li>
-              <li>Open the JBCL backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
-              <li>Paste and press Enter. A file picker pops up per game — select that game's 200×200 image.</li>
-              <li>Watch for the green <b>DONE</b> with the created JRN ids. Drafts are unpublished — review + publish in the Journeys UI.</li>
-            </ol>
-            <textarea id="nc-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ nc.console_script.text }}</textarea>
-          </div>
-        </section>
-        <script>
-          (function () {
-            var btn = document.getElementById('nc-copy'), area = document.getElementById('nc-script-text');
-            if (!btn || !area) return;
-            btn.addEventListener('click', function () {
-              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
-              if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); }); }
-              else { area.select(); document.execCommand('copy'); done(); }
-            });
-          })();
-        </script>
-      {% endif %}
+      {% with title="JBCL console script ready", console_script=nc.console_script,
+              steps=["Open the <b>JBCL</b> backoffice — Chrome, logged in — before pasting.",
+                     "Paste and press Enter. A file picker pops up per game — select that game's 200×200 image."],
+              final_step="Watch for the green <b>DONE</b> with the created JRN ids. Drafts are unpublished — review + publish in the Journeys UI." %}
+        {% include "partials/_console_script.html" %}
+      {% endwith %}
 
       {# PMCL script output #}
-      {% if nc.pmcl_console_script %}
-        <section class="card" style="overflow:hidden">
-          <div class="card-head">
-            <div>
-              <h2 class="card-title">PMCL Console Script Ready</h2>
-              <p class="card-sub">{{ nc.pmcl_console_script.name }}</p>
-            </div>
-            <button type="button" id="nc-pmcl-copy" class="btn primary">Copy script</button>
-          </div>
-          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
-            <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
-              <li>Click <b>Copy script</b> above.</li>
-              <li>Open the PMCL backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
-              <li>Paste and press Enter. A file picker pops up per game — select that game's 200×200 image.</li>
-              <li>Watch for the green <b>DONE</b> with the created JRN ids. Drafts are unpublished — review + publish in the Journeys UI.</li>
-            </ol>
-            <textarea id="nc-pmcl-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ nc.pmcl_console_script.text }}</textarea>
-          </div>
-        </section>
-        <script>
-          (function () {
-            var btn = document.getElementById('nc-pmcl-copy'), area = document.getElementById('nc-pmcl-script-text');
-            if (!btn || !area) return;
-            btn.addEventListener('click', function () {
-              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
-              if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); }); }
-              else { area.select(); document.execCommand('copy'); done(); }
-            });
-          })();
-        </script>
-      {% endif %}
+      {% with title="PMCL console script ready", console_script=nc.pmcl_console_script,
+              steps=["Open the <b>PMCL</b> backoffice — Chrome, logged in — before pasting.",
+                     "Paste and press Enter. A file picker pops up per game — select that game's 200×200 image."],
+              final_step="Watch for the green <b>DONE</b> with the created JRN ids. Drafts are unpublished — review + publish in the Journeys UI." %}
+        {% include "partials/_console_script.html" %}
+      {% endwith %}
 
       {# JBCL run output #}
       {% if nc.result %}

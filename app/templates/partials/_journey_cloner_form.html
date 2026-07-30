@@ -127,41 +127,10 @@
       </div>
     </section>
 
-    {% if console_script %}
-      <section class="card" style="overflow:hidden">
-        <div class="card-head">
-          <div>
-            <h2 class="card-title">Console Script Ready</h2>
-            <p class="card-sub">{{ console_script.name }}</p>
-          </div>
-          <button type="button" id="copy-console-script" class="btn primary">Copy script</button>
-        </div>
-        <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
-          <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
-            <li>Click <b>Copy script</b> above.</li>
-            <li>On the computer with the office VPN, open the Journey Builder backoffice in Chrome (logged in).</li>
-            <li>Press <span class="mono">F12</span> and open the <b>Console</b> tab. If Chrome warns about pasting, type <span class="mono">allow pasting</span> and press Enter.</li>
-            <li>Paste the script and press Enter.</li>
-            <li>If it says <b>"Waiting for a token"</b>, click anything in the backoffice. The script picks the token up by itself.</li>
-            <li>Wait for the green <b>DONE</b> message with the created JRN ids.</li>
-          </ol>
-          <textarea id="console-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ console_script.text }}</textarea>
-        </div>
-      </section>
-      <script>
-        (function () {
-          var btn = document.getElementById('copy-console-script');
-          var area = document.getElementById('console-script-text');
-          if (!btn || !area) return;
-          btn.addEventListener('click', function () {
-            var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-              navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); });
-            } else { area.select(); document.execCommand('copy'); done(); }
-          });
-        })();
-      </script>
-    {% endif %}
+    {% with console_script=console_script,
+            final_step="Wait for the green <b>DONE</b> message with the created JRN ids." %}
+      {% include "partials/_console_script.html" %}
+    {% endwith %}
 
     {% if result %}
       <section class="card" style="overflow:hidden">
