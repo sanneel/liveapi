@@ -151,6 +151,51 @@ def main() -> int:
     check(mirror_nc.get("caption-en") == spec.nc.caption_en,
           "the editor mirror got the same NC caption as the compiled activity")
 
+    print("\ncanvas labels (displayData — missed by every settings walk):")
+    # displayData is what the builder prints on the node, it duplicates the copy,
+    # and in the mirror it hangs off the config entry rather than its `data`.
+    # Left alone the SMS node showed the previous campaign's message and the
+    # email node the previous campaign's name.
+    cfgs = save["rawJourneyData"]["activitiesConfiguration"]
+    for a in save["activities"]:
+        if a.get("activityName") == "dextra_sms":
+            for where, dd in (("activity", a["initializationData"].get("displayData")),
+                              ("mirror", cfgs[a["activityId"]].get("displayData"))):
+                joined = " ".join(dd or [])
+                check(G.TPL_SMS_PRIMARY not in joined and G.TPL_SMS_RAW not in joined,
+                      f"SMS {where} label is not the captured message")
+                check(spec.sms.text_es.split(" http")[0] in joined,
+                      f"SMS {where} label is the sheet's copy")
+        if a.get("activityName") == "dextra_email":
+            for where, dd in (("activity", a["initializationData"].get("displayData")),
+                              ("mirror", cfgs[a["activityId"]].get("displayData"))):
+                joined = " ".join(dd or [])
+                check(G.TPL_EMAIL_NODE_LABEL not in joined,
+                      f"email {where} label does not name the captured campaign")
+                check(G.EMAIL_ID_TOKEN in joined,
+                      f"email {where} label carries the content-id placeholder")
+
+    print("\nreusing the captured promo page is allowed (not a stale-slug leak):")
+    # A real run passed --promo-link .../randomizer/arg-eng-sc, which IS the
+    # slug the capture used. Three checks wrongly read that as "never replaced"
+    # and refused a correct build. The test is that no OTHER slug survives.
+    same = G.read_spec(_write_tmp(SHEET),
+                       f"https://jugabet.cl/services/promo/offers/randomizer/{G.TPL_SLUG_ES}")
+    b_same, _ = G.prepare(campaign(), same)
+    fails_same = [m for ok, m in G.verify(b_same) if not ok]
+    check(not fails_same, "a run deliberately reusing the captured promo page passes"
+          + (f" (REFUSED: {fails_same[:3]})" if fails_same else ""))
+    # ...while a genuinely stale second slug still refuses.
+    def leave_other_slug(b):
+        s = json.dumps(b["journey_save"], ensure_ascii=False)
+        b["journey_save"] = json.loads(
+            s.replace(f"/randomizer/{same.promo_slug}", "/randomizer/some-old-page", 1))
+    broken = {k: (json.loads(json.dumps(v)) if k.startswith(("journey", "email")) else v)
+              for k, v in b_same.items()}
+    leave_other_slug(broken)
+    check(any(not ok for ok, _ in G.verify(broken)),
+          "a second, different slug anywhere is still refused")
+
     print("\nemail body:")
     check(G.TPL_EMAIL_BODY_COPY not in json.dumps(bundle["email_save"], ensure_ascii=False),
           "the captured email body copy is gone")

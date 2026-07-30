@@ -252,6 +252,20 @@ notification's caption, while the sheet's pop-up caption was parsed and
 discarded. It looked fine: the captured literal was gone, so every
 leftover-detection check passed.
 
+Note what the slug checks do **not** assert. A real run deliberately reused the
+promo page the capture used (`arg-eng-sc`), and three checks read that as "never
+replaced" and refused a correct build. The test is that **no other** slug
+survives, not that the captured string is absent — reusing a promo page is
+legitimate, a second stale slug is not.
+
+`displayData` is the other trap, found on a real run: it is the label the
+builder prints on a node, it duplicates the copy, and in the mirror it hangs off
+the config entry rather than its `data` — so nothing that walks settings touches
+it. The SMS node kept the previous campaign's message and the email node its
+name. `set_display_data` rewrites both, and because the label *is* the value
+there, it replaces every string element rather than matching on content (the
+promo slug inside the SMS label is already rewritten by then).
+
 `set_channel_copy` / `set_sms_text` address each field by **name** instead —
 the template already encodes the language (`title-en`, `caption_es`, `des-en`,
 `description_es`) — and write both storages. `verify()` then reads the copy back
