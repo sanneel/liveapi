@@ -165,6 +165,14 @@ def verify(body: dict) -> list[tuple[bool, str]]:
     out.append((bool(prizes), f"{len(prizes)} prize slice(s) present"))
     numeric = all(re.fullmatch(r"-?\d+(\.\d+)?", str(p.get("weight"))) for p in prizes)
     out.append((numeric, "all prize weights are numeric"))
+    # recipes_catalog.json publishes "Weights must sum to 100" as the contract the
+    # planner and the operator both work to, but nothing enforced it: a --weights
+    # list summing to 97 sailed through and shipped a wheel whose odds were not
+    # the ones anyone signed off. Only checked once the weights parse as numbers,
+    # so a non-numeric weight reports as itself rather than as a bad sum.
+    if numeric and prizes:
+        total = sum(float(p.get("weight")) for p in prizes)
+        out.append((abs(total - 100.0) < 1e-6, f"prize weights sum to 100 (got {total:g})"))
     routed = all((p.get("journeyPrizeSettings") or {}).get("journeyId") for p in prizes)
     out.append((routed, "every prize routes to a journeyId"))
     dates = [body.get(k) for k in ("showDate", "startDate", "endDate", "hideDate")]
@@ -259,7 +267,10 @@ JS_TEMPLATE = r"""// Randomizer console script — @LABEL@ — generated @GENERA
   const QUEUE = DEBUG ? PAYLOADS.slice(0, 1) : PAYLOADS;
   console.log('Creating ' + QUEUE.length + ' randomizer draft(s)...' + (DEBUG ? ' (DEBUG: 1 only, no fill)' : ''));
   const ok = [], fail = [];
-  for (const P of PAYLOADS) {
+  // Iterate QUEUE, not PAYLOADS: DEBUG announces "1 only" and exists to avoid
+  // piling up orphans, but looping PAYLOADS created (and abandoned) one draft
+  // per date — the exact thing it promises not to do on a --dates run.
+  for (const P of QUEUE) {
     console.log('  ' + P.internalName + ' ...');
     try { const id = await createOne(P); ok.push({ name: P.internalName, id }); console.log('%c    ✓ ' + id, 'color:#22c55e'); }
     catch (e) { const msg = String((e && e.message) || e); fail.push({ name: P.internalName, err: msg }); console.error('    ✗ ' + P.internalName + ' — ' + msg); }

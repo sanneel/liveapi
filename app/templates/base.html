@@ -21,7 +21,7 @@
   <script defer src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
   <link rel="stylesheet" href="/static/admin.css">
-  <link rel="stylesheet" href="/static/redesign.css?v=10">
+  <link rel="stylesheet" href="/static/redesign.css?v=11">
   <style>
     html,body{margin:0;background:var(--canvas);}
     *:focus-visible { outline: 2px solid var(--ac,#F0613C); outline-offset: 2px; border-radius: 4px; }
@@ -196,6 +196,39 @@
 </div>
 <script>
   window.toast = function(detail) { window.dispatchEvent(new CustomEvent('toast', { detail })); };
+
+  // ── "Copy script" buttons ──────────────────────────────────────────────
+  // Every generator panel on the Optimization page renders the same "Console
+  // Script Ready" card, and each used to ship its own inline IIFE wired to a
+  // hardcoded element id. Two of them (GOW and Promo Codes) picked the SAME
+  // id, and because every panel is rendered into one document — hidden, not
+  // absent — getElementById returned the GOW node for both: the Promo Codes
+  // button got no listener and did nothing when clicked.
+  //
+  // One delegated listener resolving the textarea relative to the button means
+  // the panels no longer have to agree on globally unique ids.
+  document.addEventListener('click', function (ev) {
+    var btn = ev.target && ev.target.closest ? ev.target.closest('[data-copy-script]') : null;
+    if (!btn) return;
+    var card = btn.closest('[data-script-card]') || document;
+    var area = card.querySelector('[data-script-text]');
+    if (!area) return;
+    var label = btn.getAttribute('data-copy-label') || 'Copy script';
+    var done = function () {
+      btn.textContent = 'Copied!';
+      setTimeout(function () { btn.textContent = label; }, 2000);
+    };
+    var fallback = function () {
+      area.select();
+      try { document.execCommand('copy'); } catch (e) { /* no-op */ }
+      done();
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(area.value).then(done, fallback);
+    } else {
+      fallback();
+    }
+  });
 
   // ── Dark mode ── persisted in localStorage as jb-theme; applied to <html>.
   window.applyTheme = function(t) {

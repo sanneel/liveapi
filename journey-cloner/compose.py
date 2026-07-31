@@ -1736,7 +1736,24 @@ def main() -> int:
 
     if args[0] == "--catalog":
         out = HERE / "recipes_catalog.json"
-        out.write_text(json.dumps(catalog(), indent=2, ensure_ascii=False), encoding="utf-8")
+        doc = catalog()
+        # _randomizer_palette() swallows any import error and returns {}, so a
+        # missing dependency (python-dotenv, say) turned this into a writer that
+        # silently DELETED the whole randomizer section — every wheel and scratch
+        # card — from the file the planner reads to know what it can build. And
+        # the contract test's own advice on a stale catalog is "run
+        # compose.py --catalog", which would have committed the truncation.
+        # Refuse instead: an empty section here is a broken environment, never
+        # an intentional catalog.
+        for section in ("recipes", "randomizer"):
+            if not doc.get(section):
+                print(f"refusing to write {out.name}: the {section!r} section came out "
+                      f"empty, which means a builder failed to import rather than "
+                      f"that there is nothing to publish. Fix the environment "
+                      f"(.venv/bin/python, requirements installed) and re-run.",
+                      file=sys.stderr)
+                return 1
+        out.write_text(json.dumps(doc, indent=2, ensure_ascii=False), encoding="utf-8")
         print(f"wrote {out}")
         return 0
 

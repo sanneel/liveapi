@@ -223,6 +223,14 @@ GENERATORS: List[dict] = [
      "label": "AI planner",
      "what": "Brief → plan → design boards → console scripts",
      "script": "compose.py", "route": "/admin/ai"},
+    # Registered rather than excluded: it is the first step of the HAR runbook
+    # (HAR_TO_AUTOMATION.md), so the Overview is where someone will look for it.
+    # Left unregistered it also tripped unlisted_generators() on every page load,
+    # and a drift alarm that is always red is a drift alarm nobody reads.
+    {"key": "har_analyse", "group": "Tools", "brand": "—",
+     "label": "HAR analyser",
+     "what": "Scrub a captured HAR and report what an automation would need",
+     "script": "har_analyse.py", "tab": None},
 ]
 
 # Scripts that are library/tooling, not campaign generators — excluded from the

@@ -77,7 +77,11 @@ DEFAULT_FOLDER_ID = "67e37e66-3532-47d7-b574-195ede915ff4"
 # --folder-id is given; otherwise the template's existing URLs are kept).
 NC_ICON_TOKEN = "@@NC_ICON_URL@@"
 POPUP_BG_TOKEN = "@@POPUP_BG_URL@@"
-EMAIL_HERO_TOKEN = "@@EMAIL_HERO_URL@@"
+# EMAIL_HERO_TOKEN is imported from tournament_pmcl_email above. It used to be
+# re-declared here with the same literal, which meant the checks below compared
+# the payload against this copy while prepare_email_content() wrote that one —
+# they only agreed by coincidence, and a change to either would have silently
+# turned the "no stray hero placeholder" guard into a no-op.
 RESERVED_ID_TOKEN = "DRY-RUN-TOURNAMENT-PMCL"
 
 # The tournament comms entry window is always same-day 12:00 -> 19:00 Chile
@@ -537,13 +541,42 @@ def prepare_comms(
     return body, report, start_local, stop_local, email_content
 
 
+def _copy_landed(serialized: str, spec_copy: dict[str, dict[str, str]]) -> list[tuple[bool, str]]:
+    """Every non-empty value the sheet supplied must be findable in the payload.
+
+    The end-to-end backstop: whatever route the copy took to get in, if the sheet
+    asked for it and it is not in the payload, this run is not what was ordered.
+    Catches a channel whose update was skipped entirely — the rest of verify()
+    only ever looked at ids, links and lineage, never at the copy itself.
+
+    Only non-empty values are asserted, so a sheet that legitimately omits a
+    field is not turned into a refusal.
+    """
+    def present(value: str) -> bool:
+        # Compare against the JSON-escaped form too: copy carrying a quote or a
+        # backslash is escaped inside `serialized` and would never match raw.
+        return value in serialized or json.dumps(value, ensure_ascii=False)[1:-1] in serialized
+
+    out: list[tuple[bool, str]] = []
+    for channel, fields in spec_copy.items():
+        missing = sorted(k for k, v in (fields or {}).items() if v and not present(v))
+        out.append((not missing,
+                    f"{channel}: sheet copy present in payload"
+                    + (f" — MISSING {', '.join(missing)}" if missing else "")))
+    return out
+
+
 def verify(body: dict, tournament_id: str, upload_photos: bool,
-           email_content: dict | None = None) -> list[tuple[bool, str]]:
+           email_content: dict | None = None,
+           spec_copy: dict[str, dict[str, str]] | None = None) -> list[tuple[bool, str]]:
     checks: list[tuple[bool, str]] = []
     serialized = json.dumps(body, ensure_ascii=False)
     # The hero placeholder lives in the email *content*, never in the journey
     # payload — checking `serialized` for it always failed.
     email_serialized = json.dumps(email_content, ensure_ascii=False) if email_content is not None else ""
+
+    if spec_copy:
+        checks.extend(_copy_landed(serialized, spec_copy))
 
     checks.append((bool(body.get("journeyName")), f"journeyName is {body.get('journeyName')!r}"))
     checks.append((body.get("reservedJourneyId") == RESERVED_ID_TOKEN, f"reservedJourneyId is {body.get('reservedJourneyId')!r}"))
@@ -922,7 +955,12 @@ def main() -> int:
 
     print("Verification:")
     all_ok = True
-    for ok, msg in verify(body, tournament_id, upload_photos, email_content):
+    spec_copy = {
+        "Notification": nc_dict_from_spec(spec.nc),
+        "Pop-up": popup_dict_from_spec(spec.popup),
+        "SMS": sms_dict_from_spec(spec.sms),
+    }
+    for ok, msg in verify(body, tournament_id, upload_photos, email_content, spec_copy):
         print(f"  {'OK  ' if ok else 'FAIL'} {msg}")
         all_ok = all_ok and ok
     if not all_ok:

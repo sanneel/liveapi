@@ -8,20 +8,20 @@
     display:flex; align-items:center; justify-content:center; text-align:center; padding:16px;
     cursor:pointer; color:var(--t-faint,#889); font-size:13px; position:relative; overflow:hidden;
     transition:border-color .15s, background .15s; }
-  .sc-drop.hover{ border-color:#4a6cf7; background:rgba(74,108,247,.06); color:var(--t,#223); }
+  .sc-drop.hover{ border-color:var(--ac); background:var(--acw); color:var(--t-strong); }
   .sc-drop img{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#0b0d11; }
   .sc-field{ margin-top:14px; }
   .sc-field .lbl{ display:block; font-size:12px; color:var(--t-faint,#889); margin-bottom:6px;
     text-transform:uppercase; letter-spacing:.4px; }
   .sc-tier{ display:grid; grid-template-columns:1fr 120px; gap:10px; align-items:center; margin-top:8px; }
-  .sc-tier .name{ font-size:13px; font-weight:600; color:var(--t,#223); }
+  .sc-tier .name{ font-size:13px; font-weight:600; color:var(--t-strong); }
   .sc-tier .name small{ display:block; font-weight:400; color:var(--t-faint,#889); font-size:11px; }
   .sc-two{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   .sc-hint{ font-size:11.5px; color:var(--t-faint,#889); margin-top:8px; line-height:1.5; }
   .sc-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:16px; }
-  .sc-card{ border:1px solid var(--border-in,#e6e6ee); border-radius:12px; padding:12px; background:var(--panel,#fff);
+  .sc-card{ border:1px solid var(--border-in,#e6e6ee); border-radius:12px; padding:12px; background:var(--surface);
     display:flex; flex-direction:column; align-items:center; gap:10px; }
-  .sc-card .cap{ font-size:12px; font-weight:600; color:var(--t,#223); text-align:center; }
+  .sc-card .cap{ font-size:12px; font-weight:600; color:var(--t-strong); text-align:center; }
   .sc-card .cap small{ display:block; font-weight:400; color:var(--t-faint,#889); }
   .sc-stage{ width:100%; aspect-ratio:360/650; background:#0b0d11; border-radius:10px; overflow:hidden;
     display:flex; align-items:center; justify-content:center; }
@@ -33,9 +33,9 @@
     border-top-color:#fff; border-radius:50%; animation:sc-sp .7s linear infinite; vertical-align:-2px; margin-right:8px; }
   @keyframes sc-sp{ to{ transform:rotate(360deg); } }
   .sc-err{ color:var(--live-t,#d33); font-size:13px; margin-top:10px; min-height:16px; }
-  .sc-public-url{ margin-top:10px; padding:10px; background:var(--bg-faint,#f5f5f5); border-radius:8px; font-size:11px; word-break:break-all; color:var(--t-faint,#667); }
+  .sc-public-url{ margin-top:10px; padding:10px; background:var(--hover); border-radius:8px; font-size:11px; word-break:break-all; color:var(--t-faint,#667); }
   .sc-public-url code{ user-select:all; font-family:monospace; }
-  .sc-public-url .label{ font-weight:600; margin-bottom:4px; color:var(--t,#223); display:block; }
+  .sc-public-url .label{ font-weight:600; margin-bottom:4px; color:var(--t-strong); display:block; }
 </style>
 
 <p class="card-sub" style="margin-bottom:12px">Drop one slot-game photo and render all four Ace cards (PNG + email flip GIF) at once.</p>

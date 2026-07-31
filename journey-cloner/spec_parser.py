@@ -263,7 +263,8 @@ def parse_spec(text: str, *, expect_game_offer: bool = True) -> ParsedSpec:
                 values = _row_values(row)
                 en = values[0] if len(values) >= 1 else ""
                 es = values[1] if len(values) >= 2 else en
-                field_rows[channel].append((field_name.lower(), en, es))
+                if en or es:
+                    field_rows[channel].append((field_name.lower(), en, es))
             continue
 
         if not current_channel:
@@ -272,7 +273,13 @@ def parse_spec(text: str, *, expect_game_offer: bool = True) -> ParsedSpec:
         values = _row_values(row)
         en = values[0] if len(values) >= 1 else ""
         es = values[1] if len(values) >= 2 else en
-        field_rows[current_channel].append((label.lower(), en, es))
+        # A row with a matching label but no copy in it carries no instruction, so
+        # it must not be recorded: _fill_channel assigns unconditionally, so a
+        # second (blank) "Description" row further down a section overwrote the
+        # real copy above it with "" and the generator shipped an empty channel.
+        # Omitting a field means "leave it alone"; it never means "blank it".
+        if en or es:
+            field_rows[current_channel].append((label.lower(), en, es))
 
     def _fill_channel(target: ChannelCopy, rows_for_channel: list) -> None:
         for label, en, es in rows_for_channel:

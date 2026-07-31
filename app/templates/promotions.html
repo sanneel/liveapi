@@ -121,7 +121,7 @@
           {% if a.knobs %}
             <span class="lbl">Knobs</span>
             <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px">
-              {% for k in a.knobs %}<span class="chip">{{ k }}</span>{% endfor %}
+              {% for k in a.knobs %}<span class="chip sm">{{ k }}</span>{% endfor %}
             </div>
           {% endif %}
         </div>
@@ -238,13 +238,13 @@
 
     <div class="col-main stack">
       {% if pred.console_script %}
-        <section class="card" style="overflow:hidden">
+        <section class="card" data-script-card style="overflow:hidden">
           <div class="card-head">
             <div>
               <h2 class="card-title">Console Script Ready</h2>
               <p class="card-sub">{{ pred.console_script.name }}</p>
             </div>
-            <button type="button" id="pred-copy" class="btn primary">Copy script</button>
+            <button type="button" data-copy-script class="btn primary">Copy script</button>
           </div>
           <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
             <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
@@ -253,22 +253,9 @@
               <li>Paste and press Enter. If it says "Waiting for a token", click anything in the UI.</li>
               <li>Watch for the green confirmation that the draft was saved.</li>
             </ol>
-            <textarea id="pred-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ pred.console_script.text }}</textarea>
+            <textarea data-script-text class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ pred.console_script.text }}</textarea>
           </div>
         </section>
-        <script>
-          (function () {
-            var btn = document.getElementById('pred-copy');
-            var area = document.getElementById('pred-script-text');
-            if (!btn || !area) return;
-            btn.addEventListener('click', function () {
-              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
-              if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); });
-              } else { area.select(); document.execCommand('copy'); done(); }
-            });
-          })();
-        </script>
       {% endif %}
 
       {% if pred.result %}
@@ -276,12 +263,12 @@
           <div class="card-head"><h2 class="card-title">Run Output</h2></div>
           <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
             <div>
-              <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Command</div>
-              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0">{{ pred.result.command }}</pre>
+              <div class="lbl io-cap">Command</div>
+              <pre class="input mono io-pre">{{ pred.result.command }}</pre>
             </div>
             <div>
-              <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Output</div>
-              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:32rem; margin:0">{{ pred.result.output }}</pre>
+              <div class="lbl io-cap">Output</div>
+              <pre class="input mono io-pre out">{{ pred.result.output }}</pre>
             </div>
           </div>
         </section>
@@ -374,12 +361,14 @@
           chips.innerHTML = '';
           dates.forEach(function (d, i) {
             var c = document.createElement('span');
-            c.className = 'chip';
-            c.style.cssText = 'display:inline-flex; align-items:center; gap:6px; padding:4px 10px; font-size:13px';
+            c.className = 'chip sm';
+            c.style.display = 'inline-flex';
+            c.style.alignItems = 'center';
+            c.style.gap = '6px';
             c.appendChild(document.createTextNode(d));
             var x = document.createElement('a');
             x.href = '#'; x.textContent = '✕'; x.title = 'remove';
-            x.style.cssText = 'text-decoration:none; color:#b91c1c; font-weight:700';
+            x.className = 'x';
             x.addEventListener('click', function (e) { e.preventDefault(); dates.splice(i, 1); render(); });
             c.appendChild(x); chips.appendChild(c);
           });
@@ -404,13 +393,13 @@
 
     <div class="col-main stack">
       {% if rnd.console_script %}
-        <section class="card" style="overflow:hidden">
+        <section class="card" data-script-card style="overflow:hidden">
           <div class="card-head">
             <div>
               <h2 class="card-title">Console Script Ready</h2>
               <p class="card-sub">{{ rnd.console_script.name }}</p>
             </div>
-            <button type="button" id="rnd-copy" class="btn primary">Copy script</button>
+            <button type="button" data-copy-script class="btn primary">Copy script</button>
           </div>
           <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
             <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
@@ -419,22 +408,9 @@
               <li>Paste and press Enter. If it says "Waiting for a token", click anything in the UI.</li>
               <li>Watch for the green <b>DONE</b> with the created randomizer draft id.</li>
             </ol>
-            <textarea id="rnd-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ rnd.console_script.text }}</textarea>
+            <textarea data-script-text class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ rnd.console_script.text }}</textarea>
           </div>
         </section>
-        <script>
-          (function () {
-            var btn = document.getElementById('rnd-copy');
-            var area = document.getElementById('rnd-script-text');
-            if (!btn || !area) return;
-            btn.addEventListener('click', function () {
-              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
-              if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); });
-              } else { area.select(); document.execCommand('copy'); done(); }
-            });
-          })();
-        </script>
       {% endif %}
 
       {% if rnd.result %}
@@ -442,12 +418,12 @@
           <div class="card-head"><h2 class="card-title">Run Output</h2></div>
           <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
             <div>
-              <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Command</div>
-              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0">{{ rnd.result.command }}</pre>
+              <div class="lbl io-cap">Command</div>
+              <pre class="input mono io-pre">{{ rnd.result.command }}</pre>
             </div>
             <div>
-              <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Output</div>
-              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:32rem; margin:0">{{ rnd.result.output }}</pre>
+              <div class="lbl io-cap">Output</div>
+              <pre class="input mono io-pre out">{{ rnd.result.output }}</pre>
             </div>
           </div>
         </section>
@@ -552,13 +528,13 @@
     <div class="col-main stack">
       {# JBCL script output #}
       {% if nc.console_script %}
-        <section class="card" style="overflow:hidden">
+        <section class="card" data-script-card style="overflow:hidden">
           <div class="card-head">
             <div>
               <h2 class="card-title">JBCL Console Script Ready</h2>
               <p class="card-sub">{{ nc.console_script.name }}</p>
             </div>
-            <button type="button" id="nc-copy" class="btn primary">Copy script</button>
+            <button type="button" data-copy-script class="btn primary">Copy script</button>
           </div>
           <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
             <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
@@ -567,31 +543,20 @@
               <li>Paste and press Enter. A file picker pops up per game — select that game's 200×200 image.</li>
               <li>Watch for the green <b>DONE</b> with the created JRN ids. Drafts are unpublished — review + publish in the Journeys UI.</li>
             </ol>
-            <textarea id="nc-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ nc.console_script.text }}</textarea>
+            <textarea data-script-text class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ nc.console_script.text }}</textarea>
           </div>
         </section>
-        <script>
-          (function () {
-            var btn = document.getElementById('nc-copy'), area = document.getElementById('nc-script-text');
-            if (!btn || !area) return;
-            btn.addEventListener('click', function () {
-              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
-              if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); }); }
-              else { area.select(); document.execCommand('copy'); done(); }
-            });
-          })();
-        </script>
       {% endif %}
 
       {# PMCL script output #}
       {% if nc.pmcl_console_script %}
-        <section class="card" style="overflow:hidden">
+        <section class="card" data-script-card style="overflow:hidden">
           <div class="card-head">
             <div>
               <h2 class="card-title">PMCL Console Script Ready</h2>
               <p class="card-sub">{{ nc.pmcl_console_script.name }}</p>
             </div>
-            <button type="button" id="nc-pmcl-copy" class="btn primary">Copy script</button>
+            <button type="button" data-copy-script class="btn primary">Copy script</button>
           </div>
           <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
             <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
@@ -600,20 +565,9 @@
               <li>Paste and press Enter. A file picker pops up per game — select that game's 200×200 image.</li>
               <li>Watch for the green <b>DONE</b> with the created JRN ids. Drafts are unpublished — review + publish in the Journeys UI.</li>
             </ol>
-            <textarea id="nc-pmcl-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ nc.pmcl_console_script.text }}</textarea>
+            <textarea data-script-text class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ nc.pmcl_console_script.text }}</textarea>
           </div>
         </section>
-        <script>
-          (function () {
-            var btn = document.getElementById('nc-pmcl-copy'), area = document.getElementById('nc-pmcl-script-text');
-            if (!btn || !area) return;
-            btn.addEventListener('click', function () {
-              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
-              if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); }); }
-              else { area.select(); document.execCommand('copy'); done(); }
-            });
-          })();
-        </script>
       {% endif %}
 
       {# JBCL run output #}
@@ -621,10 +575,10 @@
         <section class="card" style="overflow:hidden">
           <div class="card-head"><h2 class="card-title">JBCL Run Output</h2></div>
           <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
-            <div><div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Command</div>
-              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0">{{ nc.result.command }}</pre></div>
-            <div><div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Output</div>
-              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:32rem; margin:0">{{ nc.result.output }}</pre></div>
+            <div><div class="lbl io-cap">Command</div>
+              <pre class="input mono io-pre">{{ nc.result.command }}</pre></div>
+            <div><div class="lbl io-cap">Output</div>
+              <pre class="input mono io-pre out">{{ nc.result.output }}</pre></div>
           </div>
         </section>
       {% endif %}
@@ -634,10 +588,10 @@
         <section class="card" style="overflow:hidden">
           <div class="card-head"><h2 class="card-title">PMCL Run Output</h2></div>
           <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
-            <div><div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Command</div>
-              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0">{{ nc.pmcl_result.command }}</pre></div>
-            <div><div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Output</div>
-              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:32rem; margin:0">{{ nc.pmcl_result.output }}</pre></div>
+            <div><div class="lbl io-cap">Command</div>
+              <pre class="input mono io-pre">{{ nc.pmcl_result.command }}</pre></div>
+            <div><div class="lbl io-cap">Output</div>
+              <pre class="input mono io-pre out">{{ nc.pmcl_result.output }}</pre></div>
           </div>
         </section>
       {% endif %}
@@ -710,21 +664,37 @@
   .tab-group-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--t-faint,#98a1b3); padding-left:14px; }
   .tab-group-btns { display:flex; gap:2px; flex-wrap:wrap; }
   .tabs .tab { background:none; border:none; padding:9px 14px; font-size:14px; font-weight:600; color:var(--t-faint,#889); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; border-radius:6px 6px 0 0; white-space:nowrap; }
-  .tabs .tab:hover { color:var(--t,#223); background:var(--bg-faint,#f5f6fa); }
-  .tabs .tab.active { color:var(--t,#223); border-bottom-color:#4a6cf7; }
+  .tabs .tab:hover { color:var(--t-strong); background:var(--hover); }
+  /* The active marker is the app accent (--ac), not a one-off blue: the tab
+     underline and the Slot Cards drop zone were the only two places in the
+     admin drawing #4a6cf7, and neither matched the coral used everywhere else. */
+  .tabs .tab.active { color:var(--t-strong); border-bottom-color:var(--ac); }
   @media(max-width:900px){
     .tab-group { padding:0 8px; }
     .tab-group + .tab-group::before { display:none; }
     .tab-group-end { margin-left:0; }
   }
-  .chip { display:inline-block; padding:2px 8px; border:1px solid var(--border,#dcdce4); border-radius:999px; font-size:11px; background:#f6f6fa; }
-  .badge { display:inline-block; padding:4px 10px; border-radius:6px; font-size:12px; background:#eef; color:#446; }
-  .file-pill { display:inline-flex; align-items:center; gap:8px; padding:4px 10px; border:1px solid var(--border,#dcdce4); border-radius:6px; background:#fafafe; }
-  .file-pill .dl { text-decoration:none; font-weight:700; color:#4a6; }
-  .file-pill a.mono { text-decoration:none; }
-  .file-pill a.mono:hover { text-decoration:underline; }
-  .mini-table th, .mini-table td { padding:2px 6px; border-bottom:1px solid #eee; vertical-align:top; }
-  .lbl { display:block; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--t-faint,#889); margin-bottom:2px; }
+  /* `.chip` itself is styled by redesign.css (.content-light .chip wins on
+     specificity), so only the compact variant this page needs lives here —
+     the old bare `.chip` rule here was dead for size/colour and its hardcoded
+     #f6f6fa never applied. `.chip.sm` is what the knob + date chips use, so
+     both render at one size instead of two. */
+  .chip.sm { padding:3px 9px; font-size:11.5px; border-radius:999px; }
+  .chip.sm .x { text-decoration:none; font-weight:700; color:var(--live-t); }
+  .badge { display:inline-block; padding:4px 10px; border-radius:6px; font-size:12px;
+           background:var(--neu-bg); color:var(--neu-t); }
+  .file-pill { display:inline-flex; align-items:center; gap:8px; padding:4px 10px;
+               border:1px solid var(--border-in); border-radius:6px; background:var(--subtle); }
+  .file-pill .dl { text-decoration:none; font-weight:700; color:var(--pos-t); }
+  .file-pill a.mono { text-decoration:none; color:var(--t-body); }
+  .file-pill a.mono:hover { text-decoration:underline; color:var(--ac); }
+  .mini-table th, .mini-table td { padding:3px 6px; border-bottom:1px solid var(--border-soft); vertical-align:top; }
+  .mini-table th { color:var(--t-faint); font-weight:600; }
+  .lbl { display:block; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--t-faint); margin-bottom:2px; }
+  /* .io-cap / .io-pre (the Command/Output blocks each generator panel used to
+     style inline) live in redesign.css — the same partials render on the
+     standalone /admin/gow and /admin/journey-cloner pages, which never see
+     this <style> block. */
 </style>
 
 <script>
