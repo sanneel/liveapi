@@ -1,2 +1,9 @@
-requests==2.32.3
+# The generators only need these two, so they stay listed here — journey-cloner
+# is runnable on its own, without the admin's FastAPI/SQLAlchemy stack.
+#
+# Versions MUST match the root requirements.txt. Both files install into the
+# same .venv, so whichever pip ran last decided which `requests` the generators
+# actually ran against — this file pinned 2.32.3 while the root pinned 2.34.2.
+# Bump them together.
+requests==2.34.2
 python-dotenv==1.0.1

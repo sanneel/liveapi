@@ -8,6 +8,13 @@ raw_fetches/*
 out/*
 !out/.gitkeep
 
+# Generated console scripts. Build output, one per run, and each embeds a whole
+# captured journey payload — a 652 KB file is not unusual and 54 of them were
+# tracked at 14 MB. They are also campaign content, which this repo does not
+# ship around. Regenerate any time by re-running the generator.
+console_scripts/*
+!console_scripts/.gitkeep
+
 # Generated, self-contained email preview (~3MB, embeds every card GIF as a
 # base64 data URI). Regenerate any time with `python email_cards/build_email.py`.
 # The hosted-URL version (email_jugabet.html) is the one that's tracked.

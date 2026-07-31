@@ -12,12 +12,18 @@ holds ~2s so it reads clearly.
 Pixels outside the patched bar regions stay bit-identical to the original.
 """
 
+from pathlib import Path
+
 from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageSequence
 
+# Resolved against the repo, not the shell's working directory: these used to be
+# bare relative names, so the script only ran from the repo root.
+ASSETS = Path(__file__).resolve().parents[1] / "assets"
+
 DEJAVU = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-SRC_GIF = "slot_story_v2_opt.gif"
-OUT_GIF = "slot_story_v2_fixed.gif"
-SRC_FRAME = "frame_v2.png"
+SRC_GIF = str(ASSETS / "slot_story_v2_opt.gif")
+OUT_GIF = str(ASSETS / "slot_story_v2_fixed.gif")
+SRC_FRAME = str(ASSETS / "frame_v2.png")
 
 # ---- palette (frame art) ----
 NAVY = (10, 20, 45)
@@ -178,7 +184,7 @@ def build_fixed_frame():
     fix_pill(f, *GANANCIA_X, "GANANCIA", "$0", LIMEVAL)
     fix_turbo(f)
     shift_premio(f)
-    f.save("frame_v2_fixed.png")
+    f.save(str(ASSETS / "frame_v2_fixed.png"))
     return f
 
 

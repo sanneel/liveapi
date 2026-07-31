@@ -229,6 +229,32 @@ def set_var(variables: list[dict], name: str, value: str) -> int:
     return n
 
 
+# Names set_var() was asked to write but matched nothing, as
+# [(contract, variable name)]. prepare_comms() clears this at the top of a run
+# and verify() refuses on anything left in it.
+#
+# A channel stores its copy twice: the language tabs are written by direct key
+# assignment, so a shape change raises. objectForSend.variables is written by
+# set_var, which matches on NAME and returns a count every caller discarded. So
+# a re-captured template with a renamed variable wrote nothing, the run still
+# reported "title/description/caption set", and the payload shipped with this
+# run's copy in the tab and the CAPTURED campaign's copy in the variables array
+# — a content leak and a dual-storage disagreement in one, both of which this
+# repo treats as non-negotiable.
+#
+# Recording the misses is what makes this precise. Comparing the two storages
+# generically does not work: several names legitimately differ between them
+# (`title` vs `title-en`, `description`, `buttons_1_caption`), so a name-equality
+# check refuses healthy runs.
+_unwritten_vars: list[tuple[int, str]] = []
+
+
+def require_var(variables: list[dict], name: str, value: str, contract: int) -> None:
+    """set_var, but a write that matched nothing is remembered instead of lost."""
+    if set_var(variables, name, value) == 0:
+        _unwritten_vars.append((contract, name))
+
+
 def update_notification(
     activity: dict,
     *,
@@ -247,16 +273,16 @@ def update_notification(
     in the common tab — unlike GOW's notification, so this is PMCL-specific."""
     init = activity["initializationData"]
     variables = init["objectForSend"]["variables"]
-    set_var(variables, "title-en", title_en)
-    set_var(variables, "title-es", title_es)
-    set_var(variables, "description-en", desc_en)
-    set_var(variables, "description-es", desc_es)
-    set_var(variables, "caption-en", caption_en)
-    set_var(variables, "caption-es", caption_es)
-    set_var(variables, "link", link)
-    set_var(variables, "deeplink", deeplink)
+    require_var(variables, "title-en", title_en, 1)
+    require_var(variables, "title-es", title_es, 1)
+    require_var(variables, "description-en", desc_en, 1)
+    require_var(variables, "description-es", desc_es, 1)
+    require_var(variables, "caption-en", caption_en, 1)
+    require_var(variables, "caption-es", caption_es, 1)
+    require_var(variables, "link", link, 1)
+    require_var(variables, "deeplink", deeplink, 1)
     if icon is not None:
-        set_var(variables, "icon-src", icon)
+        require_var(variables, "icon-src", icon, 1)
 
     tabs = init["singleChannel"]["localizedLanguagesTab"]
     tabs["en"]["title-en"] = title_en
@@ -289,16 +315,16 @@ def update_popup(
     common tab."""
     init = activity["initializationData"]
     variables = init["objectForSend"]["variables"]
-    set_var(variables, "title_en", title_en)
-    set_var(variables, "title_es", title_es)
-    set_var(variables, "description_en", desc_en)
-    set_var(variables, "description_es", desc_es)
-    set_var(variables, "caption_en", caption_en)
-    set_var(variables, "caption_es", caption_es)
-    set_var(variables, "link", link)
-    set_var(variables, "deeplink", deeplink)
+    require_var(variables, "title_en", title_en, 5)
+    require_var(variables, "title_es", title_es, 5)
+    require_var(variables, "description_en", desc_en, 5)
+    require_var(variables, "description_es", desc_es, 5)
+    require_var(variables, "caption_en", caption_en, 5)
+    require_var(variables, "caption_es", caption_es, 5)
+    require_var(variables, "link", link, 5)
+    require_var(variables, "deeplink", deeplink, 5)
     if bg is not None:
-        set_var(variables, "background_image_src", bg)
+        require_var(variables, "background_image_src", bg, 5)
 
     tabs = init["singleChannel"]["localizedLanguagesTab"]
     tabs["en"]["title_en"] = title_en
@@ -432,6 +458,7 @@ def prepare_comms(
 ) -> tuple[dict, list[str], datetime, datetime, dict | None]:
     body = json.loads(TEMPLATE_PATH.read_text(encoding="utf-8-sig"))
     report: list[str] = []
+    _unwritten_vars.clear()   # this run's tally; verify() refuses on what's left
 
     slug, tpl_id = template_link(body)
     tid = (tournament_id or "").strip() or tpl_id
@@ -578,6 +605,14 @@ def verify(body: dict, tournament_id: str, upload_photos: bool,
     if spec_copy:
         checks.extend(_copy_landed(serialized, spec_copy))
 
+    # Every channel variable this run asked to write actually matched something.
+    # A miss means the template renamed it, and the captured campaign's value is
+    # still sitting in objectForSend.variables ready to ship.
+    missed = ", ".join(f"contract {c}: {n}" for c, n in _unwritten_vars)
+    checks.append((not _unwritten_vars,
+                   "every channel variable was written"
+                   + (f" — NOT FOUND IN TEMPLATE: {missed}" if missed else "")))
+
     checks.append((bool(body.get("journeyName")), f"journeyName is {body.get('journeyName')!r}"))
     checks.append((body.get("reservedJourneyId") == RESERVED_ID_TOKEN, f"reservedJourneyId is {body.get('reservedJourneyId')!r}"))
     checks.append((body.get("brand") == BRAND, f"brand is {body.get('brand')!r}"))
@@ -609,6 +644,15 @@ def verify(body: dict, tournament_id: str, upload_photos: bool,
     sms_act = next((a for a in body.get("activities", []) if a.get("activityName") == "dextra_sms"), None)
     sms_body = ((sms_act or {}).get("initializationData") or {}).get("smsSettings", {}).get("messageText", "")
     checks.append((sms_body.lower().startswith(SMS_PREFIX.lower()), f"SMS text starts with 'Fortunazo |' ({sms_body[:22]!r}...)"))
+    # Carried over from comms_campaign.py, which has asserted this since GOW: the
+    # SMS link is built with a {{BrandDomain}} placeholder, and the platform only
+    # substitutes it if the variable is declared (ticked) on the activity. If a
+    # re-capture drops the declaration, players receive the literal text
+    # "{{BrandDomain}}" in the link. The tournament generator emitted the same
+    # placeholder with no equivalent check.
+    if sms_act is not None and "{{BrandDomain}}" in sms_body:
+        luv = (sms_act.get("initializationData") or {}).get("listOfUsedVariables") or []
+        checks.append(("BrandDomain" in luv, "SMS declares the BrandDomain variable (ticked)"))
     checks.append(("duplicatedFromId" not in body, "no stale duplicatedFromId"))
     checks.append(("duplicatedFromVersion" not in body, "no stale duplicatedFromVersion"))
 

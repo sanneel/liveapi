@@ -7,12 +7,23 @@ Assets expected: frame_v2.png, divider*.png, sym_seven.png, sym_bolt.png,
 sym_bomb.png, sym_coin.png
 Fonts: uses the JugaBet brand fonts from ./fonts when available, falls back
 to DejaVu.
+
+NOT RUNNABLE AS COMMITTED. Only frame_v2.png of the assets above was ever
+committed — divider*.png and every sym_*.png are absent from the repository, so
+this script cannot produce its GIF. It is kept for the geometry and the
+animation timings, which are the parts worth reading. Restore the symbol art
+before expecting it to run.
 """
 
 import math, os, random
+from pathlib import Path
+
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-FRAME_PATH = "frame_v2.png"
+# Resolved against the repo, not the shell's working directory.
+ASSETS = Path(__file__).resolve().parents[1] / "assets"
+
+FRAME_PATH = str(ASSETS / "frame_v2.png")
 PRIZE_TEXT = "50 GIROS GRATIS"   # <- variable prize line
 SYMBOLS = {"seven": "sym_seven.png", "bolt": "sym_bolt.png", "bomb": "sym_bomb.png"}
 

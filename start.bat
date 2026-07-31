@@ -21,11 +21,11 @@ echo Starting Jugabet servers...
 start "Server 8000 - Events + Admin" cmd /k "cd /d %~dp0 && venv_win\Scripts\activate && python -m uvicorn server:app --host %HOST% --port 8000"
 timeout /t 2 /nobreak >nul
 
-start "Server 8001 - Football" cmd /k "cd /d %~dp0 && venv_win\Scripts\activate && python -m uvicorn render_server:app --host %HOST% --port 8001"
-start "Server 8002 - Basketball" cmd /k "cd /d %~dp0 && venv_win\Scripts\activate && python -m uvicorn basketball_render_server:app --host %HOST% --port 8002"
-start "Server 8003 - Tennis" cmd /k "cd /d %~dp0 && venv_win\Scripts\activate && python -m uvicorn tennis_render_server:app --host %HOST% --port 8003"
-start "Server 8004 - Cybersport" cmd /k "cd /d %~dp0 && venv_win\Scripts\activate && python -m uvicorn cybersport_render_server:app --host %HOST% --port 8004"
-start "Server 8005 - Fights" cmd /k "cd /d %~dp0 && venv_win\Scripts\activate && python -m uvicorn fights_render_server:app --host %HOST% --port 8005"
+start "Server 8001 - Football" cmd /k "cd /d %~dp0 && venv_win\Scripts\activate && python -m uvicorn render_servers.render_server:app --host %HOST% --port 8001"
+start "Server 8002 - Basketball" cmd /k "cd /d %~dp0 && venv_win\Scripts\activate && python -m uvicorn render_servers.basketball_render_server:app --host %HOST% --port 8002"
+start "Server 8003 - Tennis" cmd /k "cd /d %~dp0 && venv_win\Scripts\activate && python -m uvicorn render_servers.tennis_render_server:app --host %HOST% --port 8003"
+start "Server 8004 - Cybersport" cmd /k "cd /d %~dp0 && venv_win\Scripts\activate && python -m uvicorn render_servers.cybersport_render_server:app --host %HOST% --port 8004"
+start "Server 8005 - Fights" cmd /k "cd /d %~dp0 && venv_win\Scripts\activate && python -m uvicorn render_servers.fights_render_server:app --host %HOST% --port 8005"
 
 echo All servers starting...
 echo.
