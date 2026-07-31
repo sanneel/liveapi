@@ -11,6 +11,24 @@ Reference implementation: `compose_comms.py` (`build_body`).
 > **Adding a recipe?** These rules are the constraints; `RECIPE_BUILDING.md` is
 > the step-by-step process (and a reusable prompt) for building one.
 
+## Which composer these rules govern
+
+There are two, and rule 2 below reads differently for each.
+
+- **`compose.py`** — the RECIPE engine (MODE 3) and the inline-graph engine
+  (MODE 4). It lifts a whole chain out of **one** captured journey and keeps
+  that capture's shared shell, so rule 2 applies literally: every node of a
+  recipe comes from one reference, and mixing references ships a blank canvas.
+- **`journey_composer.py`** — the CHAIN engine (MODE 5). It deep-clones each
+  activity *with its own mirror element*, regenerates ids per node and rewires
+  dependencies by role, so a node from a second capture is no more foreign than
+  a second node from the first. It draws from four templates on purpose
+  (`gow.json`, `gow_comms.json`, `udch/two_hours.json`, `udch/followup.json`) —
+  freebet and registration live only in the udch captures, and excluding them
+  made every sport prize unbuildable. Rules 1 and 3–7 still apply to it in full.
+
+Everything below is written against the recipe engine unless it says otherwise.
+
 ## The canvas is a mirror of the graph
 
 Every journey is stored twice and both must agree (`activities[]` runtime +

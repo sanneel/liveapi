@@ -66,3 +66,22 @@ generated and authoritative, and a prose copy can only drift out of date.
 - "Instant Bonus" IS a `freespin_bonus` with `withWagering: false` (captured — templates/casino/instfs.json):
   - Chain is `external_system_source → promotion → freespin_bonus → end_of_journey` (promotion-gated, no deposit, NO casino_bonus_v2). This is now a captured, renderable pattern — not ⛔.
   - The instant marker is `freespinActivity.withWagering: false` + no wagering follow-up node; cashout/release-limit 1 is expressed by the absence of the wagering chain.
+- SUPERSEDES the "game not in registry → ⛔" bullet above (the registry outgrew the prompt):
+  - The GAMES REGISTRY section no longer lists games. It is 4,901 games across 48 providers and only the provider counts are inlined, so you CANNOT see whether a title is registered — and "game X is not in the registry" is therefore a claim you are never in a position to make.
+  - Put the brief's game NAME, verbatim, in the game field (`spin_game_lobby` in MODE 3, `game` in MODE 5). The composer resolves it against library/games.json by name, alias or id and fills the whole provider/lobby/wallet/external tuple itself. Send ONLY the game field; the other three are derived and anything you put in them is overwritten.
+  - A name that does not resolve makes the composer refuse WITH near matches ("did you mean …?"), which tells the operator exactly what to fix. `⛔ RESOLVE_AT_BUILD_TIME` produces a blocker refusal that names nothing and leaves them stuck — so use it in a game field ONLY when the brief names no game at all and one is required.
+  - Never let an unrecognised PROVIDER name become a ⛔ either: provider is derived from the game.
+- SUPERSEDES "NEVER map an empty-prize/fallback journey to `comms` — that is ⛔ UNCAPTURED" (still right about `comms`, wrong about ⛔):
+  - Do not use the `comms` recipe for it — that part stands, and the composer refuses it outright (zero knobs means it reproduces its reference verbatim, live copy and all).
+  - But an empty-prize / notify-only / wheel-prize journey is NOT ⛔ UNCAPTURED: MODE 5 builds it from captured nodes. Write the chain you actually want, e.g. `{"name": "...", "source": {"type": "api"}, "chain": [{"type": "nc", ...copy...}], "date": "...", "days": 1}`.
+  - ⛔ UNCAPTURED is the last resort — only when an activity type has no captured node at all, so neither a recipe nor a chain can express it.
+- Randomizer fields you CANNOT set from a MODE 6 spec (state them in the plan, then tell the operator to fix them by hand):
+  - A MODE 6 spec accepts only `kind`, `date`/`dates`, `days`, `weights`, `journeys`, `internal_name`, `url_short`. EVERYTHING else comes from the captured wheel template and ships as captured.
+  - That includes `randomizerShotPolicy` (all three templates carry `"Once"`), `playerVisibility` (all three carry `"Authorized"`), `filterConditions` (the captured campaign's audience), `contentId`/`frontId` (the captured campaign's artwork), and `isEmptyPrize`/`isLimitedPrize`/`prizeQuantity` on each slice.
+  - So when the brief implies a different value — a repeatable spin ("per deposit", "daily") rather than `Once`, or a public wheel that should be `Unauthorized` — say so with ⚠ AND add: "not settable from the spec; change it in the backoffice after the draft is created." Stating it in MODE 2 prose alone reads as if the build will apply it, and it will not.
+  - There is no inherited-content guard on randomizers the way there is on journeys, so nothing will refuse a wheel that still carries the previous campaign's segment and artwork.
+- "Max win: N" has no knob and no chain setting (supersedes the `maxWinAmount` mapping above):
+  - No recipe knob and no chain setting writes `maxWinAmount`, and it appears in no captured template. Do not emit it in a spec — an invented knob name is refused, and an invented chain setting is refused.
+  - The caps that ARE settable are the free-spin ones: `spin_max_bonus_clp` / `spin_min_bonus_clp` (MODE 3, on `casino_instant_freespin` and `casino_deposit_freespins`). If the brief states a max win that is not one of those, flag it ❓ and say it needs setting by hand.
+- `spin_campaign_end` exists ONLY on `casino_instant_freespin`:
+  - `casino_deposit_freespins` does not define it, so sending it is refused as an unknown knob. When a deposit-gated free-spin campaign states an end date, that is a reason to use MODE 5 (or to accept `fix_dates`' +7-day default and say so with ❓) — not a reason to invent the knob.

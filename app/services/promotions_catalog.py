@@ -235,6 +235,9 @@ _NOT_GENERATORS = {
     "gow_campaign.py", "comms_campaign.py", "build_catalog.py",
     "build_games_registry.py", "nc_discount_campaign.py",
     "nc_discount_pmcl_campaign.py", "tournament_pmcl_email.py",
+    # The HAR analyser is the first step of HAR_TO_AUTOMATION.md, not a campaign
+    # generator — it reads a capture and reports; it builds no draft.
+    "har_analyse.py",
 }
 
 

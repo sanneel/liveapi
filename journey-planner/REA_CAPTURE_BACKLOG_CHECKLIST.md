@@ -7,6 +7,20 @@ Legend for status:
 - [x] = captured / known (verified from a real object or working code)
 - [ ] = NOT captured / unknown — the builder must NOT generate this yet
 
+**This list is hand-maintained and the RECIPES CATALOG is not.** The catalog's
+`chain_composer.activities` map is generated from the templates on disk every
+time `compose.py --catalog` runs, so it is the authoritative answer to "can this
+be built". This checklist exists to record *why* something is or is not
+captured, and what to capture next. When the two disagree, the catalog is right
+and this file is stale — fix it here rather than refusing a build. (That has
+happened: `registration`, `random_split`, `email_engagement_split` and
+`sport_bonus` sat marked uncaptured here while the composer was building them.)
+
+"Captured" also does not mean "fully steerable". `sport_bonus` and
+`multipurpose_promotion` are chainable but have no settings wired, so a node of
+either type ships its reference template's own values — see the `inline_keys`
+for each activity in the catalog, which is the real list of what you can set.
+
 ---
 
 ## A. Activity types — capture coverage
@@ -18,8 +32,11 @@ sport templates.
 ### CAPTURED (builder can assemble these) [x]
 - [x] `external_system_source`  (Input Source — "API")
 - [x] `dwh_source`              (Input Source — "Custom Segment") *(code/templates)*
-- [x] `Reference codes`         (Input Source) *(user confirmed captured)*
+- [x] `registration`            (Input Source — "Reference codes"; takes `promocode`) *(udch/two_hours.json)*
 - [x] `Promotion` as source     (Input Source) *(user confirmed captured)*
+- [x] `random_split`            (Flow control — Random split) *(udch/two_hours.json)*
+- [x] `email_engagement_split`  (Flow control — Email engagement split) *(casino/gow_comms.json)*
+- [x] `sport_bonus`             (Reward — Sport Bonus) *(udch/two_hours.json; chainable, but no settings wired — it ships the reference's values)*
 - [x] `promotion`
 - [x] `multipurpose_promotion`
 - [x] `freespin_bonus`          (Reward — Casino FreeSpin)
@@ -48,8 +65,6 @@ Input Source
 - [ ] `Events`            — real-time event entry (wire name unknown)
 
 Flow control
-- [ ] `Random split`      — wire name unknown
-- [ ] `Email engagement split`      — wire name assumed `email_engagement_split`, unconfirmed
 - [ ] `Native push engagement split`— wire name unconfirmed
 
 Communication
@@ -70,7 +85,6 @@ Conditions
 - [ ] `Deposit Collection`
 
 Reward type
-- [ ] `Sport Bonus`      — wagering sport bonus (wire name unknown)
 - [ ] `Money Bonus`      — cash to main balance (wire name unknown)
 - [ ] `Coins Bonus`      — wire name unknown
 

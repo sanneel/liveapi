@@ -23,6 +23,21 @@ captured object > working code > GR8 official doc > inference.
 **Golden rule of grounding:** the builder never invents journey structure. It
 assembles from captured objects and fills gaps only with rules recorded here.
 
+**Why the section numbers jump.** §§2–4, 8 and 13–16 are not missing — they moved
+to `REA_BUILD_MECHANICS.md` (dual storage, the activity envelope, ID classes,
+build order, the endpoint catalogue, the debugging playbook, the visual layer).
+That file is deliberately NOT injected into the planner prompt: the planner
+produces plans and specs, the composer does the POSTing. So a pointer here to a
+section you cannot see means it lives there. Numbers are kept stable rather than
+renumbered, so older cross-references still resolve.
+
+**What outranks this document.** Three prompt sections do, in this order: the
+CORRECTIONS list (highest — operator-taught, append-only, and where two of its
+bullets conflict the LATER one wins), then the RECIPES CATALOG and the GAMES
+REGISTRY, which are generated from the code and so cannot drift. Where this
+document disagrees with one of those, that one wins — and the disagreement is a
+bug worth reporting, not a judgement call to make mid-plan.
+
 ---
 
 ## 1. The three subsystems (the core mental model) [VERIFIED]
@@ -64,13 +79,13 @@ generate it safely).
 ### Input Source
 | UI label | wire `activityName` | notes |
 |---|---|---|
-| Custom Segment | `dwh_source` [VERIFIED] | DWH/segment audience; holds `filterDetails` tree |
-| Reference codes | *(uncaptured)* [UNKNOWN] | promocode-triggered entry |
-| CSV | *(uncaptured)* [UNKNOWN] | uploaded player list |
-| API | `external_system_source` [VERIFIED] | API/externally triggered; `targetSystem` e.g. `"Randomizer"`, `"PromoPage"`; keys: `description, targetSystem, webhookId, isWebhookUrlHidden, displayData` |
+| Custom Segment | `dwh_source` [VERIFIED] | DWH/segment audience; holds `filterDetails` tree. Chain alias `segment` / `csv` |
+| Reference codes | `registration` [VERIFIED — udch/two_hours.json] | promocode-triggered entry; takes `promocode`. Fires `PlayerAdded` (an Activation), so it can only ever be the ENTRY node |
+| CSV | *(uncaptured)* [UNKNOWN] | uploaded player list. The chain composer's `csv` alias maps to `dwh_source`, not to a real CSV node |
+| API | `external_system_source` [VERIFIED] | API/externally triggered; `targetSystem` e.g. `"Randomizer"`, `"PromoPage"`; keys: `description, targetSystem, webhookId, isWebhookUrlHidden, displayData`. This is the entry for a journey a randomizer routes winners into |
 | Predefined Segment | *(uncaptured)* [UNKNOWN] | |
 | Events | *(uncaptured)* [UNKNOWN] | real-time event entry |
-| Promotion (as source) | *(uncaptured)* [UNKNOWN] | greyed in capture |
+| Promotion (as source) | *(uncaptured as a SOURCE)* [UNKNOWN] | greyed in capture. `promotion` is captured as a mid-chain activity — that is a different thing |
 
 All sources fire activation event **`PlayerAdded`** into the first real
 activity. [VERIFIED]
@@ -78,9 +93,9 @@ activity. [VERIFIED]
 ### Flow control
 | UI label | wire | notes |
 |---|---|---|
-| Decision split | `ams_decision_split` [VERIFIED] | rules-based audience split; used in the birthday freespin prize for value-based routing |
-| Random split | *(uncaptured)* [UNKNOWN] | |
-| SMS / Email / Native push / On-site engagement split | `notification_center_engagement_split` [VERIFIED], `email_engagement_split` / `*_engagement_split` [GR8-DOC] | branch on Sent/Read/Clicked; must follow the matching comms + Wait/Date |
+| Decision split | `ams_decision_split` [VERIFIED] | rules-based audience split; used in the birthday freespin prize for value-based routing. Paths `DecisionSplitPassedPath01..20` + `RemainderPath` |
+| Random split | `random_split` [VERIFIED — udch/two_hours.json] | captured and chainable; no default forward event, so a chain node MUST name its path with `follow` or `branches` |
+| SMS / Email / Native push / On-site engagement split | `notification_center_engagement_split` [VERIFIED], `email_engagement_split` [VERIFIED — casino/gow_comms.json] | branch on Sent/Read/Clicked; must follow the matching comms + Wait/Date. NC paths `NCEngagementSplitPassedPath01..05`; email paths `Path1..Path6` |
 
 ### Communication
 | UI label | wire | notes |
@@ -132,8 +147,8 @@ activity. [VERIFIED]
 |---|---|---|
 | Casino FreeSpin | `freespin_bonus` [VERIFIED] | see §7 |
 | Casino Bonus | `casino_bonus_v2` [VERIFIED] | wagering/deposit-match; see §7 |
-| Sport FreeBet | `freebet` [VERIFIED] | |
-| Sport Bonus | *(uncaptured)* [UNKNOWN] | wagering sport bonus |
+| Sport FreeBet | `freebet` [VERIFIED] | settings: `amount` (minor), `max_odds`, `expire_days` |
+| Sport Bonus | `sport_bonus` [VERIFIED — udch/two_hours.json] | wagering sport bonus. Chainable, forward event `SportBonusFinished`, but NO settings are wired yet — a `sport_bonus` node ships two_hours' own values |
 | Money Bonus | *(uncaptured)* [UNKNOWN] | cash to main balance |
 | Coins Bonus | *(uncaptured)* [UNKNOWN] | |
 
@@ -312,6 +327,60 @@ Both do a `POST /promo/v2/s3/copy` first to fork a visual bundle.
 
 ---
 
+## 10a. What a randomizer spec can and cannot change [VERIFIED — randomizer_campaign.py + the three captured templates]
+
+A wheel or scratch card is built by `randomizer_campaign.py` from a captured
+template. Unlike a journey, it has **no knob layer and no inherited-content
+guard** — the spec overrides a short list of fields and everything else ships
+exactly as captured. Knowing which is which is the difference between a plan
+that describes the draft and a plan that describes something the operator never
+receives.
+
+**Settable from a MODE 6 spec** (these are the whole list):
+
+| field | how |
+|---|---|
+| `kind` | `sport_wof` \| `casino_wof` \| `casino_scratch` — picks the template |
+| `date` / `dates` | one draft per date; each date re-anchors show/start/end/hide |
+| `days` | window length (defaults per kind: 1, 1, 2) |
+| `weights` | one per slice, in template order, summing to 100 |
+| `journeys` | one per slice, in template order — the journey each prize routes to |
+| `internal_name`, `url_short` | otherwise derived from the kind + date |
+
+**NOT settable — inherited from the template, silently:**
+
+| field | what the templates carry today | why it matters |
+|---|---|---|
+| `randomizerShotPolicy` | `"Once"` in all three | a brief asking for a spin per deposit, or a daily spin, still ships `Once` |
+| `playerVisibility` | `"Authorized"` in all three | §11.3 says a public/anniversary wheel should be `Unauthorized`; the build cannot do it |
+| `filterConditions` | the captured campaign's audience (e.g. casino_wof's `Business: Premium, Negative`) | the new wheel targets the old campaign's segment |
+| `contentId` / `frontId` | the captured campaign's visual bundle | the new wheel wears the old one's artwork |
+| `isEmptyPrize`, `isLimitedPrize`, `prizeQuantity` | per slice, as captured — casino_wof has NO empty slice at all | §11.1 and §11.2 cannot be applied by the build |
+| `randomizationType`, `promoCode` | as captured | |
+
+Two consequences the planner must state rather than assume:
+
+1. **Prize slices cannot be added or removed.** `prize_count` is 6 (sport_wof),
+   4 (casino_wof), 5 (casino_scratch). A brief with a different prize count
+   needs a new capture, and the composer refuses the spec until then.
+2. **Anything in the "NOT settable" table that the brief contradicts is a
+   hand-fix.** Flag it ⚠ and say so explicitly — "not settable from the spec;
+   change it in the backoffice after the draft is created". Stating the intended
+   value in prose alone reads as if the build applied it.
+
+**Prize routing has two paths, and only one of them resolves names.** A
+randomizer built *alongside recipe journeys* (`compose.py --batch`, which the
+backoffice takes when a reply carries more than one MODE 3 spec) creates the
+journeys first and substitutes the real `JRN-*` ids into the prizes. A
+randomizer built **on its own** — which is what happens when the wheel is asked
+for alone, or when its prize journeys are MODE 5 chains — writes the
+`journeys` values into `journeyPrizeSettings.journeyId` **verbatim**, and
+`verify()` only checks the field is non-empty. So a standalone wheel spec must
+carry real `JRN-*` ids; journey NAMES in that path produce a draft routed to
+journeys that do not exist, with a clean green build.
+
+---
+
 ## 11. Brief-invisible rules (HIGHEST-VALUE knowledge) [VERIFIED from birthday HAR]
 
 These are decisions the platform/operator requires but a brief will NEVER state.
@@ -379,7 +448,7 @@ The first captured CREATE session. Brand PMCL (Fortuna Chile). 3 journeys.
 | Main journey (19.07) | `JRN-0-621799` | Same 149-activity shape as 18.07, different date. |
 
 **New things this revealed:**
-- The exact build order (§13): display-id mint → reserve JRN → 70× contents/copy → POST draft.
+- The exact build order (`REA_BUILD_MECHANICS.md` §13): display-id mint → reserve JRN → 70× contents/copy → POST draft.
 - `event_detector` full structure (deposit.approved event, amount filter).
 - `dwh_source` with `currentTemplate` (a saved segment reference).
 - `dextra_sms` with `rawValues.messageText` containing the promo page link.

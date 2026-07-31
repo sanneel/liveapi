@@ -309,7 +309,8 @@
         ],
         "follow": "SuccessSmsSend",
         "inline_keys": [
-          "text_en/es"
+          "text_en",
+          "text_es"
         ]
       },
       "email_engagement_split": {
@@ -379,10 +380,17 @@
         ],
         "follow": "NotificationSent",
         "inline_keys": [
+          "caption_en",
+          "caption_es",
           "deeplink",
+          "desc_en",
+          "desc_es",
           "icon",
-          "link_en/es",
-          "title_en/es, desc_en/es, caption_en/es"
+          "image",
+          "link_en",
+          "link_es",
+          "title_en",
+          "title_es"
         ]
       },
       "notification_center#contract5": {
@@ -391,8 +399,17 @@
         ],
         "follow": "NotificationSent",
         "inline_keys": [
+          "caption_en",
+          "caption_es",
+          "deeplink",
+          "desc_en",
+          "desc_es",
+          "icon",
           "image",
-          "title_en/es, desc_en/es, caption_en/es"
+          "link_en",
+          "link_es",
+          "title_en",
+          "title_es"
         ]
       },
       "notification_center_engagement_split": {

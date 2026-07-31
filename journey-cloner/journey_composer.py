@@ -235,6 +235,18 @@ HAPPY = {
 }
 
 # Per-node settings the composer knows how to apply (documented for `options`).
+#
+# THESE KEYS ARE THE PUBLISHED PALETTE. compose.py's catalog() copies them into
+# recipes_catalog.json as `inline_keys`, the planner prompt inlines that, and
+# admin_planner._chain_palette() reprints them to the model during a repair round
+# as "the ONLY settings this activity accepts". So every key here must be a name
+# a spec can literally send — a collapsed pseudo-key like "text_en/es" or
+# "title_en/es, desc_en/es, caption_en/es" told the model the wrong thing and
+# then the enforcement below refused what the model copied back.
+#
+# The ENFORCEMENT is the `known` dict at the end of _apply_settings(). Keep the
+# two in step: a key here that `known` rejects is a documented refusal, and a key
+# `known` accepts that is missing here is a capability the planner never uses.
 SETTINGS_DOC = {
     "dwh_source": {"segment_file": "path to a captured dwh initializationData fragment (default segment_cs_301.json)"},
     "external_system_source": {"description": "free-text label shown on the API entry node"},
@@ -255,15 +267,34 @@ SETTINGS_DOC = {
     "registration": {"promocode": "the promocode players redeem to enter"},
     "casino_bonus_v2": {"bonus_percent": "deposit-match %", "wagering": "wagering requirement (x)",
                         "release_multiplier": "releaseLimitMultiplier", "expiration_ms": "bonusExpirationTime in ms"},
-    "notification_center#contract1": {"title_en/es, desc_en/es, caption_en/es": "on-site notification copy",
+    "notification_center#contract1": {"title_en": "notification headline (English)",
+                                      "title_es": "notification headline (Spanish)",
+                                      "desc_en": "notification body (English)",
+                                      "desc_es": "notification body (Spanish)",
+                                      "caption_en": "button caption (English)",
+                                      "caption_es": "button caption (Spanish)",
+                                      "link_en": "where the card sends an English player — set it, "
+                                                 "or players go to the captured campaign's promo page",
+                                      "link_es": "where the card sends a Spanish player — set it, "
+                                                 "or players go to the captured campaign's promo page",
                                       "icon": "notification artwork URL — set it, or the card shows "
                                               "the captured campaign's image",
-                                      "link_en/es": "where the card sends the player",
+                                      "image": "background artwork URL, when the card has one",
                                       "deeplink": "app deeplink, when there is one"},
-    "notification_center#contract5": {"title_en/es, desc_en/es, caption_en/es": "pop-up (Cat-fish) copy",
+    "notification_center#contract5": {"title_en": "pop-up (Cat-fish) headline (English)",
+                                      "title_es": "pop-up (Cat-fish) headline (Spanish)",
+                                      "desc_en": "pop-up body (English)",
+                                      "desc_es": "pop-up body (Spanish)",
+                                      "caption_en": "button caption (English)",
+                                      "caption_es": "button caption (Spanish)",
+                                      "link_en": "where the pop-up sends an English player",
+                                      "link_es": "where the pop-up sends a Spanish player",
                                       "image": "pop-up background artwork URL — set it, or the "
-                                               "journey shows the captured campaign's picture"},
-    "dextra_sms": {"text_en/es": "SMS body"},
+                                               "journey shows the captured campaign's picture",
+                                      "icon": "icon artwork URL, when the pop-up has one",
+                                      "deeplink": "app deeplink, when there is one"},
+    "dextra_sms": {"text_en": "SMS body (English)",
+                   "text_es": "SMS body (Spanish)"},
     "dextra_email": {"template": "content-studio email id (e.g. CSE-0-14458). Set it, or the "
                                  "journey emails the CAPTURED campaign's template — which the "
                                  "inherited-content check refuses to build",

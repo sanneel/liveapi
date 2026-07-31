@@ -127,6 +127,45 @@ today 6 (sport_wof), 4 (casino_wof), 5 (casino_scratch). A campaign wanting 7
 prizes cannot be built until a 7-slice wheel is captured. Weights must sum to
 100, and `journeys` needs exactly one entry per slice.
 
+**Only six things are overridden; everything else ships as captured.** The run
+sets the dates (per-kind minute offsets reproduce each capture exactly),
+`internalName`, `urlShortName` (prefixed per kind — a bare date 409s
+`UrlShortNameAlreadyUsed`), the weights and the prize routing. There is **no
+knob layer and no inherited-content guard here** — unlike a composed journey,
+nothing refuses a wheel that still carries the previous campaign's content. So
+these ride along untouched, and every one of them has been wrong at least once:
+
+| inherited field | what the templates carry today |
+| --- | --- |
+| `randomizerShotPolicy` | `"Once"` — all three. A "spin per deposit" brief still ships `Once` |
+| `playerVisibility` | `"Authorized"` — all three, including wheels a brief wants public |
+| `filterConditions` | the captured campaign's audience (casino_wof: `Business: Premium, Negative`) |
+| `contentId` / `frontId` | the captured campaign's visual bundle |
+| `isEmptyPrize` / `isLimitedPrize` / `prizeQuantity` | per slice, as captured — casino_wof has no empty slice at all |
+
+`verify()` checks slice count, numeric weights, non-empty routing, date ordering
+and that a visual bundle is present. It does not — cannot — check that any of the
+above is right for *this* campaign. Fix them in the backoffice after the draft is
+created, and say so in the plan rather than implying the build applied them.
+
+**Prize routing resolves journey NAMES on exactly one path.** `compose.py
+--batch` (`{"journeys": [...], "randomizer": {...}}`) creates the journeys first
+and substitutes the real `JRN-*` ids it gets back — that is what makes the whole
+promotion one paste. Run standalone, `randomizer_campaign.py --journeys` writes
+its arguments into `journeyPrizeSettings.journeyId` **verbatim**, and `verify()`
+only asserts the field is non-empty. A standalone wheel therefore needs real
+`JRN-*` ids; passing names there produces a green build routed at journeys that
+do not exist. Note which path you are on: the backoffice only takes the batch
+path when a reply carries more than one *recipe* spec, so a wheel whose prize
+journeys are MODE 5 chains is built standalone.
+
+Other things worth knowing: `--dates` creates one draft per date in a single
+paste; the generated script has `PREVIEW=true` (log the bodies without sending)
+and `DEBUG=true` (create one draft, print the response, skip the fill); the fill
+is `POST /promo/v2/randomizer?draftId=<id>` for all three kinds, because the
+`PUT /randomizer/<id>` variant wants a different randomization GUID and 422s
+`Invalid Randomization identifier` on a numeric draft id.
+
 Because prize routing needs journey ids that do not exist until the journeys are
 created, `compose.py --batch` can build the **whole promotion in one paste**:
 give it `{"journeys": [...], "randomizer": {...}}` and the script creates the
@@ -147,6 +186,27 @@ part of this run: `tournament_pmcl_email.py` is a **module it imports**, not a
 separate generator — it builds the substituted email *content*, and the console
 script creates + publishes it at paste time, then swaps the resulting content id
 into the journey.
+
+Five mechanics that are not obvious from the tab, each of which changes what the
+operator receives:
+
+- **The entry window is fixed** to the same day as `--date`, 12:00 → 19:00 Chile
+  — identical to GOW comms, and not driven by the sheet.
+- **The tournament dates drive two derived activities.** `calc_tournament_days`
+  turns the sheet's start/end into the `wait_date` the journey waits on and the
+  revoke window on the notification, so a wrong end date moves more than the
+  copy. `--tournament-id` swaps the id in every channel's link; the notification
+  and the SMS build that link differently (`notif_link` vs `sms_link`), so both
+  are rewritten, not one.
+- **Photos are paste-time, and only with a folder id.** The template keeps two
+  placeholder tokens (NC icon, pop-up background) that the console script fills
+  from a PMCL media-library upload. `DEFAULT_FOLDER_ID` is baked in so a normal
+  run gets the file pickers; `--folder-id` overrides it and `--no-photos` opts
+  out — and opting out means the captured campaign's image URLs ship.
+- **The SMS gets a `Fortunazo | ` prefix** added by the generator, so the sheet
+  should not carry one.
+- **Brand is PMCL** and the base URL is the shared `pmi.rea-backoffice` host —
+  the same one the PMCL Discount NC generator uses.
 
 ### Comms journey from content — `journey_composer.py` → **AI** page
 Composes an arbitrary comms chain from captured nodes with **your** copy:
@@ -186,12 +246,107 @@ The comms half of a GOW campaign; runs as part of that tab by default.
 
 - **AI planner** — `compose.py` + `journey_composer.py` + `render_journey_design.py`,
   driven from the **AI** page. Brief → plan → design boards → console scripts.
-  Status and roadmap: `../JOURNEY_COMPOSER_STATUS.md`.
+  The end-to-end flow is below; status and roadmap: `../JOURNEY_COMPOSER_STATUS.md`.
 - **Games registry** — `build_games_registry.py`. Rebuilds `library/games.json`
   (4,901 games / 48 providers) from the backoffice catalog. The composer refuses
   any game not in it, so a stale registry looks like "that game does not exist".
+  Note the registry outgrew the prompt: only `library/games_index.md` (provider
+  counts, ~1.5 KB) is injected, so the model names games in plain language and
+  the composer resolves them. It cannot see the titles, and must never claim one
+  is unregistered.
+- **Recipe catalog** — `compose.py --catalog` writes `recipes_catalog.json`,
+  which IS the machine-readable part of the planner prompt. Regenerate it in the
+  full venv and check all four sections survived (`recipes`, `references`,
+  `chain_composer`, `randomizer`): the two palette builders swallow import
+  errors and return `{}`, so a missing dependency silently produces a smaller
+  catalog and the freshness check in `scripts/test_composer_contract.py` will
+  then happily bless the smaller one.
 - **Automation catalog** — `build_catalog.py`. Rebuilds `catalog.json`, which the
-  Optimization overview's "captured automations" graph reads.
+  Optimization overview's "captured automations" graph reads. Different file,
+  different purpose from `recipes_catalog.json` above, and its `recipes` key is
+  a different thing again — prose flow patterns ("free spins after a deposit"),
+  not the composer's recipe keys. Nothing in the AI prompt reads it.
+- **HAR analyser** — `har_analyse.py`. Step 1 of `HAR_TO_AUTOMATION.md`; reads a
+  capture and reports, builds no draft. Registered in `_NOT_GENERATORS` so the
+  drift alarm does not flag it.
+- **Plan linter / agent entry point** — `plan_lint.py` + `ai_campaign_builder.py`.
+  A **dormant** earlier design: a text flow-DSL validated against `catalog.json`,
+  with its own aliases (`NC1`, `NC5`, `SMS`), its own recipe names and its own
+  knob shape. Nothing in the app or the AI page calls either one. `ai_campaign_builder.py`
+  still describes itself as "the single entry point an agent uses" — it is not;
+  the live path is the one below. Do not ground a plan or a spec in these files
+  or in `catalog.json`'s vocabulary.
+
+---
+
+## How the AI path actually runs
+
+Nine steps, from the operator's paste to a pasteable script. Everything the model
+is grounded in is assembled per request from files on disk, so editing a doc
+takes effect without a restart.
+
+```
+ 1. INPUT        Operator pastes a brief into /admin/ai (editor role required).
+                 POST /admin/planner/api  {messages[], temperature}
+                 Last 40 messages forwarded; 20 000 chars each, upstream.
+
+ 2. PROMPT       app/routes/admin_planner.py::_build_system_prompt() reads
+                 journey-planner/system_prompt.txt and substitutes five blocks:
+                   <KNOWLEDGE_BASE>  REA_KNOWLEDGE_BASE.md
+                   <CAPTURE_BACKLOG> REA_CAPTURE_BACKLOG_CHECKLIST.md
+                   <RECIPES_CATALOG> journey-cloner/recipes_catalog.json  (generated)
+                   <GAMES_REGISTRY>  journey-cloner/library/games_index.md (generated)
+                   <CORRECTIONS>     corrections.md   (highest precedence)
+                 journey-planner/planner.py does the identical substitution for
+                 the CLI, which is why the two never disagree.
+
+ 3. RETRIEVAL    There is none — no embeddings, no search, no chunking. The whole
+                 knowledge base is inlined every call (~17 K tokens). "Retrieval
+                 quality" here is a question about what is IN those five files.
+
+ 4. MODEL        Gemini by default (gemini-2.5-flash for planning,
+                 gemini-2.5-flash-lite for mechanical calls); Groq is opt-in and
+                 gets a LEAN prompt — the KB and backlog swapped for one-line
+                 pointers, because the free tier's 12 K TPM cannot carry them.
+                 Transient 429/5xx retried 3× with 1.5 s / 4 s backoff.
+
+ 5. CONTINUE     A reply cut off by the output cap is continued from the exact
+                 character it stopped at, up to 4 rounds, and the pieces stitched
+                 (_complete). A 30-journey design block does not fit one round.
+
+ 6. MODES        The reply is prose (MODE 1/2) or a JSON spec (MODE 3–6). The
+                 engine is picked from the spec's OWN keys, never from the
+                 browser's guess: `kind`+`date` → randomizer, `reference` →
+                 graph, `chain` → chain, `recipe` → recipe.
+
+ 7. DESIGN       POST /admin/planner/design runs render_journey_design.py over
+                 the MODE 1 `diagram` block and returns PNG boards as data URLs.
+                 An outline that arrived without a design block gets ONE repair
+                 round asking for just the block. The model never sees the images.
+
+ 8. COMPOSE      POST /admin/planner/compose extracts EVERY spec in the reply and
+                 dispatches through app/services/journey_cloner_runner.py:
+                   recipe  → compose.py --spec       (validate_spec: 5 gates)
+                   graph   → compose.py --graph
+                   chain   → journey_composer.py compose --script
+                   wheel   → randomizer_campaign.py  (argv, not stdin)
+                   many recipe specs → compose.py --batch (one paste, N drafts,
+                                       and the wheel that routes into them)
+
+ 9. REPAIR       A refusal is fed back to the model with the offending spec and
+                 one instruction — fix only what the refusal names — for up to 2
+                 rounds. A refusal that says the SHAPE is wrong instead forces a
+                 switch to a MODE 5 chain. Repairs run on the lean prompt with a
+                 1 024-token thinking budget. A repair that swapped a game for a
+                 near match the composer suggested is DROPPED, not accepted:
+                 granting spins on a different game is wrong, not fixed. The best
+                 scoring round is what the operator gets.
+```
+
+The output is always a console script the operator pastes into a logged-in
+backoffice tab. Nothing on this path POSTs to the backoffice, and the model never
+writes journey JSON by hand — a hand-written body has `elements: []` and renders
+as a blank canvas.
 
 ---
 
