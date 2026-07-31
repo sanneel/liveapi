@@ -126,7 +126,13 @@
   .jp-composer{display:flex;gap:10px;align-items:flex-end;background:var(--surface);
     border:1px solid var(--border);border-radius:16px;padding:10px;
     box-shadow:0 1px 2px rgba(16,24,40,.04)}
-  .jp-composer textarea{flex:1;resize:vertical;min-height:52px;max-height:230px;border:none;
+  /* The primary input here is a PASTED BRIEF — a spreadsheet block dozens of
+     lines long, not a chat line. At a fixed 52px it showed two lines of what
+     you just pasted and hid the rest, so the one thing you most want to check
+     before sending was the one thing you could not see. The box now grows to
+     fit (see autogrow() below) up to a cap, then scrolls. */
+  .jp-composer textarea{flex:1;resize:vertical;min-height:52px;
+    max-height:min(46vh, 520px);overflow-y:auto;border:none;
     outline:none;background:none;padding:8px 6px;font:400 13.5px/1.5 var(--font);color:var(--t-body)}
   .jp-composer textarea::placeholder{color:var(--t-disabled)}
   .jp-send{flex:none}
@@ -478,7 +484,7 @@ NOTES
     hint.textContent = "";
     addMsg("user", text);
     history.push({ role: "user", text });
-    input.value = "";
+    input.value = ""; autogrow();          // collapse back to one line
     busy = true; sendBtn.disabled = true;
     const bub = addMsg("model", ""); bub.innerHTML = '<span class="jp-dots"></span>';
     try{
@@ -517,13 +523,32 @@ NOTES
     }
   }
 
+  // Grow the composer to fit what is in it, up to the CSS max-height (then it
+  // scrolls). Height must be cleared first or scrollHeight only ever reports
+  // the current height and the box can never shrink back down after a send.
+  // A manual drag sets an inline height too, so this quietly takes it over —
+  // which is the intent: dragging the box open for every pasted brief was the
+  // workaround, not the feature.
+  function autogrow(){
+    input.style.height = "auto";
+    input.style.height = input.scrollHeight + "px";
+  }
+  input.addEventListener("input", autogrow);
+  // Paste fires `input` in every browser we care about, but a drag-and-dropped
+  // block of text does not always, so cover that path explicitly.
+  input.addEventListener("drop", () => setTimeout(autogrow, 0));
+  // Programmatic writes (send clears it, the sample brief and the starter chips
+  // fill it) never fire `input`, so each one calls this itself.
+  const setInput = (value) => { input.value = value; autogrow(); };
+  autogrow();
+
   sendBtn.onclick = send;
   input.addEventListener("keydown", e => {
     if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); send(); }
   });
-  document.getElementById("jpInsert").onclick = () => { input.value = BRIEF; input.focus(); };
+  document.getElementById("jpInsert").onclick = () => { setInput(BRIEF); input.focus(); };
   document.querySelectorAll("[data-starter]").forEach(chip => {
-    chip.onclick = () => { input.value = STARTERS[chip.dataset.starter] || ""; input.focus(); };
+    chip.onclick = () => { setInput(STARTERS[chip.dataset.starter] || ""); input.focus(); };
   });
   document.getElementById("jpClear").onclick = () => {
     history.length = 0;
