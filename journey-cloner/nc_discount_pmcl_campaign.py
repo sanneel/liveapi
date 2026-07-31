@@ -356,6 +356,18 @@ def main() -> int:
 
     games: list[dict] = []
     all_ok = True
+    # Same trap as the JBCL generator: CALENDAR is a literal here, there is no
+    # date flag, and the admin tab calls this with no arguments — so a lapsed
+    # month silently produces drafts scheduled in the past.
+    today = datetime.now(LOCAL_TZ).date()
+    stale = [d for d, _slug, _name in CALENDAR
+             if datetime.strptime(d, "%Y-%m-%d").date() < today]
+    if stale:
+        print(f"WARNING: {len(stale)} of {len(CALENDAR)} calendar dates are in the "
+              f"past ({', '.join(stale)}). CALENDAR is hardcoded in "
+              f"{Path(__file__).name} — edit it for the new weekend before "
+              f"generating, or these drafts are scheduled for dates that have "
+              f"already gone by.", file=sys.stderr)
     print(f"NC For Discount PMCL — {len(CALENDAR)} game(s):")
     for idx, (date_str, slug, name) in enumerate(CALENDAR):
         body, report = prepare_game(date_str, slug, name, idx)

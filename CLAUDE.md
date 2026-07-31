@@ -12,6 +12,7 @@ generators (`journey-cloner/`) and an AI journey planner (`journey-planner/`).
 | asks about the AI planner's state | `JOURNEY_COMPOSER_STATUS.md` |
 | wants a new journey shape composed | `journey-cloner/RECIPE_BUILDING.md`, then `COMPOSER_RULES.md` |
 | reports a generator building the wrong thing | `COMPOSER_RULES.md` — most such bugs are a value never written, so the template's own value shipped |
+| asks where a fact lives, or two docs disagree | `KNOWLEDGE_MAP.md` — which document is authoritative for what, which five the AI actually reads, and the precedence order when they conflict |
 
 ## How this system works, in five lines
 

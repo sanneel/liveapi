@@ -84,6 +84,25 @@ disagree.
 `nc_discount_pmcl_campaign.py` is the same shape for fortunazo.cl; both forms sit
 on that one tab.
 
+**The calendar is a literal in the source, and it expires.** `CALENDAR` — the
+`(date, game-slug, display name)` list — is hardcoded in each generator. Neither
+takes a date flag, and the admin tab calls both with no arguments, so **running
+next month's campaign means editing the Python file**, not filling in a form:
+
+```python
+CALENDAR = [
+    ("2026-07-31", "gamzix-coin-win-2-hold-the-spin", "Coin Win 2: Hold The Spin"),
+    ...
+]
+```
+
+Once those dates pass, a run still succeeds — it emits drafts scheduled for
+dates that have already gone by. Both generators now print a stderr WARNING
+naming the stale dates (it surfaces in the admin log, which appends stderr), but
+it is a warning and not a refusal: re-creating a missed draft for a past date is
+a legitimate thing to want. Read the log before pasting. Updating the calendar
+is the monthly maintenance step for this automation, and it is the only one.
+
 ### Instant free spins / deposit free spins — `compose.py` → **AI** page
 Not a clone: the **composer**. Picks a recipe (`casino_instant_freespin`,
 `casino_deposit_freespins`, …), applies typed knobs to a captured reference, and

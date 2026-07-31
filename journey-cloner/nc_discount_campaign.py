@@ -323,6 +323,19 @@ def main() -> int:
 
     games: list[dict] = []
     all_ok = True
+    # CALENDAR is a literal in this file, not an input — there is no date flag
+    # and the admin tab calls this with no arguments. So once the baked month
+    # lapses, every run quietly emits drafts scheduled in the past. Say so
+    # loudly rather than printing a confident green summary of stale dates.
+    today = datetime.now(LOCAL_TZ).date()
+    stale = [d for d, _slug, _name in CALENDAR
+             if datetime.strptime(d, "%Y-%m-%d").date() < today]
+    if stale:
+        print(f"WARNING: {len(stale)} of {len(CALENDAR)} calendar dates are in the "
+              f"past ({', '.join(stale)}). CALENDAR is hardcoded in "
+              f"{Path(__file__).name} — edit it for the new month before "
+              f"generating, or these drafts are scheduled for dates that have "
+              f"already gone by.", file=sys.stderr)
     print(f"NC For Discount — {len(CALENDAR)} game(s):")
     for date_str, slug, name in CALENDAR:
         body, report = prepare_game(date_str, slug, name)
