@@ -1,170 +1,237 @@
-{# Journey Planner chat widget. Included from the Optimization page's "AI" tab
-   (promotions.html) and nowhere else — /admin/planner just redirects here.
+{# Journey Planner workbench. Included from ai.html and nowhere else —
+   /admin/planner just redirects there.
    Expects: docs_present, key_configured, provider, key_env, model.
 
    Styling rule for this panel: every colour comes from the redesign.css theme
    variables (--ac accent, --surface, --border, --t-*), never a hex literal. That
    is what keeps it matching the rest of the back-office, following the accent
-   the operator picked, and working in dark mode. #}
+   the operator picked, and working in dark mode.
+
+   Shape: a workbench, not a chat box. A stage rail across the top names the
+   pipeline the operator is actually driving (Brief -> Plan -> Boards -> Script)
+   so a run has a visible position in it; the conversation is one flush surface
+   with a docked composer; the right rail is a single continuous inspector
+   instead of three stacked cards. The JS below addresses everything by id and
+   by the .jp-* class hooks, so this markup is free to change shape as long as
+   those names survive. #}
 <style>
-  /* ── shell ─────────────────────────────────────────────────────────────── */
-  .jp-wrap{display:flex;flex-direction:column;gap:14px;height:calc(100vh - 250px);min-height:660px}
+  /* ── shell ──────────────────────────────────────────────────────────────
+     A workbench occupies its viewport: the toolbar and stage rail stay put and
+     only the conversation and the inspector scroll, so the composer never walks
+     off the bottom of a long run. */
+  .jp-wrap{display:flex;flex-direction:column;gap:10px;height:calc(100vh - 236px);min-height:640px}
   .jp-wrap.jp-full{position:fixed;inset:0;z-index:60;background:var(--canvas);
-    padding:18px 22px 20px;height:100vh;min-height:0}
-  .jp-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 318px;gap:14px}
+    padding:14px 20px 16px;height:100vh;min-height:0}
+  .jp-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 296px;gap:10px}
   /* min-height:0 or the log grows past the panel instead of scrolling inside it */
-  .jp-main{min-width:0;min-height:0;display:flex;flex-direction:column;gap:12px}
-  .jp-aside{display:flex;flex-direction:column;gap:12px;overflow-y:auto;padding-right:2px}
+  .jp-main{min-width:0;min-height:0;display:flex;flex-direction:column;gap:10px}
 
-  /* ── assistant header ──────────────────────────────────────────────────── */
-  .jp-head{display:flex;align-items:center;gap:14px;padding:16px 18px}
-  .jp-mark{flex:none;width:42px;height:42px;border-radius:13px;background:var(--acw);
-    display:flex;align-items:center;justify-content:center;color:var(--ac)}
-  .jp-mark svg{width:22px;height:22px}
-  .jp-h1{display:flex;align-items:center;gap:9px;font-size:15.5px;font-weight:800;
-    letter-spacing:-.01em;color:var(--t-strong)}
-  .jp-h2{margin-top:3px;font-size:12.5px;color:var(--t-muted)}
-  .jp-beta{font-size:10px;font-weight:800;letter-spacing:.06em;padding:3px 7px;border-radius:7px;
+  /* ── toolbar: one slim bar, not a card ─────────────────────────────────── */
+  .jp-bar{display:flex;align-items:center;gap:11px;padding:0 2px 2px}
+  .jp-mark{flex:none;width:29px;height:29px;border-radius:9px;background:var(--ac);
+    display:flex;align-items:center;justify-content:center;color:var(--canvas)}
+  .jp-mark svg{width:16px;height:16px}
+  .jp-title{font-size:13px;font-weight:800;letter-spacing:-.01em;color:var(--t-strong);
+    display:flex;align-items:center;gap:8px}
+  .jp-beta{font-size:9.5px;font-weight:800;letter-spacing:.07em;padding:2px 6px;border-radius:5px;
     background:var(--acw);color:var(--ac)}
-  .jp-headright{margin-left:auto;display:flex;align-items:center;gap:9px}
-  .jp-model{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;
-    color:var(--t-muted);background:var(--subtle);border:1px solid var(--border);
-    border-radius:10px;padding:7px 11px}
+  .jp-barright{margin-left:auto;display:flex;align-items:center;gap:7px}
+  .jp-model{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;
+    color:var(--t-faint);font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace}
   .jp-model b{color:var(--t-body);font-weight:700}
+  .jp-iconbtn{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    width:30px;height:30px;padding:0;cursor:pointer;border:1px solid var(--border);
+    border-radius:8px;background:var(--surface);color:var(--t-muted)}
+  .jp-iconbtn:hover{background:var(--hover);color:var(--t-body)}
+  .jp-iconbtn svg{width:15px;height:15px}
+  .jp-iconbtn.wide{width:auto;padding:0 11px;font:700 11.5px/1 var(--font)}
 
-  /* ── conversation ──────────────────────────────────────────────────────── */
-  .jp-log{flex:1;min-height:0;overflow-y:auto;background:var(--surface);
-    border:1px solid var(--border);border-radius:16px;padding:18px;
-    display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
-  .jp-empty{margin:auto;text-align:center;max-width:540px}
-  .jp-empty .jp-mark{margin:0 auto 12px;width:46px;height:46px}
-  .jp-empty h4{margin:0 0 6px;font-size:15px;font-weight:800;color:var(--t-strong)}
-  .jp-empty p{margin:0;font-size:13px;line-height:1.6;color:var(--t-muted)}
-  .jp-starters{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px}
-  .jp-msg{display:flex;gap:11px;align-items:flex-start}
-  .jp-av{flex:none;width:30px;height:30px;border-radius:10px;display:flex;align-items:center;
-    justify-content:center;font-size:11px;font-weight:800;background:var(--subtle);
-    border:1px solid var(--border);color:var(--t-muted)}
-  .jp-msg.model .jp-av{background:var(--acw);border-color:transparent;color:var(--ac)}
-  .jp-msg.model .jp-av svg{width:15px;height:15px}
-  .jp-bubble{flex:1;min-width:0;border:1px solid var(--border);border-radius:14px;
-    padding:12px 15px;background:var(--surface);overflow-x:auto}
-  .jp-msg.user .jp-bubble{background:var(--acw);border-color:color-mix(in srgb, var(--ac) 20%, transparent)}
-  .jp-bubble pre{margin:0;font-family:'SFMono-Regular',Consolas,Menlo,monospace;font-size:12.5px;
-    line-height:1.55;white-space:pre-wrap;word-break:break-word;color:var(--t-body)}
-  .jp-bubble .u{white-space:pre-wrap;line-height:1.55;font-size:13.5px;color:var(--t-body)}
-  .jp-bubble .jp-sum{font-size:13.5px;font-weight:700;color:var(--t-strong)}
+  /* ── stage rail: the pipeline, with the run's position in it ───────────── */
+  .jp-stages{display:flex;align-items:stretch;gap:0;background:var(--surface);
+    border:1px solid var(--border);border-radius:11px;overflow:hidden}
+  .jp-stage{flex:1;min-width:0;display:flex;align-items:center;gap:9px;padding:10px 13px;
+    border-right:1px solid var(--border);position:relative}
+  .jp-stage:last-child{border-right:none}
+  .jp-stage .sn{flex:none;width:19px;height:19px;border-radius:50%;display:flex;
+    align-items:center;justify-content:center;font:800 10px/1 var(--font);
+    background:var(--subtle);color:var(--t-faint2);border:1px solid var(--border)}
+  .jp-stage .st{min-width:0;font-size:11.5px;font-weight:700;color:var(--t-faint);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .jp-stage .sd{margin-left:auto;font-size:10px;font-weight:700;color:var(--t-faint2);
+    font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace}
+  .jp-stage.on{background:var(--acw)}
+  .jp-stage.on .sn{background:var(--ac);color:var(--canvas);border-color:transparent}
+  .jp-stage.on .st{color:var(--ac)}
+  .jp-stage.done .sn{background:var(--pos-bg);color:var(--pos-t);border-color:transparent}
+  .jp-stage.done .st{color:var(--t-body)}
+
+  /* ── conversation: one flush surface, composer docked inside it ────────── */
+  .jp-surface{flex:1;min-height:0;display:flex;flex-direction:column;
+    background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .jp-log{flex:1;min-height:0;overflow-y:auto;padding:20px 20px 6px;
+    display:flex;flex-direction:column;gap:18px}
+  .jp-empty{margin:auto;text-align:center;max-width:520px;padding:12px 0 24px}
+  .jp-empty .jp-mark{margin:0 auto 14px;width:38px;height:38px;border-radius:11px}
+  .jp-empty .jp-mark svg{width:20px;height:20px}
+  .jp-empty h4{margin:0 0 7px;font-size:16px;font-weight:800;letter-spacing:-.015em;
+    color:var(--t-strong)}
+  .jp-empty p{margin:0;font-size:12.5px;line-height:1.65;color:var(--t-muted)}
+  .jp-starters{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:18px}
+  /* Messages are left-aligned blocks separated by a rule, not opposing bubbles:
+     a pasted brief is 40 lines and a plan is longer, and chat-style alignment
+     turns both into a narrow ribbon down the middle of a wide workbench. */
+  .jp-msg{display:flex;flex-direction:column;gap:7px;min-width:0}
+  .jp-msg + .jp-msg{border-top:1px solid var(--border);padding-top:18px}
+  .jp-av{display:inline-flex;align-items:center;gap:7px;font-size:10px;font-weight:800;
+    letter-spacing:.07em;text-transform:uppercase;color:var(--t-faint2)}
+  .jp-av svg{width:13px;height:13px}
+  .jp-msg.model .jp-av{color:var(--ac)}
+  .jp-bubble{min-width:0;overflow-x:auto}
+  /* The operator's own paste is quoted by a rule, so it reads as input without
+     a filled block fighting the plan below it for attention. */
+  .jp-msg.user .jp-bubble{border-left:2px solid var(--border-in);padding-left:13px}
+  .jp-bubble pre{margin:0;font-family:'JetBrains Mono','SFMono-Regular',Consolas,Menlo,monospace;
+    font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word;color:var(--t-body)}
+  .jp-bubble .u{white-space:pre-wrap;line-height:1.6;font-size:13px;color:var(--t-body)}
+  .jp-bubble .jp-sum{font-size:13px;font-weight:700;color:var(--t-strong)}
+  /* The four line flavours the renderer tags. A refusal is the loudest thing on
+     the page on purpose — it is the output that matters most. */
   .jp-warn{color:var(--warn-t)}
-  .jp-uncap{color:var(--live-t);font-weight:700}
+  .jp-uncap{color:var(--live-t);font-weight:800}
   .jp-q{color:var(--club-t)}
-  .jp-head-line{color:var(--t-strong);font-weight:700}
+  .jp-head-line{color:var(--t-strong);font-weight:800;letter-spacing:.02em}
   .jp-err{color:var(--live-t)}
-  .jp-dots::after{content:"planning…";color:var(--ac);font-size:13px;font-weight:600}
-  /* A ```json block is machine data — collapsed to a chip so the plan stays
+  .jp-dots::after{content:"planning";color:var(--ac);font-size:12.5px;font-weight:700;
+    letter-spacing:.04em}
+  /* A ```json block is machine data — collapsed to a strip so the plan stays
      readable, expandable for when the operator does want to read it. */
-  .jp-code{margin:10px 0 2px}
-  .jp-code > summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:7px;
-    font:700 11.5px/1 var(--font);color:var(--ac);background:var(--acw);
-    border:1px solid color-mix(in srgb, var(--ac) 22%, transparent);border-radius:9px;padding:7px 11px}
+  .jp-code{margin:12px 0 2px;border:1px solid var(--border);border-radius:9px;overflow:hidden}
+  .jp-code > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;
+    font:700 11px/1 var(--font);color:var(--t-muted);background:var(--subtle);padding:9px 12px;
+    letter-spacing:.03em;text-transform:uppercase}
+  .jp-code > summary:hover{color:var(--t-body)}
   .jp-code > summary::-webkit-details-marker{display:none}
-  .jp-code > summary::before{content:"▸";font-size:10px}
-  .jp-code[open] > summary::before{content:"▾"}
-  .jp-code > summary .sz{color:var(--t-faint);font-weight:600}
-  .jp-code pre{margin:9px 0 0;padding:11px 13px;background:var(--subtle);
-    border:1px solid var(--border);border-radius:11px;max-height:260px;overflow:auto;font-size:11.5px}
+  .jp-code > summary::before{content:"+";font:800 12px/1 var(--font);color:var(--ac)}
+  .jp-code[open] > summary::before{content:"–"}
+  .jp-code[open] > summary{border-bottom:1px solid var(--border)}
+  .jp-code > summary .sz{margin-left:auto;color:var(--t-faint2);font-weight:600;
+    text-transform:none;letter-spacing:0}
+  .jp-code pre{margin:0;padding:12px 14px;background:var(--surface);
+    max-height:280px;overflow:auto;font-size:11px}
   /* Design boards drawn straight into the conversation, full width and in order,
      so the plan and its pictures are read by scrolling one answer. */
-  .jp-inline-board{margin:11px 0 0;border:1px solid var(--border);border-radius:12px;
+  .jp-inline-board{margin:13px 0 0;border:1px solid var(--border);border-radius:10px;
     overflow:hidden;background:var(--subtle)}
   .jp-inline-board img{display:block;width:100%;height:auto;cursor:zoom-in;background:#fff}
   .jp-inline-board figcaption{display:flex;align-items:center;gap:10px;justify-content:space-between;
-    padding:8px 11px;background:var(--surface);border-top:1px solid var(--border);
-    font-size:11.5px;font-weight:700;color:var(--t-muted)}
+    padding:9px 12px;background:var(--surface);border-top:1px solid var(--border);
+    font-size:11px;font-weight:700;color:var(--t-muted)}
   .jp-inline-board figcaption span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-  /* ── results: Boards / Script ──────────────────────────────────────────── */
-  .jp-results{background:var(--surface);border:1px solid var(--border);border-radius:16px;
-    box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;flex-direction:column;max-height:46%}
+  /* ── results: Boards / Script, a segmented control over full-bleed panes ── */
+  .jp-results{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    display:flex;flex-direction:column;max-height:48%;overflow:hidden}
   /* a `display` rule of our own beats the UA's [hidden]{display:none} */
   .jp-wrap [hidden]{display:none}
-  .jp-rtabs{display:flex;gap:4px;padding:8px 10px 0;border-bottom:1px solid var(--border)}
-  .jp-rtab{cursor:pointer;background:none;border:none;padding:9px 13px 11px;font:700 12.5px/1 var(--font);
-    color:var(--t-faint);border-bottom:2px solid transparent;margin-bottom:-1px}
-  .jp-rtab:hover{color:var(--t-body)}
-  .jp-rtab.on{color:var(--ac);border-bottom-color:var(--ac)}
-  .jp-rbody{overflow:auto;padding:14px}
-  .jp-boards{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px;
+  .jp-rtabs{display:flex;gap:3px;padding:9px 10px;border-bottom:1px solid var(--border);
+    background:var(--subtle)}
+  .jp-rtab{cursor:pointer;background:none;border:1px solid transparent;padding:6px 12px;
+    font:700 11.5px/1 var(--font);color:var(--t-faint);border-radius:7px}
+  .jp-rtab:hover{color:var(--t-body);background:var(--hover)}
+  .jp-rtab.on{color:var(--ac);background:var(--surface);border-color:var(--border)}
+  .jp-rbody{overflow:auto;padding:13px}
+  .jp-boards{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:11px;
     align-items:start}
-  .jp-board{border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--subtle);
+  .jp-board{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--subtle);
     display:flex;flex-direction:column}
+  .jp-board:hover{border-color:var(--border-in)}
   /* Uniform preview height: a board is 2400×700-ish, so scaled-to-width thumbs
      come out at wildly different heights and the grid looks ragged. Crop from
      the top-left — the campaign header and first journey are what identify it. */
-  .jp-board img{display:block;width:100%;height:168px;object-fit:cover;object-position:left top;
+  .jp-board img{display:block;width:100%;height:150px;object-fit:cover;object-position:left top;
     cursor:zoom-in;background:#fff}
-  .jp-board-bar{display:flex;align-items:center;gap:10px;justify-content:space-between;
+  .jp-board-bar{display:flex;align-items:center;gap:9px;justify-content:space-between;
     padding:9px 11px;background:var(--surface);border-top:1px solid var(--border)}
-  .jp-board-bar .n{font-size:11.5px;font-weight:700;color:var(--t-body);overflow:hidden;
+  .jp-board-bar .n{font-size:11px;font-weight:700;color:var(--t-body);overflow:hidden;
     text-overflow:ellipsis;white-space:nowrap}
-  .jp-board-bar .m{font-size:10.5px;color:var(--t-faint)}
-  .jp-dl{display:inline-flex;align-items:center;gap:6px;font:700 11.5px/1 var(--font);
-    text-decoration:none;color:var(--ac);background:var(--acw);
-    border:1px solid color-mix(in srgb, var(--ac) 22%, transparent);
-    border-radius:9px;padding:6px 10px;cursor:pointer;white-space:nowrap}
-  .jp-dl:hover{filter:brightness(.96)}
-  .jp-srow{display:flex;align-items:center;gap:10px;justify-content:space-between;
-    border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:9px}
+  .jp-board-bar .m{font-size:10px;color:var(--t-faint2);
+    font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace}
+  .jp-dl{display:inline-flex;align-items:center;gap:5px;font:700 11px/1 var(--font);
+    text-decoration:none;color:var(--t-muted);background:var(--surface);
+    border:1px solid var(--border);border-radius:7px;padding:6px 9px;cursor:pointer;
+    white-space:nowrap}
+  .jp-dl:hover{color:var(--ac);border-color:var(--ac);background:var(--acw)}
+  /* A script row leads with a status glyph, because "did it verify" is the only
+     question being asked of this pane. */
+  .jp-srow{display:flex;align-items:center;gap:11px;justify-content:space-between;
+    border:1px solid var(--border);border-left:3px solid var(--pos-t);border-radius:9px;
+    padding:11px 13px;margin-bottom:8px}
   .jp-srow:last-child{margin-bottom:0}
   .jp-srow .t{min-width:0}
-  .jp-srow .t b{display:block;font-size:12.5px;color:var(--t-strong)}
-  .jp-srow .t span{font-size:11px;color:var(--t-faint)}
-  .jp-srow.bad{border-color:color-mix(in srgb, var(--live-t) 40%, transparent);background:var(--live-bg)}
+  .jp-srow .t b{display:block;font-size:12px;color:var(--t-strong);
+    font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace;font-weight:700}
+  .jp-srow .t span{font-size:11px;color:var(--t-faint);line-height:1.45}
+  .jp-srow.bad{border-color:var(--border);border-left-color:var(--live-t);background:var(--live-bg)}
   .jp-srow.bad .t b{color:var(--live-t)}
-  .jp-rempty{font-size:12.5px;color:var(--t-faint);text-align:center;padding:18px 0}
+  .jp-rempty{font-size:12px;color:var(--t-faint);text-align:center;padding:20px 0}
 
-  /* ── composer ──────────────────────────────────────────────────────────── */
-  .jp-composer{display:flex;gap:10px;align-items:flex-end;background:var(--surface);
-    border:1px solid var(--border);border-radius:16px;padding:10px;
-    box-shadow:0 1px 2px rgba(16,24,40,.04)}
-  .jp-composer textarea{flex:1;resize:vertical;min-height:52px;max-height:230px;border:none;
-    outline:none;background:none;padding:8px 6px;font:400 13.5px/1.5 var(--font);color:var(--t-body)}
+  /* ── composer: docked inside the surface, not a floating card ──────────── */
+  .jp-composer{display:flex;gap:9px;align-items:flex-end;padding:11px 14px 12px;
+    border-top:1px solid var(--border);background:var(--surface)}
+  .jp-composer textarea{flex:1;resize:none;min-height:38px;max-height:210px;
+    border:1px solid var(--border-in);border-radius:9px;outline:none;background:var(--canvas);
+    padding:10px 12px;font:400 13px/1.55 var(--font);color:var(--t-body)}
+  .jp-composer textarea:focus{border-color:var(--ac);background:var(--surface)}
   .jp-composer textarea::placeholder{color:var(--t-disabled)}
-  .jp-send{flex:none}
-  .jp-hint{font-size:11.5px;color:var(--t-faint);min-height:15px;padding:0 4px}
+  .jp-send{flex:none;display:inline-flex;align-items:center;gap:7px}
+  .jp-send svg{width:14px;height:14px}
+  .jp-hint{font-size:11px;color:var(--t-faint);min-height:14px;padding:0 3px;
+    font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace}
 
-  /* ── sidebar cards ─────────────────────────────────────────────────────── */
-  .jp-card{padding:14px 15px}
-  .jp-card-head{display:flex;align-items:center;gap:8px;margin-bottom:11px}
-  .jp-card-head h4{margin:0;font-size:12.5px;font-weight:800;color:var(--t-strong);
-    letter-spacing:-.01em}
-  .jp-card-head .sp{margin-left:auto}
-  .jp-acts{display:flex;flex-direction:column;gap:7px}
-  .jp-acts .btn{width:100%;justify-content:flex-start}
-  .jp-acts .btn .ic{width:15px;text-align:center;opacity:.75}
-  .jp-select{width:100%;font:600 12px/1 var(--font);color:var(--t-body);background:var(--surface);
-    border:1px solid var(--border-in);border-radius:10px;padding:9px 10px}
-  .jp-jlist{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto}
-  .jp-jrow{display:flex;align-items:center;gap:9px;border:1px solid var(--border);
-    border-radius:11px;padding:9px 11px;cursor:pointer;background:var(--surface);text-align:left}
-  .jp-jrow:hover{background:var(--hover)}
-  .jp-jrow .i{flex:none;font-size:11px;font-weight:800;color:var(--t-faint);min-width:14px}
-  .jp-jrow .n{flex:1;min-width:0;font-size:12px;font-weight:600;color:var(--t-body);
+  /* ── inspector: one continuous rail, sections divided by rules ─────────── */
+  .jp-aside{display:flex;flex-direction:column;min-height:0;overflow-y:auto;
+    background:var(--surface);border:1px solid var(--border);border-radius:12px}
+  .jp-sec{padding:13px 14px;border-bottom:1px solid var(--border)}
+  .jp-sec:last-child{border-bottom:none}
+  .jp-sec-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .jp-sec-head h4{margin:0;font-size:10.5px;font-weight:800;color:var(--t-faint2);
+    letter-spacing:.07em;text-transform:uppercase}
+  .jp-sec-head .sp{margin-left:auto}
+  .jp-acts{display:flex;flex-direction:column;gap:6px}
+  .jp-acts .btn{width:100%;justify-content:flex-start;gap:9px}
+  .jp-acts .btn .ic{flex:none;display:inline-flex;width:14px;color:var(--t-faint)}
+  .jp-acts .btn .ic svg{width:14px;height:14px}
+  .jp-acts .btn:hover .ic{color:var(--ac)}
+  .jp-select{width:100%;font:600 11.5px/1 var(--font);color:var(--t-body);background:var(--canvas);
+    border:1px solid var(--border-in);border-radius:8px;padding:9px 10px}
+  .jp-jlist{display:flex;flex-direction:column;gap:5px;max-height:262px;overflow-y:auto}
+  .jp-jrow{display:flex;align-items:center;gap:9px;border:1px solid transparent;
+    border-radius:8px;padding:8px 9px;cursor:pointer;background:var(--canvas);text-align:left}
+  .jp-jrow:hover{background:var(--acw);border-color:color-mix(in srgb, var(--ac) 24%, transparent)}
+  .jp-jrow .i{flex:none;font:800 10px/1 var(--font);color:var(--t-faint2);min-width:13px;
+    font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace}
+  .jp-jrow .n{flex:1;min-width:0;font-size:11.5px;font-weight:600;color:var(--t-body);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .jp-jrow .b{flex:none;font-size:10px;font-weight:800;padding:3px 7px;border-radius:7px;
-    background:var(--neu-bg);color:var(--neu-t)}
-  .jp-ctx{display:flex;flex-direction:column;gap:10px}
-  .jp-ctx > div{display:flex;flex-direction:column;gap:3px}
-  .jp-ctx dt{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
-    color:var(--t-faint2)}
-  .jp-ctx dd{margin:0;font-size:12px;color:var(--t-body);word-break:break-word}
-  .jp-note{font-size:11.5px;line-height:1.5;color:var(--t-faint)}
+  .jp-jrow .b{flex:none;font:800 9.5px/1 var(--font);padding:3px 6px;border-radius:5px;
+    background:var(--subtle);color:var(--t-faint)}
+  .jp-ctx{display:flex;flex-direction:column;gap:0}
+  .jp-ctx > div{display:flex;align-items:baseline;gap:10px;justify-content:space-between;
+    padding:6px 0;border-bottom:1px dashed var(--border)}
+  .jp-ctx > div:last-child{border-bottom:none}
+  .jp-ctx dt{flex:none;font-size:11px;font-weight:600;color:var(--t-faint)}
+  .jp-ctx dd{margin:0;font-size:11px;font-weight:700;color:var(--t-body);text-align:right;
+    word-break:break-word;font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace}
+  .jp-note{font-size:11px;line-height:1.55;color:var(--t-faint)}
 
   /* ── banners ───────────────────────────────────────────────────────────── */
-  .jp-banner{border-radius:13px;padding:11px 14px;font-size:12.5px;
-    background:var(--warn-bg);color:var(--warn-t);border:1px solid color-mix(in srgb, var(--warn-t) 30%, transparent)}
+  .jp-banner{display:flex;align-items:flex-start;gap:9px;border-radius:9px;padding:10px 13px;
+    font-size:12px;line-height:1.5;background:var(--warn-bg);color:var(--warn-t);
+    border:1px solid color-mix(in srgb, var(--warn-t) 30%, transparent)}
+  .jp-banner svg{flex:none;width:15px;height:15px;margin-top:1px}
   .jp-banner.bad{background:var(--live-bg);color:var(--live-t);
     border-color:color-mix(in srgb, var(--live-t) 34%, transparent)}
-  .jp-banner code{font-family:'SFMono-Regular',Consolas,Menlo,monospace;font-size:12px}
+  .jp-banner code{font-family:'JetBrains Mono','SFMono-Regular',Consolas,Menlo,monospace;
+    font-size:11.5px}
 
   /* ── responsive ────────────────────────────────────────────────────────────
      Last in the sheet on purpose: these are overrides of the rules above, and a
@@ -176,59 +243,103 @@
     .jp-wrap{height:auto;min-height:0}
     .jp-wrap.jp-full{height:100vh;overflow:auto}
     .jp-grid{grid-template-columns:minmax(0,1fr)}
-    .jp-log{flex:0 0 auto;height:58vh;min-height:340px}
+    .jp-surface{flex:0 0 auto}
+    .jp-log{height:52vh;min-height:320px}
     .jp-results{max-height:none}
-    .jp-aside{flex-direction:row;flex-wrap:wrap;overflow:visible}
-    .jp-aside > *{flex:1 1 260px}
-    .jp-jlist{max-height:220px}
+    /* The rail becomes a row of sections; its right-hand borders replace the
+       stacked rules that only make sense in a column. */
+    .jp-aside{overflow:visible;flex-direction:row;flex-wrap:wrap}
+    .jp-aside > *{flex:1 1 250px;border-bottom:none;border-right:1px solid var(--border)}
+    .jp-aside > *:last-child{border-right:none}
+    .jp-jlist{max-height:200px}
+    .jp-stage .sd{display:none}
+  }
+  /* Narrow: the stage rail wraps to two rows rather than crushing four labels. */
+  @media (max-width:720px){
+    .jp-stages{flex-wrap:wrap}
+    .jp-stage{flex:1 1 50%;border-bottom:1px solid var(--border)}
+    .jp-stage:nth-child(2n){border-right:none}
+    .jp-stage:nth-last-child(-n+2){border-bottom:none}
+    .jp-aside > *{flex:1 1 100%;border-right:none;border-bottom:1px solid var(--border)}
   }
 </style>
 
-{% set spark %}<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.6l1.9 5.1a4 4 0 002.4 2.4l5.1 1.9-5.1 1.9a4 4 0 00-2.4 2.4L12 21.4l-1.9-5.1a4 4 0 00-2.4-2.4L2.6 12l5.1-1.9a4 4 0 002.4-2.4L12 2.6z"/><path d="M19.4 2.6l.7 1.8.0.1 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.9z" opacity=".65"/></svg>{% endset %}
+{# Icons: inline SVG on a 24-grid, stroke-based so they inherit currentColor and
+   the operator's accent. The panel used literal emoji glyphs, which
+   render at a different weight per platform and are the one thing on the page
+   that never matched the lucide set the rest of the admin draws with. #}
+{% set spark %}<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.6l1.9 5.1a4 4 0 002.4 2.4l5.1 1.9-5.1 1.9a4 4 0 00-2.4 2.4L12 21.4l-1.9-5.1a4 4 0 00-2.4-2.4L2.6 12l5.1-1.9a4 4 0 002.4-2.4L12 2.6z"/></svg>{% endset %}
+{% set i_expand %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>{% endset %}
+{% set i_send %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>{% endset %}
+{% set i_plus %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{% endset %}
+{% set i_board %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 9v12"/></svg>{% endset %}
+{% set i_cog %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M4.2 4.2l2.1 2.1m11.4 11.4l2.1 2.1M2 12h3m14 0h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>{% endset %}
+{% set i_copy %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 01-1-1V4a1 1 0 011-1h10a1 1 0 011 1v1"/></svg>{% endset %}
+{% set i_warn %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4m0 4h.01"/></svg>{% endset %}
 
 <div class="jp-wrap" id="jpWrap">
 
-  <div class="card jp-head">
+  <div class="jp-bar">
     <div class="jp-mark">{{ spark }}</div>
-    <div>
-      <div class="jp-h1">AI Assistant <span class="jp-beta">BETA</span></div>
-      <div class="jp-h2">Campaign briefs in, journey design and console scripts out.</div>
-    </div>
-    <div class="jp-headright">
-      <span class="jp-model">Model <b>{{ model }}</b></span>
-      <button type="button" class="btn sm" id="jpExpand" title="Full screen (Esc to exit)">⛶ Expand</button>
+    <div class="jp-title">Journey Planner <span class="jp-beta">BETA</span></div>
+    <div class="jp-barright">
+      <span class="jp-model">{{ model }}</span>
+      <button type="button" class="jp-iconbtn" id="jpExpand"
+              title="Full screen (Esc to exit)" aria-label="Full screen">{{ i_expand }}</button>
     </div>
   </div>
 
   {% if not docs_present %}
     <div class="jp-banner bad">
-      ⚠ <code>journey-planner/</code> docs not found on the server — the planner can't load its
-      knowledge base.
+      {{ i_warn }}
+      <div><code>journey-planner/</code> docs not found on the server — the planner can't load its
+      knowledge base.</div>
     </div>
   {% elif not key_configured %}
     <div class="jp-banner">
-      ⚠ No {{ provider|capitalize }} key configured. Add <code>{{ key_env }}=…</code> to the
+      {{ i_warn }}
+      <div>No {{ provider|capitalize }} key configured. Add <code>{{ key_env }}=…</code> to the
       <code>.env</code> (or the jugabet service environment) and restart the service.
-      {% if provider == 'groq' %} Get a free key at <code>console.groq.com</code>.{% endif %}
+      {% if provider == 'groq' %} Get a free key at <code>console.groq.com</code>.{% endif %}</div>
     </div>
   {% endif %}
+
+  {# The pipeline, named. Each stage carries a data-stage the script marks
+     .on/.done as a run moves through it, so the operator can see which step
+     they are on rather than inferring it from the conversation. #}
+  <div class="jp-stages" id="jpStages">
+    <div class="jp-stage" data-stage="brief"><span class="sn">1</span><span class="st">Brief</span></div>
+    <div class="jp-stage" data-stage="plan"><span class="sn">2</span><span class="st">Plan</span></div>
+    <div class="jp-stage" data-stage="boards"><span class="sn">3</span><span class="st">Boards</span><span class="sd" id="jpStageBoards"></span></div>
+    <div class="jp-stage" data-stage="script"><span class="sn">4</span><span class="st">Script</span><span class="sd" id="jpStageScript"></span></div>
+  </div>
 
   <div class="jp-grid">
     <div class="jp-main">
 
-      <div class="jp-log" id="jpLog">
-        <div class="jp-empty" id="jpEmpty">
-          <div class="jp-mark">{{ spark }}</div>
-          <h4>Paste a campaign brief</h4>
-          <p>The first reply is a short outline plus a design block — press
-             <b>Render design</b> to see every journey drawn as a board, one card and icon
-             per activity. Then ask for an object in full, and <b>Build script</b> composes it.</p>
-          <div class="jp-starters">
-            <button type="button" class="chip" data-starter="brief">＋ Birthday brief</button>
-            <button type="button" class="chip" data-starter="specs">Specs of each journey</button>
-            <button type="button" class="chip" data-starter="script">Full script</button>
-            <button type="button" class="chip" data-starter="comms">Comms from content</button>
+      <div class="jp-surface">
+        <div class="jp-log" id="jpLog">
+          <div class="jp-empty" id="jpEmpty">
+            <div class="jp-mark">{{ spark }}</div>
+            <h4>Paste a campaign brief</h4>
+            <p>The first reply is a short outline plus a design block — press
+               <b>Render design</b> to see every journey drawn as a board, one card and icon
+               per activity. Then ask for an object in full, and <b>Full script</b> composes it.
+               A build that cannot be made correctly is refused, and the refusal says which
+               field to fix.</p>
+            <div class="jp-starters">
+              <button type="button" class="chip" data-starter="brief">Birthday brief</button>
+              <button type="button" class="chip" data-starter="specs">Specs of each journey</button>
+              <button type="button" class="chip" data-starter="script">Full script</button>
+              <button type="button" class="chip" data-starter="comms">Comms from content</button>
+            </div>
           </div>
+        </div>
+
+        <div class="jp-composer">
+          <textarea id="jpInput" rows="1"
+            placeholder="Paste a campaign brief, or ask a follow-up…   Enter to send · Shift+Enter for a newline"></textarea>
+          <button class="btn primary jp-send" id="jpSend" type="button">{{ i_send }} Send</button>
         </div>
       </div>
 
@@ -245,21 +356,17 @@
         </div>
       </div>
 
-      <div class="jp-composer">
-        <textarea id="jpInput" placeholder="Paste a campaign brief, or ask a follow-up…  (Enter to send · Shift+Enter for newline)"></textarea>
-        <button class="btn primary jp-send" id="jpSend" type="button">➤ Send</button>
-      </div>
       <div class="jp-hint" id="jpHint"></div>
     </div>
 
     <aside class="jp-aside">
-      <div class="card jp-card">
-        <div class="jp-card-head">
-          <h4>Journey Planner</h4>
-          <button type="button" class="btn sm sp" id="jpClear">Clear all</button>
+      <div class="jp-sec">
+        <div class="jp-sec-head">
+          <h4>Journeys</h4>
+          <button type="button" class="jp-iconbtn wide sp" id="jpClear">Clear</button>
         </div>
         <select class="jp-select" id="jpPerImage" title="How many journeys per rendered board"
-                style="margin-bottom:10px">
+                style="margin-bottom:9px">
           <option value="1">1 journey / board</option>
           <option value="2" selected>2 journeys / board</option>
           <option value="3">3 journeys / board</option>
@@ -271,24 +378,24 @@
         </div>
       </div>
 
-      <div class="card jp-card">
-        <div class="jp-card-head"><h4>Quick actions</h4></div>
+      <div class="jp-sec">
+        <div class="jp-sec-head"><h4>Actions</h4></div>
         <div class="jp-acts">
-          <button type="button" class="btn" id="jpInsert"><span class="ic">＋</span> Insert birthday brief</button>
-          <button type="button" class="btn" id="jpDesign"><span class="ic">🖼</span> Render design</button>
-          <button type="button" class="btn" id="jpBuild"><span class="ic">⚙</span> Full script</button>
-          <button type="button" class="btn" id="jpCopy"><span class="ic">⧉</span> Copy last reply</button>
+          <button type="button" class="btn" id="jpInsert"><span class="ic">{{ i_plus }}</span> Insert birthday brief</button>
+          <button type="button" class="btn" id="jpDesign"><span class="ic">{{ i_board }}</span> Render design</button>
+          <button type="button" class="btn" id="jpBuild"><span class="ic">{{ i_cog }}</span> Full script</button>
+          <button type="button" class="btn" id="jpCopy"><span class="ic">{{ i_copy }}</span> Copy last reply</button>
         </div>
       </div>
 
-      <div class="card jp-card">
-        <div class="jp-card-head"><h4>Context</h4></div>
+      <div class="jp-sec">
+        <div class="jp-sec-head"><h4>Context</h4></div>
         <div class="jp-ctx">
           <div><dt>Provider</dt><dd>{{ provider|capitalize }}{% if not key_configured %} — no key{% endif %}</dd></div>
           <div><dt>Model</dt><dd>{{ model }}</dd></div>
-          <div><dt>Knowledge base</dt><dd>{% if docs_present %}journey-planner/ loaded{% else %}missing{% endif %}</dd></div>
-          <div><dt>Boards go to</dt><dd>data/journey_designs/</dd></div>
-          <div><dt>Tokens this session</dt><dd id="jpUsage">—</dd></div>
+          <div><dt>Knowledge base</dt><dd>{% if docs_present %}loaded{% else %}missing{% endif %}</dd></div>
+          <div><dt>Boards</dt><dd>data/journey_designs/</dd></div>
+          <div><dt>Tokens</dt><dd id="jpUsage">—</dd></div>
         </div>
       </div>
     </aside>
@@ -315,7 +422,49 @@
   const spent = { calls: 0, input: 0, cached: 0, thought: 0, answer: 0 };
   const meter = document.getElementById("jpUsage");
   const SPARK = document.querySelector(".jp-mark").innerHTML;
+  // Icons for JS-built summaries, so the emoji that used to sit in these
+  // strings do not come back at a different weight on every platform.
+  const SVG = (d) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+    + ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'
+    + ' style="width:14px;height:14px;vertical-align:-2px;margin-right:6px"'
+    + ' aria-hidden="true">' + d + '</svg>';
+  const I_BOARD = SVG('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 9v12"/>');
+  const I_COG = SVG('<circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M4.2 4.2l2.1 2.1'
+    + 'm11.4 11.4l2.1 2.1M2 12h3m14 0h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>');
+  const I_COPY = SVG('<rect x="9" y="9" width="12" height="12" rx="2"/>'
+    + '<path d="M5 15H4a1 1 0 01-1-1V4a1 1 0 011-1h10a1 1 0 011 1v1"/>');
   let busy = false, boards = 0, scripts = 0;
+
+  // ── stage rail ────────────────────────────────────────────────────────────
+  // Derived state, never stored: the rail is a read-out of history/boards/
+  // scripts, so it cannot drift from what the session actually produced. Called
+  // at the end of every action below.
+  const stageEls = {};
+  document.querySelectorAll("#jpStages [data-stage]").forEach(el => {
+    stageEls[el.dataset.stage] = el;
+  });
+  const stageBoards = document.getElementById("jpStageBoards"),
+        stageScript = document.getElementById("jpStageScript");
+  function paintStages(active){
+    const sent = history.some(m => m.role === "user");
+    const replied = history.some(m => m.role === "model");
+    const state = {
+      brief:  sent ? "done" : "",
+      plan:   replied ? "done" : "",
+      boards: boards ? "done" : "",
+      script: scripts ? "done" : "",
+    };
+    // The active stage wins over "done" so a re-run reads as in progress.
+    if (active) state[active] = "on";
+    else if (!sent) state.brief = "on";
+    else if (!replied) state.plan = "on";
+    for (const [k, el] of Object.entries(stageEls)){
+      el.classList.toggle("done", state[k] === "done");
+      el.classList.toggle("on", state[k] === "on");
+    }
+    if (stageBoards) stageBoards.textContent = boards ? String(boards) : "";
+    if (stageScript) stageScript.textContent = scripts ? String(scripts) : "";
+  }
 
   // Sample brief inlined so the button works without an extra fetch/route.
   const BRIEF = `CAMPAIGN BRIEF — "Spin the Wheel — 3 Years JugaBet"
@@ -424,9 +573,12 @@ NOTES
   function addMsg(role, text){
     empty.style.display = "none";
     const msg = document.createElement("div"); msg.className = "jp-msg " + role;
+    // The byline is an icon + a word, not a bare glyph: messages are now
+    // full-width blocks divided by a rule, and an unlabelled avatar left it
+    // ambiguous which block was the paste and which the reply.
     const av = document.createElement("div"); av.className = "jp-av";
-    if(role === "user"){ av.textContent = "YOU"; av.style.fontSize = "9px"; }
-    else { av.innerHTML = SPARK; }
+    av.innerHTML = (role === "user" ? "" : SPARK) +
+      "<span>" + (role === "user" ? "You" : "Planner") + "</span>";
     const bub = document.createElement("div"); bub.className = "jp-bubble";
     if(role === "user"){ const d = document.createElement("div"); d.className="u"; d.textContent = text; bub.appendChild(d); }
     else { bub.innerHTML = renderModel(text); }
@@ -471,6 +623,25 @@ NOTES
                     filename || "composed_console.js", label);
   }
 
+  // A lapsed session is not a model error. The auth layer answers a fetch with
+  // 401 `session_expired` (403 `password_change_required`) rather than a 404
+  // precisely so the SPA can say so and send the operator to log in. Without
+  // this every planner call fell through to the generic "Empty response from
+  // server (HTTP 401)" dump, and a simple expired cookie read as "AI is broken".
+  async function authLapsed(res, bub){
+    if(!(res.status === 401 || res.status === 403 ||
+         (res.redirected && /\/admin\/login/.test(res.url)))) return false;
+    const detail = await res.clone().json().then(d => d && d.detail).catch(() => "");
+    const pw = detail === "password_change_required";
+    const dest = pw ? "/admin/account/password"
+                    : "/admin/login?next=" + encodeURIComponent(location.pathname + location.search);
+    if(bub) bub.innerHTML = `<pre class="jp-err">${pw
+      ? "You must change your password before using the planner. Taking you there…"
+      : "Your session expired. Taking you to the login page…"}</pre>`;
+    setTimeout(() => { location.href = dest; }, 1500);
+    return true;
+  }
+
   async function send(){
     if(busy) return;
     const text = input.value.trim();
@@ -479,7 +650,7 @@ NOTES
     addMsg("user", text);
     history.push({ role: "user", text });
     input.value = "";
-    busy = true; sendBtn.disabled = true;
+    busy = true; sendBtn.disabled = true; paintStages("plan");
     const bub = addMsg("model", ""); bub.innerHTML = '<span class="jp-dots"></span>';
     try{
       const res = await fetch("/admin/planner/api", {
@@ -487,6 +658,8 @@ NOTES
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ messages: history, temperature: 0.2 }),
       });
+      // Hand the brief back so re-logging in does not cost them the typing.
+      if(await authLapsed(res, bub)){ input.value = text; history.pop(); return; }
       let data;
       try { data = await res.json(); }
       catch(e){ const raw = await res.text().catch(()=>""); throw new Error(`HTTP ${res.status} (non-JSON): ${raw.slice(0,300)}`); }
@@ -513,7 +686,7 @@ NOTES
     }catch(err){
       bub.innerHTML = `<pre class="jp-err">Request failed: ${esc(String(err))}</pre>`;
     }finally{
-      busy = false; sendBtn.disabled = false; toBottom();
+      busy = false; sendBtn.disabled = false; paintStages(); toBottom();
     }
   }
 
@@ -531,6 +704,7 @@ NOTES
     empty.style.display = ""; hint.textContent = "";
     boardsBox.innerHTML = ""; scriptsBox.innerHTML = "";
     boards = scripts = 0; boardCount.textContent = "(0)"; scriptCount.textContent = "(0)";
+    history.length = 0; paintStages();
     results.hidden = true;
     jlist.querySelectorAll(".jp-jrow").forEach(n => n.remove());
     jempty.hidden = false;
@@ -547,10 +721,16 @@ NOTES
   // 6-journey plan or a wide design board, so this is a class toggle rather than
   // a separate page — the conversation is never lost.
   const wrap = document.getElementById("jpWrap"), expandBtn = document.getElementById("jpExpand");
+  // Swap the icon, not textContent: the button is icon-only now, so writing text
+  // into it would delete the SVG and leave a bare glyph behind.
+  const ICON_EXPAND = expandBtn.innerHTML;
+  const ICON_CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
+    + ' stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>';
   function setFull(on){
     wrap.classList.toggle("jp-full", on);
     document.body.style.overflow = on ? "hidden" : "";
-    expandBtn.textContent = on ? "✕ Close" : "⛶ Expand";
+    expandBtn.innerHTML = on ? ICON_CLOSE : ICON_EXPAND;
+    expandBtn.title = on ? "Exit full screen (Esc)" : "Full screen (Esc to exit)";
     toBottom();
   }
   expandBtn.onclick = () => setFull(!wrap.classList.contains("jp-full"));
@@ -575,7 +755,7 @@ NOTES
     // `bub` lets the caller reuse the bubble the boards belong under; without one
     // (the button path) a fresh bubble is added.
     if(!bub){ bub = addMsg("model", ""); bub.innerHTML = '<span class="jp-dots"></span>'; }
-    hint.textContent = "Drawing boards…";
+    hint.textContent = "Drawing boards…"; paintStages("boards");
     designBtn.disabled = true;
     try{
       const res = await fetch("/admin/planner/design", {
@@ -583,6 +763,7 @@ NOTES
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ text, per_image: Number(perImage.value) }),
       });
+      if(await authLapsed(res, bub)) return;
       let data;
       try { data = await res.json(); }
       catch(e){ const raw = await res.text().catch(()=>""); throw new Error(`HTTP ${res.status} (non-JSON): ${raw.slice(0,300)}`); }
@@ -637,7 +818,7 @@ NOTES
         // not only by visiting the Boards tab.
         const folded = data.collapsed
           ? ` (${data.collapsed} near-identical journeys share a board)` : "";
-        bub.innerHTML = `<div class="jp-sum">🖼 ${esc(data.campaign || "Journey design")}`
+        bub.innerHTML = `<div class="jp-sum">${I_BOARD}${esc(data.campaign || "Journey design")}`
                       + ` — ${data.count} board${data.count === 1 ? "" : "s"}, `
                       + `${data.journeys} journeys${folded}</div>`
                       + `<div class="u" style="color:var(--t-muted);font-size:12.5px;margin-top:2px">`
@@ -712,6 +893,7 @@ NOTES
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ messages: history, temperature: 0 }),
     });
+    if(await authLapsed(res, bub)) return null;
     const data = await res.json();
     if(data.error || !data.text){
       bub.innerHTML = `<pre class="jp-err">${esc(data.error || "No spec came back.")}</pre>`;
@@ -749,7 +931,7 @@ NOTES
     const mode = /"reference"\s*:/.test(t) ? "graph"
                : (/"chain"\s*:\s*\[/.test(t) && !/"recipe"\s*:/.test(t)) ? "chain"
                : "spec";
-    busy = true; buildBtn.disabled = true; hint.textContent = "Composing…";
+    busy = true; buildBtn.disabled = true; hint.textContent = "Composing…"; paintStages("script");
     const bub = addMsg("model", ""); bub.innerHTML = '<span class="jp-dots"></span>';
     try{
       const res = await fetch("/admin/planner/compose", {
@@ -757,6 +939,7 @@ NOTES
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ text: last.text, mode }),
       });
+      if(await authLapsed(res, bub)) return;
       let data;
       try { data = await res.json(); }
       catch(e){ const raw = await res.text().catch(()=>""); throw new Error(`HTTP ${res.status} (non-JSON): ${raw.slice(0,300)}`); }
@@ -811,7 +994,7 @@ NOTES
           }
         }
         showPane("script");
-        bub.innerHTML = `<div class="jp-sum">⚙ Built ${data.built} of ${data.total} objects</div>`
+        bub.innerHTML = `<div class="jp-sum">${I_COG}Built ${data.built} of ${data.total} objects</div>`
                       + `<div class="u" style="color:var(--t-muted);font-size:12.5px;margin-top:4px">`
                       + `In the Script tab below.</div>`;
         hint.textContent = data.built === data.total
@@ -824,7 +1007,7 @@ NOTES
       } else {
         const dl = dlLink(data.js, data.filename, "⬇ script");
         const cp = document.createElement("button");
-        cp.type = "button"; cp.className = "jp-dl"; cp.textContent = "⧉ Copy";
+        cp.type = "button"; cp.className = "jp-dl"; cp.innerHTML = I_COPY + "Copy";
         cp.onclick = () => { navigator.clipboard.writeText(data.js);
                              hint.textContent = "Script copied — paste into the backoffice console (F12)."; };
         const wrapRow = document.createElement("div");
@@ -833,7 +1016,7 @@ NOTES
         srow(data.filename || "console script",
              (data.log || "").trim().split("\n").filter(Boolean).pop() || "", wrapRow);
         showPane("script");
-        bub.innerHTML = `<div class="jp-sum">⚙ Script built</div>`
+        bub.innerHTML = `<div class="jp-sum">${I_COG}Script built</div>`
                       + `<div class="u" style="color:var(--t-muted);font-size:12.5px;margin-top:4px">`
                       + `In the Script tab below — paste it into a logged-in backoffice console (F12).</div>`
                       + renderModel(data.log || "");
@@ -843,8 +1026,12 @@ NOTES
       bub.innerHTML = `<pre class="jp-err">Compose failed: ${esc(String(err))}</pre>`;
       hint.textContent = "";
     }finally{
-      busy = false; buildBtn.disabled = false; toBottom();
+      busy = false; buildBtn.disabled = false; paintStages(); toBottom();
     }
   };
+
+  // Initial paint: without this the rail renders with no stage marked, which
+  // reads as "nothing works yet" on a freshly loaded page.
+  paintStages();
 })();
 </script>
