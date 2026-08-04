@@ -814,6 +814,17 @@ def compose(spec: dict) -> dict:
         pos = {"x": X0 + col * XSTEP, "y": Y0 + row * YSTEP}
         el["position"] = dict(pos)
         el["positionAbsolute"] = dict(pos)
+        # Drop the capture's own grouping. 13 of the 24 fragments were extracted
+        # from inside a parallelFlow container, so their node carries that
+        # container's id in parentNode (+ extent "parent"). The container is not
+        # a fragment and is never emitted, so keeping the reference leaves the
+        # node parented to a node that does not exist and the builder renders a
+        # grey/blank canvas. No valid capture has a dangling parentNode.
+        # This composer lays out a FLAT canvas here; the parallel-block code
+        # below is the only legitimate re-parenting and it sets both keys itself,
+        # after this call.
+        el.pop("parentNode", None)
+        el.pop("extent", None)
         elements.append(el)
 
     put(src.get("element"), 0, 0, src_kind)
@@ -1074,6 +1085,34 @@ def verify(body: dict) -> list[str]:
         if "source" in e:
             if e["source"] not in el_ids or e["target"] not in el_ids:
                 errs.append(f"edge {e.get('data', {}).get('eventName')} references undrawn node")
+    # A node parented to a node that is not on the canvas is the grey/blank
+    # canvas: React Flow cannot place it, and it takes the whole draft down with
+    # it. This shipped for a long time because 13 of the 24 fragments were cut
+    # out of a parallelFlow container and kept its id in parentNode. No valid
+    # capture has one — all nine checked templates have zero — so any dangling
+    # parentNode is a defect, never a style.
+    for e in raw["elements"]:
+        if "source" in e:
+            continue
+        parent = e.get("parentNode")
+        if parent and parent not in el_ids:
+            errs.append(
+                f"node {e.get('data', {}).get('name') or e['id']} has parentNode "
+                f"{parent} which is not on the canvas (grey/blank canvas)")
+        if e.get("extent") == "parent" and not e.get("parentNode"):
+            errs.append(
+                f"node {e.get('data', {}).get('name') or e['id']} has extent "
+                "'parent' but no parentNode")
+    # Every activity node the builder draws needs a position, or the canvas
+    # collapses (COMPOSER_RULES rule 1). Exits and scaffolding are positioned by
+    # the code above; this catches a fragment whose capture carried a null.
+    for e in raw["elements"]:
+        if "source" in e:
+            continue
+        if e.get("positionAbsolute") is None or e.get("position") is None:
+            errs.append(
+                f"node {e.get('data', {}).get('name') or e['id']} has no "
+                "position/positionAbsolute")
     for k in raw.get("activitiesConfiguration", {}):
         if k not in idset:
             errs.append("activitiesConfiguration key not an activity id")
