@@ -93,6 +93,9 @@ class ParsedSpec:
     promo_slug: str = ""             # /randomizer/<slug> from the "Link" row
     raw_link: str = ""               # the "Link" row verbatim — any URL
     link_path: str = ""              # its path, set by the tournament generators
+    link_fragment: str = ""          # Smartico deeplink fragment (only when
+                                     # the URL has no real path — a homepage
+                                     # modal promo), leading '#' included
     nc: ChannelCopy = field(default_factory=ChannelCopy)
     popup: ChannelCopy = field(default_factory=ChannelCopy)
     sms: SmsCopy = field(default_factory=SmsCopy)

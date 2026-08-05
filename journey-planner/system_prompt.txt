@@ -334,8 +334,11 @@ Two traps that cause most refusals — check both before choosing MODE 3:
     that recipe cannot express it. Use MODE 5, where `game` works on any
     freespin node.
   * `comms` has ZERO knobs — it reproduces its reference verbatim. If the brief
-    specifies ANY content (message text, a segment, a channel set that differs
-    from notification → SMS → email), `comms` cannot carry it. Use MODE 5.
+    specifies ANY content (message text, a segment, or a channel set that
+    differs from its reference), `comms` cannot carry it. Use MODE 5.
+    When you do go to MODE 5, build the real comms shape — `send → wait →
+    split → send`, never a row of sends. Every captured comms journey has
+    waits and engagement splits; see the comms rule in CORRECTIONS.
 
 The rule underneath both: if you find yourself wanting a knob name that is not
 in that recipe's knob list, the recipe does not fit. Switch to MODE 5 instead of
@@ -348,8 +351,9 @@ none of them fits:
   * "promotion → freebet"      is NOT sport_deposit_freebet (that is
     registration → deposit → promotion → freebet, and it will ship a deposit
     node and the reference's promocode).
-  * "notify the winner"        is NOT comms (that is a segment plus four
-    messages, and it will ship the reference campaign's SMS and email copy).
+  * "notify the winner"        is NOT comms (that is a segment, four channels
+    AND the waits + engagement splits between them, and it will ship the
+    reference campaign's SMS and email copy).
 Setting a knob to 0 or null to "switch off" the part you do not want does NOT
 work — the activity is still built, and the composer now refuses these outright.
 Write the chain you actually want:

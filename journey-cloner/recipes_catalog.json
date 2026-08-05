@@ -9,8 +9,8 @@
       "reference": "udch/two_hours.json",
       "chain": [
         "registration",
-        "deposit",
         "promotion",
+        "deposit",
         "freebet",
         "end_of_journey"
       ],
@@ -57,8 +57,8 @@
       "reference": "casino/gow.json",
       "chain": [
         "external_system_source",
-        "deposit",
         "promotion",
+        "deposit",
         "freespin_bonus",
         "casino_bonus_v2",
         "end_of_journey"
@@ -411,7 +411,8 @@
         ],
         "follow": "PromotionAccepted",
         "inline_keys": [
-          "(none)"
+          "content_id",
+          "front_id"
         ]
       },
       "random_split": {

@@ -153,6 +153,11 @@ def main() -> int:
     for ok, msg in R.verify_visual(b):
         check(ok, msg)
 
+    print("\ndate-only run (no prize copy — every slice ships its baked copy):")
+    bd, _ = R.prepare_visual("sport_wof", "2026-08-05")
+    for ok, msg in R.verify_visual(bd):
+        check(ok, msg)
+
     print("\nrefusals:")
     def raises(fn, label):
         try:
@@ -162,8 +167,6 @@ def main() -> int:
             return
         check(False, f"{label} -> NOT refused")
 
-    raises(lambda: R.prepare_visual("sport_wof", "2026-08-03"),
-           "the brand-new slice left without copy")
     raises(lambda: R.prepare_visual("sport_wof", "2026-08-03", prize_text="9\tx\ty"),
            "copy aimed at a slice number the wheel does not have")
     raises(lambda: R.prepare_visual("sport_wof", "2026-08-03", prize_text="7\tx\ty\nplain line"),

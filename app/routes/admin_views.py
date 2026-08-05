@@ -704,11 +704,16 @@ def _rnd_ns(*, kind="sport_wof", date="", days="", weights="", journeys="",
 
 def _nc_ns(*, error="", result=None, console_script=None,
            pmcl_error="", pmcl_result=None, pmcl_console_script=None,
+           brief_error="", brief_result=None, brief_console_script=None,
+           brief_text="",
            git_result=None) -> dict:
     return {
         "error": error, "result": result, "console_script": console_script,
         "pmcl_error": pmcl_error, "pmcl_result": pmcl_result,
         "pmcl_console_script": pmcl_console_script,
+        "brief_error": brief_error, "brief_result": brief_result,
+        "brief_console_script": brief_console_script,
+        "brief_text": brief_text,
         "git_result": git_result,
     }
 
@@ -942,24 +947,16 @@ def promotions_nc_discount(
 @router.post("/admin/promotions/nc-discount-pmcl", response_class=HTMLResponse)
 def promotions_nc_discount_pmcl(
     request: Request,
-    folder_id: str = Form(""),
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
-    """Generate the "NC For Discount PMCL" console script for fortunazo.cl."""
+    """Generate the "NC For Discount PMCL" console script for fortunazo.cl.
+    PMCL media-library folder is baked into the generator."""
     from ..services.journey_cloner_runner import generate_nc_discount_pmcl_console_script
     pmcl_error = ""
     pmcl_result = None
     pmcl_console_script = None
-    if not folder_id.strip():
-        pmcl_error = "Media Library Folder ID is required. Find it in the PMCL backoffice URL: /media-library/folders/<uuid>."
-        ctx = _promotions_context(
-            user=user,
-            active_tab="nc_discount",
-            nc=_nc_ns(pmcl_error=pmcl_error),
-        )
-        return templates.TemplateResponse(request, "promotions.html", ctx)
     try:
-        exit_code, output, display_cmd, js_text, js_name = generate_nc_discount_pmcl_console_script(folder_id.strip())
+        exit_code, output, display_cmd, js_text, js_name = generate_nc_discount_pmcl_console_script()
         pmcl_result = {"exit_code": exit_code, "output": output, "command": display_cmd,
                        "ok": exit_code == 0 and js_text is not None}
         if exit_code == 0 and js_text is not None:
@@ -974,6 +971,49 @@ def promotions_nc_discount_pmcl(
         active_tab="nc_discount",
         nc=_nc_ns(pmcl_error=pmcl_error, pmcl_result=pmcl_result,
                   pmcl_console_script=pmcl_console_script),
+    )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
+
+
+@router.post("/admin/promotions/nc-discount-pmcl-brief", response_class=HTMLResponse)
+def promotions_nc_discount_pmcl_brief(
+    request: Request,
+    brief: str = Form(""),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """PMCL "NC For Discount" from a pasted ops brief: calendar + copy variants
+    are parsed from the brief instead of the baked-in defaults. PMCL folder
+    and year are baked in (current year)."""
+    from ..services.journey_cloner_runner import (
+        generate_nc_discount_pmcl_from_brief_console_script,
+    )
+    brief_error = ""
+    brief_result = None
+    brief_console_script = None
+    btext = brief.strip()
+    if not btext:
+        brief_error = "Paste the ops brief in the box below."
+    else:
+        try:
+            exit_code, output, display_cmd, js_text, js_name = (
+                generate_nc_discount_pmcl_from_brief_console_script(btext)
+            )
+            brief_result = {"exit_code": exit_code, "output": output,
+                            "command": display_cmd,
+                            "ok": exit_code == 0 and js_text is not None}
+            if exit_code == 0 and js_text is not None:
+                brief_console_script = {"name": js_name, "text": js_text}
+            else:
+                brief_error = "Console script was not generated. Check the run output below (brief-parse errors are printed there)."
+        except Exception as exc:  # noqa: BLE001
+            brief_error = str(exc)
+
+    ctx = _promotions_context(
+        user=user,
+        active_tab="nc_discount",
+        nc=_nc_ns(brief_error=brief_error, brief_result=brief_result,
+                  brief_console_script=brief_console_script,
+                  brief_text=btext),
     )
     return templates.TemplateResponse(request, "promotions.html", ctx)
 

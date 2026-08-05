@@ -238,7 +238,10 @@ HAPPY = {
 SETTINGS_DOC = {
     "dwh_source": {"segment_file": "path to a captured dwh initializationData fragment (default segment_cs_301.json)"},
     "external_system_source": {"description": "free-text label shown on the API entry node"},
-    "promotion": {"(none)": "external promotion refs are kept from the capture; promotionDisplayId is stripped"},
+    "promotion": {"content_id": "ContentId of a promo page YOU built (gow_campaign.py / the GOW tab). "
+                                "Without it the composer mints a fresh id, which owns no content tree, "
+                                "so the offer card renders EMPTY",
+                  "front_id": "FrontId of that same promo page — set it whenever you set content_id"},
     "deposit": {"min_deposit": "minimum deposit amount, platform minor units (all tiers set to this)",
                 "timeout": "ISO-8601 window, e.g. P0Y0M1DT0H0M0S"},
     "freespin_bonus": {"spins": "free-spin count",
@@ -380,6 +383,42 @@ def make_end_of_journey(lib: dict) -> dict:
 
 
 # ── settings appliers (edit activity init + mirror config) ───────────────────
+_ISO_DUR_RE = re.compile(
+    r"^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?"
+    r"(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$", re.IGNORECASE)
+
+
+def _iso_duration_label(iso: str) -> str:
+    """"P0Y0M1DT0H0M0S" -> "1 Days", matching the captured label style.
+
+    The wait node stores its duration twice: waitPeriod (the value) and
+    displayData (the caption the canvas prints). They have to agree.
+    """
+    m = _ISO_DUR_RE.match(str(iso or "").strip())
+    if not m:
+        return ""
+    parts = [(int(g or 0), unit) for g, unit in
+             zip(m.groups(), ("Years", "Months", "Days", "Hours", "Minutes", "Seconds"))]
+    said = [f"{n} {unit}" for n, unit in parts if n]
+    return " ".join(said) if said else "0 Minutes"
+
+
+def _placements_of(holder: dict) -> list:
+    """A promotion's placement list, from either storage.
+
+    The compiled activity keeps it at initializationData.placements; the editor
+    mirror keeps it one level deeper, under properties.placements. Both have to
+    be written or the two storages disagree and the builder blanks the canvas.
+    """
+    if not isinstance(holder, dict):
+        return []
+    direct = holder.get("placements")
+    if isinstance(direct, list):
+        return direct
+    nested = (holder.get("properties") or {}).get("placements")
+    return nested if isinstance(nested, list) else []
+
+
 def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list) -> None:
     act = node["activity"]
     init = act.get("initializationData") or {}
@@ -541,9 +580,61 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
                         if isinstance(item, dict) and str(item.get("languageCode", "")).lower() == lang:
                             note(f"localizedMessageTexts[{lang}].messageText", item.get("messageText"), val)
                             item["messageText"] = val
+    elif kind == "promotion":
+        # Point the offer card at a promo page the operator actually built.
+        # Every promotion-bearing capture carries a promo-page placement
+        # (ContentId + FrontId). Left as captured, the draft shares the captured
+        # campaign's content tree and editing it rewrites that live page; minted
+        # fresh, it owns a tree that does not exist yet and the card renders
+        # empty. Building that tree needs the promo-page flow in
+        # gow_campaign.py (per-target folder copies with role-specific
+        # fileFilters, an S3 copy and manifest rewrites) which the composer does
+        # not have — so the correct path is: build the page there, then pass its
+        # two ids here.
+        full_cfg = node.get("config") or {}
+        for src_key, dest_key, meta_key in (("content_id", "ContentId", "contentId"),
+                                            ("front_id", "FrontId", "frontId")):
+            if src_key not in s:
+                continue
+            val = str(s[src_key])
+            n = 0
+            # THREE places hold this id and all three must agree, or the two
+            # storages disagree and the builder shows a blank canvas:
+            #   1. activity.initializationData.placements[].data.<PascalCase>
+            #   2. config.properties.placements[].data.<PascalCase>  (a SIBLING
+            #      of config.data, not inside it — the trap that made an earlier
+            #      pass write only the compiled copy)
+            #   3. config.metadata.<camelCase>
+            for holder in (init, full_cfg):
+                for placement in _placements_of(holder):
+                    data = placement.get("data")
+                    if isinstance(data, dict) and dest_key in data:
+                        note(f"placements[].{dest_key}", data.get(dest_key), val)
+                        data[dest_key] = val
+                        n += 1
+            meta = full_cfg.get("metadata")
+            if isinstance(meta, dict) and meta_key in meta:
+                note(f"metadata.{meta_key}", meta.get(meta_key), val)
+                meta[meta_key] = val
+                n += 1
+            if not n:
+                warnings.append(f"promotion: {src_key} given but no placement or "
+                                f"metadata carries {dest_key} — nothing was set")
+
     elif kind == "wait_interval":
         if "wait" in s:
             note("waitPeriod", init.get("waitPeriod"), s["wait"]); init["waitPeriod"] = s["wait"]
+            # displayData is the label the BUILDER PRINTS ON THE NODE, and it is
+            # a separate copy of the value — writing only waitPeriod left every
+            # composed wait captioned with the capture's own "2 Hours", so a
+            # 1-day wait read as 2 hours on the canvas and the operator had no
+            # way to see the real duration without opening the node.
+            label = _iso_duration_label(s["wait"])
+            if label:
+                note("displayData", init.get("displayData"), [label])
+                init["displayData"] = [label]
+                if cfg is not None and "displayData" in cfg:
+                    cfg["displayData"] = [label]
     elif kind == "external_system_source":
         if "description" in s:
             note("description", init.get("description"), s["description"])
@@ -595,6 +686,7 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
         "casino_bonus_v2": {"bonus_percent", "wagering", "release_multiplier", "expiration_ms"},
         "notification_center#contract1": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "image", "deeplink"},
         "notification_center#contract5": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "image", "deeplink"},
+        "promotion": {"content_id", "front_id"},
         "dextra_sms": {"text_en", "text_es"},
         "dextra_email": {"template", "from_name"},
         "wait_interval": {"wait"},
@@ -895,6 +987,43 @@ def compose(spec: dict) -> dict:
     for entry, ev_name, tgt in edges_wanted:
         elements.append(make_edge(entry["node"]["new_id"], entry["kind"], ev_name, tgt))
 
+    # ── split handles ────────────────────────────────────────────────────────
+    # A split node names its canvas handles `path1..pathN` / `other`, NOT after
+    # the event (`NCEngagementSplitPassedPath02`, `Path2`, …) the way every other
+    # node does. On top of that the captured fragment only kept the ports it
+    # happened to have wired — `input`, `path1`, `other` — so an edge off any
+    # path but the first pointed at a handle the node did not expose and the
+    # canvas dropped it.
+    #
+    # Rewrite the handle to the platform's own naming and mint the port when it
+    # is missing. Without this a comms chain can only ever branch on path 1,
+    # which is not the branch the captures actually take.
+    def _split_path_no(ev: str) -> str | None:
+        """`NCEngagementSplitPassedPath02` -> 'path2'; a remainder -> 'other'."""
+        if not ev:
+            return None
+        if re.search(r"remainder", ev, re.I):
+            return "other"
+        m = re.search(r"(?:path)0*(\d+)$", ev, re.I)
+        return f"path{int(m.group(1))}" if m else None
+
+    node_by_id = {e["id"]: e for e in elements if "source" not in e}
+    for e in elements:
+        if "source" not in e:
+            continue
+        node = node_by_id.get(e["source"])
+        if not node:
+            continue
+        if "split" not in str((node.get("data") or {}).get("name") or ""):
+            continue
+        handle = _split_path_no((e.get("data") or {}).get("eventName"))
+        if not handle:
+            continue
+        e["sourceHandle"] = f"{handle}-{e['source']}"
+        ports = (node.setdefault("data", {})).setdefault("ports", [])
+        if not any(p.get("id") == e["sourceHandle"] for p in ports):
+            ports.append({"id": e["sourceHandle"]})
+
     # ── wrap parallel blocks: container element + flowEntry headers ──
     # Done AFTER layout so each flow is laid out as an ordinary chain first and
     # then re-parented, rather than teaching the grid about nested coordinates.
@@ -1116,6 +1245,65 @@ def verify(body: dict) -> list[str]:
     for k in raw.get("activitiesConfiguration", {}):
         if k not in idset:
             errs.append("activitiesConfiguration key not an activity id")
+    # RULE #1: promotion is NEVER downstream of the deposit that gates it.
+    # The player must ACCEPT the offer before a condition can gate its reward; a
+    # deposit gate placed first has nothing to gate and the platform rejects or
+    # misbehaves. Across the five captures carrying both nodes there are 13
+    # promotion -> deposit edges (all on PromotionAccepted) and zero of the
+    # reverse, so a deposit -> promotion edge is always a wiring bug — it is not
+    # a variant. This is a refusal rather than a warning because the draft looks
+    # completely normal in the builder and only misbehaves once a player enters.
+    by_id = {a["activityId"]: a for a in acts}
+
+    def _targets(activity: dict):
+        for ev in activity.get("events", []) or []:
+            nid = ev.get("nextActivityId")
+            if nid:
+                yield ev.get("eventName"), nid
+            for path in ((ev.get("split") or {}).get("paths") or []):
+                if path.get("nextActivityId"):
+                    yield ev.get("eventName"), path["nextActivityId"]
+
+    for a in acts:
+        if a.get("activityName") != "deposit":
+            continue
+        for ev_name, nid in _targets(a):
+            nxt = by_id.get(nid)
+            if nxt is not None and nxt.get("activityName") == "promotion":
+                errs.append(
+                    f"deposit.{ev_name} -> promotion: the deposit gate is ahead of "
+                    "the offer it gates. Order is ALWAYS promotion -> deposit "
+                    "(on PromotionAccepted)")
+
+    # A DELIVERED message is never followed straight by another send. Measured
+    # over all 18 captures: a success event (NotificationSent / SuccessEmailSend
+    # / SuccessSmsSend) leads to a wait, a split or an end — to another send
+    # ZERO times. Chaining sends on success fires the whole set at once at
+    # everybody and measures nobody, which is the "comms with no waits and no
+    # engagement split" complaint. The FAILURE branch is the opposite and is
+    # left alone: NotificationNotSent -> next channel is the correct immediate
+    # fallback and occurs 7 times.
+    SENDS = {"notification_center", "dextra_sms", "dextra_email"}
+    SUCCESS = {"NotificationSent", "SuccessEmailSend", "SuccessSmsSend"}
+    for a in acts:
+        if a.get("activityName") not in SENDS:
+            continue
+        for ev in a.get("events", []) or []:
+            if ev.get("eventName") not in SUCCESS:
+                continue
+            for nid in ([ev["nextActivityId"]] if ev.get("nextActivityId") else []) + [
+                    p_["nextActivityId"] for p_ in ((ev.get("split") or {}).get("paths") or [])
+                    if p_.get("nextActivityId")]:
+                nxt = by_id.get(nid)
+                if nxt is not None and nxt.get("activityName") in SENDS:
+                    errs.append(
+                        f"{a['activityName']}.{ev['eventName']} -> "
+                        f"{nxt['activityName']}: a delivered message goes to a wait "
+                        "or an engagement split, never straight to another send "
+                        "(0 occurrences in 18 captures). Insert a wait, then a "
+                        "split, and send the next channel off the branch that "
+                        "still needs chasing")
+
     if not body.get("journeyName"):
         errs.append("journeyName missing")
     if body.get("duplicatedFromId"):
@@ -1242,7 +1430,7 @@ def _inherited_content_errors(body: dict) -> list[str]:
     whole — so an SMS node the spec gave no text to still carries the captured
     campaign's message, links and email template."""
     try:
-        from compose import audit_inherited_content
+        from compose import audit_inherited_content, audit_shared_promotion_identity
     except Exception:
         return []
     leaks: dict[str, None] = {}
@@ -1253,11 +1441,36 @@ def _inherited_content_errors(body: dict) -> list[str]:
             continue
         for line in audit_inherited_content(body, ref):
             leaks.setdefault(line, None)
+        # A chain clones its promotion node whole, so it arrives carrying the
+        # captured campaign's promotionId / campaignId and its promo-page
+        # ContentId+FrontId. Those are not copies — they are the SAME
+        # server-side objects, so the draft hangs off the captured campaign and
+        # editing its page content rewrites that live campaign's page. MODE 5 is
+        # the default path, so this is where it mattered most and it was the one
+        # place not checked.
+        for line in audit_shared_promotion_identity(body, ref):
+            leaks.setdefault(f"SHARED PROMOTION IDENTITY — {line}", None)
     return list(leaks)
 
 
 def cmd_compose(spec: dict, as_json: bool, script: bool, basename: str | None = None) -> int:
     res = compose(spec)
+    # A chain clones its promotion node whole, so the draft arrives owning the
+    # CAPTURED campaign's promotionId / campaignId and promo-page ContentId. Mint
+    # fresh ones before verifying, or the draft hangs off that live campaign and
+    # editing its page content rewrites it (the Sport WOF bug). The audit below
+    # is the backstop for anything this misses.
+    try:
+        from compose import refresh_promotion_identity
+        for _src in SOURCES:
+            try:
+                _ref = json.loads(_src.read_text(encoding="utf-8-sig"))
+            except (OSError, ValueError):
+                continue
+            for _line in refresh_promotion_identity(res["body"], _ref):
+                res.setdefault("report", []).append(_line)
+    except Exception:
+        pass
     errs = verify(res["body"])
     # Treat leaked campaign content as a verification failure: a journey that
     # messages players with another campaign's copy is not a usable draft, and

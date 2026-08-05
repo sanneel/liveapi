@@ -176,12 +176,16 @@ Two more things the rebuild corrected:
 
   Three of those four are the *same prize* re-pointed at a new journey, and
   their real copy was still in the capture under the OLD activityId — so it is
-  carried across (`INHERITED_COPY`), never retyped. Only the genuinely new
-  `10%- Dep | Freebet` slice needs the operator: one
-  `<n><TAB>EN<TAB>ES` line. A build where any slice still matches the internal
-  shape is **refused**, and the error lists the wheel's slices in order so the
-  right number is obvious. Copy for slices the wheel no longer has (three
-  removed activity ids plus four numeric orphans) is dropped.
+  carried across (`INHERITED_COPY`), never retyped. The genuinely new
+  `10%- Dep | Freebet` slice now ships **baked** player copy too
+  (EN `10% extra free bet` / ES `Apuesta gratis 10% extra`, in
+  `spa/content/content-{en,es}.json`), so a normal run needs **no prize copy at
+  all — only a date**. `--prize-text` (and the Advanced → "Prize copy override"
+  box in the UI) still lets you rewrite any slice: one `<n><TAB>EN<TAB>ES` line,
+  or seven unnumbered lines in wheel order. A build where any slice still matches
+  the internal shape is **refused**, and the error lists the wheel's slices in
+  order so the right number is obvious. Copy for slices the wheel no longer has
+  (three removed activity ids plus four numeric orphans) is dropped.
 
   Prize copy is a **spa** concern: it lives in `spa/content/content-{en,es}.json`
   and the key is created where the capture lacks it — the captured ES file

@@ -94,15 +94,28 @@ PROMO_FS = "initializationData.placements.0.data.freespinActivity."
 
 RECIPES: dict[str, Recipe] = {
     # The proven comms chain (equivalent to compose_comms.py).
+    # A comms journey is NEVER a row of sends. The unit is send -> wait -> split
+    # -> send: after a channel fires you wait, then branch on how the player
+    # engaged, and only the branch that still needs chasing gets the next
+    # channel. This chain used to be dwh_source -> nc -> nc -> sms -> email,
+    # which stripped every wait and split out of its OWN reference (gow_comms
+    # has 3 waits, 2 NC engagement splits, 1 email split) and fired all four
+    # channels at once at everybody. The order below mirrors gow_comms Flow 1.
     "comms": Recipe(
         key="comms",
         reference="casino/gow_comms.json",
         chain=[
             Node("dwh_source", "PlayerAdded", "Segment — comms"),
             Node("notification_center", "NotificationSent", "On-site notification"),
+            Node("wait_interval", "WaitTimeCompleted", "Wait — let it land"),
+            Node("notification_center_engagement_split",
+                 "NCEngagementSplitPassedPath02", "Did they engage?"),
             Node("notification_center", "NotificationSent", "On-site reminder"),
-            Node("dextra_sms", "SuccessSmsSend", "SMS"),
+            Node("wait_interval", "WaitTimeCompleted", "Wait — before email"),
             Node("dextra_email", "SuccessEmailSend", "Email"),
+            Node("wait_interval", "WaitTimeCompleted", "Wait — before SMS"),
+            Node("email_engagement_split", "Path2", "Did they open it?"),
+            Node("dextra_sms", "SuccessSmsSend", "SMS — last resort"),
         ],
     ),
     # A sport reward chain — deposit-gated freebet. two_hours is the only
@@ -114,10 +127,15 @@ RECIPES: dict[str, Recipe] = {
         # two_hours has no STANDALONE notification_center (only boundary ones),
         # so this chain stops at the freebet — the engine refuses to source a
         # node the reference can't supply, which is the correct behaviour.
+        # promotion -> deposit, never the reverse (see the same fix on
+        # casino_deposit_freespins). This recipe also had it backwards. Its own
+        # reference wires registration -> split -> promotion --PromotionAccepted-->
+        # deposit --DepositConditionSatisfied--> freebet; the split is flattened
+        # away here but the promotion/deposit order is not ours to change.
         chain=[
             Node("registration", "PlayerAdded", "Entry"),
-            Node("deposit", "DepositConditionSatisfied", "Deposit gate"),
             Node("promotion", "PromotionAccepted", "Offer"),
+            Node("deposit", "DepositConditionSatisfied", "Deposit gate"),
             Node("freebet", "PlayerFreebetUsed", "Free bet"),
         ],
         # Named knobs → real paths in THIS recipe's reference (udch/two_hours).
@@ -149,10 +167,18 @@ RECIPES: dict[str, Recipe] = {
     "casino_deposit_freespins": Recipe(
         key="casino_deposit_freespins",
         reference="casino/gow.json",
+        # ORDER IS promotion -> deposit, NEVER the reverse. This recipe had it
+        # backwards (deposit -> promotion) and so built every draft with the
+        # gate ahead of the offer, contradicting its OWN reference: across the
+        # five captures that carry both nodes (gow, spinladder, pmcl_betandget,
+        # two_hours, followup) there are 13 promotion -> deposit edges, all on
+        # PromotionAccepted, and zero deposit -> promotion. The player has to
+        # ACCEPT the offer before a condition can gate its reward; a deposit
+        # gate placed first has nothing to gate.
         chain=[
             Node("external_system_source", "PlayerAdded", "Entry"),
-            Node("deposit", "DepositConditionSatisfied", "Deposit gate"),
             Node("promotion", "PromotionAccepted", "Offer"),
+            Node("deposit", "DepositConditionSatisfied", "Deposit gate"),
             Node("freespin_bonus", "FreespinBonusCollectingFinished", "Free spins"),
             Node("casino_bonus_v2", "WageringBonusFinished", "Wagering bonus"),
         ],
@@ -417,12 +443,27 @@ def compose(recipe: Recipe, values: dict | None = None) -> tuple[dict, str, list
         })
 
     # edges — stamped from a real reference edge (keeps eventDisplayName/payloadKeys)
+    node_els = {e["id"]: e for e in elements if "source" not in e}
     for frm, event, etype, aname, to in edge_specs:
         e = copy.deepcopy(edge_tpl)
         e["id"] = _nid()
         e["source"], e["target"] = frm, to
         e["sourceHandle"] = f"{event}-{frm}"
         e["targetHandle"] = f"input-{to}"
+        # A SPLIT names its handles path1..pathN / other, NOT after the event the
+        # way every other node does, and the captured fragment only kept the
+        # ports it had wired (input, path1, other). So an edge off any path but
+        # the first addressed a handle the node did not expose and the canvas
+        # dropped it — which is why a comms chain could previously only branch on
+        # path 1, never the path the captures actually take.
+        handle = _split_handle(aname, event)
+        if handle:
+            e["sourceHandle"] = f"{handle}-{frm}"
+            node = node_els.get(frm)
+            if node is not None:
+                ports = node.setdefault("data", {}).setdefault("ports", [])
+                if not any(p.get("id") == e["sourceHandle"] for p in ports):
+                    ports.append({"id": e["sourceHandle"]})
         d = e.setdefault("data", {})
         d["eventName"], d["eventType"], d["activityName"] = event, etype, aname
         elements.append(e)
@@ -629,6 +670,23 @@ CONTENT_KEYS = (
 _CONTENT_NOISE = {"", "link", "regular", "1", "True", "%icon%", "%deeplink%"}
 
 
+def _split_handle(activity_name: str, event: str) -> str | None:
+    """Canvas handle for an edge leaving a SPLIT node, or None for other nodes.
+
+    Splits are the one family whose handles are not named after the event:
+    `NCEngagementSplitPassedPath02` leaves through the port `path2`, a
+    `...RemainderPath` through `other`. Everything else uses `<event>-<id>`.
+    """
+    if "split" not in str(activity_name or "").lower():
+        return None
+    if not event:
+        return None
+    if re.search(r"remainder", event, re.I):
+        return "other"
+    m = re.search(r"(?:path)0*(\d+)$", event, re.I)
+    return f"path{int(m.group(1))}" if m else None
+
+
 def _collect_content(obj, out: list, path: str = "") -> None:
     """Every campaign-identifying string in a journey body, with its path."""
     if isinstance(obj, dict):
@@ -680,7 +738,8 @@ def _flatten_strings(obj, out: list) -> None:
             _flatten_strings(v, out)
 
 
-def audit_inherited_content(body: dict, reference: dict) -> list[str]:
+def audit_inherited_content(body: dict, reference: dict, *,
+                            allowed=()) -> list[str]:
     """Campaign content the composed journey still shares with its reference.
 
     This is the generalisable version of the failures that actually shipped: a
@@ -692,17 +751,24 @@ def audit_inherited_content(body: dict, reference: dict) -> list[str]:
     Returns one line per distinct leaked value. Empty list means the composed
     journey shares no message copy, template id, promocode or link with the
     journey it was cloned from.
+
+    ``allowed`` is a set of strings that the caller *knows* were chosen by the
+    operator this run (typically the pasted sheet's copy). A value on the
+    allow-list is not flagged even if it happens to equal the capture's — the
+    operator wrote "Join the tournament" because that is what they want to
+    ship, not because it leaked from the template.
     """
     ref_content: list = []
     _collect_content(reference, ref_content)
     ref_values = {s for _, s in ref_content}
     if not ref_values:
         return []
+    allow_set = {s.strip() for s in allowed if isinstance(s, str) and s.strip()}
     new_content: list = []
     _collect_content(body, new_content)
     leaked: dict[str, str] = {}
     for path, value in new_content:
-        if value in ref_values:
+        if value in ref_values and value.strip() not in allow_set:
             leaked.setdefault(value, path)
     return [f"{path} still carries {value[:88]!r}"
             for value, path in sorted(leaked.items(), key=lambda kv: kv[1])]
@@ -957,6 +1023,139 @@ def validate_spec(spec: dict) -> Recipe:
     return recipe
 
 
+# The ids that IDENTIFY a promotion and its promo-page content tree. Sharing one
+# with the reference is a different, worse failure than sharing copy: the two
+# campaigns become the same object server-side, so editing this draft's artwork
+# or terms rewrites the CAPTURED campaign — which is a live weekly promo. This is
+# the same class as the Sport WOF bug, where every wheel shared one contentId and
+# editing this week's rewrote every published one.
+#
+# They are missed by audit_inherited_content because _is_content() only accepts
+# uppercase-leading tokens (built for copy and CSE-* ids), so a lowercase uuid
+# sails straight through it.
+IDENTITY_KEYS = ("ContentId", "FrontId", "campaignId",
+                 "promotionId", "promotionLinkId",
+                 # The editor mirror repeats the content pair under
+                 # config.metadata in camelCase. Missing these left the minted
+                 # draft still pointing at the captured campaign's tree through
+                 # the mirror, which is the copy the builder reads.
+                 "contentId", "frontId")
+
+
+def audit_shared_promotion_identity(body: dict, reference: dict) -> list[str]:
+    """Promotion/content ids the composed journey still SHARES with its reference.
+
+    Returns one line per shared id. Empty means this draft owns its own
+    promotion and content tree.
+    """
+    def collect(obj, out: dict, path: str = "") -> dict:
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                here = f"{path}.{k}" if path else k
+                if k in IDENTITY_KEYS and isinstance(v, str) and v.strip():
+                    out.setdefault((k, v), here)
+                else:
+                    collect(v, out, here)
+        elif isinstance(obj, list):
+            for i, v in enumerate(obj):
+                collect(v, out, f"{path}[{i}]")
+        return out
+
+    ref_ids = {kv[0] + "\x00" + kv[1] for kv in collect(reference, {})}
+    if not ref_ids:
+        return []
+    leaks: list[str] = []
+    for (key, val), where in sorted(collect(body, {}).items(), key=lambda kv: kv[1]):
+        if key + "\x00" + val in ref_ids:
+            leaks.append(f"{where} = {key} {val} (same object as the reference)")
+    return leaks
+
+
+def refresh_promotion_identity(body: dict, reference: dict) -> list[str]:
+    """Give this draft its OWN promotion + content ids instead of the capture's.
+
+    A cloned promotion node arrives carrying the captured campaign's
+    promotionId / promotionLinkId / campaignId and its promo-page
+    ContentId+FrontId. Those are not copies, they are the SAME server-side
+    objects: the draft hangs off the captured campaign's promotion, and editing
+    its promo-page content rewrites that live campaign's page. This is the Sport
+    WOF bug — every wheel shared one contentId, so editing this week's artwork
+    rewrote every published wheel — and the fix there is the fix here: mint a
+    fresh uuid per draft.
+
+    Rewrites consistently: one old id maps to ONE new id everywhere it appears,
+    so the compiled activities and the rawJourneyData mirror keep agreeing
+    (disagreement is a blank canvas).
+
+    Only ids the draft SHARES with its reference are touched — an id the
+    operator supplied is theirs and is left alone. Returns a report line per id.
+    """
+    shared: set[str] = set()
+
+    def collect(obj, out: set) -> set:
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                if k in IDENTITY_KEYS and isinstance(v, str) and v.strip():
+                    out.add(v)
+                else:
+                    collect(v, out)
+        elif isinstance(obj, list):
+            for v in obj:
+                collect(v, out)
+        return out
+
+    ref_ids = collect(reference, set())
+    body_ids = collect(body, set())
+    shared = body_ids & ref_ids
+    if not shared:
+        return []
+    mapping = {old: str(uuid.uuid4()) for old in sorted(shared)}
+    text = json.dumps(body)
+    for old, new in mapping.items():
+        text = text.replace(old, new)
+    body.clear()
+    body.update(json.loads(text))
+    lines = [f"promotion identity {old} -> {new} (was the reference's own object)"
+             for old, new in mapping.items()]
+    # A minted ContentId/FrontId owns no content tree, so the offer card renders
+    # empty. That must not be a quiet line in a long report — it is the
+    # difference between a shippable journey and one the player sees nothing in.
+    content_minted = [new for old, new in mapping.items()
+                      if _id_key_of(reference, old) in ("ContentId", "FrontId")]
+    if content_minted:
+        lines.append(
+            "INCOMPLETE — the promo page: this draft now owns fresh "
+            "ContentId/FrontId, which removes the damage of sharing the "
+            "captured campaign's page, but a fresh id has NO content tree "
+            "behind it, so the offer card will render EMPTY. Build the promo "
+            "page with gow_campaign.py (Optimization > GOW), then pass its ids "
+            "as the promotion node's content_id / front_id so this journey "
+            "points at real content instead of a minted blank.")
+    return lines
+
+
+def _id_key_of(reference: dict, value: str) -> str:
+    """Which IDENTITY_KEYS field held `value` in the reference."""
+    found = ""
+
+    def walk(o):
+        nonlocal found
+        if found:
+            return
+        if isinstance(o, dict):
+            for k, v in o.items():
+                if k in IDENTITY_KEYS and v == value:
+                    found = k
+                    return
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+
+    walk(reference)
+    return found
+
+
 def _refuse_inherited(body: dict, reference: str) -> None:
     """Refuse a spec-built journey that still carries its reference's campaign.
 
@@ -965,7 +1164,23 @@ def _refuse_inherited(body: dict, reference: str) -> None:
     a NEW campaign, and a new campaign that shares the old one's SMS body,
     email template or promo link is the failure this whole gate exists for.
     """
-    leaks = audit_inherited_content(body, _load(reference))
+    ref_body = _load(reference)
+    shared_ids = audit_shared_promotion_identity(body, ref_body)
+    if shared_ids:
+        shown = "\n    ".join(shared_ids[:8])
+        more = (f"\n    ...and {len(shared_ids) - 8} more"
+                if len(shared_ids) > 8 else "")
+        raise SpecError(
+            f"the composed journey SHARES {len(shared_ids)} promotion/content id(s) "
+            f"with {reference} — refusing to build:\n    {shown}{more}\n"
+            f"  These are not copies, they are the SAME server-side objects. The "
+            f"draft would hang off the captured campaign's promotion, and editing "
+            f"its promo-page content would rewrite that live campaign's page.\n"
+            f"  A new campaign needs its own promotion + content tree. If reusing "
+            f"that exact captured campaign really is the intent, run the recipe "
+            f"with no --spec — the bare-clone path is allowed to share, because "
+            f"cloning is what it is for.")
+    leaks = audit_inherited_content(body, ref_body)
     if not leaks:
         return
     shown = "\n    ".join(leaks[:8])
@@ -1044,6 +1259,10 @@ def compose_from_spec(spec: dict) -> tuple[Recipe, dict, str, list[str]]:
     values, unknown = spec_to_values(recipe, spec)
     body, name, _ = compose(recipe, values)
     sync_game_labels(body)
+    # Give the draft its own promotion + content ids BEFORE auditing, so a new
+    # campaign never hangs off the captured one's promotion. _refuse_inherited
+    # stays as the backstop for anything this does not reach.
+    refresh_promotion_identity(body, _load(recipe.reference))
     _refuse_inherited(body, recipe.reference)
     return recipe, body, name, unknown
 
@@ -1114,6 +1333,9 @@ def compose_from_graph(spec: dict) -> tuple[Recipe, dict, str, list[str]]:
         body, name, _ = compose(recipe, values)
     except ValueError as exc:
         raise SpecError(str(exc)) from exc
+    # A graph describes a NEW campaign too, so it must not hang off the
+    # reference's promotion either.
+    refresh_promotion_identity(body, _load(ref))
     return recipe, body, name, []
 
 

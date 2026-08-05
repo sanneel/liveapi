@@ -83,7 +83,7 @@
    "prize_2.prizeTextKey": "<p>JBCL | SP | RB - Wheel of fortune | Dep | Bonus</p>\n",
    "prize_4.prizeTextKey": "<p>JBCL | SP | RB - Wheel of fortune | Dep | Freebet</p>\n",
    "prize_6.prizeTextKey": "<p>JBCL | SP | 10%- Wheel of fortune | Dep | Freebet</p>\n",
-   "prize_7005e59e-9e0d-420f-829b-1db6d4131997.prizeTextKey": "<p>JBCL | SP | Wheel of fortune | Dep10% | Freebet&nbsp;</p>\n",
+   "prize_7005e59e-9e0d-420f-829b-1db6d4131997.prizeTextKey": "<p>10% extra free bet</p>\n",
    "prize_2226976c-110a-4f2b-b440-e96ee736c43a.prizeTextKey": "<p>JBCL | SP | RB - Wheel of fortune | Free | Bonuses</p>\n",
    "prize_1415c53b-f14f-4e1d-a21b-07d6975f4a08.prizeTextKey": "<p>JBCL | SP | RB - Wheel of fortune | Dep | Bonus</p>\n",
    "prize_5e0fafd0-bd8d-4dfa-9b42-1d7798c30bc7.prizeTextKey": "<p>JBCL | SP | RB - Wheel of fortune | Dep | Freebet</p>\n",
@@ -171,7 +171,8 @@
    "prize_1faa001a-f221-4f53-b184-75e564aa1a60.prizeTextKey": "<p>Bonos de depósito</p>\n",
    "prize_b6148588-a5c8-4cf9-ace8-1af8574f7deb.prizeTextKey": "<p>Seguro de apuesta</p>\n",
    "prize_ff2e626c-7ec7-4c1c-859e-078ef18004be.prizeTextKey": "<p>Apuestas gratis con tu depósito</p>\n",
-   "prize_62b2f5c3-d12f-4a17-bbb0-a8d9a328cd41.prizeTextKey": "<p>Apustas gratis realizando una apuesta</p>\n"
+   "prize_62b2f5c3-d12f-4a17-bbb0-a8d9a328cd41.prizeTextKey": "<p>Apustas gratis realizando una apuesta</p>\n",
+   "prize_7005e59e-9e0d-420f-829b-1db6d4131997.prizeTextKey": "<p>Apuesta gratis 10% extra</p>\n"
   }
  },
  {

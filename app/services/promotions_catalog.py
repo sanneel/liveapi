@@ -147,10 +147,6 @@ GENERATORS: List[dict] = [
      "label": "Game of the Week",
      "what": "Free-spin journey + promo page + comms, one paste",
      "script": "gow_combined.py", "tab": "gow"},
-    {"key": "casino_gow_clone", "group": "Casino", "brand": "JBCL",
-     "label": "Casino GOW clone",
-     "what": "Older path: clone GOW with new game/bets. Prefer the composer recipes",
-     "script": "casino_journey.py", "tab": None, "legacy": True},
     {"key": "instant_freespin", "group": "Casino", "brand": "JBCL/PMCL",
      "label": "Instant free spins",
      "what": "Promotion → free spins, no deposit gate (composer recipe)",
@@ -197,7 +193,7 @@ GENERATORS: List[dict] = [
      "label": "Comms journey from content",
      "what": "NC + pop-up + SMS + email with your copy, one journey per date",
      "script": "journey_composer.py", "route": "/admin/ai"},
-    {"key": "sport_comms", "group": "Comms", "brand": "JBCL",
+    {"key": "sport_comms", "group": "Sport", "brand": "JBCL",
      "label": "Scratch Card Comms",
      "what": "SMS + NC + pop-up + email for a fixture scratch card, one journey",
      "script": "sport_comms_campaign.py", "tab": "sport_comms"},
@@ -211,20 +207,6 @@ GENERATORS: List[dict] = [
      "label": "Figma export",
      "what": "Pull GOW image slots straight out of Figma",
      "script": "figma_export.py", "tab": "gow"},
-
-    # ── Tools ─────────────────────────────────────────────────────────────
-    {"key": "games_registry", "group": "Tools", "brand": "—",
-     "label": "Games registry",
-     "what": "Rebuild library/games.json from the backoffice catalog",
-     "script": "build_games_registry.py", "tab": None},
-    {"key": "catalog", "group": "Tools", "brand": "—",
-     "label": "Automation catalog",
-     "what": "Rebuild catalog.json (what the Overview graph reads)",
-     "script": "build_catalog.py", "tab": None},
-    {"key": "planner", "group": "Tools", "brand": "JBCL/PMCL",
-     "label": "AI planner",
-     "what": "Brief → plan → design boards → console scripts",
-     "script": "compose.py", "route": "/admin/ai"},
 ]
 
 # Scripts that are library/tooling, not campaign generators — excluded from the
@@ -237,13 +219,13 @@ _NOT_GENERATORS = {
     "gow_campaign.py", "comms_campaign.py", "build_catalog.py",
     "build_games_registry.py", "nc_discount_campaign.py",
     "nc_discount_pmcl_campaign.py",
-    "comms_engine.py", "tournament_comms_base.py",
+    "comms_engine.py", "tournament_comms_base.py", "har_analyse.py",
 }
 
 
 # Reading order for the Overview. Jinja's groupby sorts alphabetically, which put
 # Assets and Tools above the thing most people came for.
-GROUP_ORDER = ["Casino", "Sport", "Wheels & cards", "Comms", "Assets", "Tools"]
+GROUP_ORDER = ["Casino", "Sport", "Wheels & cards", "Comms", "Assets"]
 
 
 def generators() -> List[dict]:

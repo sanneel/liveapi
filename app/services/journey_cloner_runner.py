@@ -484,12 +484,26 @@ def generate_tournament_jbcl_console_script(**kw) -> Tuple[int, str, str, str | 
         script_path=TOURNAMENT_JBCL_SCRIPT_PATH, tag="tournament_jbcl", **kw)
 
 
-def generate_nc_discount_pmcl_console_script(folder_id: str) -> Tuple[int, str, str, str | None, str]:
-    """Generate the "NC For Discount PMCL" console script for fortunazo.cl."""
+def generate_nc_discount_pmcl_console_script() -> Tuple[int, str, str, str | None, str]:
+    """Generate the "NC For Discount PMCL" console script for fortunazo.cl.
+    The PMCL media-library folder UUID is baked into the CLI script."""
     basename = _unique_basename("nc_discount_pmcl", "")
     cmd = [python_executable(), str(NC_DISCOUNT_PMCL_SCRIPT_PATH),
-           "--name", basename, "--folder-id", folder_id]
+           "--name", basename]
     return _run_gow_cli(cmd, basename=basename)
+
+
+def generate_nc_discount_pmcl_from_brief_console_script(
+    brief_text: str,
+) -> Tuple[int, str, str, str | None, str]:
+    """Same as generate_nc_discount_pmcl_console_script, but the calendar and
+    per-day copy come from a pasted ops brief piped via stdin — overrides the
+    baked-in defaults in nc_discount_pmcl_campaign.py. Year is auto-detected
+    from the current date."""
+    basename = _unique_basename("nc_discount_pmcl", "")
+    cmd = [python_executable(), str(NC_DISCOUNT_PMCL_SCRIPT_PATH),
+           "--name", basename, "--brief", "-"]
+    return _run_gow_cli(cmd, basename=basename, spec_text=brief_text)
 
 
 def generate_prediction_console_script(

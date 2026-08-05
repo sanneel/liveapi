@@ -10,13 +10,17 @@ everything that is a rule lives here once, so the two cannot drift.
 
 Rules this engine enforces (each one was a real broken draft):
 
-  * **Any link, no Smartico id.** The operator pastes whatever URL the promo
-    lives at. Its *path* is what ships: the notification and pop-up get
+  * **Any link, no captured Smartico id.** The operator pastes whatever URL the
+    promo lives at. Its *path* is what ships: the notification and pop-up get
     ``/xxx/yy/gg?%$utm_tags%`` and the SMS gets
-    ``https://{{BrandDomain}}/xxx/yy/gg``. The captured
-    ``#_smartico_dp=dp:gf_tournaments&id=<n>`` deeplink is removed outright —
-    it only ever addressed one tournament on one product, and a run that kept
-    it silently pointed every channel at the captured tournament.
+    ``https://{{BrandDomain}}/xxx/yy/gg``. Any Smartico
+    ``#_smartico_dp=dp:gf_tournaments&id=<n>`` fragment *from the capture* is
+    removed outright — it only ever addressed one tournament on one product,
+    and a run that kept it silently pointed every channel at the captured
+    tournament. If the operator's URL has *no path* but does have a Smartico
+    fragment (homepage-modal tournaments — the tournament only exists as a
+    Smartico modal on the brand root, no dedicated promo page), the fragment
+    IS the destination and every channel carries it.
   * **The sheet owns the tournament window.** ``Start date`` / ``End date``
     drive the two wait_date gates, the notification revoke period (a
     notification for a tournament that ended is still sitting in the centre
@@ -102,27 +106,45 @@ class Brand:
 
 
 # ── inputs ──────────────────────────────────────────────────────────────
-def link_path(link: str) -> str:
-    """The path every channel links to, from whatever URL the operator pasted.
+def parse_link(link: str) -> tuple[str, str]:
+    """Parse the operator's promo URL into ``(path, fragment)``.
 
-    ``https://jugabet.cl/xxx/yy/gg`` → ``/xxx/yy/gg``. A bare path is taken as
-    is. Any query or fragment is dropped — the fragment is where the captured
-    Smartico deeplink lived, and the query is rebuilt per channel.
+    ``https://jugabet.cl/xxx/yy/gg`` → ``("/xxx/yy/gg", "")``. A bare path is
+    taken as is. Query is always dropped (rebuilt per channel).
+
+    When the URL has a real path, its Smartico deeplink fragment (if any) is
+    dropped — the path is authoritative, and the captured tournament id would
+    otherwise leak through. When the URL has *no* real path but does have a
+    Smartico fragment (a homepage-modal tournament, no dedicated promo page),
+    the fragment is returned as ``("", "#_smartico_dp=…")`` and every channel
+    ships it. Refuses only when both would be empty.
     """
     v = (link or "").strip()
     if not v:
-        return ""
+        return "", ""
     if "://" not in v and not v.startswith("/"):
         v = "//" + v                       # "jugabet.cl/x" parses as a host
     parts = urlsplit(v)
-    path = parts.path if (parts.scheme or parts.netloc) else v.split("?")[0].split("#")[0]
-    path = "/" + path.strip("/")
-    if path == "/":
+    if parts.scheme or parts.netloc:
+        raw_path = parts.path
+        raw_fragment = parts.fragment
+    else:
+        head = v.split("?", 1)[0]
+        raw_path, _, raw_fragment = head.partition("#")
+    path = "/" + raw_path.strip("/") if raw_path.strip("/") else ""
+    # Only keep the fragment when it IS the destination — i.e. no real path
+    # AND the fragment is a Smartico deeplink (never keep an arbitrary fragment).
+    fragment = ""
+    if not path and raw_fragment and SMARTICO_RE.search("#" + raw_fragment):
+        fragment = "#" + raw_fragment
+    if not path and not fragment:
         raise Refused(
-            f"link {link!r} has no path. Give the full promo URL "
-            f"(https://<brand>/xxx/yy/gg) or the path itself (/xxx/yy/gg)."
+            f"link {link!r} has no path and no Smartico deeplink. Give the "
+            f"full promo URL (https://<brand>/xxx/yy/gg), the path itself "
+            f"(/xxx/yy/gg), or a Smartico homepage-modal URL "
+            f"(https://<brand>/#_smartico_dp=dp:<product>&id=<n>)."
         )
-    return path
+    return path, fragment
 
 
 def parse_game_slug(value: str) -> str:
@@ -151,17 +173,19 @@ def read_spec(brand: Brand, path: Path, link: str = ""):
     # pathless sheet link falls through to the missing-input refusal below
     # rather than aborting with a less useful message.
     if (link or "").strip():
-        spec.link_path = link_path(link)
+        spec.link_path, spec.link_fragment = parse_link(link)
     else:
         try:
-            spec.link_path = link_path(getattr(spec, "raw_link", ""))
+            spec.link_path, spec.link_fragment = parse_link(getattr(spec, "raw_link", ""))
         except Refused:
-            spec.link_path = ""
+            spec.link_path, spec.link_fragment = "", ""
 
     missing = []
-    if not spec.link_path:
+    if not (spec.link_path or spec.link_fragment):
         missing.append(
-            'no promo link — give --link (any URL, e.g. https://jugabet.cl/xxx/yy/gg)'
+            'no promo link — give --link (any URL, e.g. https://jugabet.cl/xxx/yy/gg, '
+            'or a Smartico homepage-modal URL like '
+            'https://<brand>/#_smartico_dp=dp:<product>&id=<n>)'
         )
     if not (spec.tournament_start_date and spec.tournament_end_date):
         missing.append(
@@ -218,8 +242,15 @@ def prepare(brand: Brand, spec, *, date_str: str, journey_name: str = "",
             ) -> tuple[dict, list[str]]:
     now = now or datetime.now(LOCAL_TZ)
     path = spec.link_path
-    nc_link = f"{path}?%$utm_tags%"                 # notification + pop-up
-    sms_link = "https://{{BrandDomain}}" + path      # SMS carries the domain
+    fragment = getattr(spec, "link_fragment", "")
+    # nc_link is the relative URL every notification/pop-up field stores. Query
+    # must come BEFORE fragment (RFC 3986); for Smartico-only targets the base
+    # is "/" so the client visits the brand root and Smartico's JS reads the
+    # fragment to open the modal. sms_link is absolute — SMS carries the domain
+    # via the {{BrandDomain}} template macro.
+    base = path or "/"
+    nc_link = f"{base}?%$utm_tags%{fragment}"
+    sms_link = f"https://{{{{BrandDomain}}}}{base}{fragment}"
     start_date, end_date = spec.tournament_start_date, spec.tournament_end_date
     days = tournament_days(start_date, end_date)
     start_at, stop_at = chile_window(date_str)
@@ -230,7 +261,13 @@ def prepare(brand: Brand, spec, *, date_str: str, journey_name: str = "",
     else:
         s = datetime.strptime(start_date, "%Y-%m-%d")
         e = datetime.strptime(end_date, "%Y-%m-%d")
-        label = spec.event_name or path.strip("/").replace("/", " ")
+        # Fallback label when the sheet has no Event row: use the URL path,
+        # or the Smartico id when the target is a homepage-modal deeplink.
+        fallback = path.strip("/").replace("/", " ") if path else ""
+        if not fallback and fragment:
+            m = re.search(r"id=(\d+)", fragment)
+            fallback = f"Tournament {m.group(1)}" if m else fragment.lstrip("#")
+        label = spec.event_name or fallback
         name = f"{brand.journey_prefix} | {label} {s:%d.%m}-{e:%d.%m}"
 
     nc_copy = {
@@ -351,7 +388,8 @@ def prepare(brand: Brand, spec, *, date_str: str, journey_name: str = "",
         "email_create": email_create, "email_save": email_save,
         "make_email": make_email, "email_name": email_name,
         "email_game": game, "email_cta": cta,
-        "link_path": path, "nc_link": nc_link, "sms_link": sms_link,
+        "link_path": path, "link_fragment": fragment,
+        "nc_link": nc_link, "sms_link": sms_link,
         "journey_name": name, "days": days,
         "start_date": start_date, "end_date": end_date,
         "email_content_id": email_content_id.strip(),
@@ -362,7 +400,7 @@ def prepare(brand: Brand, spec, *, date_str: str, journey_name: str = "",
     }
     report = [
         f"journeyName   {name!r}",
-        f"link          {path}  (notification/pop-up: {nc_link})",
+        f"link          {(path or '/') + fragment}  (notification/pop-up: {nc_link})",
         f"sms link      {sms_link}",
         f"send window   {start_at} → {stop_at}  (starts on the date, 12:00 Chile)",
         f"tournament    {start_date} → {end_date}  ({days} days: gates + revoke period)",
@@ -420,7 +458,20 @@ def verify(bundle: dict) -> list[tuple[bool, str]]:
     both = s_create + s_save
 
     reference = json.loads(brand.save_tpl.read_text(encoding="utf-8"))
-    leaked = audit_inherited_content(save, reference)
+    # The operator's sheet copy is legitimately in the output — a match with the
+    # capture is coincidence, not a leak (a button that reads "Join the
+    # tournament" both times is what the sheet asked for).
+    def _flatten_sheet(v):
+        if isinstance(v, str):
+            yield v
+        elif isinstance(v, dict):
+            for x in v.values():
+                yield from _flatten_sheet(x)
+        elif isinstance(v, list):
+            for x in v:
+                yield from _flatten_sheet(x)
+    allowed = set(_flatten_sheet(bundle.get("expected") or {}))
+    leaked = audit_inherited_content(save, reference, allowed=allowed)
 
     # every link field on both nodes carries this run's link
     wrong_links: list[str] = []
@@ -510,12 +561,21 @@ def verify(bundle: dict) -> list[tuple[bool, str]]:
              "email name / subject / pre-header filled"),
         ]
 
+    # A Smartico fragment is allowed IFF it is the operator's chosen target;
+    # any other match is a captured id that leaked through and would silently
+    # send every channel to the wrong tournament.
+    op_fragment_body = (bundle.get("link_fragment") or "").lstrip("#")
+    stale_smartico = [
+        m.group(0) for m in SMARTICO_RE.finditer(both)
+        if m.group(0).lstrip("#") != op_fragment_body
+    ]
     return [
         (not wrong_links, f"every notification/pop-up link is {nc_link}"
          + (f" (WRONG: {wrong_links[:2]})" if wrong_links else "")),
         (sms_link in both, f"the SMS carries {sms_link}"),
-        (not SMARTICO_RE.search(both),
-         "no Smartico deeplink survives (the captured tournament id is gone)"),
+        (not stale_smartico,
+         "no captured Smartico id survives"
+         + (f" (LEAK: {stale_smartico[:2]})" if stale_smartico else "")),
         (all(lit not in both for lit in brand.tpl_links),
          "captured links gone" + (f" (LEFT: {[l for l in brand.tpl_links if l in both][:1]})"
                                   if any(l in both for l in brand.tpl_links) else "")),

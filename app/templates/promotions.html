@@ -2,7 +2,7 @@
 {% block title %}Optimization · Jugabet Admin{% endblock %}
 {% block content_theme %}content-light{% endblock %}
 {% block page_title %}Optimization{% endblock %}
-{% block page_subtitle %}One place for every promo automation — GOW, Promo Codes, Prediction, Randomizers, Discount NC, AI and Slot Cards.{% endblock %}
+{% block page_subtitle %}Generate every promo campaign draft from one place — casino, sport, comms, wheels and cards.{% endblock %}
 
 {% block content %}
 
@@ -88,77 +88,6 @@
       <span class="mono">promotions_catalog.GENERATORS</span> so they appear above.
     </div>
   {% endif %}
-
-  <h3 style="margin:26px 0 10px">Captured automations</h3>
-  {% if not automations %}
-    <div class="alert err">No catalog found. Run <span class="mono">journey-cloner/build_catalog.py</span> to generate <span class="mono">catalog.json</span>.</div>
-  {% endif %}
-  {% if meta %}
-    <p class="help" style="margin-bottom:14px">Catalog: brand <b>{{ meta.brand or 'JBCL' }}</b>{% if meta.operator %} · {{ meta.operator }}{% endif %}{% if meta.timezone %} · {{ meta.timezone }}{% endif %}.{% if meta.note %} {{ meta.note }}{% endif %}</p>
-  {% endif %}
-
-  <div style="display:grid; gap:16px">
-    {% for a in automations %}
-    <div class="card" style="padding:16px">
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap">
-        <div>
-          <h3 style="margin:0">{{ a.label }}</h3>
-          {% if a.creates %}<div class="help" style="margin-top:2px">Creates {{ a.creates }}.</div>{% endif %}
-        </div>
-        <div style="display:flex; gap:8px">
-          {% if a.tab %}<button type="button" class="btn primary tab-jump" data-tab="{{ a.tab }}">Open generator →</button>
-          {% elif a.link %}<a href="{{ a.link }}" class="btn primary">Open generator →</a>
-          {% else %}<span class="badge">Template-only</span>{% endif %}
-        </div>
-      </div>
-
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:12px">
-        <div>
-          {% if a.endpoint %}<div style="margin-bottom:8px"><span class="lbl">Endpoint</span><div class="mono" style="font-size:12px">{{ a.endpoint }}</div></div>{% endif %}
-          {% if a.compiler %}<div style="margin-bottom:8px"><span class="lbl">Compiler</span><div class="mono" style="font-size:12px">{{ a.compiler }}</div></div>{% endif %}
-          {% if a.template %}<div style="margin-bottom:8px"><span class="lbl">Template</span><div class="mono" style="font-size:12px">{{ a.template }}</div></div>{% endif %}
-          {% if a.segment %}<div style="margin-bottom:8px"><span class="lbl">Segment</span><div class="mono" style="font-size:12px">{{ a.segment }}</div></div>{% endif %}
-          {% if a.starts %}<div style="margin-bottom:8px"><span class="lbl">Starts</span> <span class="mono" style="font-size:12px">{{ a.starts }}</span></div>{% endif %}
-          {% if a.shot_policy %}<div style="margin-bottom:8px"><span class="lbl">Shot policy</span> <span class="mono" style="font-size:12px">{{ a.shot_policy }}</span></div>{% endif %}
-          {% if a.knobs %}
-            <span class="lbl">Knobs</span>
-            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px">
-              {% for k in a.knobs %}<span class="chip">{{ k }}</span>{% endfor %}
-            </div>
-          {% endif %}
-        </div>
-        <div>
-          {% if a.prizes %}
-            <span class="lbl">Prize slices → journeys</span>
-            <table class="mini-table" style="width:100%; margin-top:4px; font-size:12px">
-              <thead><tr><th style="text-align:left">weight</th><th style="text-align:left">routes to</th><th style="text-align:left">description</th></tr></thead>
-              <tbody>
-                {% for p in a.prizes %}
-                <tr><td class="mono">{{ p.weight }}</td><td class="mono">{{ p.routes_to_journey or '—' }}</td><td>{{ p.description or '' }}</td></tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          {% endif %}
-          {% if a.notes %}<p class="help" style="margin-top:8px">{{ a.notes }}</p>{% endif %}
-        </div>
-      </div>
-
-      {% if a.scripts %}
-        <div style="margin-top:12px">
-          <span class="lbl">Scripts &amp; templates</span>
-          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px">
-            {% for s in a.scripts %}
-              <span class="file-pill">
-                <a href="/admin/promotions/download?path={{ s.path | urlencode }}" target="_blank" class="mono" title="View {{ s.path }}">{{ s.name }}</a>
-                <a href="/admin/promotions/download?path={{ s.path | urlencode }}&amp;dl=1" title="Download {{ s.name }}" class="dl">↓</a>
-              </span>
-            {% endfor %}
-          </div>
-        </div>
-      {% endif %}
-    </div>
-    {% endfor %}
-  </div>
 </section>
 
 {# ── GOW generator ───────────────────────────────────────────────────── #}
@@ -411,7 +340,7 @@
     <form method="post" action="/admin/promotions/randomizer" class="card card-pad col-rail" style="display:flex; flex-direction:column; gap:14px">
       <div>
         <h2 class="card-title">Create randomizer</h2>
-        <p class="card-sub">Prize slices, routed journeys and segment come from the captured template &mdash; the dates, name and prize copy change per run. <b>Sport Wheel of Fortune</b> clones its own visual content per wheel, so editing one wheel&#39;s artwork no longer rewrites every other. Optionally override the weights and the routed journeys.</p>
+        <p class="card-sub">Prize slices, copy, routed journeys and segment all come from the captured template &mdash; only the date changes per run. <b>Sport Wheel of Fortune</b> clones its own visual content per wheel, so editing one wheel&#39;s artwork never rewrites another. Weights, journeys and prize copy can still be overridden under Advanced.</p>
       </div>
 
       <div class="field">
@@ -434,19 +363,12 @@
         <p class="help" style="margin-top:6px">Pick a date from the calendar and click <b>Add</b> — repeat for as many promos as you want. Each date becomes one randomizer, all created in one paste.</p>
       </div>
 
-      <div class="field">
-        <span class="lbl">Prize copy <span style="color:var(--t-faint)">(Sport Wheel of Fortune &mdash; usually one line)</span></span>
-        <textarea class="input mono" name="prize_text" rows="5" spellcheck="false" style="font-size:12px"
-                  placeholder="7&#9;10% extra free bet&#9;Apuesta gratis 10% extra">{{ rnd.prize_text or '' }}</textarea>
-        <p class="help" style="margin-top:6px">Six of the seven slices <b>inherit the previous wheel&#39;s copy automatically</b>. Only the new <span class="mono">10%- Dep | Freebet</span> slice needs a line: <span class="mono">7&#9;English&#9;Spanish</span> (tab-separated). To rewrite others, add a line each; to rewrite all seven, paste seven lines in wheel order with no numbers. Leave blank for the Casino types. A build where any slice still shows its journey&#39;s internal name to players is <b>refused</b>, and the error lists the wheel&#39;s slices in order.</p>
-      </div>
-
       <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:2px">
-        <input type="checkbox" id="rnd-adv" {% if rnd.days or rnd.weights or rnd.journeys %}checked{% endif %}/>
-        <span class="lbl" style="margin:0">Advanced options <span style="color:var(--t-faint)">(days, weights, journeys)</span></span>
+        <input type="checkbox" id="rnd-adv" {% if rnd.days or rnd.weights or rnd.journeys or rnd.prize_text %}checked{% endif %}/>
+        <span class="lbl" style="margin:0">Advanced options <span style="color:var(--t-faint)">(days, weights, journeys, prize copy)</span></span>
       </label>
 
-      <div id="rnd-adv-fields" style="display:{% if rnd.days or rnd.weights or rnd.journeys %}flex{% else %}none{% endif %}; flex-direction:column; gap:14px">
+      <div id="rnd-adv-fields" style="display:{% if rnd.days or rnd.weights or rnd.journeys or rnd.prize_text %}flex{% else %}none{% endif %}; flex-direction:column; gap:14px">
         <div class="field">
           <span class="lbl">Days</span>
           <input class="input" name="days" type="number" min="1" value="{{ rnd.days or '' }}"/>
@@ -461,6 +383,12 @@
           <span class="lbl">Journeys</span>
           <input class="input mono" name="journeys" value="{{ rnd.journeys or '' }}" placeholder="JRN-0-572381 JRN-0-572307 ..."/>
           <p class="help" style="margin-top:6px">Space-separated routed journey ids, in prize order. Leave blank to keep the template's.</p>
+        </div>
+        <div class="field">
+          <span class="lbl">Prize copy override <span style="color:var(--t-faint)">(Sport WOF only &mdash; rarely needed)</span></span>
+          <textarea class="input mono" name="prize_text" rows="4" spellcheck="false" style="font-size:12px"
+                    placeholder="7&#9;10% extra free bet&#9;Apuesta gratis 10% extra">{{ rnd.prize_text or '' }}</textarea>
+          <p class="help" style="margin-top:6px">All seven slices ship their baked copy by default &mdash; leave blank. To rewrite a slice, add a line <span class="mono">N&#9;English&#9;Spanish</span> (tab-separated, wheel order); for all seven, paste seven lines with no numbers. A build where any slice would show its journey&#39;s internal name to players is <b>refused</b>.</p>
         </div>
       </div>
 
@@ -568,6 +496,14 @@
     </div>
   {% endif %}
 
+  {# Brief-driven PMCL alerts #}
+  {% if nc.brief_error %}<div class="alert err">{{ nc.brief_error }}</div>{% endif %}
+  {% if nc.brief_result %}
+    <div class="alert {% if nc.brief_result.ok %}ok{% else %}err{% endif %}">
+      {% if nc.brief_result.ok %}PMCL console script generated from brief.{% else %}Brief-driven PMCL generation exited with code {{ nc.brief_result.exit_code }}.{% endif %}
+    </div>
+  {% endif %}
+
   {# Git pull card #}
   <div style="margin-bottom:18px">
     <form method="post" action="/admin/promotions/git-pull" class="card card-pad" style="display:flex; align-items:center; gap:18px; flex-wrap:wrap">
@@ -580,11 +516,30 @@
   </div>
 
   <div class="row-flex">
-    {# Left rail: two generate forms #}
+    {# Left rail: paste-brief form + two baked-calendar forms #}
     <div class="col-rail stack">
 
+      {# PMCL from-brief form — paste the ops brief, get a console script back.
+         Media-library folder is baked into the generator; year defaults to
+         the current year — one input, one button. #}
+      <form method="post" action="/admin/promotions/nc-discount-pmcl-brief" class="card card-pad" style="display:flex; flex-direction:column; gap:12px">
+        <div>
+          <h2 class="card-title">NC For Discount — PMCL</h2>
+          <p class="card-sub">fortunazo.cl · paste the ops brief and get one notification journey per date. Calendar + copy come from what you paste; the PMCL media-library folder is baked into the generator.</p>
+        </div>
+        <div>
+          <label class="lbl" for="brief-text">Ops brief</label>
+          <textarea id="brief-text" name="brief" class="input mono" rows="16"
+                    spellcheck="false"
+                    placeholder="Day 1: Saturday&#10;Time: 12.00 (Chile time)&#10;Message: + image of the game&#10;&#10;⭐ La elección de miles de jugadores&#10;[game name] sigue conquistando a nuevos jugadores cada día.&#10;&#10;CTA (button): ¡Juega ahora!&#10;&#10;... (more Day N: blocks) ...&#10;&#10;Games calendar:&#10;&#10;01.08 Saturday - https://fortunazo.cl/services/slots/game/fazi-winning-clover-5&#10;02.08 Sunday - https://fortunazo.cl/services/slots/game/champion-fruit-party-deluxe&#10;..."
+                    style="margin-top:4px; font-size:12.5px; min-height:22rem">{{ nc.brief_text }}</textarea>
+        </div>
+        <button class="btn primary" style="justify-content:center">Generate console script</button>
+        <p class="help">One <b>Day N:</b> block per date + a <b>Games calendar</b> block (<span class="mono">DD.MM &lt;weekday&gt; - &lt;URL&gt;</span>). Row count must match Day count. <span class="mono">[game name]</span> in copy is swapped for the game name. Refuses on any missing piece — the parse error prints in the run output.</p>
+      </form>
+
       {# JBCL form #}
-      <form method="post" action="/admin/promotions/nc-discount" class="card card-pad" style="display:flex; flex-direction:column; gap:14px">
+      <form method="post" action="/admin/promotions/nc-discount" class="card card-pad" style="display:flex; flex-direction:column; gap:12px">
         <div>
           <h2 class="card-title">NC For Discount — JBCL</h2>
           <p class="card-sub">jugabet.cl · Mon 20:00 / Fri 21:00 Chile. July calendar baked in.</p>
@@ -602,32 +557,17 @@
         <p class="help">Reserves an id, pops a file picker per game image, uploads it, then creates + saves each draft (unpublished for review).</p>
       </form>
 
-      {# PMCL form #}
-      <form method="post" action="/admin/promotions/nc-discount-pmcl" class="card card-pad" style="display:flex; flex-direction:column; gap:14px">
-        <div>
-          <h2 class="card-title">NC For Discount — PMCL</h2>
-          <p class="card-sub">fortunazo.cl · Sat 12:00 / Sun 13:00 Chile. July calendar baked in.</p>
-        </div>
-        <ul class="help" style="margin:0; padding-left:18px; line-height:1.7">
-          <li>18.07 Sat — Jackpot Joker</li>
-          <li>19.07 Sun — 3 Coin Golden Ox</li>
-          <li>25.07 Sat — Fortune Garuda 500</li>
-          <li>26.07 Sun — Fortune Gems 500</li>
-        </ul>
-        <div>
-          <label class="lbl" for="pmcl-folder-id">Media Library Folder ID</label>
-          <input id="pmcl-folder-id" name="folder_id" class="input" type="text"
-                 placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                 style="margin-top:4px; font-family:monospace; font-size:13px">
-          <p class="help" style="margin-top:4px">Open Media Library in the PMCL backoffice → copy the UUID from the URL <span class="mono">/media-library/folders/&lt;uuid&gt;</span></p>
-        </div>
-        <button class="btn primary" style="justify-content:center">Generate console script</button>
-        <p class="help">Pops a file picker per game image, creates + saves each draft unpublished.</p>
-      </form>
-
     </div>
 
     <div class="col-main stack">
+      {# Brief-driven PMCL script output #}
+      {% with title="PMCL (from brief) console script ready", console_script=nc.brief_console_script,
+              steps=["Open the <b>PMCL</b> backoffice — Chrome, logged in — before pasting.",
+                     "Paste and press Enter. A file picker pops up per game — select that game's 200×200 image, in calendar order."],
+              final_step="Watch for the green <b>DONE</b> with the created JRN ids. Drafts are unpublished — review + publish in the Journeys UI." %}
+        {% include "partials/_console_script.html" %}
+      {% endwith %}
+
       {# JBCL script output #}
       {% with title="JBCL console script ready", console_script=nc.console_script,
               steps=["Open the <b>JBCL</b> backoffice — Chrome, logged in — before pasting.",
@@ -643,6 +583,19 @@
               final_step="Watch for the green <b>DONE</b> with the created JRN ids. Drafts are unpublished — review + publish in the Journeys UI." %}
         {% include "partials/_console_script.html" %}
       {% endwith %}
+
+      {# Brief-driven PMCL run output #}
+      {% if nc.brief_result %}
+        <section class="card" style="overflow:hidden">
+          <div class="card-head"><h2 class="card-title">PMCL (from brief) Run Output</h2></div>
+          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+            <div><div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Command</div>
+              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0">{{ nc.brief_result.command }}</pre></div>
+            <div><div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Output</div>
+              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:32rem; margin:0">{{ nc.brief_result.output }}</pre></div>
+          </div>
+        </section>
+      {% endif %}
 
       {# JBCL run output #}
       {% if nc.result %}
@@ -670,12 +623,12 @@
         </section>
       {% endif %}
 
-      {% if not nc.result and not nc.pmcl_result %}
+      {% if not nc.result and not nc.pmcl_result and not nc.brief_result %}
         <section class="card card-pad">
           <h2 class="card-title" style="margin-bottom:8px">How it works</h2>
           <div class="help" style="line-height:1.7">
             <p style="margin:0 0 8px">Each game is a separate journey cloned from the captured NC template — same segment (active players), with the game name, message, CTA, deep link and send time swapped in.</p>
-            <p style="margin:0">The calendar is baked from the brief. To run a different month, tell me the dates/games and I'll add a form for it.</p>
+            <p style="margin:0">Paste an ops brief into the top card to drive the calendar + copy directly, or use the JBCL/PMCL cards below for the baked-in calendar.</p>
           </div>
         </section>
       {% endif %}
@@ -737,21 +690,21 @@
   .tab-group-end::before { display:none; }
   .tab-group-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--t-faint,#98a1b3); padding-left:14px; }
   .tab-group-btns { display:flex; gap:2px; flex-wrap:wrap; }
-  .tabs .tab { background:none; border:none; padding:9px 14px; font-size:14px; font-weight:600; color:var(--t-faint,#889); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; border-radius:6px 6px 0 0; white-space:nowrap; }
-  .tabs .tab:hover { color:var(--t,#223); background:var(--bg-faint,#f5f6fa); }
-  .tabs .tab.active { color:var(--t,#223); border-bottom-color:#4a6cf7; }
+  .tabs .tab { background:none; border:none; padding:9px 14px; font-size:14px; font-weight:600; color:var(--t-faint,#889); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; border-radius:6px 6px 0 0; white-space:nowrap; transition:color .12s ease, background-color .12s ease; }
+  .tabs .tab:hover { color:var(--t-strong,#15171d); background:var(--acw,rgba(240,97,60,.10)); }
+  .tabs .tab.active { color:var(--ac,#F0613C); font-weight:700; border-bottom-color:var(--ac,#F0613C); }
   @media(max-width:900px){
     .tab-group { padding:0 8px; }
     .tab-group + .tab-group::before { display:none; }
     .tab-group-end { margin-left:0; }
   }
-  .chip { display:inline-block; padding:2px 8px; border:1px solid var(--border,#dcdce4); border-radius:999px; font-size:11px; background:#f6f6fa; }
-  .badge { display:inline-block; padding:4px 10px; border-radius:6px; font-size:12px; background:#eef; color:#446; }
-  .file-pill { display:inline-flex; align-items:center; gap:8px; padding:4px 10px; border:1px solid var(--border,#dcdce4); border-radius:6px; background:#fafafe; }
-  .file-pill .dl { text-decoration:none; font-weight:700; color:#4a6; }
+  .chip { display:inline-block; padding:2px 8px; border:1px solid var(--border,#ECEDF1); border-radius:999px; font-size:11px; color:var(--neu-t,#5B6472); background:var(--neu-bg,#EEF1F6); }
+  .badge { display:inline-block; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:600; background:var(--neu-bg,#EEF1F6); color:var(--neu-t,#5B6472); }
+  .file-pill { display:inline-flex; align-items:center; gap:8px; padding:4px 10px; border:1px solid var(--border,#ECEDF1); border-radius:6px; background:var(--surface,#fff); }
+  .file-pill .dl { text-decoration:none; font-weight:700; color:var(--ac,#F0613C); }
   .file-pill a.mono { text-decoration:none; }
   .file-pill a.mono:hover { text-decoration:underline; }
-  .mini-table th, .mini-table td { padding:2px 6px; border-bottom:1px solid #eee; vertical-align:top; }
+  .mini-table th, .mini-table td { padding:2px 6px; border-bottom:1px solid var(--border,#ECEDF1); vertical-align:top; }
   .lbl { display:block; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--t-faint,#889); margin-bottom:2px; }
 </style>
 
