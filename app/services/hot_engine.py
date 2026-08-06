@@ -41,18 +41,25 @@ CANDIDATE_HEADROOM = 40
 
 class HotEngine:
     def __init__(self, session: Session, sport: str,
-                 league: Optional[str] | list | tuple = None) -> None:
+                 league: Optional[str] | list | tuple = None,
+                 quotas: Optional[dict] = None) -> None:
         self.session = session
         self.sport = (sport or "").strip().lower() or "football"
-        # A campaign may name several leagues. Accept one name, a list of them,
-        # or the raw column value, so every existing caller keeps working.
+        # A campaign may name several leagues, each optionally with its own match
+        # quota. Accept one name, a list of them, or the raw column value, so
+        # every existing caller keeps working.
+        self.quotas: dict = dict(quotas or {})
         if league is None:
             self.leagues: list[str] = []
         elif isinstance(league, (list, tuple)):
             self.leagues = [str(x).strip() for x in league if str(x).strip()]
         else:
-            from ..models.campaign import parse_leagues
-            self.leagues = parse_leagues(str(league))
+            from ..models.campaign import parse_league_entries
+            entries = parse_league_entries(str(league))
+            self.leagues = [e["name"] for e in entries]
+            if not self.quotas:
+                self.quotas = {e["name"]: e["limit"] for e in entries
+                               if e["limit"] is not None}
         # Kept for callers and logs that read a single name.
         self.league = self.leagues[0] if len(self.leagues) == 1 else None
         self.match_repo = MatchRepository(session)
@@ -108,10 +115,14 @@ class HotEngine:
         # diversity caps so `?limit=N` actually returns N matches. That holds for
         # two named leagues as much as for one: the cap (2-3 per tournament)
         # would silently return 4-6 for a campaign asking for 10.
+        # With quotas, ask for the whole pool: the cap discards from the head of
+        # the scored list, so a league that dominates the top would otherwise eat
+        # the headroom and leave the campaign short of its own total.
+        want = len(events) if self.quotas else limit + CANDIDATE_HEADROOM
         scored = run_scoring(
             events,
             self.sport,
-            limit + CANDIDATE_HEADROOM,
+            want,
             tz,
             single_league=bool(self.leagues),
         )
@@ -120,6 +131,22 @@ class HotEngine:
             for e in scored
             if e.get("event_id") in by_id
         ]
+        # Per-league quotas ("2 from X, 3 from Y"). Applied to the scored order
+        # rather than by scoring each league separately, so the campaign still
+        # shows its hottest matches — a quota caps a league, it does not reorder
+        # anything. A league with fewer hot matches than its quota contributes
+        # what it has; nothing is invented to reach the number.
+        if self.quotas:
+            taken: Dict[str, int] = {}
+            capped = []
+            for m in auto_ordered:
+                cap = self.quotas.get(m.tournament_name)
+                if cap is not None:
+                    if taken.get(m.tournament_name, 0) >= cap:
+                        continue
+                    taken[m.tournament_name] = taken.get(m.tournament_name, 0) + 1
+                capped.append(m)
+            auto_ordered = capped
         # Fallback: if the scorer rejected every candidate (e.g. UFC fights
         # scheduled past the horizon, or a sport without 1×2 odds), we still
         # have an unscored pool of real active matches. Returning [] here

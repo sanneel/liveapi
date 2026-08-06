@@ -75,10 +75,17 @@
 
   <div id="panel-auto" class="card card-pad">
     <div class="field">
-      <span class="lbl">League / Tournament</span>
-      <input class="input" id="league-select" name="league" list="league-options" autocomplete="off" placeholder="All leagues in sport, type to search…"/>
+      <span class="lbl">Leagues / Tournaments</span>
+      <div id="league-rows" style="display:flex; flex-direction:column; gap:8px">
+        <div class="league-row" style="display:flex; gap:8px">
+          <input class="input" id="league-select" name="league" list="league-options" autocomplete="off" style="flex:1" placeholder="All leagues in sport, type to search…"/>
+          <input class="input" name="league_limit" type="number" min="1" max="20" style="width:76px" placeholder="all" title="Max matches from this league. Blank = no limit of its own."/>
+        </div>
+      </div>
       <datalist id="league-options"></datalist>
+      <button type="button" id="league-add" class="btn" style="margin-top:8px; align-self:flex-start">+ Add another league</button>
       <p id="league-hint" class="help"></p>
+      <p class="help" style="color:var(--t-faint)">The number caps how many matches that league contributes — <span class="mono">2</span> and <span class="mono">3</span> gives 2 from the first and 3 from the second. Blank means no cap of its own.</p>
     </div>
   </div>
 
@@ -113,6 +120,23 @@
   const panelManual = document.getElementById('panel-manual');
   const modeCards = document.querySelectorAll('.mode-card');
 
+  // Each row posts one `league` and one `league_limit`, always as a pair — the
+  // server pairs them by position. Blanks are dropped server-side.
+  const leagueRows = document.getElementById('league-rows');
+  const leagueAdd = document.getElementById('league-add');
+  if (leagueRows && leagueAdd) {
+    leagueAdd.addEventListener('click', function () {
+      const last = leagueRows.querySelector('.league-row:last-of-type');
+      if (!last) return;
+      const row = last.cloneNode(true);
+      row.querySelectorAll('input').forEach(i => { i.value = ''; i.removeAttribute('id'); });
+      const name = row.querySelector('input[name="league"]');
+      if (name) name.placeholder = 'Add another league…';
+      leagueRows.appendChild(row);
+      if (name) name.focus();
+    });
+  }
+
   function slugify(v) {
     return (v||'').toString().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50);
   }
@@ -123,7 +147,8 @@
   function refreshLeagueOptions() {
     const sport = sportSelect.value;
     const list = TOURNAMENTS[sport] || [];
-    leagueInput.value = '';
+    // Every row: switching sport invalidates whatever was typed for the old one.
+    document.querySelectorAll('#league-rows input').forEach(i => { i.value = ''; });
     leagueOptions.innerHTML = '';
     list.forEach(t => { const o = document.createElement('option'); o.value = t; leagueOptions.appendChild(o); });
     if (list.length === 0) {

@@ -228,7 +228,8 @@ def _resolve_matches(session, campaign: Campaign, auto_limit: int) -> List[Match
     hide_hours = get_settings().campaign_hide_after_start_hours
 
     if campaign.mode == "auto":
-        engine = HotEngine(session, campaign.sport, league=campaign.league_names)
+        engine = HotEngine(session, campaign.sport, league=campaign.league_names,
+                           quotas=campaign.league_quotas)
         # Over-fetch then drop past-kickoff matches and trim, so a finished
         # game in the top slots is backfilled by the next fresh match rather
         # than leaving the PNG short.

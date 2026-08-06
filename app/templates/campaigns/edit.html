@@ -84,31 +84,41 @@
           <div class="field">
             <span class="lbl">Leagues / Tournaments</span>
             <div id="league-rows" style="display:flex; flex-direction:column; gap:8px">
-              {% for name in campaign.league_names %}
-                <input class="input" name="league" list="league-options" autocomplete="off" value="{{ name }}" placeholder="All leagues in sport, type to search…"/>
+              {% for e in campaign.league_entries %}
+                <div class="league-row" style="display:flex; gap:8px">
+                  <input class="input" name="league" list="league-options" autocomplete="off" style="flex:1" value="{{ e.name }}" placeholder="All leagues in sport, type to search…"/>
+                  <input class="input" name="league_limit" type="number" min="1" max="20" style="width:76px" value="{{ e.limit or '' }}" placeholder="all" title="Max matches from this league. Blank = no limit of its own."/>
+                </div>
               {% endfor %}
-              <input class="input" name="league" list="league-options" autocomplete="off" value="" placeholder="{% if campaign.league_names %}Add another league…{% else %}All leagues in sport, type to search…{% endif %}"/>
+              <div class="league-row" style="display:flex; gap:8px">
+                <input class="input" name="league" list="league-options" autocomplete="off" style="flex:1" value="" placeholder="{% if campaign.league_entries %}Add another league…{% else %}All leagues in sport, type to search…{% endif %}"/>
+                <input class="input" name="league_limit" type="number" min="1" max="20" style="width:76px" value="" placeholder="all" title="Max matches from this league. Blank = no limit of its own."/>
+              </div>
             </div>
             <datalist id="league-options">
               {% for t in tournaments %}<option value="{{ t }}"></option>{% endfor %}
             </datalist>
             <button type="button" id="league-add" class="btn" style="margin-top:8px; align-self:flex-start">+ Add another league</button>
-            <span class="help" style="color:var(--t-faint)">Leave every box empty for all leagues in the sport. Two or more pools their matches into one campaign — the hottest across them, up to the limit.</span>
+            <span class="help" style="color:var(--t-faint)">Leave every box empty for all leagues in the sport. The number beside a league caps how many of its matches appear — <span class="mono">2</span> and <span class="mono">3</span> gives you 2 from the first and 3 from the second. Blank means that league has no cap of its own. Matches are still ordered hottest-first; a cap only limits a league, it never reorders anything, and a league with fewer hot matches than its cap contributes what it has.</span>
           </div>
           <script>
             (function () {
-              // Each box posts as another `league` value; blanks are dropped
-              // server-side, so the trailing empty row is harmless.
+              // Each row posts one `league` and one `league_limit`, always as a
+              // pair — the server pairs them by position, so a row must never
+              // emit one without the other. Blanks are dropped server-side, so
+              // the trailing empty row is harmless.
               var rows = document.getElementById('league-rows');
               var add = document.getElementById('league-add');
               if (!rows || !add) return;
               add.addEventListener('click', function () {
-                var last = rows.querySelector('input[name="league"]:last-of-type');
-                var box = last ? last.cloneNode(false) : document.createElement('input');
-                box.value = '';
-                box.placeholder = 'Add another league…';
-                rows.appendChild(box);
-                box.focus();
+                var last = rows.querySelector('.league-row:last-of-type');
+                if (!last) return;
+                var row = last.cloneNode(true);
+                row.querySelectorAll('input').forEach(function (i) { i.value = ''; });
+                var name = row.querySelector('input[name="league"]');
+                if (name) name.placeholder = 'Add another league…';
+                rows.appendChild(row);
+                if (name) name.focus();
               });
             })();
           </script>

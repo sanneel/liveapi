@@ -79,20 +79,23 @@ def _validate_slug(slug: str) -> str:
     return slug
 
 
-def _normalise_league(league) -> Optional[str]:
+def _normalise_league(league, limits=None) -> Optional[str]:
     """The `league` column value for one or more chosen tournaments.
 
-    The form repeats the field once per league, so this takes a list as well as
-    a single string. Blanks are dropped (the last row of the picker is empty by
-    design) and duplicates collapsed — the same league twice would double its
-    weight in the pool for no reason the operator asked for.
+    The form repeats the name field once per league and, alongside it, a count
+    field — so `limits[i]` is the quota for `league[i]`. Both are always emitted
+    together, which is what makes pairing by position safe. Blanks are dropped
+    (the picker's last row is empty by design) and duplicates collapsed, since
+    the same league twice would double its weight in the pool.
     """
     from ..models.campaign import format_leagues
     if league is None:
         return None
-    if isinstance(league, (list, tuple)):
-        return format_leagues([str(x) for x in league])
-    return format_leagues([str(league)])
+    names = [str(x) for x in league] if isinstance(league, (list, tuple)) else [str(league)]
+    caps = [str(x) for x in (limits or [])]
+    paired = [{"name": n, "limit": caps[i] if i < len(caps) else None}
+              for i, n in enumerate(names)]
+    return format_leagues(paired)
 
 
 def _validate_sport(sport: str) -> str:
@@ -170,13 +173,14 @@ def campaigns_create(
     sport: str = Form(...),
     mode: str = Form(...),
     league: Optional[List[str]] = Form(None),
+    league_limit: Optional[List[str]] = Form(None),
     vip: Optional[str] = Form(None),
     user: User = Depends(require_role("editor")),
 ) -> RedirectResponse:
     slug = _validate_slug(slug)
     sport = _validate_sport(sport)
     mode = _validate_mode(mode)
-    league_v = _normalise_league(league) if mode == "auto" else None
+    league_v = _normalise_league(league, league_limit) if mode == "auto" else None
     title = (title or slug).strip()[:120]
     vip_v = bool(vip)
 
@@ -291,6 +295,7 @@ def campaigns_update(
     title: str = Form(...),
     sport: str = Form(...),
     league: Optional[List[str]] = Form(None),
+    league_limit: Optional[List[str]] = Form(None),
     limit: Optional[int] = Form(None),
     enabled: Optional[str] = Form(None),
     vip: Optional[str] = Form(None),
@@ -305,7 +310,7 @@ def campaigns_update(
             raise HTTPException(404)
         # `mode` is fixed at create time. Auto campaigns may change league
         # and their default render limit; manual campaigns keep neither.
-        league_v = _normalise_league(league) if c.mode == "auto" else None
+        league_v = _normalise_league(league, league_limit) if c.mode == "auto" else None
         fields = dict(
             title=(title or slug).strip()[:120],
             sport=sport,
@@ -439,7 +444,8 @@ def api_preview(
                 if m.is_active and not is_past_kickoff_cutoff(m, now, hide_hours)
             ]
         else:
-            engine = HotEngine(session, c.sport, league=c.league_names)
+            engine = HotEngine(session, c.sport, league=c.league_names,
+                                quotas=c.league_quotas)
             pool = engine.resolve(20)
             matches = [m for m in pool if not is_past_kickoff_cutoff(m, now, hide_hours)][:n]
             if not matches:
