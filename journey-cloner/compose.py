@@ -566,11 +566,16 @@ class SpecError(ValueError):
     """A spec the composer refuses to build (unknown recipe or a ⛔ blocker)."""
 
 
+def _is_blocker(value) -> bool:
+    """True if this string is an unresolved-blocker placeholder (⛔ …)."""
+    return isinstance(value, str) and any(m in value for m in BLOCKER_MARKERS)
+
+
 def _find_blockers(obj, prefix: str = "") -> list[str]:
     """Recursively collect dotted paths whose string value carries a blocker."""
     hits: list[str] = []
     if isinstance(obj, str):
-        if any(m in obj for m in BLOCKER_MARKERS):
+        if _is_blocker(obj):
             hits.append(f"{prefix or '<root>'} = {obj!r}")
     elif isinstance(obj, dict):
         for k, v in obj.items():
@@ -879,21 +884,158 @@ def _norm_name(s) -> str:
     return "".join(ch for ch in str(s).lower() if ch.isalnum())
 
 
-def _games_by_name() -> dict:
-    """Every way a brief might name a game -> its lobbyGameId.
+def _gow_norm(s) -> str:
+    """The normalisation gow_campaign.py's resolveGame() uses: drop the ™/® the
+    catalog appends, collapse whitespace, lowercase. Crucially it KEEPS spaces,
+    so "Coin Volcano" cannot collide with "Coinvolcano" — matching is on the full
+    name, never a squashed one."""
+    return re.sub(r"\s+", " ", re.sub(r"[™®]", "", str(s or ""))).strip().lower()
 
-    Indexes the id itself, the display name and every alias. This is what lets a
-    spec say "Big Bass Bonanza 1000" instead of an opaque id: with ~4,900 games
-    the registry can no longer be inlined into the prompt, so the model names the
-    game in plain language and the composer does the lookup."""
+
+def _games_by_name() -> dict:
+    """Every way a brief might name a game -> the LIST of lobbyGameIds it matches.
+
+    A list, not a single id. 47 display names in the registry are shared by two
+    or more games (94 games in total — "God of Wealth" exists under both
+    1gamehub-funta and evo-redtiger). The old index kept the first with
+    `setdefault`, so a brief naming one of those silently awarded spins on
+    whichever provider happened to be first in the file, and nothing downstream
+    could catch it because both ids are individually valid.
+
+    Indexes the id itself, the display name and every alias, so a spec can say
+    "Big Bass Bonanza 1000" instead of an opaque id — with ~4,900 games the
+    registry cannot be inlined into the prompt, so the model names the game in
+    plain language and the composer resolves it.
+    """
     if not hasattr(_games_by_name, "_cache"):
-        idx: dict[str, str] = {}
+        idx: dict[str, list] = {}
         for lobby_id, entry in _games_registry().items():
             for key in (lobby_id, entry.get("gameTranslationKey"), *(entry.get("aliases") or [])):
                 if key:
-                    idx.setdefault(_norm_name(key), lobby_id)
+                    bucket = idx.setdefault(_gow_norm(key), [])
+                    if lobby_id not in bucket:
+                        bucket.append(lobby_id)
         _games_by_name._cache = idx
     return _games_by_name._cache
+
+
+def resolve_game(name: str, provider: str = "") -> str:
+    """A game name -> its lobbyGameId, by the same rules as GOW's resolveGame().
+
+    Ported from gow_campaign.py so the two agree; GOW queries the live catalog,
+    this queries the registry snapshot, but the MATCHING is identical:
+
+      1. exact on the full normalised name — never a loose substring, so the
+         wrong slot cannot be picked;
+      2. more than one exact match -> prefer the given provider;
+      3. still ambiguous -> REFUSE, listing the providers. GOW's message is
+         "matches multiple providers ... Set the right provider", and silently
+         choosing one is how a campaign awards spins on another studio's game;
+      4. no exact match -> allow ONE unambiguous prefix match;
+      5. otherwise refuse, listing the near candidates.
+
+    Raises SpecError; returns "" only when the registry is unavailable, so
+    grounding degrades to a no-op instead of blocking every build.
+    """
+    games = _games_registry()
+    if not games:
+        return ""
+    want = _gow_norm(name)
+    if not want:
+        return ""
+
+    exact = list(_games_by_name().get(want, []))
+    if len(exact) > 1 and provider:
+        pref = [lid for lid in exact
+                if _gow_norm(games[lid].get("provider")) == _gow_norm(provider)]
+        if pref:
+            exact = pref[:1]
+    if len(exact) == 1:
+        return exact[0]
+    if len(exact) > 1:
+        shown = ", ".join(f"{games[l].get('provider')}/{games[l].get('gameTranslationKey')}"
+                          for l in exact[:6])
+        raise SpecError(
+            f'game "{name}" matches multiple providers: {shown}. Set the right '
+            f'provider, or give the exact lobbyGameId — picking one here would '
+            f'award spins on a different studio\'s game with the same title.')
+
+    # No exact match: one unambiguous prefix is allowed, as GOW does.
+    starts = sorted({lid for key, ids in _games_by_name().items()
+                     if key.startswith(want) for lid in ids})
+    if len(starts) == 1:
+        return starts[0]
+    near = [games[l].get("gameTranslationKey") or l for l in starts[:6]]
+    raise SpecError(
+        f'game "{name}" not found exactly'
+        + (f' for provider "{provider}"' if provider else "")
+        + (f". Candidates: {', '.join(near)}" if near else
+           ". No candidate in the games registry — capture it or fix the name.")
+        + f"  ({len(games)} games in {GAMES_FILE.name})")
+
+
+def resolve_derivable_game_ids(recipe: "Recipe", spec: dict) -> list[str]:
+    """Fill game ids the registry can derive, instead of refusing the spec.
+
+    The planner is asked to name a game. Every OTHER game field —
+    walletGameId, externalGameId, provider, productType — is then a lookup on
+    that registry row, which `_check_games` already performs. But when the model
+    marked those fields `⛔ RESOLVE_AT_BUILD_TIME` (which is exactly what it is
+    told to do when it cannot supply a value), the blocker gate refused the build
+    first and the derivation never ran.
+
+    That was asking the model for data the composer holds. On a real brief it
+    cost a whole journey: the spec named the game and gave a correct
+    `lobbyGameId`, then blocked on wallet/external ids that the registry lists
+    right beside it.
+
+    So: if the game IS identified, any ⛔ on a derivable field is dropped here and
+    `_check_games` fills it from the registry row. If the game itself is unknown
+    or ⛔, nothing is touched — that is a genuine unknown and the refusal stands.
+
+    Returns a report line per field resolved.
+    """
+    games = _games_registry()
+    knobs = spec.get("knobs")
+    if not games or not isinstance(knobs, dict):
+        return []
+    fields = {k: kb.path.rsplit(".", 1)[-1] for k, kb in recipe.knobs.items()
+              if kb.path.rsplit(".", 1)[-1] in GAME_FIELDS}
+    lobby_knob = next((k for k, f in fields.items() if f == "lobbyGameId"), None)
+    if not lobby_knob:
+        return []
+
+    # The game has to be identified by something that is NOT a blocker.
+    raw = knobs.get(lobby_knob)
+    if not isinstance(raw, str) or _is_blocker(raw):
+        return []
+    if raw in games:
+        lobby = raw
+    else:
+        # Resolve by name the way GOW does — and let an AMBIGUOUS name raise
+        # rather than silently derive the rest of the tuple from the wrong game.
+        provider_knob = next((k for k, f in fields.items() if f == "provider"), None)
+        provider = knobs.get(provider_knob) or "" if provider_knob else ""
+        if _is_blocker(provider):
+            provider = ""
+        lobby = resolve_game(raw, str(provider))
+    entry = games.get(lobby) if lobby else None
+    if entry is None:
+        return []
+
+    done: list[str] = []
+    for kname, field_name in fields.items():
+        if field_name == "lobbyGameId" or kname not in knobs:
+            continue
+        value = knobs[kname]
+        if not (isinstance(value, str) and _is_blocker(value)):
+            continue
+        derived = entry.get(field_name)
+        if derived:
+            knobs[kname] = derived
+            done.append(f"{kname}: {value} -> {derived!r} (from the registry row for "
+                        f"{entry.get('gameTranslationKey') or lobby})")
+    return done
 
 
 def _check_games(recipe: Recipe, knobs: dict) -> None:
@@ -917,7 +1059,12 @@ def _check_games(recipe: Recipe, knobs: dict) -> None:
     if lobby_knob_early and lobby_knob_early in given:
         raw_value = given[lobby_knob_early]
         if raw_value not in games:
-            resolved = _games_by_name().get(_norm_name(raw_value))
+            # resolve_game() follows GOW's rules: exact name, provider to break a
+            # tie, one unambiguous prefix, and a REFUSAL when the name matches
+            # several studios' games. It raises rather than returning a guess.
+            provider_knob = next((k for k, f in fields.items() if f == "provider"), None)
+            provider = str(given.get(provider_knob) or "") if provider_knob else ""
+            resolved = resolve_game(str(raw_value), provider)
             if resolved:
                 knobs[lobby_knob_early] = resolved
                 given[lobby_knob_early] = resolved
@@ -991,6 +1138,9 @@ def validate_spec(spec: dict) -> Recipe:
             f"unknown recipe {key!r}. The composer only builds proven recipes: "
             f"{list(RECIPES)}. If none fits, the campaign is ⛔ UNCAPTURED — "
             f"capture a template first; do not remap to the nearest recipe.")
+    # Resolve BEFORE refusing. A game field the registry can derive is not an
+    # unresolved blocker — it is a question the composer can answer itself.
+    resolve_derivable_game_ids(recipe, spec)
     blockers = _find_blockers(spec)
     if blockers:
         joined = "\n    ".join(blockers)

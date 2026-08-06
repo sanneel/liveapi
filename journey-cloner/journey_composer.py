@@ -1304,6 +1304,58 @@ def verify(body: dict) -> list[str]:
                         "split, and send the next channel off the branch that "
                         "still needs chasing")
 
+    # Spins make the winnings, the wagering bonus wagers them — never the other
+    # way round. `freespin_bonus -> casino_bonus_v2` occurs 4x in the captures on
+    # FreespinBonusCollectingFinished; the reverse occurs 0 times. Reversed, the
+    # bonus has nothing to wager.
+    for a in acts:
+        if a.get("activityName") != "casino_bonus_v2":
+            continue
+        for ev_name, nid in _targets(a):
+            nxt = by_id.get(nid)
+            if nxt is not None and nxt.get("activityName") == "freespin_bonus":
+                errs.append(
+                    f"casino_bonus_v2.{ev_name} -> freespin_bonus: the wagering "
+                    "bonus is ahead of the spins that produce the winnings it "
+                    "wagers. Order is ALWAYS freespin_bonus -> casino_bonus_v2 "
+                    "(on FreespinBonusCollectingFinished)")
+
+    # withWagering and the wagering node must AGREE, in both directions. The
+    # captures correlate 1:1 with no exception: gow.json's four freespin nodes
+    # are withWagering:true and every one leads to a casino_bonus_v2;
+    # instfs.json's is withWagering:false and leads to none.
+    #
+    #   false + a wagering node  = an "instant" bonus that grinds. The flag is
+    #                              what makes it instant; the node contradicts it.
+    #   true  + no wagering node = spins marked as requiring wagering with
+    #                              nothing downstream to wager. The requirement
+    #                              silently does nothing.
+    #
+    # Both ship a reward that is not the one the brief describes, and both look
+    # completely normal in the builder.
+    for a in acts:
+        if a.get("activityName") != "freespin_bonus":
+            continue
+        fa = ((a.get("initializationData") or {}).get("freespinActivity") or {})
+        with_wagering = fa.get("withWagering")
+        if with_wagering is None:
+            continue
+        leads_to_wagering = any(
+            (by_id.get(nid) or {}).get("activityName") == "casino_bonus_v2"
+            for _ev, nid in _targets(a))
+        if with_wagering is False and leads_to_wagering:
+            errs.append(
+                "freespin_bonus -> casino_bonus_v2 with withWagering:false: an "
+                "instant bonus is a TERMINAL reward and cannot carry a wagering "
+                "requirement. Drop the wagering node, or set withWagering:true "
+                "if the brief really wants the player to grind it")
+        elif with_wagering is True and not leads_to_wagering:
+            errs.append(
+                "freespin_bonus has withWagering:true but no casino_bonus_v2 "
+                "after it: the spins are marked as requiring wagering with "
+                "nothing to wager, so the requirement does nothing. Add the "
+                "wagering node, or set withWagering:false for an instant bonus")
+
     if not body.get("journeyName"):
         errs.append("journeyName missing")
     if body.get("duplicatedFromId"):
