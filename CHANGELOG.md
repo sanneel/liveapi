@@ -112,7 +112,116 @@ with the DB snapshot + `git reset` commands printed by that script.
   cookie, Set-Cookie and password planted in a HAR reach neither the report nor
   the parsed analysis, alongside 16 checks that the flow is read correctly.
 
+- **The composer refuses five wiring rules it used to only ask for.** Each was
+  prose in `corrections.md`, and a real brief this week produced a journey that
+  violated one and built cleanly — a rule that lives only in the prompt is a
+  suggestion. All five are grounded in counts measured over all 18 captures:
+  - `deposit -> promotion` (17 `promotion -> deposit` edges across 5 captures,
+    all on `PromotionAccepted`; **zero** the other way). The player must accept
+    the offer before a condition can gate its reward.
+  - `casino_bonus_v2 -> freespin_bonus` (4 the right way, zero reversed) — the
+    wagering bonus would have nothing to wager.
+  - `withWagering` disagreeing with the presence of a wagering node, **in both
+    directions**. The correlation is 1:1 across every capture. `false` plus a
+    wagering node is an "instant" bonus that grinds; `true` with no wagering node
+    is a requirement that silently does nothing.
+  - a **delivered** message wired straight to another send (0 occurrences in 18
+    captures — a success goes to a wait, a split or an end). The *failure* branch
+    is deliberately untouched: `NotificationNotSent -> next channel` is the
+    correct immediate fallback, 7 occurrences.
+  - a node whose `parentNode` is not on the canvas, `extent: "parent"` with no
+    parent, or a node with no `position`.
+- **Explicit Gemini context caching.** The system prompt is byte-identical on
+  every call and ~19K tokens; both live calls measured `cached: 0` while the code
+  was already reading `cachedContentTokenCount`. A `cachedContents` entry keyed on
+  a digest of the prompt **and** the model (so an edited `corrections.md` starts a
+  new one) now bills **98% of input as cached from the first call** — implicit
+  caching needs warm-up and was not hitting. Fails open: any error disables
+  caching for the process and the prompt goes inline, because a planner that
+  works uncached beats one that 500s on a rejected cache create. Measured on an
+  eval run: 65,284 input tokens, 484 billed.
+- **The Prediction tab accepts the sheet ops actually writes.** The parser only
+  understood the machine schema (`internalName`, `headerTitle_en`, a questions
+  table with an `order` column), which nobody authors by hand.
+  `parse_operator_sheet()` reads the label/value sheet ops hands over — Name,
+  Start/End Date, Widget Header/Subtitle, Promo Page Header, Promo Content,
+  repeated `Prediction`/`Answers` pairs, Prize Structure, Description — and is
+  auto-detected, so the machine schema keeps working. Dates are `DD.MM.YYYY HH:MM`
+  Chile; `show`/`hide`/`expiration` follow the window; `urlShortName` derives from
+  the name. Question text is used verbatim because the answer legend is already
+  written into it. `Description` splits on the `Términos:` heading, since one cell
+  carries how-to-participate *and* the terms.
+- **`resolve_derivable_game_ids()`** fills game fields the registry can derive
+  instead of refusing them. A spec that named the game and gave a correct
+  `lobbyGameId` still blocked on `walletGameId`/`externalGameId` marked
+  `RESOLVE_AT_BUILD_TIME` — the coercion already existed in `_check_games`, it
+  just ran 28 lines after the blocker gate refused. The composer was asking the
+  model for data sitting next to the id it had already supplied.
+
 ### Fixed
+- **Every composed journey rendered a grey/blank canvas.** 14 of the 23 activity
+  types the composer loads carry a `parentNode` pointing at a `parallelFlow`
+  container they were cut out of, and that container is never emitted — so most
+  composed journeys referenced a parent that does not exist. All nine valid
+  captures have zero dangling `parentNode`, so it is a defect, never a variant.
+  `put()` strips it during layout and `verify()` refuses any that survive.
+- **Two recipes built the deposit gate ahead of the offer.**
+  `casino_deposit_freespins` and `sport_deposit_freebet` both declared
+  `deposit -> promotion`, contradicting their own reference captures, so every
+  MODE 3 draft was wired backwards. `corrections.md` simultaneously stated the
+  correct order four lines above the rule forbidding the wrong one.
+- **The `comms` recipe stripped every wait and split out of its own reference.**
+  It built `dwh_source -> nc -> nc -> sms -> email` while `gow_comms.json` has 3
+  waits and 3 splits — four channels firing at once at everybody, nobody measured.
+  It now mirrors the reference. The prompt reinforced the error by describing a
+  comms journey as "notification → SMS → email"; corrected.
+- **Split branches past path 1 vanished from the canvas.** A split names its
+  handles `path<N>`/`other`, *not* after the event, and the captured fragment kept
+  only the ports it had wired (`ams_decision_split`: 1 port for 21 events). Edges
+  addressed a handle the node did not expose. The handle is now derived and the
+  missing port minted, in both engines.
+- **Composed drafts shared the captured campaign's promotion and promo page.**
+  `ContentId`, `FrontId`, `campaignId`, `promotionId` and `promotionLinkId` were
+  the *same server-side objects*, so editing a new draft's promo content rewrote
+  the live Game of the Week page — the Sport WOF bug again. Fresh ids are now
+  minted per draft on the spec, graph and chain paths, consistently across both
+  storages. The audit missed them because `_is_content()` only accepts
+  uppercase-leading tokens, so lowercase uuids sailed through.
+  ⚠ A minted `ContentId` owns no content tree, so the offer card renders EMPTY;
+  the build reports `INCOMPLETE — the promo page`. Build the page with
+  `gow_campaign.py` first and pass its ids as the promotion node's new
+  `content_id` / `front_id` settings.
+- **Game names resolved by silent first-match.** The index squashed spaces (so
+  "Coin Volcano" and "Coinvolcano" collided) and kept the first hit with
+  `setdefault` — but **47 display names are shared by 2+ games, 94 games in
+  total**, so "God of Wealth" picked whichever provider came first in the file.
+  Resolution now follows `gow_campaign.py`'s `resolveGame()`: exact match on the
+  full normalised name, provider to break a tie, one unambiguous prefix, and a
+  refusal listing the studios when a name is ambiguous.
+- **Wait nodes were captioned with the capture's own label**, so a 1-day wait read
+  as "2 Hours" on the canvas. `displayData` is a second copy of the value and only
+  `waitPeriod` was being written.
+- **The prompt contained a section contradicting its own catalog.** The hand-written
+  capture backlog answered "what is composable" in prose while the generated
+  `recipes_catalog.json` answers it from the code that builds — and the prose had
+  drifted, still calling `email_engagement_split` unconfirmed long after
+  `gow_comms.json` captured it. There was even a correction whose only job was to
+  contradict the contradiction. Backlog dropped from the prompt (~2.2K tokens),
+  fixed at source, correction deleted; the file stays on disk as a human
+  capture-planning note.
+- **Prediction promos kept the captured campaign's copy in two slots that had no
+  sheet column at all**: `forecastBlockDescriptionKey` (the promo page's top
+  marketing blurb — the template's own comment flagged it as a known gap) and the
+  widget title, which reused the promo *page* header and forced a two-line title
+  into a one-line badge. With no `Prize` row the widget amount is now **blanked**
+  rather than inheriting `$20.000 Apuestas Gratis` from the Champions League
+  promo — written whenever the key exists, even empty, because a truthiness check
+  would have left the captured value standing.
+- **Dark mode on the AI page was hooked to `prefers-color-scheme`,** but the app
+  toggles `html.dark` (`base.html:202`, `redesign.css:71`), so the panel's shadow
+  tokens would never have applied when the operator used the theme toggle and
+  every surface would have flattened into the dark ground.
+
 - **Free-spin activities shipped the reference template's caps and labels.**
   `casino_instant_freespin` / `casino_deposit_freespins` had no knob for the
   bonus caps, so a brief specifying *Max bonus 200.000 CLP* silently built with
@@ -145,6 +254,32 @@ with the DB snapshot + `git reset` commands printed by that script.
   (`cannot write <path>: …`) instead of a stack trace.
 
 ### Changed
+- **The planner prompt: six response modes collapsed to three.** Modes 3–6 all
+  emitted machine JSON — they were not response modes but four spec *dialects*,
+  and the composer already picks the engine from the spec's own keys
+  (`_spec_mode`). ~230 lines went on a decision the code makes regardless, and
+  "MODE 6 — RANDOMIZER" described an object, not a reply. Now MODE 1 outline /
+  MODE 2 detail / MODE 3 spec, with the four shapes as a table inside MODE 3. A
+  trap buried in MODE 4's prose is now stated where it applies: `graph` specs take
+  **minor** units, `chain` and `recipe` take major CLP. Nine stale references to
+  the removed modes fixed across the prompt and corrections.
+  Prompt size: **22,785 → 19,066 tokens** full, **16,083 → 14,468** lean.
+- **Prediction draft/content/front ids are baked in**, not three form fields.
+  They are properties of the promo, not of a run, and three GUIDs retyped from
+  memory was an easy way to write this campaign's content over another promo's
+  tree. An env var still overrides for a second draft.
+- **The AI page is the conversation, full width.** The stage rail, the right-hand
+  inspector, the empty state's headline and paragraph, the page subtitle and the
+  card around the conversation are all gone; page and conversation are one
+  `--surface` field aligned to a single 26px edge. Render design and Full script
+  survive as buttons in the bar. Six ids belonging to removed controls are now
+  looked up defensively so the JS cannot throw.
+- **Eval baseline recorded for the first time: 96% (22/23)** on
+  `scripts/eval_planner.py`. The one failure is `wheel_fits` on the matrix brief
+  (a wheel planned without a slice count). Note the run used `flash-lite`, not the
+  `2.5-flash` the AI page uses — re-run with `--repeat 3` on the real model before
+  trusting the number as a trend.
+
 - **The planning call uses `gemini-2.5-flash`; the mechanical calls stay on
   flash-lite.** Planning is the reasoning step, and flash-lite is measurably
   inconsistent at it — across runs of the same brief it enumerated a matrix it was
