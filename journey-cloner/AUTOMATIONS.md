@@ -107,6 +107,48 @@ date, Chile kick-off time and promocode. Per-team templates under
 `templates/udch/` and `templates/colocolo/`; a team with no file of its own
 inherits the base team's.
 
+### Welcome Pack promo codes — `welcome_pack_campaign.py` → Optimization ▸ Welcome Pack
+One affiliate promocode → up to four drafts in one paste: JBCL and PMCL (FTCL),
+each in **normal** and **boosted** form. "Boosted" is the same journey plus the
+extra Sport FreeBet promotion hanging off the deposit detector — 1.000 CLP on
+PMCL, 1.500 CLP on JBCL.
+
+The tab is a promo-code box plus two dropdowns (brand, mode); the same thing from
+a shell:
+
+```bash
+.venv/bin/python journey-cloner/welcome_pack_campaign.py --code JUGAWELCOME
+.venv/bin/python journey-cloner/welcome_pack_campaign.py --code TIPSTERX,JUGATW --brand jbcl
+```
+
+Two things make this one different from its neighbours.
+
+**No stored template.** The console script GETs the four hand-maintained source
+drafts (PMCL 657225/657226, JBCL 657229/657230) at paste time and clones what it
+finds, rather than replaying a `templates/` file. The sources are edited by hand
+in the backoffice, so a stored copy would go stale silently; the cost is that
+shape is whatever those drafts are on the day you paste. The promocode is swapped
+by string replacement over the whole serialised body — same trick as
+`nc_discount_campaign.py`, and for the same reason: `activities[]` and the
+`rawJourneyData` mirror stay byte-identical.
+
+**It cannot duplicate promotions, and says so.** The backoffice's own Copy button
+creates fresh promotions per copy (two copies of draft 657226 came back with
+different `promotionId` / `promotionLinkId` / `FrontId` / `ContentId` and a new
+server-assigned `promotionDisplayId`), via calls that were never captured. So
+every draft this creates points at its **source's** promotion, and therefore at
+the source's `/services/promo/promotion/<id>` link in every SMS, NC and pop-up.
+The script prints exactly which promotion each draft inherited, under a
+"BEFORE PUBLISHING" banner. Re-point them by hand, or capture the copy flow's
+promotion calls and this limitation can be removed.
+
+Checks run in the browser before anything is created — old code gone (token
+boundaries, so `JUGATW2` does not count as `JUGATW` surviving), new code present
+in both storages, names equal across both storages, every id regenerated, no id
+shared between the drafts of one run. Any failure and nothing is posted at all.
+`scripts/test_welcome_pack.py` runs the emitted script under node against
+synthetic sources and asserts all of that.
+
 ### Prediction — `prediction_campaign.py` → Optimization ▸ Prediction
 Updates a Multi Number Prediction promo from a pasted Google Sheets table:
 uploads SPA + widget content, both manifests, SPA + widget settings, then PUTs

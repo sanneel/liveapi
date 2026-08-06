@@ -642,7 +642,7 @@ def figma_run(
     return templates.TemplateResponse(request, "figma.html", ctx)
 
 
-_PROMO_TABS = {"overview", "gow", "tournament_pmcl", "bet_and_get", "journey_cloner", "randomizers", "nc_discount", "scripts", "prediction", "slot_cards"}
+_PROMO_TABS = {"overview", "gow", "tournament_pmcl", "bet_and_get", "journey_cloner", "randomizers", "nc_discount", "scripts", "prediction", "slot_cards", "welcome_pack"}
 _JC_TYPES = ["followup", "bfr", "two_hours", "aft"]
 
 
@@ -711,6 +711,13 @@ def _nc_ns(*, error="", result=None, console_script=None,
     }
 
 
+def _wp_ns(*, form=None, error="", result=None, console_script=None) -> dict:
+    return {
+        "form": form or {"code": "", "brand": "both", "mode": "both"},
+        "error": error, "result": result, "console_script": console_script,
+    }
+
+
 def _pred_ns(*, sheet="", draft_id="", content_id="", front_id="", base_body="",
              dry_run=False, error="", result=None, console_script=None) -> dict:
     return {
@@ -735,7 +742,7 @@ def _bag_ns(*, form=None, error="", result=None, console_script=None) -> dict:
     return {"form": form or {}, "error": error, "result": result, "console_script": console_script}
 
 def _promotions_context(*, user, active_tab="overview", gow=None, tournament=None, bag=None, jc=None,
-                        rnd=None, nc=None, pred=None) -> dict:
+                        rnd=None, nc=None, pred=None, wp=None) -> dict:
     """Full context for the unified Optimization page: automation graph + the
     embedded generators (GOW, Tournament Comms, Journey Cloner, Randomizers,
     Discount NC, Prediction, Planner, Slot Cards) + all-scripts list. All of
@@ -761,6 +768,7 @@ def _promotions_context(*, user, active_tab="overview", gow=None, tournament=Non
         "rnd": rnd if rnd is not None else _rnd_ns(),
         "nc": nc if nc is not None else _nc_ns(),
         "pred": pred if pred is not None else _pred_ns(),
+        "wp": wp if wp is not None else _wp_ns(),
         "sc": _slot_ns(),
     }
 
@@ -923,6 +931,55 @@ def promotions_nc_discount_pmcl(
         active_tab="nc_discount",
         nc=_nc_ns(pmcl_error=pmcl_error, pmcl_result=pmcl_result,
                   pmcl_console_script=pmcl_console_script),
+    )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
+
+
+@router.post("/admin/promotions/welcome-pack", response_class=HTMLResponse)
+def promotions_welcome_pack(
+    request: Request,
+    code: str = Form(""),
+    brand: str = Form("both"),
+    mode: str = Form("both"),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """Generate the "Welcome Pack - 1st Deposit / Aff" console script: one
+    promocode -> up to four drafts (JBCL/PMCL x normal/boosted)."""
+    from ..services.journey_cloner_runner import generate_welcome_pack_console_script
+    error = ""
+    result = None
+    console_script = None
+    form = {"code": code.strip().upper(), "brand": brand, "mode": mode}
+
+    if not form["code"]:
+        return templates.TemplateResponse(request, "promotions.html", _promotions_context(
+            user=user, active_tab="welcome_pack",
+            wp=_wp_ns(form=form, error="Promo code is required."),
+        ))
+    if brand not in ("both", "jbcl", "pmcl") or mode not in ("both", "normal", "boosted"):
+        return templates.TemplateResponse(request, "promotions.html", _promotions_context(
+            user=user, active_tab="welcome_pack",
+            wp=_wp_ns(form=form, error="Unknown brand or mode."),
+        ))
+
+    try:
+        exit_code, output, display_cmd, js_text, js_name = generate_welcome_pack_console_script(
+            code=form["code"], brand=brand, mode=mode)
+        result = {"exit_code": exit_code, "output": output, "command": display_cmd,
+                  "ok": exit_code == 0 and js_text is not None}
+        if exit_code == 0 and js_text is not None:
+            console_script = {"name": js_name, "text": js_text}
+        else:
+            # The generator refuses a malformed promocode rather than emitting a
+            # wrong draft; its reason is in the run output below the form.
+            error = "Console script was not generated. Check the run output below."
+    except Exception as exc:  # noqa: BLE001
+        error = str(exc)
+
+    ctx = _promotions_context(
+        user=user,
+        active_tab="welcome_pack",
+        wp=_wp_ns(form=form, error=error, result=result, console_script=console_script),
     )
     return templates.TemplateResponse(request, "promotions.html", ctx)
 
