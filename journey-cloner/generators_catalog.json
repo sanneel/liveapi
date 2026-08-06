@@ -1,0 +1,410 @@
+{
+  "_legend": {
+    "what": "the registry's one-line description of the generator",
+    "summary": "the script's own module docstring, first paragraph",
+    "driven_from": "where an operator runs it: an Optimization tab, its own page, or a shell",
+    "cli.required": "flags argparse will refuse to run without",
+    "superseded_by": "prefer that generator for anything new",
+    "legacy": "kept for reference; do not propose it"
+  },
+  "_rules": [
+    "These are GENERATORS, not composer recipes. They are run by an operator, not by you: point at the tab and say what it needs.",
+    "Never write a spec for one of these — a spec is only for `recipe` and `chain` shapes in the RECIPES CATALOG.",
+    "Only these keys exist. A generator not listed here is ⛔ UNCAPTURED; say so rather than describing one that might exist.",
+    "Quote `what`/`summary` rather than paraphrasing what a script does."
+  ],
+  "generators": [
+    {
+      "key": "gow",
+      "label": "Game of the Week",
+      "group": "Casino",
+      "brand": "JBCL",
+      "what": "Free-spin journey + promo page + comms, one paste",
+      "script": "gow_combined.py",
+      "driven_from": "Optimization tab: gow",
+      "summary": "Build the FULL \"Game of the Week\" promo in one console script: the casino free-spin journey + promo page (gow_campaign.py) AND the communications journey (comms_campaign.py: Notification + Pop-up + SMS, Email left untouched) — created together, with the comms links pointed at the exact promo-page id the campaign step generates. No promo-page-id needs to be typed in by hand; it is captured client-side mid-script.",
+      "cli": {
+        "flags": [
+          "--figma-game",
+          "--date",
+          "--days",
+          "--spec",
+          "--spins",
+          "--public-domain",
+          "--journey-name",
+          "--promo-source-content-id",
+          "--promo-source-front-id",
+          "--promo-description",
+          "--name",
+          "--figma-key",
+          "--figma-page",
+          "--photo",
+          "--popup",
+          "--email-hero",
+          "--dry-run"
+        ],
+        "required": [
+          "--date",
+          "--spec"
+        ]
+      }
+    },
+    {
+      "key": "instant_freespin",
+      "label": "Instant free spins",
+      "group": "Casino",
+      "brand": "JBCL/PMCL",
+      "what": "Promotion → free spins, no deposit gate (composer recipe)",
+      "script": "compose.py",
+      "driven_from": "page: /admin/ai",
+      "summary": "General journey COMPOSER — build a journey draft from a recipe + values."
+    },
+    {
+      "key": "comms_builder",
+      "label": "Comms builder",
+      "group": "Comms",
+      "brand": "JBCL",
+      "what": "THE JBCL comms entry point: pick channels/splits/waits, paste the sheet. --variant gow for the GOW comms shape; the other shapes have tabs of their own. No model involved",
+      "script": "comms_builder.py",
+      "driven_from": "Optimization tab: comms_builder",
+      "summary": "Pick channels, splits and waits; paste the sheet; get the console script.",
+      "cli": {
+        "flags": [
+          "->",
+          "--splits",
+          "--date",
+          "--sheet",
+          "--variant",
+          "--channels",
+          "--wait",
+          "--days",
+          "--name",
+          "--out-name",
+          "--link",
+          "--email-template",
+          "--email-hero-link",
+          "--email-promo-page-id",
+          "--email-heading",
+          "--artwork",
+          "--script",
+          "--json"
+        ],
+        "required": [
+          "--sheet"
+        ]
+      }
+    },
+    {
+      "key": "nc_discount",
+      "label": "Discount NC",
+      "group": "Casino",
+      "brand": "JBCL",
+      "what": "One notification journey per game/day from the calendar. Superseded by Comms builder --variant nc_only; kept for the baked calendar",
+      "script": "nc_discount_campaign.py",
+      "driven_from": "Optimization tab: nc_discount",
+      "superseded_by": "comms_builder",
+      "summary": "Build the \"NC For Discount\" notification journeys — one per game/day.",
+      "cli": {
+        "flags": [
+          "--name",
+          "--dry-run"
+        ],
+        "required": []
+      }
+    },
+    {
+      "key": "nc_discount_pmcl",
+      "label": "Discount NC — PMCL",
+      "group": "Casino",
+      "brand": "PMCL",
+      "what": "The fortunazo.cl variant, same shape",
+      "script": "nc_discount_pmcl_campaign.py",
+      "driven_from": "Optimization tab: nc_discount",
+      "summary": "Build \"NC For Discount\" notification journeys for PMCL (fortunazo.cl).",
+      "cli": {
+        "flags": [
+          "--name",
+          "--folder-id",
+          "--dry-run",
+          "--brief",
+          "--brief-year"
+        ],
+        "required": []
+      }
+    },
+    {
+      "key": "bet_and_get",
+      "label": "Bet & Get",
+      "group": "Casino",
+      "brand": "PMCL",
+      "what": "Journey + promo page + email from the captured PMCL flow",
+      "script": "bet_and_get_pmcl_campaign.py",
+      "driven_from": "Optimization tab: bet_and_get",
+      "summary": "Build the PMCL (Fortunazo) \"Bet and Get\" weekend promotion as three linked drafts, from one console script:",
+      "cli": {
+        "flags": [
+          "--date",
+          "--email-spec",
+          "--name",
+          "--allow-any-weekday",
+          "--dry-run"
+        ],
+        "required": [
+          "--date",
+          "--email-spec"
+        ]
+      }
+    },
+    {
+      "key": "promo_codes",
+      "label": "Promo Codes",
+      "group": "Sport",
+      "brand": "JBCL",
+      "what": "Four match journeys per fixture (UDCH, Colo Colo)",
+      "script": "create_journeys.py",
+      "driven_from": "Optimization tab: journey_cloner",
+      "summary": "Create 4 Journey Builder draft clones for a promocode match campaign.",
+      "cli": {
+        "flags": [
+          "--team",
+          "--match",
+          "--code",
+          "--date",
+          "--time",
+          "--types",
+          "--followup-id",
+          "--dry-run",
+          "--yes",
+          "--no-unique-name"
+        ],
+        "required": []
+      }
+    },
+    {
+      "key": "welcome_pack",
+      "label": "Welcome Pack promo codes",
+      "group": "Sport",
+      "brand": "JBCL/PMCL",
+      "what": "One promocode → one draft; pick the brand (JBCL/PMCL) and mode (normal/boosted)",
+      "script": "welcome_pack_campaign.py",
+      "driven_from": "Optimization tab: welcome_pack",
+      "summary": "Welcome Pack - 1st Deposit / Aff: one promocode, one brand, one mode -> one draft.",
+      "cli": {
+        "flags": [
+          "--code",
+          "--brand",
+          "--mode",
+          "--name"
+        ],
+        "required": [
+          "--code",
+          "--brand",
+          "--mode"
+        ]
+      }
+    },
+    {
+      "key": "prediction",
+      "label": "Prediction",
+      "group": "Sport",
+      "brand": "JBCL",
+      "what": "Multi-number prediction promo from a pasted sheet",
+      "script": "prediction_campaign.py",
+      "driven_from": "Optimization tab: prediction",
+      "summary": "Update a \"Multi Number Prediction\" promo (JBCL gr8.tech backoffice) from a pasted Google Sheets table: uploads SPA + widget content, the two manifests, SPA + widget settings, then PUTs the promo draft -- replicating the exact sequence and JSON shapes captured in templates/prediction/multi_number_prediction.json (a HAR of one manual edit of draft 35352, \"final-champions-league-2025\").",
+      "cli": {
+        "flags": [
+          "--sheet",
+          "--draft-id",
+          "--content-id",
+          "--front-id",
+          "--base-body",
+          "--name",
+          "--dry-run"
+        ],
+        "required": [
+          "--sheet"
+        ]
+      }
+    },
+    {
+      "key": "sport_comms",
+      "label": "Scratch Card Comms",
+      "group": "Sport",
+      "brand": "JBCL",
+      "what": "SMS + notification + pop-up + email for a liveapi campaign. Superseded by Comms builder --variant scratch_card, except the liveapi card fetch",
+      "script": "sport_comms_campaign.py",
+      "driven_from": "Optimization tab: sport_comms",
+      "superseded_by": "comms_builder",
+      "summary": "Build the Sport scratch-card comms campaign from a liveapi campaign + a sheet.",
+      "cli": {
+        "flags": [
+          "--campaign",
+          "--spec",
+          "--promo-link",
+          "--stop-at",
+          "--name",
+          "--dry-run"
+        ],
+        "required": [
+          "--campaign",
+          "--spec"
+        ]
+      }
+    },
+    {
+      "key": "randomizers",
+      "label": "Randomizers",
+      "group": "Wheels & cards",
+      "brand": "JBCL/PMCL",
+      "what": "Fortune wheels and scratch cards (sport_wof, casino_wof, scratch)",
+      "script": "randomizer_campaign.py",
+      "driven_from": "Optimization tab: randomizers",
+      "summary": "Build the console script for a Randomizer promo — Sport Wheel of Fortune, Casino Wheel of Fortune, or Raspa y Gana (Scratch Card).",
+      "cli": {
+        "flags": [
+          "--dry-run",
+          "--kind",
+          "--date",
+          "--dates",
+          "--days",
+          "--internal-name",
+          "--url-short",
+          "--weights",
+          "--journeys",
+          "--prize-text",
+          "--name",
+          "--debug"
+        ],
+        "required": [
+          "--kind"
+        ]
+      }
+    },
+    {
+      "key": "tournament_pmcl",
+      "label": "PMCL Tournament comms",
+      "group": "Comms",
+      "brand": "PMCL",
+      "what": "NC + pop-up + SMS + email for a Fortunazo tournament, one journey (create + save)",
+      "script": "tournament_pmcl_campaign.py",
+      "driven_from": "Optimization tab: tournament_pmcl",
+      "summary": "PMCL (Fortunazo) tournament comms — the brand half of `tournament_comms_base`.",
+      "cli": {
+        "flags": [
+          "--date",
+          "--spec",
+          "--link",
+          "--journey-name",
+          "--email-content-id",
+          "--email-link",
+          "--no-photos",
+          "--name",
+          "--dry-run"
+        ],
+        "required": [
+          "--date",
+          "--spec"
+        ]
+      }
+    },
+    {
+      "key": "tournament_jbcl",
+      "label": "JBCL Tournament comms",
+      "group": "Comms",
+      "brand": "JBCL",
+      "what": "NC + pop-up + SMS + email for a JugaBet tournament, one journey (create + save)",
+      "script": "tournament_jbcl_campaign.py",
+      "driven_from": "Optimization tab: tournament_jbcl",
+      "summary": "JBCL (JugaBet) tournament comms — the brand half of `tournament_comms_base`.",
+      "cli": {
+        "flags": [
+          "--date",
+          "--spec",
+          "--link",
+          "--journey-name",
+          "--email-content-id",
+          "--email-link",
+          "--no-photos",
+          "--name",
+          "--dry-run"
+        ],
+        "required": [
+          "--date",
+          "--spec"
+        ]
+      }
+    },
+    {
+      "key": "comms_chain",
+      "label": "Comms journey from content",
+      "group": "Comms",
+      "brand": "JBCL/PMCL",
+      "what": "NC + pop-up + SMS + email with your copy, one journey per date",
+      "script": "journey_composer.py",
+      "driven_from": "page: /admin/ai",
+      "summary": "Journey Composer — build a REAL custom journey draft JSON from a chain spec."
+    },
+    {
+      "key": "gow_comms",
+      "label": "GOW comms",
+      "group": "Comms",
+      "brand": "JBCL",
+      "what": "The comms half of a GOW campaign (built with it by default). Superseded for standalone use by Comms builder --variant gow",
+      "script": "comms_campaign.py",
+      "driven_from": "Optimization tab: gow",
+      "superseded_by": "comms_builder",
+      "summary": "Build the \"Game of the Week\" communications Journey Builder draft: Notification (NC) + Pop-up (Cat-fish) + SMS, all wired to the promo-page link produced by gow_campaign.py's run (so every channel's link/deeplink is the same `/promo/offers/promoPage/<id>` the player actually lands on, instead of a hand-typed vanity URL that drifts from campaign to campaign).",
+      "cli": {
+        "flags": [
+          "--date",
+          "--promo-page-id",
+          "--public-domain",
+          "--journey-name",
+          "--spec",
+          "--name",
+          "--dry-run"
+        ],
+        "required": [
+          "--date",
+          "--promo-page-id",
+          "--spec"
+        ]
+      }
+    },
+    {
+      "key": "slot_cards",
+      "label": "Slot Cards",
+      "group": "Assets",
+      "brand": "JBCL",
+      "what": "Reveal cards / GIFs for email and on-site",
+      "script": null,
+      "driven_from": "Optimization tab: slot_cards"
+    },
+    {
+      "key": "figma_export",
+      "label": "Figma export",
+      "group": "Assets",
+      "brand": "JBCL",
+      "what": "Pull GOW image slots straight out of Figma",
+      "script": "figma_export.py",
+      "driven_from": "Optimization tab: gow",
+      "summary": "Export the GOW image slots for one game straight out of Figma.",
+      "cli": {
+        "flags": [
+          "--key",
+          "--page",
+          "--game",
+          "--scale",
+          "--out",
+          "--inspect",
+          "--refresh",
+          "--ids"
+        ],
+        "required": [
+          "--key"
+        ]
+      }
+    }
+  ]
+}

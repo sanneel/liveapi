@@ -179,7 +179,7 @@ GENERATORS: List[dict] = [
      "script": "create_journeys.py", "tab": "journey_cloner"},
     {"key": "welcome_pack", "group": "Sport", "brand": "JBCL/PMCL",
      "label": "Welcome Pack promo codes",
-     "what": "One promocode → up to 4 drafts (JBCL/PMCL × normal/boosted)",
+     "what": "One promocode → one draft; pick the brand (JBCL/PMCL) and mode (normal/boosted)",
      "script": "welcome_pack_campaign.py", "tab": "welcome_pack"},
     {"key": "prediction", "group": "Sport", "brand": "JBCL",
      "label": "Prediction",
@@ -238,7 +238,8 @@ _NOT_GENERATORS = {
     "extract_knobs.py", "extract_templates.py", "mine_flows.py", "web_ui.py",
     "generate_console_script.py", "ai_campaign_builder.py", "casino_journey.py",
     "gow_campaign.py", "comms_campaign.py", "build_catalog.py",
-    "build_games_registry.py", "nc_discount_campaign.py",
+    "build_games_registry.py", "build_generators_catalog.py",
+    "nc_discount_campaign.py",
     "nc_discount_pmcl_campaign.py",
     "comms_engine.py", "tournament_comms_base.py", "har_analyse.py",
 }

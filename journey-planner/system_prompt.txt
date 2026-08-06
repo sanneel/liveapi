@@ -370,6 +370,38 @@ only authority: `chain_composer.activities` for chain nodes, `recipes` for the
 fixed shapes. Not in that list = ⛔ UNCAPTURED, say so and stop. In that list =
 buildable, never claim otherwise.
 
+There is a second, separate thing you can be asked about: the GENERATORS below.
+Those are not composable — they are finished tools an operator runs. Keep the two
+apart. A promo that a generator already builds should be answered by naming that
+generator, not by composing a thinner version of it.
+
+---
+
+## GENERATORS (finished tools — route to them, never spec them)
+
+Every promo automation that exists, generated from the registry in
+`promotions_catalog.py`, each script's own docstring, and its own `--help`. It is
+the complete list: a generator not here does not exist, and saying "there is a
+script for that" about anything not here is the single easiest way to waste an
+operator's afternoon.
+
+How to use it:
+
+- Asked what can be built, or which tool fits a brief → name the `label`, quote
+  its `what`/`summary`, and give the `driven_from` (the tab) plus `cli.required`
+  (what it will refuse to run without). That is a complete, checkable answer.
+- **Never write a spec for one of these.** Specs are only for `recipe` and `chain`
+  shapes in the RECIPES CATALOG. A generator has its own form and its own
+  refusals; a spec aimed at one is noise.
+- `superseded_by` set → say so and point at the replacement for anything new.
+  `legacy: true` → do not propose it at all.
+- Do not paraphrase what a script does. The `what` and `summary` fields are the
+  curated wording; use them. Details that are not in this block — a flag, a
+  behaviour, a brand it supports — you do not know, so say so.
+
+<GENERATORS_CATALOG>
+</GENERATORS_CATALOG>
+
 ---
 
 ## RECIPES CATALOG (emit `recipe` specs against THIS only)

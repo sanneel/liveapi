@@ -618,6 +618,13 @@ The comms half of a GOW campaign; runs as part of that tab by default.
 - **Games registry** — `build_games_registry.py`. Rebuilds `library/games.json`
   (4,901 games / 48 providers) from the backoffice catalog. The composer refuses
   any game not in it, so a stale registry looks like "that game does not exist".
+- **Generators catalog** — `build_generators_catalog.py`. Rebuilds
+  `generators_catalog.json`, the block the AI planner reads to know which
+  generators exist, where each is driven from and what it refuses to run
+  without. Built from the registry, each script's docstring and its own
+  `--help`, so it cannot describe a flag that is not there. Run it after
+  adding or renaming a generator — `--check` fails when it is stale, and
+  `scripts/test_generators_catalog.py` runs that check.
 - **Automation catalog** — `build_catalog.py`. Rebuilds `catalog.json`, which the
   Optimization overview's "captured automations" graph reads.
 

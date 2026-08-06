@@ -58,6 +58,7 @@ Offline, no key, safe to run any time:
 
 ```bash
 .venv/bin/python scripts/test_composer_contract.py   # planner -> composer contract
+.venv/bin/python scripts/test_generators_catalog.py  # what the planner knows about the generators
 .venv/bin/python scripts/test_comms_chain.py         # comms chain: languages, links, artwork pickers
 .venv/bin/python scripts/test_comms_builder.py       # pick channels + paste sheet -> spec
 .venv/bin/python scripts/test_journey_design.py      # design-board renderer

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Welcome Pack - 1st Deposit / Aff: one promocode -> up to four drafts.
+"""Welcome Pack - 1st Deposit / Aff: one promocode, one brand, one mode -> one draft.
 
 Two brands (JBCL, PMCL a.k.a. FTCL) x two modes (normal, boosted). "Boosted"
 is the variant carrying the extra Sport FreeBet promotion after the deposit
 detector; "normal" is the same journey without it.
 
-    python welcome_pack_campaign.py --code JUGAWELCOME
-    python welcome_pack_campaign.py --code TIPSTERX,JUGATW --brand jbcl
+    python welcome_pack_campaign.py --code JUGAWELCOME --brand jbcl --mode normal
+    python welcome_pack_campaign.py --code TIPSTERX,JUGATW --brand jbcl --mode boosted
     python welcome_pack_campaign.py --code FORTW --brand pmcl --mode boosted
 
 WHY THIS ONE HAS NO templates/ FILE
