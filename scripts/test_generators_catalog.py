@@ -154,6 +154,54 @@ except RuntimeError as exc:
 check("a fully substituted prompt passes the same guard",
       _assert_no_unfilled_blocks("all filled in") is None)
 
+print("\nthe corrections file keeps every rule it was trimmed of prose for")
+# corrections.md is ~23% of the prompt and is paid for on every request, so it was
+# compressed 60% by dropping evidence and history for rules the composer enforces.
+# Compression is only safe if no RULE went with the prose — that is what this is.
+corr = (REPO / "journey-planner" / "corrections.md").read_text(encoding="utf-8")
+RULES = {
+    "promotion before deposit": ("promotion", "deposit"),
+    "freespins before the wagering bonus": ("freespin_bonus", "casino_bonus_v2"),
+    "withWagering agrees with the chain": ("withWagering",),
+    "a delivered send goes to a wait/split": ("delivered", "wait"),
+    "a failed send goes straight on": ("Failed", "fallback"),
+    "games come from the registry": ("lobbyGameId", "registry"),
+    "blockers survive into the spec": ("RESOLVE_AT_BUILD_TIME",),
+    "captured ids are never reused": ("promotionId", "ContentId"),
+    "wait_date is not composable": ("wait_date",),
+    "max win maps to maxWinAmount": ("maxWinAmount",),
+    "wagering days map to bonusExpirationTime": ("bonusExpirationTime",),
+    "deposit days map to expirationTimeout": ("expirationTimeout",),
+    "cashout maps to releaseLimitMultiplier": ("releaseLimitMultiplier",),
+    "derived author arithmetic is ignored": ("Contribution", "ignore"),
+    "shot policy Once vs repeatable": ("Once",),
+    "player visibility splits page from flow": ("Authorized", "Unauthorized"),
+    "two tables mean two variants": ("two variants",),
+    "comms is send/wait/split": ("wait", "split"),
+    "follow is set on every node": ("follow",),
+    "the detector sits on its own flow": ("event_detector", "parallel"),
+    "one spec block per object, counted": ("spec block",),
+    "truncation is declared": ("TRUNCATED",),
+    "never hand-write a journey or script": ("hand-write",),
+    "the promo page is a separate build": ("promo page",),
+    "a randomizer with urlShortName needs none": ("urlShortName",),
+    "the connection grammar is closed": ("grammar",),
+    "route to a generator, never spec it": ("Route, never spec",),
+    "welcome pack is one draft per run": ("Welcome Pack", "required"),
+    "the comms builder has one variant": ("Comms builder",),
+    "the email creatives are not interchangeable": ("creative",),
+    "content studio restricts a name": ("Content Studio",),
+    "no HAR means uncaptured": ("HAR",),
+}
+for label, needles in RULES.items():
+    missing = [n for n in needles if n not in corr]
+    check(f"still states: {label}", not missing, f"missing {missing}")
+check("the file explains why enforced rules are one-liners",
+      "ONE line, not a paragraph" in corr)
+check("it still forbids restating generated facts",
+      "Never restate a machine-generated fact" in corr)
+check("it stayed under 3k tokens", len(corr) // 4 < 3000, f"{len(corr)//4} tokens")
+
 print()
 if FAILURES:
     print(f"FAILED ({len(FAILURES)}):")
