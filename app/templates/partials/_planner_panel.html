@@ -69,11 +69,6 @@
     box-shadow:0 2px 8px -2px color-mix(in srgb, var(--ac) 55%, transparent),
       inset 0 1px 0 rgba(255,255,255,.34)}
   .jp-mark svg{width:18px;height:18px}
-  .jp-title{display:flex;align-items:center;gap:9px;font-size:16px;font-weight:750;
-    letter-spacing:-.021em;color:var(--t-strong)}
-  .jp-beta{font-size:9.5px;font-weight:800;letter-spacing:.09em;padding:3px 7px;
-    border-radius:999px;background:var(--acw);color:var(--ac);
-    border:1px solid color-mix(in srgb, var(--ac) 26%, transparent)}
   .jp-barright{margin-left:auto;display:flex;align-items:center;gap:8px}
   .jp-model{display:inline-flex;align-items:center;gap:6px;font:600 11px/1 var(--font);
     color:var(--t-faint);font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace;
@@ -279,8 +274,6 @@
 <div class="jp-wrap" id="jpWrap">
 
   <div class="jp-bar">
-    <div class="jp-mark">{{ spark }}</div>
-    <div class="jp-title">Journey Planner <span class="jp-beta">BETA</span></div>
     <div class="jp-barright">
       <button type="button" class="btn jp-act" id="jpDesign">{{ i_board }} Render design</button>
       <button type="button" class="btn primary jp-act" id="jpBuild">{{ i_cog }} Full script</button>
@@ -311,13 +304,8 @@
       <div class="jp-surface">
         <div class="jp-log" id="jpLog">
           <div class="jp-empty" id="jpEmpty">
-            <div class="jp-mark">{{ spark }}</div>
-            <div class="jp-starters">
-              <button type="button" class="chip" data-starter="brief">Birthday brief</button>
-              <button type="button" class="chip" data-starter="specs">Specs of each journey</button>
-              <button type="button" class="chip" data-starter="script">Full script</button>
-              <button type="button" class="chip" data-starter="comms">Comms from content</button>
-            </div>
+            <p class="jp-hint">Paste a campaign brief and read the answer. Ask follow-ups in the
+            same thread; <b>Render design</b> and <b>Full script</b> act on what is above.</p>
           </div>
         </div>
 
@@ -435,18 +423,6 @@ NOTES
 
   // The workflow, as prompts: brief -> (design draws itself) -> adjust in your
   // own words -> specs of each journey -> full script.
-  const STARTERS = {
-    brief: BRIEF,
-    specs: "Now the specs of each journey — for every journey, every setting an "
-         + "operator has to type into each activity.",
-    script: "Now give me the full script for this campaign.",
-    wheel: "Build the wheel — the randomizer spec, with the weights from the brief.",
-    comms: "Build the comms journey from this content — one journey per date, with the "
-         + "NC, pop-up, SMS and email nodes carrying the copy below. Ask me for anything "
-         + "you need that I have not given you (artwork URL, email template id, link).\n\n"
-         + "NC title (es/en):\nNC text (es/en):\nPop-up title (es/en):\n"
-         + "Pop-up text (es/en):\nSMS (es/en):\nEmail template id:\nLink:\nDates:",
-  };
 
   function esc(s){ return String(s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 
@@ -626,9 +602,6 @@ NOTES
   });
   const _jpInsert = document.getElementById("jpInsert");
   if (_jpInsert) _jpInsert.onclick = () => { input.value = BRIEF; input.focus(); };
-  document.querySelectorAll("[data-starter]").forEach(chip => {
-    chip.onclick = () => { input.value = STARTERS[chip.dataset.starter] || ""; input.focus(); };
-  });
   // Clear / Insert / Copy lived in the removed rail. Guarded so the handlers
   // simply do not bind when the button is absent.
   const clearBtn = document.getElementById("jpClear");
