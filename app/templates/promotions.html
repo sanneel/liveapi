@@ -21,6 +21,7 @@
       <button type="button" class="tab" data-tab="tournament_jbcl">JBCL Tournament</button>
       <button type="button" class="tab" data-tab="bet_and_get">PMCL Bet &amp; Get</button>
       <button type="button" class="tab" data-tab="journey_cloner">Promo Codes</button>
+      <button type="button" class="tab" data-tab="welcome_pack">Welcome Pack</button>
       <button type="button" class="tab" data-tab="prediction">Prediction</button>
       <button type="button" class="tab" data-tab="comms_builder">Comms builder</button>
       <button type="button" class="tab" data-tab="sport_comms">Scratch Card Comms</button>
@@ -470,6 +471,114 @@
 </section>
 
 {# ── Discount NC (game-of-the-day notification journeys) ─────────────── #}
+<section data-panel="welcome_pack" hidden>
+
+  {% if wp.error %}<div class="alert err">{{ wp.error }}</div>{% endif %}
+  {% if wp.result %}
+    <div class="alert {% if wp.result.ok %}ok{% else %}err{% endif %}">
+      {% if wp.result.ok %}Console script generated.{% else %}Generation exited with code {{ wp.result.exit_code }}.{% endif %}
+    </div>
+  {% endif %}
+
+  <div class="row-flex">
+    <div class="col-rail stack">
+
+      <form method="post" action="/admin/promotions/welcome-pack" class="card card-pad" style="display:flex; flex-direction:column; gap:14px">
+        <div>
+          <h2 class="card-title">Welcome Pack — 1st Deposit / Aff</h2>
+          <p class="card-sub">One affiliate promo code → up to four drafts: JBCL and FTCL (PMCL), each normal and boosted.</p>
+        </div>
+
+        <div>
+          <label class="lbl" for="wp-code">Promo code</label>
+          <input id="wp-code" name="code" class="input" type="text" required
+                 value="{{ wp.form.code }}" placeholder="JUGAWELCOME"
+                 style="margin-top:4px; font-family:monospace; font-size:13px; text-transform:uppercase">
+          <p class="help" style="margin-top:4px">A–Z, 0–9, <span class="mono">-</span> and <span class="mono">_</span>, 3–32 characters. Several codes: separate with commas (the JBCL source carries two).</p>
+        </div>
+
+        <div>
+          <label class="lbl" for="wp-brand">Brand</label>
+          <select id="wp-brand" name="brand" class="input" style="margin-top:4px">
+            <option value="both" {% if wp.form.brand == 'both' %}selected{% endif %}>Both — JBCL and FTCL</option>
+            <option value="jbcl" {% if wp.form.brand == 'jbcl' %}selected{% endif %}>JBCL only</option>
+            <option value="pmcl" {% if wp.form.brand == 'pmcl' %}selected{% endif %}>FTCL (PMCL) only</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="lbl" for="wp-mode">Mode</label>
+          <select id="wp-mode" name="mode" class="input" style="margin-top:4px">
+            <option value="both" {% if wp.form.mode == 'both' %}selected{% endif %}>Both — normal and boosted</option>
+            <option value="normal" {% if wp.form.mode == 'normal' %}selected{% endif %}>Normal only</option>
+            <option value="boosted" {% if wp.form.mode == 'boosted' %}selected{% endif %}>Boosted only — adds the extra Sport FreeBet</option>
+          </select>
+          <p class="help" style="margin-top:4px">Boosted is the same journey plus the extra freebet after the deposit detector — 1.000 CLP on FTCL, 1.500 CLP on JBCL.</p>
+        </div>
+
+        <button class="btn primary" style="justify-content:center">Generate console script</button>
+        <p class="help">Clones the four hand-maintained source drafts (FTCL 657225/657226, JBCL 657229/657230) live at paste time, swaps the promo code in both storages and regenerates every id. Creates drafts only.</p>
+      </form>
+
+      <div class="card card-pad">
+        <h2 class="card-title" style="margin-bottom:6px">Before you publish</h2>
+        <p class="card-sub" style="margin:0 0 8px">This script cannot duplicate a promotion — the backoffice mints a new one per copy through calls we have never captured.</p>
+        <p class="help" style="margin:0">So every draft it creates points at its <b>source's</b> promotion, and therefore at the source's <span class="mono">/services/promo/promotion/&lt;id&gt;</span> link in each SMS, notification and pop-up. The script lists the inherited promotion per draft when it finishes. Re-point them by hand before anything goes live.</p>
+      </div>
+
+    </div>
+
+    <div class="col-main stack">
+      {% if wp.console_script %}
+        <section class="card" style="overflow:hidden">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Console Script Ready</h2>
+              <p class="card-sub">{{ wp.console_script.name }}</p>
+            </div>
+            <button type="button" id="wp-copy" class="btn primary">Copy script</button>
+          </div>
+          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+            <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
+              <li>Click <b>Copy script</b> above.</li>
+              <li>Open the backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
+              <li>Paste and press Enter. Every source draft is fetched and checked first — if any check fails, nothing is created.</li>
+              <li>Read the red <b>BEFORE PUBLISHING</b> block at the end: it names the promotion each new draft inherited from its source.</li>
+            </ol>
+            <textarea id="wp-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ wp.console_script.text }}</textarea>
+          </div>
+        </section>
+        <script>
+          (function () {
+            var btn = document.getElementById('wp-copy'), area = document.getElementById('wp-script-text');
+            if (!btn || !area) return;
+            btn.addEventListener('click', function () {
+              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
+              if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); }); }
+              else { area.select(); document.execCommand('copy'); done(); }
+            });
+          })();
+        </script>
+      {% endif %}
+
+      {% if wp.result %}
+        <section class="card" style="overflow:hidden">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Run output</h2>
+              <p class="card-sub mono" style="font-size:12px">{{ wp.result.command }}</p>
+            </div>
+          </div>
+          <div class="card-pad">
+            <pre class="mono" style="font-size:12px; white-space:pre-wrap; margin:0">{{ wp.result.output }}</pre>
+          </div>
+        </section>
+      {% endif %}
+    </div>
+  </div>
+
+</section>
+
 <section data-panel="nc_discount" hidden>
 
   {# Git pull banner #}

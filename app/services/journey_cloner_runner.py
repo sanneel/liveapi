@@ -190,6 +190,7 @@ COMBINED_SCRIPT_PATH = CLONER_DIR / "gow_combined.py"
 RANDOMIZER_SCRIPT_PATH = CLONER_DIR / "randomizer_campaign.py"
 NC_DISCOUNT_SCRIPT_PATH = CLONER_DIR / "nc_discount_campaign.py"
 NC_DISCOUNT_PMCL_SCRIPT_PATH = CLONER_DIR / "nc_discount_pmcl_campaign.py"
+WELCOME_PACK_SCRIPT_PATH = CLONER_DIR / "welcome_pack_campaign.py"
 PREDICTION_SCRIPT_PATH = CLONER_DIR / "prediction_campaign.py"
 TOURNAMENT_PMCL_SCRIPT_PATH = CLONER_DIR / "tournament_pmcl_campaign.py"
 TOURNAMENT_JBCL_SCRIPT_PATH = CLONER_DIR / "tournament_jbcl_campaign.py"
@@ -792,6 +793,29 @@ def generate_nc_discount_console_script() -> Tuple[int, str, str, str | None, st
     """
     basename = _unique_basename("nc_discount", "")
     cmd = [python_executable(), str(NC_DISCOUNT_SCRIPT_PATH), "--name", basename]
+    return _run_gow_cli(cmd, basename=basename)
+
+
+def generate_welcome_pack_console_script(
+    *, code: str, brand: str = "both", mode: str = "both"
+) -> Tuple[int, str, str, str | None, str]:
+    """Generate the "Welcome Pack - 1st Deposit / Aff" console script: one
+    promocode -> up to four drafts (JBCL/PMCL x normal/boosted).
+
+    The generator refuses a malformed promocode, so a bad input comes back as a
+    non-zero exit with the reason in the output rather than a wrong draft.
+
+    Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
+    """
+    basename = _unique_basename("welcome_pack", "")
+    cmd = [
+        python_executable(),
+        str(WELCOME_PACK_SCRIPT_PATH),
+        "--code", code.strip().upper(),
+        "--brand", brand,
+        "--mode", mode,
+        "--name", basename,
+    ]
     return _run_gow_cli(cmd, basename=basename)
 
 
