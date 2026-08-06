@@ -25,6 +25,7 @@ No network, no model. Run: python scripts/test_generators_catalog.py
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -48,6 +49,7 @@ def check(label: str, condition: bool, detail: str = "") -> None:
     else:
         print(f"  [FAIL] {label}" + (f" — {detail}" if detail else ""))
         FAILURES.append(label if not detail else f"{label}: {detail}")
+
 
 
 print("\nthe catalog is current")
@@ -129,6 +131,28 @@ check("the prompt says the list is complete",
 check("the prompt keeps generators and recipes apart",
       "not composable" in prompt or "Keep the two" in prompt)
 check("the rules travel with the data", "_rules" in prompt)
+
+# The web AI page builds its own prompt, so wiring a block only into
+# journey-planner/planner.py reaches the CLI and not the UI — which is exactly
+# what happened: the page shipped a literal <GENERATORS_CATALOG> tag.
+from app.routes.admin_planner import _build_system_prompt  # noqa: E402
+for lean in (False, True):
+    web = _build_system_prompt(lean=lean)
+    check(f"the web page's prompt (lean={lean}) carries the catalog",
+          '"generators"' in web and "welcome_pack" in web)
+    check(f"the web page's prompt (lean={lean}) has no unfilled block",
+          not re.findall(r"<([A-Z_]+)>\n</\1>", web),
+          str(re.findall(r"<([A-Z_]+)>\n</\1>", web)))
+from app.routes.admin_planner import _assert_no_unfilled_blocks  # noqa: E402
+try:
+    _assert_no_unfilled_blocks("intro\n<GAMES_REGISTRY>\n</GAMES_REGISTRY>\nrest")
+    check("an unfilled block is a hard error, not an empty section", False,
+          "it was accepted; a typo'd tag would tell the model there are no games")
+except RuntimeError as exc:
+    check("an unfilled block is a hard error, not an empty section",
+          "GAMES_REGISTRY" in str(exc), str(exc)[:90])
+check("a fully substituted prompt passes the same guard",
+      _assert_no_unfilled_blocks("all filled in") is None)
 
 print()
 if FAILURES:
