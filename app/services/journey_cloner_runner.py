@@ -526,18 +526,21 @@ def generate_prediction_console_script(
     of a console script, and that request plan is appended to output_log so
     it's still visible without pasting anything.
     """
-    if not draft_id.strip() or not content_id.strip() or not front_id.strip():
-        raise ValueError("Draft id, Content id, and Front id are all required.")
-    basename = name.strip() or _unique_basename("prediction", draft_id.strip())
+    # The draft/content/front ids are baked into prediction_campaign.py — they
+    # are properties of the promo, not of a run, and having them as form fields
+    # meant three GUIDs retyped from memory each time. Only forwarded when the
+    # caller actually supplied one, so the generator's own defaults apply.
+    basename = name.strip() or _unique_basename("prediction", draft_id.strip() or "draft")
     cmd = [
         python_executable(),
         str(PREDICTION_SCRIPT_PATH),
         "--sheet", "-",
-        "--draft-id", draft_id.strip(),
-        "--content-id", content_id.strip(),
-        "--front-id", front_id.strip(),
         "--name", basename,
     ]
+    for flag, value in (("--draft-id", draft_id), ("--content-id", content_id),
+                        ("--front-id", front_id)):
+        if value.strip():
+            cmd += [flag, value.strip()]
     if base_body_path.strip():
         cmd += ["--base-body", base_body_path.strip()]
     if dry_run:

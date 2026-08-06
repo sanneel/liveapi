@@ -1043,9 +1043,12 @@ def promotions_git_pull(
 def promotions_prediction(
     request: Request,
     sheet: str = Form(...),
-    draft_id: str = Form(...),
-    content_id: str = Form(...),
-    front_id: str = Form(...),
+    # The three ids are baked into prediction_campaign.py (they belong to the
+    # promo, not the run). Still accepted so an existing form post keeps working,
+    # but optional — blank means "use the generator's own".
+    draft_id: str = Form(""),
+    content_id: str = Form(""),
+    front_id: str = Form(""),
     base_body: str = Form(""),
     dry_run: str = Form(""),
     user: User = Depends(require_role("editor")),

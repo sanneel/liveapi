@@ -154,18 +154,12 @@
         <textarea class="input mono" name="sheet" rows="10" spellcheck="false" placeholder="internalName&#9;urlShortName&#9;brand&#9;currency&#9;languages&#9;showDate&#9;...&#10;JBCL|PR|... &#9;...&#10;&#10;order&#9;question_en&#9;question_es&#9;answer1_en&#9;...&#10;1&#9;Who scores first?&#9;...">{{ pred.sheet or '' }}</textarea>
       </div>
 
-      <div class="field">
-        <span class="lbl">Draft id</span>
-        <input class="input mono" name="draft_id" value="{{ pred.draft_id or '' }}" placeholder="35352" required/>
-      </div>
-      <div class="field">
-        <span class="lbl">Content id</span>
-        <input class="input mono" name="content_id" value="{{ pred.content_id or '' }}" placeholder="9b5b9fe4-abb8-44b3-bdb8-73355946508b" required/>
-      </div>
-      <div class="field">
-        <span class="lbl">Front id</span>
-        <input class="input mono" name="front_id" value="{{ pred.front_id or '' }}" placeholder="c7b5e12f-fea1-4320-b33d-c5c503c00154" required/>
-      </div>
+      {# Draft / Content / Front id are baked into prediction_campaign.py: they
+         belong to the promo, not to a run, and three GUIDs retyped from memory
+         every time was an easy way to write this campaign's content over another
+         promo's tree. Change them in the generator's DEFAULT_* constants. #}
+      <p class="help">Draft, content and front ids are built in — nothing to fill.
+        Just paste the sheet.</p>
       <div class="field">
         <span class="lbl">Base body path <span style="color:var(--t-faint); text-transform:none">(optional, advanced)</span></span>
         <input class="input mono" name="base_body" value="{{ pred.base_body or '' }}" placeholder="journey-cloner/out/some-capture.json"/>

@@ -82,6 +82,25 @@ BRAND = os.getenv("BRAND", "JBCL")
 HERE = Path(__file__).resolve().parent
 TEMPLATE_PATH = HERE / "templates" / "prediction" / "multi_number_prediction.json"
 
+# The operator sheet names no brand or currency because this promo only ever
+# runs on one: the captured draft's own (put_body.currencies). Hardcoded rather
+# than an operator field, the same way the media-library folder is per-brand in
+# the tournament generators — a pasted mismatch there uploaded to the wrong brand.
+DEFAULT_BRAND = "JBCL"
+DEFAULT_CURRENCY = "CLP"
+
+# The draft this generator updates, and the content tree it writes into. These
+# are properties of the PROMO, not of a run: the same Multi Number Prediction
+# draft is re-dressed per fixture, and its contentId/frontId are where the SPA
+# and widget bundles live. They used to be operator fields, which meant three
+# GUIDs retyped from memory on every run with nothing to catch a wrong one — and
+# a mistyped contentId writes this campaign's content over another promo's tree.
+# Same reasoning as the per-brand media-library folders in the tournament
+# generators. Change them here if the promo is rebuilt from a new capture.
+DEFAULT_DRAFT_ID = "35352"
+DEFAULT_CONTENT_ID = "9b5b9fe4-abb8-44b3-bdb8-73355946508b"
+DEFAULT_FRONT_ID = "c7b5e12f-fea1-4320-b33d-c5c503c00154"
+
 REQUIRED_TOP_FIELDS = [
     "internalName", "urlShortName", "brand", "currency", "languages",
     "showDate", "hideDate", "expirationDate", "startDate", "endDate",
@@ -250,7 +269,191 @@ def _parse_questions(q_rows: list[list[str]]) -> list[dict[str, Any]]:
     return out
 
 
+# --------------------------------------------------------------------------
+# Operator sheet ("just paste the sheet")
+# --------------------------------------------------------------------------
+# The block above parses the MACHINE schema (internalName, headerTitle_en, a
+# questions table with an order column...). Nobody authors that by hand. What
+# ops actually hands over is a label/value sheet in one language:
+#
+#   Name                 Prediction Esporta
+#   Start Date           15.08.2026  18:00
+#   End Date             16.08.2026 22:00
+#   Widget Header        Apuesta predicion
+#   Widget Subtitle      predicion
+#   Promo Page Header    Predicción: Penarol - Colo-Colo
+#   Promo Content        <the marketing blurb>
+#   Prediction           <question text, legend included>
+#   Answers              0 - 1 - 2
+#   ... (Prediction/Answers repeat per question) ...
+#   Description          Cómo Participar ... Términos: ...
+#
+# This parser accepts that and maps it onto the machine schema. It DERIVES what
+# the window implies and REFUSES what it would otherwise have to invent.
+
+_OP_LABELS = {
+    "name": "name", "start date": "start", "end date": "end",
+    "widget header": "widget_header", "widget subtitle": "widget_subtitle",
+    "promo page header": "promo_header", "promo content": "promo_content",
+    "description": "description",
+    # Two different prize slots, and they are not interchangeable:
+    #   "Prize"           -> the single headline amount on the WIDGET
+    #   "Prize Structure" -> the tiered breakdown block on the PROMO PAGE
+    # Mapping the structure onto the widget would print six lines of tiers into a
+    # one-line badge; mapping the headline onto the page would drop the tiers.
+    "prize": "prize", "prize fund": "prize", "premio": "prize",
+    "prize structure": "prize_structure", "estructura de premios": "prize_structure",
+    "prediction": "prediction", "answers": "answers",
+}
+# A sheet is the operator layout if it uses these human labels at all.
+_OP_MARKERS = ("promo page header", "widget header", "promo content", "prediction")
+
+
+def looks_like_operator_sheet(text: str) -> bool:
+    labels = {(r[0] or "").strip().lower() for r in _read_rows(text) if r}
+    return any(m in labels for m in _OP_MARKERS)
+
+
+def _op_date(raw: str, field: str) -> str:
+    """'15.08.2026  18:00' -> the platform's UTC string.
+
+    Chile time in, UTC out, same as every other generator here. Ops writes
+    DD.MM.YYYY; a stray double space is normal in a pasted cell.
+    """
+    txt = " ".join((raw or "").split())
+    m = re.match(r"^(\d{1,2})[./-](\d{1,2})[./-](\d{4})(?:\s+(\d{1,2}):(\d{2}))?$", txt)
+    if not m:
+        raise SheetError(
+            f"{field}: could not read {raw!r}. Expected DD.MM.YYYY HH:MM (Chile time), "
+            f"e.g. 15.08.2026 18:00")
+    d, mo, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    hh, mm = int(m.group(4) or 0), int(m.group(5) or 0)
+    return to_platform_utc(f"{y:04d}-{mo:02d}-{d:02d} {hh:02d}:{mm:02d}", field=field)
+
+
+def _slugify(name: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", (name or "").lower()).strip("-")
+    return slug or "prediction"
+
+
+def parse_operator_sheet(text: str) -> tuple[dict[str, str], list[dict[str, Any]]]:
+    rows = _read_rows(text)
+    fields: dict[str, str] = {}
+    preds: list[str] = []
+    answers: list[str] = []
+    for r in rows:
+        if not r or not (r[0] or "").strip():
+            continue
+        label = (r[0] or "").strip().lower().rstrip(":")
+        key = _OP_LABELS.get(label)
+        if key is None:
+            continue
+        value = "\n".join(c for c in r[1:] if c is not None).strip()
+        if key == "prediction":
+            preds.append(value)
+        elif key == "answers":
+            answers.append(value)
+        else:
+            fields[key] = value
+
+    missing = [lbl for lbl, k in (("Name", "name"), ("Start Date", "start"),
+                                  ("End Date", "end"), ("Promo Page Header", "promo_header"),
+                                  ("Promo Content", "promo_content"),
+                                  ("Description", "description"))
+               if not fields.get(k)]
+    if missing:
+        raise SheetError("sheet is missing row(s): " + ", ".join(missing))
+    if not preds:
+        raise SheetError("no 'Prediction' rows found — each question needs a Prediction row "
+                         "and an Answers row under it.")
+    if len(preds) != len(answers):
+        raise SheetError(
+            f"{len(preds)} Prediction row(s) but {len(answers)} Answers row(s) — each "
+            f"question needs exactly one Answers row, or the answer ranges get paired "
+            f"with the wrong questions.")
+
+    # Description carries how-to-participate AND the terms in one cell, split by
+    # a "Términos:" / "Terms:" heading. Shipping the whole blob into both slots
+    # would print the terms twice on the page.
+    desc = fields["description"]
+    m = re.split(r"\n\s*(?:t[eé]rminos|terms)\s*:?\s*\n", desc, maxsplit=1, flags=re.I)
+    how_to = m[0].strip()
+    terms = m[1].strip() if len(m) > 1 else ""
+    if not terms:
+        raise SheetError(
+            "Description has no 'Términos:' heading, so the terms cannot be told apart "
+            "from the how-to-participate text. Add a 'Términos:' line between them.")
+
+    # The widget prints a prize amount (prizeFundMoney). The captured draft's is
+    # "$20.000 Apuestas Gratis" from the Champions League promo. When the sheet
+    # does not say what the prize is, that field is BLANKED, never inherited: an
+    # empty prize line is an omission the operator sees on the page, whereas the
+    # captured one is a wrong number players would act on. An optional "Prize"
+    # row ("Prize Fund" / "Premio" also accepted) fills it.
+
+    start, end = _op_date(fields["start"], "Start Date"), _op_date(fields["end"], "End Date")
+    if start >= end:
+        raise SheetError(f"Start Date ({fields['start']}) is not before End Date ({fields['end']}).")
+
+    # es-only sheet: the same copy goes in both language slots. That is what the
+    # PMCL notification templates do too — the market is Spanish, and an empty
+    # en slot renders blank for anyone whose client asks for English.
+    def both(v: str) -> dict:
+        return {"en": v, "es": v}
+
+    top: dict[str, str] = {
+        "internalName": fields["name"],
+        "urlShortName": _slugify(fields["name"]),
+        "brand": DEFAULT_BRAND, "currency": DEFAULT_CURRENCY,
+        "languages": "en,es",
+        # The sheet gives one window. show/hide/expiration are not separate ops
+        # decisions here, so they follow it: visible from the start, hidden and
+        # closed at the end. Every one of these is printed in the run report.
+        "startDate": start, "endDate": end,
+        "showDate": start, "hideDate": end, "expirationDate": end,
+    }
+    for slot, val in (("headerTitle", fields["promo_header"]),
+                      ("promoContent", fields["promo_content"]),
+                      ("howToParticipate", how_to),
+                      ("termsText", terms),
+                      ("widgetTitle", fields["widget_header"] or fields["promo_header"]),
+                      ("widgetSubtitle", fields.get("widget_subtitle", "")),
+                      ("prizeFund", fields.get("prize", "")),
+                      ("prizeStructure", fields.get("prize_structure", ""))):
+        for lang, v in both(val).items():
+            top[f"{slot}_{lang}"] = v
+
+    questions: list[dict[str, Any]] = []
+    for i, (q_text, ans) in enumerate(zip(preds, answers), start=1):
+        values = re.findall(r"\d+", ans)
+        if not values:
+            raise SheetError(f"question {i}: Answers row {ans!r} has no numbers in it.")
+        top_val = max(int(v) for v in values)
+        if top_val not in (1, 2):
+            raise SheetError(
+                f"question {i}: Answers {ans!r} tops out at {top_val}. The captured widget "
+                f"only accepts a 0-1 or 0-2 range per question.")
+        # The prediction text already carries its own legend
+        # ("( Penarol- 1 / Colo-Colo - 2 / Sin Gol - 0)"), so it is used verbatim
+        # rather than re-synthesised — rebuilding it would double the legend.
+        questions.append({
+            "order": i, "uuid": str(uuid4()), "has_answer2": top_val == 2,
+            "question_en": q_text, "question_es": q_text,
+            "title_en": q_text, "title_es": q_text,
+            "answer0_en": "0", "answer0_es": "0",
+            "answer1_en": "1", "answer1_es": "1",
+            "answer2_en": "2" if top_val == 2 else "",
+            "answer2_es": "2" if top_val == 2 else "",
+        })
+    return top, questions
+
+
 def parse_sheet(text: str) -> tuple[dict[str, str], list[dict[str, Any]]]:
+    # Two accepted shapes: the operator sheet ops actually hands over, and the
+    # machine schema. Detected, not configured — an operator should not have to
+    # know which parser they are feeding.
+    if looks_like_operator_sheet(text):
+        return parse_operator_sheet(text)
     rows = _read_rows(text)
     top_rows, q_rows = _split_blocks(rows)
     top = _parse_top(top_rows)
@@ -278,8 +481,14 @@ def build_spa_content_data(lang: str, top: dict, questions: list[dict], template
     base = copy.deepcopy(template["spa_content"][lang])
     base["headerTitleKey"] = top[f"headerTitle_{lang}"]
     base["ModalDetailsTitleDescriptionKey"] = top[f"termsText_{lang}"]
-    base["PrizeFunText"] = top[f"prizeStructure_{lang}"]
     base["prizePoolDescriptionKey"] = top[f"howToParticipate_{lang}"]
+    # forecastBlockDescriptionKey is the marketing blurb at the top of the promo
+    # page. It had no sheet column, so every generated promo kept the CAPTURED
+    # campaign's blurb; the operator sheet's "Promo Content" row fills it.
+    if top.get(f"promoContent_{lang}"):
+        base["forecastBlockDescriptionKey"] = top[f"promoContent_{lang}"]
+    if top.get(f"prizeStructure_{lang}"):
+        base["PrizeFunText"] = top[f"prizeStructure_{lang}"]
     for q in questions:
         base[f"{q['uuid']}.forecastMultiTitleKey"] = q[f"title_{lang}"]
     return base
@@ -294,7 +503,15 @@ def build_widget_content_data(lang: str, top: dict, template: dict) -> dict:
     # widget's title (the captured template additionally bolds it with
     # <strong> for the widget vs. plain <p> for SPA -- not reproduced here
     # since the sheet doesn't carry that distinction; adjust if it matters).
-    base["titleKey"] = top[f"headerTitle_{lang}"]
+    # The widget has its own header and subtitle on the sheet — reusing the promo
+    # page header here printed the page's two-line title into a one-line widget.
+    base["titleKey"] = top.get(f"widgetTitle_{lang}") or top[f"headerTitle_{lang}"]
+    if top.get(f"widgetSubtitle_{lang}"):
+        base["prizeFundText"] = top[f"widgetSubtitle_{lang}"]
+    # Written whenever the key EXISTS, even empty — an absent Prize row has to
+    # clear the captured amount, not leave it standing.
+    if f"prizeFund_{lang}" in top:
+        base["prizeFundMoney"] = top[f"prizeFund_{lang}"] or ""
     return base
 
 
@@ -617,9 +834,14 @@ def build_js(b: PreparedBodies, cfg: Config) -> str:
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--sheet", required=True, help="path to pasted TSV/CSV, or - for stdin")
-    p.add_argument("--draft-id", default=os.getenv("DRAFT_ID", ""), help="existing draft id, e.g. 35352 (or set DRAFT_ID in .env)")
-    p.add_argument("--content-id", default=os.getenv("CONTENT_ID", ""), help="existing contentId GUID (or set CONTENT_ID in .env)")
-    p.add_argument("--front-id", default=os.getenv("FRONT_ID", ""), help="existing frontId GUID (or set FRONT_ID in .env)")
+    # Baked in, not asked for. An env var still wins if one is set, so a second
+    # draft can be driven without editing code, but the normal run needs nothing.
+    p.add_argument("--draft-id", default=os.getenv("DRAFT_ID", "") or DEFAULT_DRAFT_ID,
+                   help=f"draft id (default: the baked-in {DEFAULT_DRAFT_ID})")
+    p.add_argument("--content-id", default=os.getenv("CONTENT_ID", "") or DEFAULT_CONTENT_ID,
+                   help="contentId GUID (default: baked in, see DEFAULT_CONTENT_ID)")
+    p.add_argument("--front-id", default=os.getenv("FRONT_ID", "") or DEFAULT_FRONT_ID,
+                   help="frontId GUID (default: baked in, see DEFAULT_FRONT_ID)")
     p.add_argument("--base-body", default="", help="path to a fresh DevTools capture of the ACTUAL draft's PUT body, "
                                                     "overriding the packaged template (recommended -- see module docstring)")
     p.add_argument("--name", default="", help="output basename (default: draft-<draft-id>)")
