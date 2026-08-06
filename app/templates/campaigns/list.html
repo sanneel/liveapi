@@ -55,7 +55,7 @@
             <td><span class="cell-sport">{{ c.sport }}</span></td>
             <td>
               {% if c.mode == 'auto' %}
-                <span class="tag warn">Auto{% if c.league %} · {{ c.league }}{% endif %}</span>
+                <span class="tag warn">Auto{% if c.league_names %} · {{ c.league_label }}{% endif %}</span>
               {% else %}
                 <span class="tag club">Manual</span>
               {% endif %}

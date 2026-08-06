@@ -228,21 +228,24 @@ def _resolve_matches(session, campaign: Campaign, auto_limit: int) -> List[Match
     hide_hours = get_settings().campaign_hide_after_start_hours
 
     if campaign.mode == "auto":
-        engine = HotEngine(session, campaign.sport, league=campaign.league)
+        engine = HotEngine(session, campaign.sport, league=campaign.league_names)
         # Over-fetch then drop past-kickoff matches and trim, so a finished
         # game in the top slots is backfilled by the next fresh match rather
         # than leaving the PNG short.
         pool = engine.resolve(MAX_AUTO_LIMIT)
         fresh = [m for m in pool if not is_past_kickoff_cutoff(m, now, hide_hours)]
         candidates = fresh[:auto_limit]
-        if not candidates and campaign.league:
+        if not candidates and campaign.league_names:
             # Surface silent breakage: campaign pinned to a league the feed
-            # no longer emits (renamed/dropped) shows zero matches.
-            league_slug = slugify_league(campaign.league)
+            # no longer emits (renamed/dropped) shows zero matches. With several
+            # leagues, name every slug — one renamed tournament out of two is
+            # otherwise invisible.
+            names = campaign.league_names
+            slugs = [slugify_league(n) for n in names]
             logger.warning(
                 f"auto campaign /r/{campaign.slug}.png: 0 matches after "
-                f"league filter (sport={campaign.sport} league={campaign.league!r} "
-                f"slug={league_slug!r})"
+                f"league filter (sport={campaign.sport} leagues={names!r} "
+                f"slugs={slugs!r})"
             )
         return candidates
 

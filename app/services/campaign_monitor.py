@@ -72,7 +72,7 @@ def _health(campaign, count, age_sec, dead, reason) -> CampaignHealth:
         slug=campaign.slug,
         title=campaign.title,
         sport=campaign.sport,
-        league=campaign.league,
+        league=campaign.league_label,
         mode=campaign.mode,
         match_count=count,
         age_sec=age_sec,
@@ -135,8 +135,9 @@ def _freshness(session, campaign, now_dt: datetime, settings) -> CampaignHealth:
     base = session.query(Match).filter(
         Match.is_active.is_(True), Match.sport == campaign.sport
     )
-    if campaign.league:
-        base = base.filter(Match.tournament_name == campaign.league)
+    names = campaign.league_names
+    if names:
+        base = base.filter(Match.tournament_name.in_(names))
     last, count = base.with_entities(
         func.max(Match.last_updated_at), func.count(Match.event_id)
     ).one()

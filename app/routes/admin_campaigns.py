@@ -79,11 +79,20 @@ def _validate_slug(slug: str) -> str:
     return slug
 
 
-def _normalise_league(league: Optional[str]) -> Optional[str]:
+def _normalise_league(league) -> Optional[str]:
+    """The `league` column value for one or more chosen tournaments.
+
+    The form repeats the field once per league, so this takes a list as well as
+    a single string. Blanks are dropped (the last row of the picker is empty by
+    design) and duplicates collapsed — the same league twice would double its
+    weight in the pool for no reason the operator asked for.
+    """
+    from ..models.campaign import format_leagues
     if league is None:
         return None
-    league = league.strip()
-    return league or None
+    if isinstance(league, (list, tuple)):
+        return format_leagues([str(x) for x in league])
+    return format_leagues([str(league)])
 
 
 def _validate_sport(sport: str) -> str:
@@ -160,7 +169,7 @@ def campaigns_create(
     title: str = Form(...),
     sport: str = Form(...),
     mode: str = Form(...),
-    league: Optional[str] = Form(None),
+    league: Optional[List[str]] = Form(None),
     vip: Optional[str] = Form(None),
     user: User = Depends(require_role("editor")),
 ) -> RedirectResponse:
@@ -281,7 +290,7 @@ def campaigns_update(
     slug: str,
     title: str = Form(...),
     sport: str = Form(...),
-    league: Optional[str] = Form(None),
+    league: Optional[List[str]] = Form(None),
     limit: Optional[int] = Form(None),
     enabled: Optional[str] = Form(None),
     vip: Optional[str] = Form(None),
@@ -430,17 +439,19 @@ def api_preview(
                 if m.is_active and not is_past_kickoff_cutoff(m, now, hide_hours)
             ]
         else:
-            engine = HotEngine(session, c.sport, league=c.league)
+            engine = HotEngine(session, c.sport, league=c.league_names)
             pool = engine.resolve(20)
             matches = [m for m in pool if not is_past_kickoff_cutoff(m, now, hide_hours)][:n]
             if not matches:
-                if c.league:
+                if c.league_names:
                     active_sport_matches = MatchRepository(session).find_active_by_sport(c.sport)
                     if active_sport_matches:
+                        picked = ", ".join(f'"{n}"' for n in c.league_names)
                         warning = (
-                            f"League filter \"{c.league}\" matched 0 of {len(active_sport_matches)} "
+                            f"League filter {picked} matched 0 of {len(active_sport_matches)} "
                             f"candidate {c.sport} matches. The PNG will render empty "
-                            f"until the parser sees a match in this league."
+                            f"until the parser sees a match in "
+                            f"{'one of these leagues' if len(c.league_names) > 1 else 'this league'}."
                         )
                     else:
                         warning = f"No active {c.sport} matches in the DB right now."

@@ -40,10 +40,21 @@ CANDIDATE_HEADROOM = 40
 
 
 class HotEngine:
-    def __init__(self, session: Session, sport: str, league: Optional[str] = None) -> None:
+    def __init__(self, session: Session, sport: str,
+                 league: Optional[str] | list | tuple = None) -> None:
         self.session = session
         self.sport = (sport or "").strip().lower() or "football"
-        self.league = league
+        # A campaign may name several leagues. Accept one name, a list of them,
+        # or the raw column value, so every existing caller keeps working.
+        if league is None:
+            self.leagues: list[str] = []
+        elif isinstance(league, (list, tuple)):
+            self.leagues = [str(x).strip() for x in league if str(x).strip()]
+        else:
+            from ..models.campaign import parse_leagues
+            self.leagues = parse_leagues(str(league))
+        # Kept for callers and logs that read a single name.
+        self.league = self.leagues[0] if len(self.leagues) == 1 else None
         self.match_repo = MatchRepository(session)
         self.boost_repo = HotBoostRepository(session)
 
@@ -60,10 +71,10 @@ class HotEngine:
         for s in sports_in_scope:
             all_matches.extend(self.match_repo.find_active_by_sport(s))
 
-        if self.league:
+        if self.leagues:
             from ..utils.slugify import slugify_league
-            league_slug = slugify_league(self.league)
-            all_matches = [m for m in all_matches if m.tournament_slug == league_slug]
+            wanted = {slugify_league(name) for name in self.leagues}
+            all_matches = [m for m in all_matches if m.tournament_slug in wanted]
 
         return all_matches
 
@@ -92,15 +103,17 @@ class HotEngine:
             events.append(d)
 
         tz = get_settings().forced_timezone
-        # When a league filter is active, candidates already belong to one
-        # tournament — tell the scorer to skip its cross-tournament
-        # diversity caps so `?limit=N` actually returns N matches.
+        # When a league filter is active the caller has already chosen which
+        # tournaments are in scope — tell the scorer to skip its cross-tournament
+        # diversity caps so `?limit=N` actually returns N matches. That holds for
+        # two named leagues as much as for one: the cap (2-3 per tournament)
+        # would silently return 4-6 for a campaign asking for 10.
         scored = run_scoring(
             events,
             self.sport,
             limit + CANDIDATE_HEADROOM,
             tz,
-            single_league=bool(self.league),
+            single_league=bool(self.leagues),
         )
         auto_ordered = [
             by_id[e["event_id"]]

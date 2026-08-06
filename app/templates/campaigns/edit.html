@@ -82,12 +82,36 @@
 
         {% if campaign.mode == 'auto' %}
           <div class="field">
-            <span class="lbl">League / Tournament</span>
-            <input class="input" name="league" list="league-options" autocomplete="off" value="{{ campaign.league or '' }}" placeholder="All leagues in sport, type to search…"/>
+            <span class="lbl">Leagues / Tournaments</span>
+            <div id="league-rows" style="display:flex; flex-direction:column; gap:8px">
+              {% for name in campaign.league_names %}
+                <input class="input" name="league" list="league-options" autocomplete="off" value="{{ name }}" placeholder="All leagues in sport, type to search…"/>
+              {% endfor %}
+              <input class="input" name="league" list="league-options" autocomplete="off" value="" placeholder="{% if campaign.league_names %}Add another league…{% else %}All leagues in sport, type to search…{% endif %}"/>
+            </div>
             <datalist id="league-options">
               {% for t in tournaments %}<option value="{{ t }}"></option>{% endfor %}
             </datalist>
+            <button type="button" id="league-add" class="btn" style="margin-top:8px; align-self:flex-start">+ Add another league</button>
+            <span class="help" style="color:var(--t-faint)">Leave every box empty for all leagues in the sport. Two or more pools their matches into one campaign — the hottest across them, up to the limit.</span>
           </div>
+          <script>
+            (function () {
+              // Each box posts as another `league` value; blanks are dropped
+              // server-side, so the trailing empty row is harmless.
+              var rows = document.getElementById('league-rows');
+              var add = document.getElementById('league-add');
+              if (!rows || !add) return;
+              add.addEventListener('click', function () {
+                var last = rows.querySelector('input[name="league"]:last-of-type');
+                var box = last ? last.cloneNode(false) : document.createElement('input');
+                box.value = '';
+                box.placeholder = 'Add another league…';
+                rows.appendChild(box);
+                box.focus();
+              });
+            })();
+          </script>
 
           <div class="field">
             <span class="lbl">Default limit</span>
@@ -136,7 +160,7 @@
       <div class="alert warn" style="align-items:flex-start; display:block">
         <b>Auto campaign.</b>
         Renders the hottest {{ campaign.sport }} matches
-        {% if campaign.league %}from <span class="mono">{{ campaign.league }}</span>{% else %}across all leagues in the sport{% endif %}.
+        {% if campaign.league_names %}from <span class="mono">{{ campaign.league_label }}</span>{% else %}across all leagues in the sport{% endif %}.
         Add <span class="mono">?limit=N</span> to the URL to control how many appear (default 5, max 20). Match ordering comes from the
         <a href="/admin/hot" class="link" style="color:inherit; text-decoration:underline">hot dashboard</a>.
       </div>
@@ -169,8 +193,8 @@
             </li>
           </template>
           <li x-show="!loading && matches.length === 0" class="empty">
-            <template x-if="'{{ campaign.league }}'"><span>No matches in <span class="mono">{{ campaign.league }}</span> right now. The campaign will render an empty PNG until the parser sees one.</span></template>
-            <template x-if="!'{{ campaign.league }}'"><span>No active {{ campaign.sport }} matches in the DB. Wait for the parser.</span></template>
+            <template x-if="'{{ campaign.league_label }}'"><span>No matches in <span class="mono">{{ campaign.league_label }}</span> right now. The campaign will render an empty PNG until the parser sees one.</span></template>
+            <template x-if="!'{{ campaign.league_label }}'"><span>No active {{ campaign.sport }} matches in the DB. Wait for the parser.</span></template>
           </li>
         </ul>
       </section>
