@@ -178,6 +178,19 @@ async def _global_exception_handler(request: _FRequest, exc: Exception):
     return _FJSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 # ─── Mount the new admin (Phase 2+) ───────────────────────────────────
+# Onboarding SPA (React/Vite) — must be mounted BEFORE any router includes.
+# The catch-all /{rest:path} in a router would win over a later Mount for
+# /admin/onboarding/assets/* requests; mounting first avoids that race.
+# html=True serves index.html for directory requests and unknown sub-paths (SPA mode).
+from pathlib import Path as _PPath
+_ONBOARDING_DIST = _PPath(__file__).resolve().parent / "onboarding" / "dist"
+if _ONBOARDING_DIST.exists():
+    app.mount(
+        "/admin/onboarding",
+        StaticFiles(directory=str(_ONBOARDING_DIST), html=True),
+        name="onboarding-spa",
+    )
+
 # Order matters: include these BEFORE legacy /admin so they take precedence.
 # Auth routes (login/logout/2fa) MUST be registered before admin_views_router
 # so /admin/login isn't caught by the protected admin layer.
@@ -206,6 +219,7 @@ from pathlib import Path as _P
 _STATIC_DIR = _P(__file__).resolve().parent / "app" / "static"
 if _STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
+
 
 
 @app.get("/robots.txt", include_in_schema=False)

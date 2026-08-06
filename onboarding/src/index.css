@@ -1,0 +1,122 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background-color: theme('colors.canvas');
+    color: theme('colors.ink.DEFAULT');
+    font-family: theme('fontFamily.sans');
+    font-size: 18px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    outline: 3px solid theme('colors.accent.DEFAULT');
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: theme('colors.accent.weak');
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #D0D4CC;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #B8BDB4;
+  }
+}
+
+@layer components {
+  /* The tiny uppercase mono label. */
+  .mono-label {
+    @apply font-mono text-label uppercase tracking-[0.09em] text-muted;
+  }
+
+  .headline {
+    @apply font-display font-extrabold text-headline text-ink leading-none;
+    letter-spacing: -0.025em;
+  }
+
+  /* Primary CTA — sits on canvas, so it gets a very slight shadow for lift. */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2
+           rounded-control bg-accent text-white font-semibold
+           px-7 py-4 text-[17px]
+           shadow-[0_1px_3px_rgba(0,0,0,.12),0_4px_12px_-4px_rgba(14,122,90,.35)]
+           transition-all duration-150;
+  }
+  .btn-primary:hover:not(:disabled) {
+    @apply bg-[#0a6649];
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0,0,0,.12), 0 8px 20px -4px rgba(14,122,90,.40);
+  }
+  .btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  .btn-primary:disabled {
+    @apply cursor-default opacity-30;
+  }
+
+  /* White card surface. */
+  .surface-card {
+    @apply rounded-card bg-surface shadow-soft;
+  }
+
+  /* ── Content blocks inside lessons ──────────────────────────────────────── */
+
+  /* Paragraph body text */
+  .lesson-prose {
+    @apply text-body text-ink leading-[1.7];
+    /* Slightly more line-height than default for long-read comfort */
+  }
+  .lesson-prose strong {
+    @apply font-semibold text-ink;
+  }
+  .lesson-prose em {
+    font-style: italic;
+    color: theme('colors.ink.DEFAULT');
+  }
+}
+
+/* ── Step transitions ─────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-step-in,
+  .animate-step-out {
+    animation-duration: 160ms;
+  }
+  .animate-step-in  { animation-name: reducedIn; }
+  .animate-step-out { animation-name: reducedOut; }
+  .animate-shake    { animation: none; }
+  .btn-primary:hover:not(:disabled) { transform: none; }
+}
+
+@keyframes reducedIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes reducedOut { from { opacity: 1; } to { opacity: 0; } }
