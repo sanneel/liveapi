@@ -537,21 +537,23 @@ the Game of the Week SMS, email and promo link.
 splits and waits, paste the sheet, get the script. **No model is involved**,
 which is the point: a comms chain is not something worth inferring.
 
-`--variant` starts from a shape that used to be a script of its own. A variant is
-only defaults — anything on the command line still wins — so four near-identical
-generators became four rows of data, not four code paths:
+`--variant gow` starts from the GOW comms shape (NC → wait → pop-up → wait → SMS).
+A variant is only defaults — anything on the command line still wins.
 
-| `--variant` | chain | replaces |
+**There is one variant, on purpose.** There were four; the other three were thin
+copies of shapes that each have a tab of their own, and the thin copy was the one
+on the shorter path:
+
+| shape | build it here instead | why that one is better |
 | --- | --- | --- |
-| `tournament` | NC → wait → split → pop-up → wait → split → email → wait → split → SMS | hand-written specs |
-| `gow` | NC → pop-up → SMS | `comms_campaign.py` (standalone use) |
-| `scratch_card` | NC → pop-up → email | `sport_comms_campaign.py` |
-| `nc_only` | NC | `nc_discount_campaign.py` |
+| Tournament | PMCL / JBCL Tournament tabs | `wait_date` gates, the notification revoke period, the brand's own capture |
+| Scratch card | Scratch Card Comms tab | fetches the liveapi campaign card for the email hero |
+| Discount NC | Discount NC tab | owns the baked twice-weekly calendar |
 
-The superseded generators still exist and still work — the GOW tab calls
-`comms_campaign.py`, and `nc_discount_campaign.py` owns the baked calendar. They
-are marked `superseded_by` in the registry so the Optimization list says which to
-reach for. Reach for the builder for anything new.
+GOW is the shape with no tab of its own — the GOW tab builds it only as part of a
+full campaign — so this is how you build the comms half alone. Any other chain is
+still buildable here by ticking channels directly; a variant is a shortcut, not a
+gate.
 
 **PMCL comms is deliberately not here.** `journey_composer`'s node library is
 entirely JBCL-captured (`SOURCES` is `gow`, `gow_comms` and the two `udch`

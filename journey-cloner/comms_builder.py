@@ -47,51 +47,30 @@ CHANNELS = ("nc", "popup", "email", "sms")
 CHANNEL_LABELS = {"nc": "Notification (bell)", "popup": "Pop-up (Cat-fish)",
                   "email": "Email", "sms": "SMS"}
 
-# The comms shapes that used to be a script each. A variant is only defaults —
-# anything given on the command line still wins — so this replaces four
-# near-identical generators with four rows of data rather than four code paths.
-#
-# All of these are JBCL. The PMCL comms shapes (tournament_pmcl_campaign.py,
-# nc_discount_pmcl_campaign.py) are deliberately absent: journey_composer's whole
-# node library is JBCL-captured, so a PMCL run here would build PMCL copy into
-# JBCL nodes. That is the brand swap the email guard already refuses, and mixing
-# a second brand's capture into the node library is the blank-canvas risk
-# COMPOSER_RULES.md is about. Those two stay separate until a PMCL capture is
-# added to SOURCES deliberately.
+# A variant is only defaults — anything given on the command line still wins.
 VARIANTS = {
-    "tournament": {
-        "what": "NC -> pop-up -> email -> SMS for a tournament (the Olimpo shape)",
-        "channels": ["nc", "popup", "email", "sms"],
-        "splits": ["nc", "popup", "email"],
-        "waits": {"nc": "2h", "popup": "1d", "email": "1d"},
-        "replaces": "hand-written specs",
-    },
-    # These two carry waits between their sends, and must: a delivered message is
-    # never followed straight by another send — 0 occurrences across 18 captures,
-    # and verify() refuses it. The captured GOW comms fires its channels from a
-    # parallel container rather than a linear chain, which is why the old
-    # generators look like they chain sends and do not. A linear version needs the
-    # waits; 2h is a placeholder cadence, so set --wait if the brief says otherwise.
+    # Only GOW. The other three shapes each have a tab of their own that builds
+    # them better — Tournament via tournament_comms_base (wait_date gates, the
+    # revoke period, the brand's own capture), Scratch card via
+    # sport_comms_campaign (it fetches the liveapi campaign card), Discount NC via
+    # its baked calendar. Offering thinner copies of them here was two ways to
+    # build one thing, and the thinner way was the one on the shorter path.
+    #
+    # GOW is the shape with no tab of its own: the GOW tab builds it only as part
+    # of a full campaign, so this is how you build the comms half alone.
+    #
+    # There is no PMCL variant and cannot be one: journey_composer's node library
+    # is entirely JBCL-captured, so a PMCL run here would put PMCL copy in JBCL
+    # nodes — the brand swap the email guard already refuses.
     "gow": {
         "what": "Game of the Week comms: NC -> pop-up -> SMS, copy from the GOW sheet",
         "channels": ["nc", "popup", "sms"],
         "splits": [],
+        # A delivered message never leads straight into another send (0 in 18
+        # captures) and verify() refuses it, so the sends are spaced. 2h is a
+        # placeholder cadence — pass --wait if the brief says otherwise.
         "waits": {"nc": "2h", "popup": "2h"},
         "replaces": "comms_campaign.py (the comms half of the GOW tab)",
-    },
-    "scratch_card": {
-        "what": "Scratch-card comms: NC -> pop-up -> email, link is the randomizer page",
-        "channels": ["nc", "popup", "email"],
-        "splits": [],
-        "waits": {"nc": "2h", "popup": "2h"},
-        "replaces": "sport_comms_campaign.py",
-    },
-    "nc_only": {
-        "what": "One notification per day, nothing else (the Discount NC shape)",
-        "channels": ["nc"],
-        "splits": [],
-        "waits": {},
-        "replaces": "nc_discount_campaign.py",
     },
 }
 # Which composer node an engagement split after each channel maps to. SMS has no

@@ -7,40 +7,20 @@
 {% block content %}
 
 <div class="tabs" id="promo-tabs" data-active="{{ active_tab or 'overview' }}">
-  <div class="tab-group">
-    <span class="tab-group-label">Plan</span>
-    <div class="tab-group-btns">
-      <button type="button" class="tab" data-tab="overview">Overview</button>
-    </div>
-  </div>
-  <div class="tab-group">
-    <span class="tab-group-label">Generate</span>
-    <div class="tab-group-btns">
-      <button type="button" class="tab" data-tab="gow">GOW</button>
-      <button type="button" class="tab" data-tab="tournament_pmcl">PMCL Tournament</button>
-      <button type="button" class="tab" data-tab="tournament_jbcl">JBCL Tournament</button>
-      <button type="button" class="tab" data-tab="bet_and_get">PMCL Bet &amp; Get</button>
-      <button type="button" class="tab" data-tab="journey_cloner">Promo Codes</button>
-      <button type="button" class="tab" data-tab="welcome_pack">Welcome Pack</button>
-      <button type="button" class="tab" data-tab="prediction">Prediction</button>
-      <button type="button" class="tab" data-tab="comms_builder">Comms builder</button>
-      <button type="button" class="tab" data-tab="sport_comms">Scratch Card Comms</button>
-      <button type="button" class="tab" data-tab="randomizers">Randomizers</button>
-      <button type="button" class="tab" data-tab="nc_discount">Discount NC</button>
-    </div>
-  </div>
-  <div class="tab-group">
-    <span class="tab-group-label">Assets</span>
-    <div class="tab-group-btns">
-      <button type="button" class="tab" data-tab="slot_cards">Slot Cards</button>
-    </div>
-  </div>
-  <div class="tab-group tab-group-end">
-    <span class="tab-group-label">&nbsp;</span>
-    <div class="tab-group-btns">
-      <button type="button" class="tab" data-tab="scripts">All scripts</button>
-    </div>
-  </div>
+  <button type="button" class="tab" data-tab="overview">Overview</button>
+  <button type="button" class="tab" data-tab="gow">GOW</button>
+  <button type="button" class="tab" data-tab="tournament_pmcl">PMCL Tournament</button>
+  <button type="button" class="tab" data-tab="tournament_jbcl">JBCL Tournament</button>
+  <button type="button" class="tab" data-tab="bet_and_get">PMCL Bet &amp; Get</button>
+  <button type="button" class="tab" data-tab="journey_cloner">Promo Codes</button>
+  <button type="button" class="tab" data-tab="welcome_pack">Welcome Pack</button>
+  <button type="button" class="tab" data-tab="prediction">Prediction</button>
+  <button type="button" class="tab" data-tab="comms_builder">Comms builder</button>
+  <button type="button" class="tab" data-tab="sport_comms">Scratch Card Comms</button>
+  <button type="button" class="tab" data-tab="randomizers">Randomizers</button>
+  <button type="button" class="tab" data-tab="nc_discount">Discount NC</button>
+  <button type="button" class="tab" data-tab="slot_cards">Slot Cards</button>
+  <button type="button" class="tab tab-end" data-tab="scripts">All scripts</button>
 </div>
 
 {# ── OVERVIEW: what this page can build, then the automation graph ───── #}
@@ -790,26 +770,25 @@
   .gen-brand { font-size:10px; font-weight:800; padding:3px 7px; border-radius:6px;
                background:var(--neu-bg,#f1f2f5); color:var(--neu-t,#6b7280); white-space:nowrap; }
   .gen-cli { font-size:10.5px; color:var(--t-faint,#98a1b3); white-space:nowrap; }
-  /* align-items:flex-start, not flex-end: the Generate group wraps to two rows
-     now that it holds eleven tabs, and bottom-aligning made the shorter groups
-     (Assets, All scripts) hang off its last row with their labels stranded. */
-  .tabs { display:flex; align-items:flex-start; gap:0; row-gap:8px; border-bottom:2px solid var(--border-in,#e6e6ee); margin-bottom:18px; flex-wrap:wrap; }
-  .tab-group { display:flex; flex-direction:column; gap:5px; padding:0 14px; position:relative; }
-  .tab-group + .tab-group::before { content:""; position:absolute; left:0; top:6px; bottom:8px; width:1px; background:var(--border-in,#e6e6ee); }
-  .tab-group:first-child { padding-left:0; }
-  .tab-group-end { margin-left:auto; }
-  .tab-group-end::before { display:none; }
-  .tab-group-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--t-faint,#98a1b3); padding-left:14px; }
-  .tab-group-btns { display:flex; gap:2px; row-gap:4px; flex-wrap:wrap; }
+  /* One flat row: every tab is a sibling, so Overview lines up with the rest
+     instead of sitting in its own labelled column above them. The PLAN /
+     GENERATE / ASSETS group labels are gone with it — they cost a line of
+     height and pushed the shorter groups out of alignment once Generate grew
+     past one row. */
+  .tabs { display:flex; align-items:stretch; gap:2px; row-gap:4px; border-bottom:2px solid var(--border-in,#e6e6ee); margin-bottom:18px; flex-wrap:wrap; }
   .tabs .tab { background:none; border:none; padding:9px 14px; font-size:14px; font-weight:600; color:var(--t-faint,#889); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; border-radius:6px 6px 0 0; white-space:nowrap; transition:color .12s ease, background-color .12s ease; }
+  /* The accent tint marks the SELECTED tab. Hover is a neutral wash — when hover
+     carried the tint, whatever the cursor sat on looked as chosen as the real
+     one, and louder. */
   .tabs .tab:hover { color:var(--t-strong,#15171d); background:rgba(120,130,150,.10); }
   .tabs .tab.active { color:var(--ac,#F0613C); font-weight:700; border-bottom-color:var(--ac,#F0613C); background:var(--acw,rgba(240,97,60,.10)); }
   .tabs .tab.active:hover { background:var(--acw,rgba(240,97,60,.10)); }
   .tabs .tab:focus-visible { outline:2px solid var(--ac,#F0613C); outline-offset:-2px; }
+  /* All scripts is a utility, not a generator — keep it off to the right. */
+  .tabs .tab-end { margin-left:auto; }
   @media(max-width:900px){
-    .tab-group { padding:0 8px; }
-    .tab-group + .tab-group::before { display:none; }
-    .tab-group-end { margin-left:0; }
+    .tabs .tab { padding:9px 10px; font-size:13px; }
+    .tabs .tab-end { margin-left:0; }
   }
   .chip { display:inline-block; padding:2px 8px; border:1px solid var(--border,#ECEDF1); border-radius:999px; font-size:11px; color:var(--neu-t,#5B6472); background:var(--neu-bg,#EEF1F6); }
   .badge { display:inline-block; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:600; background:var(--neu-bg,#EEF1F6); color:var(--neu-t,#5B6472); }

@@ -17,12 +17,9 @@
       <span class="lbl">Start from a known shape <span style="color:var(--t-faint)">(optional)</span></span>
       <select class="input" name="variant">
         <option value="">— none, use my picks below —</option>
-        <option value="tournament" {% if comms.form.variant == 'tournament' %}selected{% endif %}>Tournament — NC → pop-up → email → SMS, splits + waits</option>
         <option value="gow" {% if comms.form.variant == 'gow' %}selected{% endif %}>GOW — NC → pop-up → SMS</option>
-        <option value="scratch_card" {% if comms.form.variant == 'scratch_card' %}selected{% endif %}>Scratch card — NC → pop-up → email</option>
-        <option value="nc_only" {% if comms.form.variant == 'nc_only' %}selected{% endif %}>Notification only</option>
       </select>
-      <p class="help" style="margin-top:6px">Only fills what you leave alone — your ticks below always win.</p>
+      <p class="help" style="margin-top:6px">Only fills what you leave alone — your ticks below always win. GOW is the one shape without a tab of its own; tournaments, scratch cards and Discount NC have their own tabs, which build them more completely.</p>
     </div>
 
     <div class="field">

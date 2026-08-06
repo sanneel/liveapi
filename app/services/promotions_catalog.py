@@ -154,8 +154,8 @@ GENERATORS: List[dict] = [
     {"key": "comms_builder", "group": "Comms", "brand": "JBCL",
      "label": "Comms builder",
      "what": "THE JBCL comms entry point: pick channels/splits/waits, paste the sheet. "
-             "--variant gow / scratch_card / nc_only / tournament covers the shapes that "
-             "used to be a script each. No model involved",
+             "--variant gow for the GOW comms shape; the other shapes have tabs of "
+             "their own. No model involved",
      "script": "comms_builder.py", "tab": "comms_builder"},
     {"key": "nc_discount", "group": "Casino", "brand": "JBCL",
      "label": "Discount NC",

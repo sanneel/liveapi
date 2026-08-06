@@ -246,7 +246,13 @@ check("the ES side survives it too",
       f"{cl.nc.title_es!r}/{cl.nc.desc_es!r}")
 check("the caption is untouched", cl.nc.caption_en == "PLAY NOW", repr(cl.nc.caption_en))
 
-print("\nthe variants are the shapes that used to be a script each")
+print("\nthe one variant is the shape with no tab of its own")
+check("gow is the only variant", sorted(CB.VARIANTS) == ["gow"], str(sorted(CB.VARIANTS)))
+check("the shapes that have their own tab are not offered here",
+      not ({"tournament", "scratch_card", "nc_only"} & set(CB.VARIANTS)),
+      "a thin copy of a shape with a better tab is the one on the shorter path")
+check("a removed variant is refused, not silently ignored",
+      "tournament" not in CB.VARIANTS)
 check("every variant declares what it replaces",
       all(v.get("replaces") and v.get("what") for v in CB.VARIANTS.values()),
       str(sorted(CB.VARIANTS)))
