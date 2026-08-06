@@ -790,17 +790,22 @@
   .gen-brand { font-size:10px; font-weight:800; padding:3px 7px; border-radius:6px;
                background:var(--neu-bg,#f1f2f5); color:var(--neu-t,#6b7280); white-space:nowrap; }
   .gen-cli { font-size:10.5px; color:var(--t-faint,#98a1b3); white-space:nowrap; }
-  .tabs { display:flex; align-items:flex-end; gap:0; border-bottom:2px solid var(--border-in,#e6e6ee); margin-bottom:18px; flex-wrap:wrap; }
+  /* align-items:flex-start, not flex-end: the Generate group wraps to two rows
+     now that it holds eleven tabs, and bottom-aligning made the shorter groups
+     (Assets, All scripts) hang off its last row with their labels stranded. */
+  .tabs { display:flex; align-items:flex-start; gap:0; row-gap:8px; border-bottom:2px solid var(--border-in,#e6e6ee); margin-bottom:18px; flex-wrap:wrap; }
   .tab-group { display:flex; flex-direction:column; gap:5px; padding:0 14px; position:relative; }
   .tab-group + .tab-group::before { content:""; position:absolute; left:0; top:6px; bottom:8px; width:1px; background:var(--border-in,#e6e6ee); }
   .tab-group:first-child { padding-left:0; }
   .tab-group-end { margin-left:auto; }
   .tab-group-end::before { display:none; }
   .tab-group-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--t-faint,#98a1b3); padding-left:14px; }
-  .tab-group-btns { display:flex; gap:2px; flex-wrap:wrap; }
+  .tab-group-btns { display:flex; gap:2px; row-gap:4px; flex-wrap:wrap; }
   .tabs .tab { background:none; border:none; padding:9px 14px; font-size:14px; font-weight:600; color:var(--t-faint,#889); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; border-radius:6px 6px 0 0; white-space:nowrap; transition:color .12s ease, background-color .12s ease; }
-  .tabs .tab:hover { color:var(--t-strong,#15171d); background:var(--acw,rgba(240,97,60,.10)); }
-  .tabs .tab.active { color:var(--ac,#F0613C); font-weight:700; border-bottom-color:var(--ac,#F0613C); }
+  .tabs .tab:hover { color:var(--t-strong,#15171d); background:rgba(120,130,150,.10); }
+  .tabs .tab.active { color:var(--ac,#F0613C); font-weight:700; border-bottom-color:var(--ac,#F0613C); background:var(--acw,rgba(240,97,60,.10)); }
+  .tabs .tab.active:hover { background:var(--acw,rgba(240,97,60,.10)); }
+  .tabs .tab:focus-visible { outline:2px solid var(--ac,#F0613C); outline-offset:-2px; }
   @media(max-width:900px){
     .tab-group { padding:0 8px; }
     .tab-group + .tab-group::before { display:none; }
