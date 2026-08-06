@@ -720,7 +720,7 @@ def _nc_ns(*, error="", result=None, console_script=None,
 
 def _wp_ns(*, form=None, error="", result=None, console_script=None) -> dict:
     return {
-        "form": form or {"code": "", "brand": "both", "mode": "both"},
+        "form": form or {"code": "", "brand": "", "mode": ""},
         "error": error, "result": result, "console_script": console_script,
     }
 
@@ -1046,8 +1046,8 @@ def promotions_nc_discount_pmcl_brief(
 def promotions_welcome_pack(
     request: Request,
     code: str = Form(""),
-    brand: str = Form("both"),
-    mode: str = Form("both"),
+    brand: str = Form(""),
+    mode: str = Form(""),
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
     """Generate the "Welcome Pack - 1st Deposit / Aff" console script: one
@@ -1063,10 +1063,12 @@ def promotions_welcome_pack(
             user=user, active_tab="welcome_pack",
             wp=_wp_ns(form=form, error="Promo code is required."),
         ))
-    if brand not in ("both", "jbcl", "pmcl") or mode not in ("both", "normal", "boosted"):
+    if brand not in ("jbcl", "pmcl") or mode not in ("normal", "boosted"):
         return templates.TemplateResponse(request, "promotions.html", _promotions_context(
             user=user, active_tab="welcome_pack",
-            wp=_wp_ns(form=form, error="Unknown brand or mode."),
+            wp=_wp_ns(form=form, error="Pick a brand and a mode — one run builds one "
+                                       "draft, and a defaulted brand is how the wrong "
+                                       "brand's draft gets created."),
         ))
 
     try:

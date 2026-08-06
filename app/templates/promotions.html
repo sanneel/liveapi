@@ -499,21 +499,21 @@
 
         <div>
           <label class="lbl" for="wp-brand">Brand</label>
-          <select id="wp-brand" name="brand" class="input" style="margin-top:4px">
-            <option value="both" {% if wp.form.brand == 'both' %}selected{% endif %}>Both — JBCL and FTCL</option>
-            <option value="jbcl" {% if wp.form.brand == 'jbcl' %}selected{% endif %}>JBCL only</option>
-            <option value="pmcl" {% if wp.form.brand == 'pmcl' %}selected{% endif %}>FTCL (PMCL) only</option>
+          <select id="wp-brand" name="brand" class="input" required style="margin-top:4px">
+            <option value="" {% if not wp.form.brand %}selected{% endif %}>— pick a brand —</option>
+            <option value="jbcl" {% if wp.form.brand == 'jbcl' %}selected{% endif %}>JBCL (JugaBet)</option>
+            <option value="pmcl" {% if wp.form.brand == 'pmcl' %}selected{% endif %}>FTCL (Fortunazo / PMCL)</option>
           </select>
         </div>
 
         <div>
           <label class="lbl" for="wp-mode">Mode</label>
-          <select id="wp-mode" name="mode" class="input" style="margin-top:4px">
-            <option value="both" {% if wp.form.mode == 'both' %}selected{% endif %}>Both — normal and boosted</option>
-            <option value="normal" {% if wp.form.mode == 'normal' %}selected{% endif %}>Normal only</option>
-            <option value="boosted" {% if wp.form.mode == 'boosted' %}selected{% endif %}>Boosted only — adds the extra Sport FreeBet</option>
+          <select id="wp-mode" name="mode" class="input" required style="margin-top:4px">
+            <option value="" {% if not wp.form.mode %}selected{% endif %}>— pick a mode —</option>
+            <option value="normal" {% if wp.form.mode == 'normal' %}selected{% endif %}>Normal</option>
+            <option value="boosted" {% if wp.form.mode == 'boosted' %}selected{% endif %}>Boosted — adds the extra Sport FreeBet</option>
           </select>
-          <p class="help" style="margin-top:4px">Boosted is the same journey plus the extra freebet after the deposit detector — 1.000 CLP on FTCL, 1.500 CLP on JBCL.</p>
+          <p class="help" style="margin-top:4px">Boosted is the same journey plus the extra freebet after the deposit detector — 1.000 CLP on FTCL, 1.500 CLP on JBCL. <b>One run builds one draft</b>: each inherits its own source's promotion, so pick the one you are actually publishing.</p>
         </div>
 
         <button class="btn primary" style="justify-content:center">Generate console script</button>

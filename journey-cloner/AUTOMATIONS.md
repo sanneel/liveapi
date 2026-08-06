@@ -125,17 +125,23 @@ date, Chile kick-off time and promocode. Per-team templates under
 inherits the base team's.
 
 ### Welcome Pack promo codes — `welcome_pack_campaign.py` → Optimization ▸ Welcome Pack
-One affiliate promocode → up to four drafts in one paste: JBCL and PMCL (FTCL),
-each in **normal** and **boosted** form. "Boosted" is the same journey plus the
-extra Sport FreeBet promotion hanging off the deposit detector — 1.000 CLP on
-PMCL, 1.500 CLP on JBCL.
+One affiliate promocode → **one draft**: a brand (JBCL or PMCL/FTCL) and a mode
+(normal or boosted). "Boosted" is the same journey plus the extra Sport FreeBet
+promotion hanging off the deposit detector — 1.000 CLP on PMCL, 1.500 CLP on JBCL.
+Four source drafts, so four possible runs: JBCL 657229/657230, FTCL 657226/657225.
+
+There is no "both". It existed and was removed: a four-draft paste left four
+separate inherited promotions to re-point before publishing, and a defaulted brand
+is how a Fortunazo operator ends up holding a JugaBet draft. Brand and mode are
+required, in the tab and on the command line — for four drafts, run it four times
+and publish each deliberately.
 
 The tab is a promo-code box plus two dropdowns (brand, mode); the same thing from
 a shell:
 
 ```bash
-.venv/bin/python journey-cloner/welcome_pack_campaign.py --code JUGAWELCOME
-.venv/bin/python journey-cloner/welcome_pack_campaign.py --code TIPSTERX,JUGATW --brand jbcl
+.venv/bin/python journey-cloner/welcome_pack_campaign.py --code JUGAWELCOME --brand jbcl --mode boosted
+.venv/bin/python journey-cloner/welcome_pack_campaign.py --code TIPSTERX,JUGATW --brand pmcl --mode normal
 ```
 
 Two things make this one different from its neighbours.

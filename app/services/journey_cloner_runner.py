@@ -797,10 +797,15 @@ def generate_nc_discount_console_script() -> Tuple[int, str, str, str | None, st
 
 
 def generate_welcome_pack_console_script(
-    *, code: str, brand: str = "both", mode: str = "both"
+    *, code: str, brand: str, mode: str
 ) -> Tuple[int, str, str, str | None, str]:
     """Generate the "Welcome Pack - 1st Deposit / Aff" console script: one
-    promocode -> up to four drafts (JBCL/PMCL x normal/boosted).
+    promocode, one brand, one mode -> one draft.
+
+    brand and mode have no default on purpose. They used to accept "both", which
+    built up to four drafts in one paste — four separate promotions to re-point
+    before publishing — and a defaulted brand is how a Fortunazo operator ends up
+    holding a JugaBet draft.
 
     The generator refuses a malformed promocode, so a bad input comes back as a
     non-zero exit with the reason in the output rather than a wrong draft.

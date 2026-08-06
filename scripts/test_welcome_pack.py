@@ -282,7 +282,7 @@ def check_admin_wiring() -> None:
         ('value="JUGAWELCOME"', "the submitted code is kept in the form"),
         ('name="brand"', "brand dropdown"),
         ('name="mode"', "mode dropdown"),
-        ("selected>JBCL only", "the chosen brand stays selected"),
+        ("selected>JBCL (JugaBet)", "the chosen brand stays selected"),
         ('action="/admin/promotions/welcome-pack"', "form action"),
         ("wp_console.js", "generated script name"),
         ("// script body", "generated script body"),
@@ -301,9 +301,32 @@ def check_admin_wiring() -> None:
         check("657226" not in js_text, "the unselected sources are absent")
     (REPO / "journey-cloner" / "console_scripts" / js_name).unlink(missing_ok=True)
 
+    # "both" is gone, and gone means refused — not silently treated as a brand.
+    # It used to build up to four drafts per paste, which left four separate
+    # inherited promotions to re-point, and a defaulted brand is how a Fortunazo
+    # operator ends up holding a JugaBet draft.
+    import subprocess as _sp
+    for args, label in (
+        (["--code", "JUGAWELCOME", "--brand", "both", "--mode", "normal"], "--brand both"),
+        (["--code", "JUGAWELCOME", "--brand", "jbcl", "--mode", "both"], "--mode both"),
+        (["--code", "JUGAWELCOME"], "no --brand/--mode at all"),
+    ):
+        rc = _sp.run([sys.executable, str(REPO / "journey-cloner" / "welcome_pack_campaign.py")] + args,
+                     capture_output=True, text=True, cwd=REPO / "journey-cloner")
+        check(rc.returncode != 0, f"{label} is refused by the CLI")
+    for brand, mode in (("both", "normal"), ("jbcl", "both"), ("", "normal"), ("jbcl", "")):
+        r = admin_views.promotions_welcome_pack(
+            request=None, code="JUGAWELCOME", brand=brand, mode=mode,
+            user=types.SimpleNamespace(username="tester", role="editor", is_admin=True))
+        body = r.body.decode()
+        check("Pick a brand and a mode" in body,
+              f"the route refuses brand={brand!r} mode={mode!r}")
+        check("Console Script Ready" not in body,
+              f"no script for brand={brand!r} mode={mode!r}")
+
     # A malformed code must come back as a refusal, not a script.
     bad_code, bad_output, _, bad_js, bad_name = runner.generate_welcome_pack_console_script(
-        code="no good!", brand="both", mode="both")
+        code="no good!", brand="jbcl", mode="normal")
     check(bad_code != 0 and bad_js is None, "a malformed promo code is refused, no script emitted")
     check("Refusing to emit" in bad_output, "the refusal reason reaches the run output")
     (REPO / "journey-cloner" / "console_scripts" / bad_name).unlink(missing_ok=True)

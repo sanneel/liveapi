@@ -158,14 +158,18 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--code", required=True,
                     help="promocode, or several comma-separated (JBCL's source carries two)")
-    ap.add_argument("--brand", default="both", choices=["jbcl", "pmcl", "both"])
-    ap.add_argument("--mode", default="both", choices=["normal", "boosted", "both"])
+    # No "both": one run builds one draft. Each draft inherits its own source's
+    # promotion and promo links, so a four-draft run left four separate things to
+    # re-point before publishing — and a defaulted brand is how a Fortunazo
+    # operator ends up holding a JugaBet draft. Both are required choices.
+    ap.add_argument("--brand", required=True, choices=["jbcl", "pmcl"])
+    ap.add_argument("--mode", required=True, choices=["normal", "boosted"])
     ap.add_argument("--name", default=None, help="output script name (default: the first code)")
     args = ap.parse_args()
 
     codes = parse_codes(args.code)
-    brands = list(BRANDS) if args.brand == "both" else [args.brand.upper()]
-    modes = list(MODES) if args.mode == "both" else [args.mode]
+    brands = [args.brand.upper()]
+    modes = [args.mode]
 
     plan, report = prepare(codes, brands, modes)
     for line in report:
