@@ -427,7 +427,7 @@
         "inline_keys": [
           "content_id",
           "front_id",
-          "promo_page"
+          "placement_content"
         ]
       },
       "random_split": {

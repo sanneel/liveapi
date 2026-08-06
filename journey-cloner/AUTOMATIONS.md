@@ -532,6 +532,36 @@ with its reference, so an unset one is a failed build rather than a cosmetic
 slip. That check exists because a "Physical Prize" journey once shipped carrying
 the Game of the Week SMS, email and promo link.
 
+### Placement cards vs the promo page — two objects, easily confused
+
+A promotion node's `placements[]` carry a `ContentId`/`FrontId` pair per role
+(offer, tier1…tier4). Those are the **cards the journey itself shows**. The
+composer mints fresh ones per draft so a draft cannot edit the captured
+campaign's live cards — but a fresh id owns no content tree, so the card renders
+empty. `placement_content: "clone"` copies the captured tree onto the new ids:
+
+```
+/contents/v1/copy   per target (spa, widget, widgetModulor, cashier), scoped by
+                    fileFilters — an unfiltered copy of an old bundle stalls
+then                fetch each content-{en,es}.json, rewrite the bundle id inside
+                    it, re-upload. The copy moves bytes, so those absolute
+                    self-paths still address the OLD tree until this runs.
+```
+
+The **promo page** is a different object and the composer does not build it:
+
+| | placement cards | promo page |
+| --- | --- | --- |
+| ids | in the journey body | its own pair, minted separately |
+| copied by | `/contents/v1/copy`, filtered | `/promo/v2/s3/copy` (whole tree) |
+| content filenames | constant `content-{en,es}.json` | hash-suffixed, found via `manifest.json` |
+| then | — | `POST /promo/v2/promo-drafts/promo-page` |
+| needs | nothing extra | the regenerated offer `activityId`, dates, currencies, `urlShortName` |
+
+So the promo page still means `gow_campaign.py` (Optimization ▸ GOW), and passing
+its `content_id`/`front_id` into the promotion node. Anything that claims
+otherwise is describing the cards.
+
 ### Comms builder — `comms_builder.py` → shell
 **The JBCL comms entry point.** Pick the channels, say where you want engagement
 splits and waits, paste the sheet, get the script. **No model is involved**,

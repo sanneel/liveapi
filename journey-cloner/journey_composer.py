@@ -359,7 +359,7 @@ EMAIL_PROMO_PAGE_TOKEN = "@@PROMO_PAGE_ID@@"
 # built in compose(), which is where the journey name and date are known.
 _email_authoring: list[dict] = []
 # Set when a promotion node asks for its page tree to be cloned at paste time.
-_promo_page_requested: list = []
+_placement_clone_requested: list = []
 
 
 def build_email_content(s: dict, journey_name: str, date_str: str,
@@ -511,12 +511,14 @@ SETTINGS_DOC = {
                                 "Without it the composer mints a fresh id, which owns no content tree, "
                                 "so the offer card renders EMPTY",
                   "front_id": "FrontId of that same promo page — set it whenever you set content_id",
-                  "promo_page": "\"clone\" copies the captured campaign's page tree onto this "
-                                "draft's own freshly-minted ids at paste time, so the offer card "
-                                "renders instead of being empty. It carries the captured words and "
-                                "artwork — change them in the backoffice, or build the page in GOW "
-                                "where the text rewrites live. Leave unset to keep the INCOMPLETE "
-                                "warning and wire content_id/front_id yourself."},
+                  "placement_content": "\"clone\" copies the captured campaign's PLACEMENT CARD "
+                                "bundles (the offer/tier visuals the journey itself carries) onto "
+                                "this draft's freshly-minted ids, so those cards render instead of "
+                                "being empty. NOT the promo page: that is a separate object with "
+                                "its own ids, its own S3 copy and a promo-drafts POST that needs "
+                                "the regenerated offer activityId — build it in GOW and pass "
+                                "content_id/front_id. The cards carry the captured campaign's "
+                                "words and artwork."},
     "deposit": {"min_deposit": "minimum deposit amount, platform minor units (all tiers set to this)",
                 "timeout": "ISO-8601 window, e.g. P0Y0M1DT0H0M0S"},
     "freespin_bonus": {"spins": "free-spin count",
@@ -951,8 +953,8 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
             note("displayData", init["displayData"], [body_text])
             init["displayData"] = [body_text]
     elif kind == "promotion":
-        if str(s.get("promo_page") or "").strip().lower() == "clone":
-            _promo_page_requested.append(True)
+        if str(s.get("placement_content") or "").strip().lower() == "clone":
+            _placement_clone_requested.append(True)
         # Point the offer card at a promo page the operator actually built.
         # Every promotion-bearing capture carries a promo-page placement
         # (ContentId + FrontId). Left as captured, the draft shares the captured
@@ -1059,7 +1061,7 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
         "notification_center#contract1": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "image", "deeplink"},
         "notification_center#contract5": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "image", "deeplink"},
         "promotion": {"content_id", "front_id"},
-        "promotion": {"content_id", "front_id", "promo_page"},
+        "promotion": {"content_id", "front_id", "placement_content"},
         "dextra_sms": {"text_en", "text_es"},
         "dextra_email": {"template", "from_name"} | EMAIL_AUTHORING_KEYS,
         "wait_interval": {"wait"},
@@ -1088,7 +1090,7 @@ def compose(spec: dict) -> dict:
     warnings: list[str] = []
     _pick_counter[0] = 0     # per-build, so the same spec yields the same tokens
     _email_authoring.clear()
-    _promo_page_requested.clear()
+    _placement_clone_requested.clear()
 
     # resolve source
     src_spec = spec.get("source") or {}
@@ -1990,10 +1992,14 @@ _EMAIL_JS = """
 """
 
 
-_PROMO_PAGE_JS = """
-  // --- clone the promo page ---------------------------------------------------
-  // A minted ContentId/FrontId owns no content tree, so the offer card renders
-  // empty — every composed casino journey reported INCOMPLETE for that reason.
+_PLACEMENT_CONTENT_JS = """
+  // --- clone the placement card bundles ---------------------------------------------------
+  // A minted ContentId/FrontId owns no content tree, so the offer/tier CARD the
+  // journey carries renders empty. These are the journey's own placement bundles,
+  // NOT the promo page — that is a separate object (its own ids, an S3 tree copy,
+  // and a /promo/v2/promo-drafts/promo-page POST needing the regenerated offer
+  // activityId). Building it belongs to gow_campaign.py; this only stops the cards
+  // pointing at the captured campaign's trees.
   // These are gow_campaign.py's own calls, unchanged: a per-target
   // /contents/v1/copy from the captured id to the fresh one. The copy is always
   // scoped by fileFilters, because an unfiltered copy of a years-old bundle
@@ -2005,7 +2011,7 @@ _PROMO_PAGE_JS = """
   // ids this draft owns. That is the template being the source of truth for
   // shape; change the words in the backoffice, or build the page in GOW where
   // those rewrites live.
-  const PROMO_CLONES = @PROMO_CLONES@;
+  const PLACEMENT_CLONES = @PLACEMENT_CLONES@;
   async function copyContentsTarget(srcPath, destPath, fileFilters) {
     const body = { sourcePath: srcPath, destinationPath: destPath };
     if (fileFilters) body.fileFilters = fileFilters;
@@ -2032,23 +2038,60 @@ _PROMO_PAGE_JS = """
       copyContentsTarget(`mf/v1/${oldId}/${t}`, `mf/v1/${newId}/${t}`,
                          role ? contentFileFilters(t, role, itemContentIds) : undefined)));
   }
-  if (PROMO_CLONES.length) {
-    console.log('Cloning the promo page bundle(s)...');
-    await Promise.all(PROMO_CLONES.map(async (c) => {
+  // content-<lang>.json embeds absolute self-paths carrying the bundle's OWN id.
+  // /contents/v1/copy copies bytes, so after the copy those paths still address
+  // the captured campaign's bundle — the new page would render its media out of
+  // the old tree, which is the sharing this whole minting step exists to stop.
+  // Fetch, rewrite the id, re-upload. gow_campaign.py does exactly this and only
+  // for the content bundle; the front bundle carries no such self-paths.
+  const AWS_BASE = new URL(BASE).origin + '/api/aws-get';
+  async function awsGet(path) {
+    const r = await fetch(AWS_BASE + '/' + path, { credentials: 'include' });
+    if (!r.ok) throw new Error('GET ' + path + ' failed: HTTP ' + r.status);
+    return r.text();
+  }
+  async function s3Upload(path, dataObj) {
+    const r = await fetch(CRM_BASE + '/promo/v2/s3/upload', { method: 'POST', headers: headers('application/json'), credentials: 'include', body: JSON.stringify({ path, data: dataObj }) });
+    if (!r.ok) throw new Error('upload failed ' + path + ': HTTP ' + r.status + ' ' + await r.text());
+  }
+  async function fixSelfPaths(newId, oldId) {
+    const jobs = [];
+    for (const t of ['spa', 'widget', 'widgetModulor', 'cashier'])
+      for (const l of ['en', 'es']) jobs.push([t, l]);
+    let fixed = 0;
+    await Promise.all(jobs.map(async ([t, l]) => {
+      const path = `mf/v1/${newId}/${t}/content/content-${l}.json`;
+      let txt;
+      try { txt = await awsGet(path); }
+      catch (e) { return; }          // that target/lang has no content — fine
+      if (txt.indexOf(oldId) === -1) return;
+      await s3Upload(path, JSON.parse(txt.split(oldId).join(newId)));
+      fixed++;
+    }));
+    return fixed;
+  }
+  if (PLACEMENT_CLONES.length) {
+    console.log('Cloning the placement card bundle(s)...');
+    for (const c of PLACEMENT_CLONES) {
       console.log('  [' + c.role + '] content ' + c.old_content + ' -> ' + c.new_content);
       await Promise.all([
         cloneBundle(c.old_content, c.new_content,
                     ['spa', 'widget', 'widgetModulor', 'cashier'], c.role, c.item_content_ids),
         cloneBundle(c.old_front, c.new_front, ['spa', 'widget']),
       ]);
-    }));
-    console.log('%c  promo page cloned — it carries the captured campaign\\'s words and artwork.',
-                'color:#eab308');
+      // Sequential per placement, and only after its copy finished: the rewrite
+      // reads the files the copy just wrote.
+      const n = await fixSelfPaths(c.new_content, c.old_content);
+      console.log('    self-paths rewritten in ' + n + ' content file(s)');
+      if (!n) console.warn('    no content-*.json carried the old id — check the page renders its own media');
+    }
+    console.log('%c  placement cards cloned. They carry the captured campaign\\'s words and '
+                + 'artwork. This is NOT the promo page — build that in GOW.', 'color:#eab308');
   }
 """
 
 
-def promo_page_clones(id_map: dict) -> tuple[list[dict], list[str]]:
+def placement_content_clones(id_map: dict) -> tuple[list[dict], list[str]]:
     """Pair each minted ContentId with its FrontId and the role that names its
     fileFilters. Returns (clones, problems).
 
@@ -2105,7 +2148,7 @@ def _inject_pickers(js: str, slots: list[dict], email_content: dict | None = Non
                   .replace("@EMAIL_IMAGE_SLOTS@", json.dumps(slots, ensure_ascii=False))
                   .replace("@EMAIL_CONTENT_ID_TOKEN@", json.dumps(EMAIL_CONTENT_ID_TOKEN)))
     if promo_clones:
-        block += _PROMO_PAGE_JS.replace("@PROMO_CLONES@",
+        block += _PLACEMENT_CONTENT_JS.replace("@PLACEMENT_CLONES@",
                                         json.dumps(promo_clones, ensure_ascii=False))
     # After the ids are regenerated and before the body is parsed and POSTed:
     # substituting on the serialised text hits the compiled activities and the
@@ -2170,23 +2213,25 @@ def cmd_compose(spec: dict, as_json: bool, script: bool, basename: str | None = 
     # is the difference between a shippable journey and one the player sees an
     # empty card in. Only when asked for: a silent clone of another campaign's
     # page is a surprise, and the INCOMPLETE warning is the honest default.
-    if _promo_page_requested and _id_map:
-        promo_clones, promo_problems = promo_page_clones(_id_map)
+    if _placement_clone_requested and _id_map:
+        promo_clones, promo_problems = placement_content_clones(_id_map)
         for _line in promo_problems:
-            errs_extra.append(f"promo_page — {_line}")
+            errs_extra.append(f"placement_content — {_line}")
         if promo_clones:
-            # refresh_promotion_identity warns INCOMPLETE because a minted id owns
-            # no tree. We are about to give it one, so that line now contradicts
-            # what the run does — drop it rather than print both.
+            # refresh_promotion_identity's INCOMPLETE line is about the minted
+            # PLACEMENT ids owning no tree, which is what this clone fixes — so it
+            # would contradict the run. Its advice to build the promo page in GOW
+            # still stands and is repeated in the line below, because the promo
+            # page is a different object this does not touch.
             res["report"] = [ln for ln in res.get("report", [])
                              if "INCOMPLETE — the promo page" not in ln]
             res.setdefault("report", []).append(
-                f"promotion: cloning {len(promo_clones)} promo-page bundle(s) at paste "
-                f"time ({', '.join(c['role'] for c in promo_clones)}) — the page will "
-                f"carry the captured campaign's words and artwork, so change the copy "
-                f"in the backoffice or build it in GOW instead")
-    elif _promo_page_requested:
-        errs_extra.append("promo_page: 'clone' was asked for but no ContentId was "
+                f"promotion: cloning {len(promo_clones)} placement card bundle(s) at "
+                f"paste time ({', '.join(c['role'] for c in promo_clones)}) — they carry "
+                f"the captured campaign's words and artwork. This is NOT the promo page; "
+                f"build that in GOW and pass content_id/front_id")
+    elif _placement_clone_requested:
+        errs_extra.append("placement_content: 'clone' was asked for but no ContentId was "
                           "minted — this journey shares no page with its reference, "
                           "so there is nothing to copy")
     errs = verify(res["body"]) + errs_extra

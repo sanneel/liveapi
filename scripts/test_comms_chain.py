@@ -302,7 +302,7 @@ try:
 except BaseException as exc:
     check("a parallel chain composes", False, f"{type(exc).__name__}: {exc}")
 
-print("\nthe promo page can be built, not just warned about")
+print("\nthe placement cards are cloned — and are not confused with the promo page")
 # A minted ContentId owns no content tree, so the offer card rendered empty and
 # every composed casino journey reported INCOMPLETE. promo_page: "clone" copies the
 # captured page onto the draft's own ids using gow_campaign's proven calls.
@@ -313,7 +313,7 @@ import contextlib  # noqa: E402
 def _promo_run(promo_page=None, basename="zz_test_promo"):
     node = {"type": "promotion"}
     if promo_page:
-        node["promo_page"] = promo_page
+        node["placement_content"] = promo_page
     sp = {"name": "zz promo probe", "source": {"type": "api"},
           "chain": [node, {"type": "freespins", "game": "lagrancopa",
                            "with_wagering": False}],
@@ -331,26 +331,46 @@ def _promo_run(promo_page=None, basename="zz_test_promo"):
 rc, out, js = _promo_run()
 check("without the setting it still warns INCOMPLETE",
       "INCOMPLETE — the promo page" in out)
-check("and emits no clone", "PROMO_CLONES" not in js)
+check("and emits no clone", "PLACEMENT_CLONES" not in js)
 
 rc, out, js = _promo_run("clone")
 check("with clone it composes", rc == 0, out.strip()[-160:])
-check("it reports which bundle it will copy", "cloning 1 promo-page bundle" in out)
+check("it reports which bundle it will copy",
+      "cloning 1 placement card bundle" in out)
 check("the contradictory INCOMPLETE line is gone",
       "INCOMPLETE — the promo page" not in out,
       "it warned the page is missing while building it")
-check("it says the page carries the captured words",
+check("it says the cards carry the captured words",
       "captured campaign's words" in out)
+check("it says plainly this is NOT the promo page", "NOT the promo page" in out,
+      "naming it after the promo page would have an operator believe it was built")
 check("the script carries the clone calls",
-      "PROMO_CLONES" in js and "contents/v1/copy" in js)
+      "PLACEMENT_CLONES" in js and "contents/v1/copy" in js)
 check("the copy is scoped by fileFilters, never unfiltered",
       "fileFilters" in js and "JSON_FILTERS" in js,
       "an unfiltered copy of an old bundle stalls")
 check("the clone runs before the draft is POSTed",
-      js.index("PROMO_CLONES") < js.index("journey-drafts"))
+      js.index("PLACEMENT_CLONES") < js.index("journey-drafts"))
+# /contents/v1/copy copies bytes, so content-<lang>.json keeps the OLD bundle id in
+# its absolute self-paths and the new page renders its media out of the captured
+# campaign's tree — the exact sharing the minting step exists to stop. The first
+# version of this clone missed it.
+check("the copied content's self-paths are rewritten", "fixSelfPaths" in js,
+      "the page would read its media from the captured bundle")
+check("the rewrite reads the copied file and re-uploads it",
+      "awsGet" in js and "promo/v2/s3/upload" in js)
+check("only the old id is swapped, not the whole file",
+      "split(oldId).join(newId)" in js)
+check("the rewrite runs after that placement's copy, not concurrently",
+      js.index("cloneBundle(c.old_content") < js.index("await fixSelfPaths"),
+      "it reads files the copy has to have written first")
+check("the front bundle is not rewritten (it carries no self-paths)",
+      js.count("fixSelfPaths(c.new_content") == 1)
+check("rewriting nothing is warned about, not passed over",
+      "check the page renders its own media" in js)
 import json as _json  # noqa: E402
 import re as _re  # noqa: E402
-clones = _json.loads(_re.search(r"const PROMO_CLONES = (\[.*?\]);", js, _re.DOTALL).group(1))
+clones = _json.loads(_re.search(r"const PLACEMENT_CLONES = (\[.*?\]);", js, _re.DOTALL).group(1))
 check("each clone names a captured role", all(c["role"] for c in clones), str(clones))
 check("content and front both move", all(c["old_front"] and c["new_front"] for c in clones))
 check("old and new are different ids",
@@ -358,7 +378,7 @@ check("old and new are different ids",
 
 # The role comes from gow_campaign.PLACEMENTS, so an id that is not one of those
 # has unknown filters — that must be reported, not copied unfiltered.
-clones, problems = JC.promo_page_clones(
+clones, problems = JC.placement_content_clones(
     {"11111111-1111-1111-1111-111111111111": {"new": "x", "key": "ContentId"}})
 check("an unknown ContentId is refused rather than copied unfiltered",
       not clones and any("not one of the captured" in p for p in problems), str(problems))
