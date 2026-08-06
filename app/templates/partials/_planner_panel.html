@@ -7,260 +7,259 @@
    is what keeps it matching the rest of the back-office, following the accent
    the operator picked, and working in dark mode.
 
-   Shape: a workbench, not a chat box. A stage rail across the top names the
-   pipeline the operator is actually driving (Brief -> Plan -> Boards -> Script)
-   so a run has a visible position in it; the conversation is one flush surface
-   with a docked composer; the right rail is a single continuous inspector
-   instead of three stacked cards. The JS below addresses everything by id and
-   by the .jp-* class hooks, so this markup is free to change shape as long as
-   those names survive. #}
+   Shape: the conversation, full width, and almost nothing else. A stage rail
+   and a right-hand inspector both lived here and were removed at the operator's
+   request — the two actions worth keeping (Render design, Full script) moved
+   into the bar. Page chrome is collapsed via .ai-page so the canvas starts near
+   the top of the viewport. The JS addresses everything by id and by the .jp-*
+   class hooks; ids belonging to the removed rail are looked up defensively, so
+   this markup can keep changing shape without breaking it. #}
 <style>
-  /* ── shell ──────────────────────────────────────────────────────────────
-     A workbench occupies its viewport: the toolbar and stage rail stay put and
-     only the conversation and the inspector scroll, so the composer never walks
-     off the bottom of a long run. */
-  .jp-wrap{display:flex;flex-direction:column;gap:10px;height:calc(100vh - 236px);min-height:640px}
+  /* ── identity ────────────────────────────────────────────────────────────
+     This page composes node graphs, so it is dressed as a schematic canvas:
+     a dot-grid ground, surfaces that float above it with real depth, and the
+     accent reserved for live state (the stage you are on, a refusal, a link).
+     Every colour still resolves from the redesign.css tokens, so it follows the
+     operator's accent and inverts properly in dark mode. */
+  .jp-wrap{--jp-gap:12px;--jp-r:16px;--jp-r-sm:10px;
+    /* the one non-token colour: foreground ON the filled accent */
+    --jp-on-ac:#fff;
+    --jp-lift:0 1px 2px rgba(16,24,40,.05), 0 8px 24px -12px rgba(16,24,40,.16);
+    --jp-lift-sm:0 1px 2px rgba(16,24,40,.05), 0 3px 10px -6px rgba(16,24,40,.14);
+    --jp-inset:inset 0 1px 0 color-mix(in srgb, var(--surface) 70%, var(--jp-on-ac));
+    display:flex;flex-direction:column;gap:0;
+    height:calc(100vh - 94px);min-height:520px}
+  /* Dark mode is a CLASS in this app — base.html toggles html.dark and
+     redesign.css keys off it. A prefers-color-scheme query would miss the
+     operator's own toggle entirely. Shadows have to deepen on a dark ground or
+     every surface flattens into it. */
+  html.dark .jp-wrap{
+    --jp-lift:0 1px 2px rgba(0,0,0,.42), 0 10px 28px -14px rgba(0,0,0,.62);
+    --jp-lift-sm:0 1px 2px rgba(0,0,0,.36), 0 4px 12px -8px rgba(0,0,0,.5);
+    --jp-inset:inset 0 1px 0 color-mix(in srgb, var(--surface) 55%, var(--jp-on-ac))}
   .jp-wrap.jp-full{position:fixed;inset:0;z-index:60;background:var(--canvas);
-    padding:14px 20px 16px;height:100vh;min-height:0}
-  .jp-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 296px;gap:10px}
-  /* min-height:0 or the log grows past the panel instead of scrolling inside it */
-  .jp-main{min-width:0;min-height:0;display:flex;flex-direction:column;gap:10px}
+    padding:16px 22px 18px;height:100vh;min-height:0}
+  /* One column: the conversation owns the full width. */
+  .jp-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr)}
+  .jp-main{min-width:0;min-height:0;display:flex;flex-direction:column;gap:var(--jp-gap)}
 
-  /* ── toolbar: one slim bar, not a card ─────────────────────────────────── */
-  .jp-bar{display:flex;align-items:center;gap:11px;padding:0 2px 2px}
-  .jp-mark{flex:none;width:29px;height:29px;border-radius:9px;background:var(--ac);
-    display:flex;align-items:center;justify-content:center;color:var(--canvas)}
-  .jp-mark svg{width:16px;height:16px}
-  .jp-title{font-size:13px;font-weight:800;letter-spacing:-.01em;color:var(--t-strong);
-    display:flex;align-items:center;gap:8px}
-  .jp-beta{font-size:9.5px;font-weight:800;letter-spacing:.07em;padding:2px 6px;border-radius:5px;
-    background:var(--acw);color:var(--ac)}
-  .jp-barright{margin-left:auto;display:flex;align-items:center;gap:7px}
-  .jp-model{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;
-    color:var(--t-faint);font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace}
+  /* ── page chrome: give the space to the conversation ─────────────────────
+     The shell reserves a lot above the panel — .content-light pads 24px top,
+     .page-head adds 24px below itself, and the page-sub <p> still occupies a
+     line even with nothing in it. That stacked up to a band of empty page
+     between the "AI" heading and the planner. Scoped to .ai-page (set in
+     ai.html) so no other admin page changes. */
+  /* The conversation is not a card on a page — it IS the page. One continuous
+     surface, no border, no radius, no shadow, nothing to be boxed inside. The
+     shell's canvas tint is overridden to --surface so the field is a single
+     white (and a single dark, since --surface inverts). */
+  .ai-page{padding:12px 0 0;background:var(--surface)}
+  .ai-page .page-head{margin-bottom:8px;padding:0 26px}
+  .ai-page .page-sub:empty{display:none}
+  .ai-page .page-title{font-size:21px;letter-spacing:-.02em}
+  .ai-page .page-body{padding:0}
+
+  /* ── bar ─────────────────────────────────────────────────────────────── */
+  .jp-bar{display:flex;align-items:center;gap:12px;padding:0 26px 12px}
+  .jp-mark{flex:none;width:34px;height:34px;border-radius:11px;display:flex;
+    align-items:center;justify-content:center;color:var(--jp-on-ac);
+    background:linear-gradient(145deg,
+      color-mix(in srgb, var(--ac) 88%, var(--jp-on-ac)) 0%, var(--ac) 55%,
+      color-mix(in srgb, var(--ac) 78%, #000) 100%);
+    box-shadow:0 2px 8px -2px color-mix(in srgb, var(--ac) 55%, transparent),
+      inset 0 1px 0 rgba(255,255,255,.34)}
+  .jp-mark svg{width:18px;height:18px}
+  .jp-title{display:flex;align-items:center;gap:9px;font-size:16px;font-weight:750;
+    letter-spacing:-.021em;color:var(--t-strong)}
+  .jp-beta{font-size:9.5px;font-weight:800;letter-spacing:.09em;padding:3px 7px;
+    border-radius:999px;background:var(--acw);color:var(--ac);
+    border:1px solid color-mix(in srgb, var(--ac) 26%, transparent)}
+  .jp-barright{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .jp-model{display:inline-flex;align-items:center;gap:6px;font:600 11px/1 var(--font);
+    color:var(--t-faint);font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace;
+    padding:7px 10px;border-radius:999px;background:var(--subtle);
+    border:1px solid var(--border)}
   .jp-model b{color:var(--t-body);font-weight:700}
   .jp-iconbtn{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;
-    width:30px;height:30px;padding:0;cursor:pointer;border:1px solid var(--border);
-    border-radius:8px;background:var(--surface);color:var(--t-muted)}
-  .jp-iconbtn:hover{background:var(--hover);color:var(--t-body)}
-  .jp-iconbtn svg{width:15px;height:15px}
-  .jp-iconbtn.wide{width:auto;padding:0 11px;font:700 11.5px/1 var(--font)}
+    width:34px;height:34px;padding:0;cursor:pointer;border:1px solid var(--border);
+    border-radius:10px;background:var(--surface);color:var(--t-muted);
+    box-shadow:var(--jp-lift-sm);transition:transform .12s ease, color .12s ease}
+  .jp-iconbtn:hover{color:var(--ac);border-color:color-mix(in srgb, var(--ac) 40%, transparent);
+    transform:translateY(-1px)}
+  .jp-iconbtn svg{width:16px;height:16px}
+  .jp-iconbtn.wide{width:auto;padding:0 12px;height:30px;font:700 11px/1 var(--font)}
 
-  /* ── stage rail: the pipeline, with the run's position in it ───────────── */
-  .jp-stages{display:flex;align-items:stretch;gap:0;background:var(--surface);
-    border:1px solid var(--border);border-radius:11px;overflow:hidden}
-  .jp-stage{flex:1;min-width:0;display:flex;align-items:center;gap:9px;padding:10px 13px;
-    border-right:1px solid var(--border);position:relative}
-  .jp-stage:last-child{border-right:none}
-  .jp-stage .sn{flex:none;width:19px;height:19px;border-radius:50%;display:flex;
-    align-items:center;justify-content:center;font:800 10px/1 var(--font);
-    background:var(--subtle);color:var(--t-faint2);border:1px solid var(--border)}
-  .jp-stage .st{min-width:0;font-size:11.5px;font-weight:700;color:var(--t-faint);
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .jp-stage .sd{margin-left:auto;font-size:10px;font-weight:700;color:var(--t-faint2);
-    font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace}
-  .jp-stage.on{background:var(--acw)}
-  .jp-stage.on .sn{background:var(--ac);color:var(--canvas);border-color:transparent}
-  .jp-stage.on .st{color:var(--ac)}
-  .jp-stage.done .sn{background:var(--pos-bg);color:var(--pos-t);border-color:transparent}
-  .jp-stage.done .st{color:var(--t-body)}
 
-  /* ── conversation: one flush surface, composer docked inside it ────────── */
+  /* ── the canvas: dot grid, floating surface ──────────────────────────── */
   .jp-surface{flex:1;min-height:0;display:flex;flex-direction:column;
-    background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
-  .jp-log{flex:1;min-height:0;overflow-y:auto;padding:20px 20px 6px;
-    display:flex;flex-direction:column;gap:18px}
-  .jp-empty{margin:auto;text-align:center;max-width:520px;padding:12px 0 24px}
-  .jp-empty .jp-mark{margin:0 auto 14px;width:38px;height:38px;border-radius:11px}
-  .jp-empty .jp-mark svg{width:20px;height:20px}
-  .jp-empty h4{margin:0 0 7px;font-size:16px;font-weight:800;letter-spacing:-.015em;
-    color:var(--t-strong)}
-  .jp-empty p{margin:0;font-size:12.5px;line-height:1.65;color:var(--t-muted)}
-  .jp-starters{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:18px}
-  /* Messages are left-aligned blocks separated by a rule, not opposing bubbles:
-     a pasted brief is 40 lines and a plan is longer, and chat-style alignment
-     turns both into a narrow ribbon down the middle of a wide workbench. */
-  .jp-msg{display:flex;flex-direction:column;gap:7px;min-width:0}
-  .jp-msg + .jp-msg{border-top:1px solid var(--border);padding-top:18px}
+    background:var(--surface);border:none;border-top:1px solid var(--border);
+    border-radius:0;overflow:hidden;box-shadow:none}
+  .jp-log{flex:1;min-height:0;overflow-y:auto;padding:26px 26px 10px;
+    display:flex;flex-direction:column;gap:22px;background:var(--surface)}
+  .jp-empty{margin:auto;text-align:center;max-width:540px;padding:18px 0 30px}
+  .jp-empty .jp-mark{margin:0 auto 18px;width:52px;height:52px;border-radius:16px}
+  .jp-empty .jp-mark svg{width:26px;height:26px}
+  .jp-empty h4{margin:0 0 9px;font-size:25px;line-height:1.15;font-weight:750;
+    letter-spacing:-.028em;color:var(--t-strong);text-wrap:balance}
+  .jp-empty p{margin:0 auto;max-width:44ch;font-size:13.5px;line-height:1.7;
+    color:var(--t-muted);text-wrap:pretty}
+  .jp-starters{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:22px}
+  .jp-starters .chip{box-shadow:var(--jp-lift-sm)}
+
+  /* messages: full-width blocks, a hairline between, gentle arrival */
+  .jp-msg{display:flex;flex-direction:column;gap:9px;min-width:0;
+    animation:jpIn .22s ease both}@keyframes jpIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+  .jp-msg + .jp-msg{border-top:1px solid var(--border);padding-top:22px}
   .jp-av{display:inline-flex;align-items:center;gap:7px;font-size:10px;font-weight:800;
-    letter-spacing:.07em;text-transform:uppercase;color:var(--t-faint2)}
+    letter-spacing:.1em;text-transform:uppercase;color:var(--t-faint2)}
   .jp-av svg{width:13px;height:13px}
   .jp-msg.model .jp-av{color:var(--ac)}
   .jp-bubble{min-width:0;overflow-x:auto}
-  /* The operator's own paste is quoted by a rule, so it reads as input without
-     a filled block fighting the plan below it for attention. */
-  .jp-msg.user .jp-bubble{border-left:2px solid var(--border-in);padding-left:13px}
+  .jp-msg.user .jp-bubble{border-left:2px solid color-mix(in srgb, var(--ac) 34%, transparent);
+    padding-left:15px}
   .jp-bubble pre{margin:0;font-family:'JetBrains Mono','SFMono-Regular',Consolas,Menlo,monospace;
-    font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word;color:var(--t-body)}
-  .jp-bubble .u{white-space:pre-wrap;line-height:1.6;font-size:13px;color:var(--t-body)}
-  .jp-bubble .jp-sum{font-size:13px;font-weight:700;color:var(--t-strong)}
-  /* The four line flavours the renderer tags. A refusal is the loudest thing on
-     the page on purpose — it is the output that matters most. */
+    font-size:12px;line-height:1.68;white-space:pre-wrap;word-break:break-word;color:var(--t-body)}
+  .jp-bubble .u{white-space:pre-wrap;line-height:1.68;font-size:13.5px;color:var(--t-body)}
+  .jp-bubble .jp-sum{display:flex;align-items:center;gap:2px;font-size:14px;font-weight:750;
+    letter-spacing:-.012em;color:var(--t-strong);margin-bottom:2px}
   .jp-warn{color:var(--warn-t)}
   .jp-uncap{color:var(--live-t);font-weight:800}
   .jp-q{color:var(--club-t)}
-  .jp-head-line{color:var(--t-strong);font-weight:800;letter-spacing:.02em}
+  .jp-head-line{color:var(--t-strong);font-weight:800;letter-spacing:.015em}
   .jp-err{color:var(--live-t)}
-  .jp-dots::after{content:"planning";color:var(--ac);font-size:12.5px;font-weight:700;
-    letter-spacing:.04em}
-  /* A ```json block is machine data — collapsed to a strip so the plan stays
-     readable, expandable for when the operator does want to read it. */
-  .jp-code{margin:12px 0 2px;border:1px solid var(--border);border-radius:9px;overflow:hidden}
-  .jp-code > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;
-    font:700 11px/1 var(--font);color:var(--t-muted);background:var(--subtle);padding:9px 12px;
-    letter-spacing:.03em;text-transform:uppercase}
-  .jp-code > summary:hover{color:var(--t-body)}
+  .jp-dots::after{content:"planning";color:var(--ac);font-size:13px;font-weight:750;
+    letter-spacing:.03em}
+  .jp-dots::before{content:"";display:inline-block;width:7px;height:7px;margin-right:9px;
+    border-radius:50%;background:var(--ac);animation:jpBlink 1.1s ease-in-out infinite}@keyframes jpBlink{0%,100%{opacity:.25;transform:scale(.82)}50%{opacity:1;transform:scale(1)}}
+
+  /* a JSON block folds into a strip — machine data, readable on demand */
+  .jp-code{margin:14px 0 2px;border:1px solid var(--border);border-radius:var(--jp-r-sm);
+    overflow:hidden;background:var(--canvas)}
+  .jp-code > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;
+    font:700 10.5px/1 var(--font);color:var(--t-muted);background:var(--subtle);
+    padding:10px 13px;letter-spacing:.09em;text-transform:uppercase}
+  .jp-code > summary:hover{color:var(--ac)}
   .jp-code > summary::-webkit-details-marker{display:none}
-  .jp-code > summary::before{content:"+";font:800 12px/1 var(--font);color:var(--ac)}
-  .jp-code[open] > summary::before{content:"–"}
+  .jp-code > summary::before{content:"+";font:800 13px/1 var(--font);color:var(--ac);width:9px}
+  .jp-code[open] > summary::before{content:"\2013"}
   .jp-code[open] > summary{border-bottom:1px solid var(--border)}
   .jp-code > summary .sz{margin-left:auto;color:var(--t-faint2);font-weight:600;
     text-transform:none;letter-spacing:0}
-  .jp-code pre{margin:0;padding:12px 14px;background:var(--surface);
-    max-height:280px;overflow:auto;font-size:11px}
-  /* Design boards drawn straight into the conversation, full width and in order,
-     so the plan and its pictures are read by scrolling one answer. */
-  .jp-inline-board{margin:13px 0 0;border:1px solid var(--border);border-radius:10px;
-    overflow:hidden;background:var(--subtle)}
-  .jp-inline-board img{display:block;width:100%;height:auto;cursor:zoom-in;background:#fff}
-  .jp-inline-board figcaption{display:flex;align-items:center;gap:10px;justify-content:space-between;
-    padding:9px 12px;background:var(--surface);border-top:1px solid var(--border);
-    font-size:11px;font-weight:700;color:var(--t-muted)}
-  .jp-inline-board figcaption span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .jp-code pre{margin:0;padding:13px 15px;background:var(--canvas);
+    max-height:290px;overflow:auto;font-size:11px}
 
-  /* ── results: Boards / Script, a segmented control over full-bleed panes ── */
-  .jp-results{background:var(--surface);border:1px solid var(--border);border-radius:12px;
-    display:flex;flex-direction:column;max-height:48%;overflow:hidden}
-  /* a `display` rule of our own beats the UA's [hidden]{display:none} */
-  .jp-wrap [hidden]{display:none}
-  .jp-rtabs{display:flex;gap:3px;padding:9px 10px;border-bottom:1px solid var(--border);
-    background:var(--subtle)}
-  .jp-rtab{cursor:pointer;background:none;border:1px solid transparent;padding:6px 12px;
-    font:700 11.5px/1 var(--font);color:var(--t-faint);border-radius:7px}
-  .jp-rtab:hover{color:var(--t-body);background:var(--hover)}
-  .jp-rtab.on{color:var(--ac);background:var(--surface);border-color:var(--border)}
-  .jp-rbody{overflow:auto;padding:13px}
-  .jp-boards{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:11px;
-    align-items:start}
-  .jp-board{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--subtle);
-    display:flex;flex-direction:column}
-  .jp-board:hover{border-color:var(--border-in)}
-  /* Uniform preview height: a board is 2400×700-ish, so scaled-to-width thumbs
-     come out at wildly different heights and the grid looks ragged. Crop from
-     the top-left — the campaign header and first journey are what identify it. */
-  .jp-board img{display:block;width:100%;height:150px;object-fit:cover;object-position:left top;
-    cursor:zoom-in;background:#fff}
-  .jp-board-bar{display:flex;align-items:center;gap:9px;justify-content:space-between;
-    padding:9px 11px;background:var(--surface);border-top:1px solid var(--border)}
-  .jp-board-bar .n{font-size:11px;font-weight:700;color:var(--t-body);overflow:hidden;
-    text-overflow:ellipsis;white-space:nowrap}
-  .jp-board-bar .m{font-size:10px;color:var(--t-faint2);
-    font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace}
-  .jp-dl{display:inline-flex;align-items:center;gap:5px;font:700 11px/1 var(--font);
-    text-decoration:none;color:var(--t-muted);background:var(--surface);
-    border:1px solid var(--border);border-radius:7px;padding:6px 9px;cursor:pointer;
+  .jp-inline-board{margin:15px 0 0;border:1px solid var(--border);
+    border-radius:var(--jp-r-sm);overflow:hidden;background:var(--subtle);
+    box-shadow:var(--jp-lift-sm)}
+  .jp-inline-board img{display:block;width:100%;height:auto;cursor:zoom-in;background:#fff}
+  .jp-inline-board figcaption{display:flex;align-items:center;gap:10px;
+    justify-content:space-between;padding:10px 13px;background:var(--surface);
+    border-top:1px solid var(--border);font-size:11px;font-weight:700;color:var(--t-muted)}
+  .jp-inline-board figcaption span{min-width:0;overflow:hidden;text-overflow:ellipsis;
     white-space:nowrap}
+
+  /* ── composer, docked ────────────────────────────────────────────────── */
+  .jp-composer{display:flex;gap:10px;align-items:flex-end;padding:14px 26px 18px;
+    border-top:1px solid var(--border);background:var(--surface)}
+  .jp-composer textarea{flex:1;resize:none;min-height:42px;max-height:210px;
+    border:1px solid var(--border-in);border-radius:12px;outline:none;
+    background:var(--canvas);padding:11px 14px;font:400 13.5px/1.6 var(--font);
+    color:var(--t-body);transition:border-color .14s ease, box-shadow .14s ease}
+  .jp-composer textarea:focus{border-color:var(--ac);background:var(--surface);
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--ac) 14%, transparent)}
+  .jp-composer textarea::placeholder{color:var(--t-disabled)}
+  .jp-send{flex:none;display:inline-flex;align-items:center;gap:8px;height:42px;
+    border-radius:12px;box-shadow:0 2px 8px -3px color-mix(in srgb, var(--ac) 55%, transparent)}
+  .jp-send svg{width:15px;height:15px}
+  .jp-hint{font-size:11px;color:var(--t-faint);min-height:14px;padding:6px 26px 0;
+    font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace}
+
+  /* ── results ─────────────────────────────────────────────────────────── */
+  .jp-results{background:var(--surface);border:none;border-top:1px solid var(--border);
+    border-radius:0;display:flex;flex-direction:column;max-height:50%;
+    overflow:hidden;box-shadow:none}
+  .jp-wrap [hidden]{display:none}
+  .jp-rtabs{display:flex;gap:4px;padding:12px 26px;border-bottom:1px solid var(--border);
+    background:var(--surface)}
+  .jp-rtab{cursor:pointer;background:none;border:1px solid transparent;padding:7px 14px;
+    font:700 11.5px/1 var(--font);color:var(--t-faint);border-radius:999px;
+    transition:color .12s ease, background .12s ease}
+  .jp-rtab:hover{color:var(--t-body);background:var(--hover)}
+  .jp-rtab.on{color:var(--jp-on-ac);background:var(--ac);border-color:transparent;
+    box-shadow:0 2px 7px -3px color-mix(in srgb, var(--ac) 60%, transparent)}
+  .jp-rbody{overflow:auto;padding:16px 26px 20px}
+  .jp-boards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+    gap:14px;align-items:start}
+  .jp-board{border:1px solid var(--border);border-radius:var(--jp-r-sm);overflow:hidden;
+    background:var(--subtle);display:flex;flex-direction:column;
+    box-shadow:var(--jp-lift-sm);transition:transform .14s ease, box-shadow .14s ease}
+  .jp-board:hover{transform:translateY(-2px);box-shadow:var(--jp-lift);
+    border-color:color-mix(in srgb, var(--ac) 36%, transparent)}
+  /* a board is ~2400x700, so scale-to-width thumbs come out ragged. Crop from
+     the top-left: the campaign header and first journey identify it. */
+  .jp-board img{display:block;width:100%;height:186px;object-fit:cover;
+    object-position:left top;cursor:zoom-in;background:#fff}
+  .jp-board-bar{display:flex;align-items:center;gap:10px;justify-content:space-between;
+    padding:11px 13px;background:var(--surface);border-top:1px solid var(--border)}
+  .jp-board-bar .n{font-size:11.5px;font-weight:700;color:var(--t-body);overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .jp-board-bar .m{font:600 10px/1 var(--font);color:var(--t-faint2);
+    font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace}
+  .jp-dl{display:inline-flex;align-items:center;gap:6px;font:700 11px/1 var(--font);
+    text-decoration:none;color:var(--t-muted);background:var(--surface);
+    border:1px solid var(--border);border-radius:8px;padding:7px 10px;cursor:pointer;
+    white-space:nowrap;transition:color .12s ease, border-color .12s ease}
   .jp-dl:hover{color:var(--ac);border-color:var(--ac);background:var(--acw)}
-  /* A script row leads with a status glyph, because "did it verify" is the only
-     question being asked of this pane. */
-  .jp-srow{display:flex;align-items:center;gap:11px;justify-content:space-between;
-    border:1px solid var(--border);border-left:3px solid var(--pos-t);border-radius:9px;
-    padding:11px 13px;margin-bottom:8px}
+  /* a script row leads with a status edge — "did it verify" is the only
+     question this pane is asked */
+  .jp-srow{display:flex;align-items:center;gap:12px;justify-content:space-between;
+    border:1px solid var(--border);border-left:3px solid var(--pos-t);
+    border-radius:var(--jp-r-sm);padding:13px 15px;margin-bottom:9px;
+    background:var(--surface);box-shadow:var(--jp-lift-sm)}
   .jp-srow:last-child{margin-bottom:0}
   .jp-srow .t{min-width:0}
-  .jp-srow .t b{display:block;font-size:12px;color:var(--t-strong);
-    font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace;font-weight:700}
-  .jp-srow .t span{font-size:11px;color:var(--t-faint);line-height:1.45}
-  .jp-srow.bad{border-color:var(--border);border-left-color:var(--live-t);background:var(--live-bg)}
+  .jp-srow .t b{display:block;font-size:12px;color:var(--t-strong);font-weight:700;
+    font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace}
+  .jp-srow .t span{font-size:11px;color:var(--t-faint);line-height:1.5}
+  .jp-srow.bad{border-color:var(--border);border-left-color:var(--live-t);
+    background:var(--live-bg)}
   .jp-srow.bad .t b{color:var(--live-t)}
-  .jp-rempty{font-size:12px;color:var(--t-faint);text-align:center;padding:20px 0}
+  .jp-rempty{font-size:12px;color:var(--t-faint);text-align:center;padding:22px 0}
 
-  /* ── composer: docked inside the surface, not a floating card ──────────── */
-  .jp-composer{display:flex;gap:9px;align-items:flex-end;padding:11px 14px 12px;
-    border-top:1px solid var(--border);background:var(--surface)}
-  .jp-composer textarea{flex:1;resize:none;min-height:38px;max-height:210px;
-    border:1px solid var(--border-in);border-radius:9px;outline:none;background:var(--canvas);
-    padding:10px 12px;font:400 13px/1.55 var(--font);color:var(--t-body)}
-  .jp-composer textarea:focus{border-color:var(--ac);background:var(--surface)}
-  .jp-composer textarea::placeholder{color:var(--t-disabled)}
-  .jp-send{flex:none;display:inline-flex;align-items:center;gap:7px}
-  .jp-send svg{width:14px;height:14px}
-  .jp-hint{font-size:11px;color:var(--t-faint);min-height:14px;padding:0 3px;
-    font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace}
+  /* ── inspector ───────────────────────────────────────────────────────── */
 
-  /* ── inspector: one continuous rail, sections divided by rules ─────────── */
-  .jp-aside{display:flex;flex-direction:column;min-height:0;overflow-y:auto;
-    background:var(--surface);border:1px solid var(--border);border-radius:12px}
-  .jp-sec{padding:13px 14px;border-bottom:1px solid var(--border)}
-  .jp-sec:last-child{border-bottom:none}
-  .jp-sec-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
-  .jp-sec-head h4{margin:0;font-size:10.5px;font-weight:800;color:var(--t-faint2);
-    letter-spacing:.07em;text-transform:uppercase}
-  .jp-sec-head .sp{margin-left:auto}
-  .jp-acts{display:flex;flex-direction:column;gap:6px}
-  .jp-acts .btn{width:100%;justify-content:flex-start;gap:9px}
-  .jp-acts .btn .ic{flex:none;display:inline-flex;width:14px;color:var(--t-faint)}
-  .jp-acts .btn .ic svg{width:14px;height:14px}
-  .jp-acts .btn:hover .ic{color:var(--ac)}
-  .jp-select{width:100%;font:600 11.5px/1 var(--font);color:var(--t-body);background:var(--canvas);
-    border:1px solid var(--border-in);border-radius:8px;padding:9px 10px}
-  .jp-jlist{display:flex;flex-direction:column;gap:5px;max-height:262px;overflow-y:auto}
-  .jp-jrow{display:flex;align-items:center;gap:9px;border:1px solid transparent;
-    border-radius:8px;padding:8px 9px;cursor:pointer;background:var(--canvas);text-align:left}
-  .jp-jrow:hover{background:var(--acw);border-color:color-mix(in srgb, var(--ac) 24%, transparent)}
-  .jp-jrow .i{flex:none;font:800 10px/1 var(--font);color:var(--t-faint2);min-width:13px;
-    font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace}
-  .jp-jrow .n{flex:1;min-width:0;font-size:11.5px;font-weight:600;color:var(--t-body);
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .jp-jrow .b{flex:none;font:800 9.5px/1 var(--font);padding:3px 6px;border-radius:5px;
-    background:var(--subtle);color:var(--t-faint)}
-  .jp-ctx{display:flex;flex-direction:column;gap:0}
-  .jp-ctx > div{display:flex;align-items:baseline;gap:10px;justify-content:space-between;
-    padding:6px 0;border-bottom:1px dashed var(--border)}
-  .jp-ctx > div:last-child{border-bottom:none}
-  .jp-ctx dt{flex:none;font-size:11px;font-weight:600;color:var(--t-faint)}
-  .jp-ctx dd{margin:0;font-size:11px;font-weight:700;color:var(--t-body);text-align:right;
-    word-break:break-word;font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace}
-  .jp-note{font-size:11px;line-height:1.55;color:var(--t-faint)}
-
-  /* ── banners ───────────────────────────────────────────────────────────── */
-  .jp-banner{display:flex;align-items:flex-start;gap:9px;border-radius:9px;padding:10px 13px;
-    font-size:12px;line-height:1.5;background:var(--warn-bg);color:var(--warn-t);
-    border:1px solid color-mix(in srgb, var(--warn-t) 30%, transparent)}
-  .jp-banner svg{flex:none;width:15px;height:15px;margin-top:1px}
+  /* ── banners ─────────────────────────────────────────────────────────── */
+  .jp-banner{display:flex;align-items:flex-start;gap:10px;border-radius:var(--jp-r-sm);
+    padding:12px 15px;font-size:12.5px;line-height:1.55;background:var(--warn-bg);
+    color:var(--warn-t);border:1px solid color-mix(in srgb, var(--warn-t) 30%, transparent);
+    box-shadow:var(--jp-lift-sm)}
+  .jp-banner svg{flex:none;width:16px;height:16px;margin-top:1px}
   .jp-banner.bad{background:var(--live-bg);color:var(--live-t);
     border-color:color-mix(in srgb, var(--live-t) 34%, transparent)}
   .jp-banner code{font-family:'JetBrains Mono','SFMono-Regular',Consolas,Menlo,monospace;
-    font-size:11.5px}
-
-  /* ── responsive ────────────────────────────────────────────────────────────
-     Last in the sheet on purpose: these are overrides of the rules above, and a
-     media query carries no extra specificity — placed earlier, the plain rules
-     would win. Below the breakpoint the sidebar stacks under the chat, so a
-     viewport-locked panel height no longer fits: the page scrolls instead and
-     the log keeps a fixed share of the viewport. */
-  @media (max-width:1180px){
+    font-size:11.5px}@media (prefers-reduced-motion:reduce){
+    .jp-msg,
+    .jp-iconbtn,.jp-board{transition:none}
+  }@media (max-width:1180px){
     .jp-wrap{height:auto;min-height:0}
     .jp-wrap.jp-full{height:100vh;overflow:auto}
     .jp-grid{grid-template-columns:minmax(0,1fr)}
     .jp-surface{flex:0 0 auto}
     .jp-log{height:52vh;min-height:320px}
     .jp-results{max-height:none}
-    /* The rail becomes a row of sections; its right-hand borders replace the
-       stacked rules that only make sense in a column. */
-    .jp-aside{overflow:visible;flex-direction:row;flex-wrap:wrap}
-    .jp-aside > *{flex:1 1 250px;border-bottom:none;border-right:1px solid var(--border)}
-    .jp-aside > *:last-child{border-right:none}
-    .jp-jlist{max-height:200px}
-    .jp-stage .sd{display:none}
+  }@media (max-width:720px){
+    .jp-empty h4{font-size:21px}
+    .jp-boards{grid-template-columns:minmax(0,1fr)}
   }
-  /* Narrow: the stage rail wraps to two rows rather than crushing four labels. */
-  @media (max-width:720px){
-    .jp-stages{flex-wrap:wrap}
-    .jp-stage{flex:1 1 50%;border-bottom:1px solid var(--border)}
-    .jp-stage:nth-child(2n){border-right:none}
-    .jp-stage:nth-last-child(-n+2){border-bottom:none}
-    .jp-aside > *{flex:1 1 100%;border-right:none;border-bottom:1px solid var(--border)}
+  /* The two actions that survived the rail, now in the bar. */
+  .jp-act{display:inline-flex;align-items:center;gap:8px;height:34px;border-radius:10px;
+    white-space:nowrap}
+  .jp-act svg{width:15px;height:15px;flex:none}
+  .jp-act.primary{box-shadow:0 2px 8px -3px color-mix(in srgb, var(--ac) 55%, transparent)}
+  @media (max-width:820px){
+    .jp-bar{flex-wrap:wrap}
+    .jp-barright{width:100%;margin-left:0}
+    .jp-act{flex:1}
   }
 </style>
 
@@ -283,6 +282,8 @@
     <div class="jp-mark">{{ spark }}</div>
     <div class="jp-title">Journey Planner <span class="jp-beta">BETA</span></div>
     <div class="jp-barright">
+      <button type="button" class="btn jp-act" id="jpDesign">{{ i_board }} Render design</button>
+      <button type="button" class="btn primary jp-act" id="jpBuild">{{ i_cog }} Full script</button>
       <span class="jp-model">{{ model }}</span>
       <button type="button" class="jp-iconbtn" id="jpExpand"
               title="Full screen (Esc to exit)" aria-label="Full screen">{{ i_expand }}</button>
@@ -304,16 +305,6 @@
     </div>
   {% endif %}
 
-  {# The pipeline, named. Each stage carries a data-stage the script marks
-     .on/.done as a run moves through it, so the operator can see which step
-     they are on rather than inferring it from the conversation. #}
-  <div class="jp-stages" id="jpStages">
-    <div class="jp-stage" data-stage="brief"><span class="sn">1</span><span class="st">Brief</span></div>
-    <div class="jp-stage" data-stage="plan"><span class="sn">2</span><span class="st">Plan</span></div>
-    <div class="jp-stage" data-stage="boards"><span class="sn">3</span><span class="st">Boards</span><span class="sd" id="jpStageBoards"></span></div>
-    <div class="jp-stage" data-stage="script"><span class="sn">4</span><span class="st">Script</span><span class="sd" id="jpStageScript"></span></div>
-  </div>
-
   <div class="jp-grid">
     <div class="jp-main">
 
@@ -321,12 +312,6 @@
         <div class="jp-log" id="jpLog">
           <div class="jp-empty" id="jpEmpty">
             <div class="jp-mark">{{ spark }}</div>
-            <h4>Paste a campaign brief</h4>
-            <p>The first reply is a short outline plus a design block — press
-               <b>Render design</b> to see every journey drawn as a board, one card and icon
-               per activity. Then ask for an object in full, and <b>Full script</b> composes it.
-               A build that cannot be made correctly is refused, and the refusal says which
-               field to fix.</p>
             <div class="jp-starters">
               <button type="button" class="chip" data-starter="brief">Birthday brief</button>
               <button type="button" class="chip" data-starter="specs">Specs of each journey</button>
@@ -359,46 +344,14 @@
       <div class="jp-hint" id="jpHint"></div>
     </div>
 
-    <aside class="jp-aside">
-      <div class="jp-sec">
-        <div class="jp-sec-head">
-          <h4>Journeys</h4>
-          <button type="button" class="jp-iconbtn wide sp" id="jpClear">Clear</button>
-        </div>
-        <select class="jp-select" id="jpPerImage" title="How many journeys per rendered board"
-                style="margin-bottom:9px">
-          <option value="1">1 journey / board</option>
-          <option value="2" selected>2 journeys / board</option>
-          <option value="3">3 journeys / board</option>
-          <option value="0">all on one board</option>
-        </select>
-        <div class="jp-jlist" id="jpJourneyList">
-          <div class="jp-note" id="jpJourneyEmpty">No design rendered yet. Send a brief, then
-            <b>Render design</b> — the journeys it drew appear here.</div>
-        </div>
-      </div>
-
-      <div class="jp-sec">
-        <div class="jp-sec-head"><h4>Actions</h4></div>
-        <div class="jp-acts">
-          <button type="button" class="btn" id="jpInsert"><span class="ic">{{ i_plus }}</span> Insert birthday brief</button>
-          <button type="button" class="btn" id="jpDesign"><span class="ic">{{ i_board }}</span> Render design</button>
-          <button type="button" class="btn" id="jpBuild"><span class="ic">{{ i_cog }}</span> Full script</button>
-          <button type="button" class="btn" id="jpCopy"><span class="ic">{{ i_copy }}</span> Copy last reply</button>
-        </div>
-      </div>
-
-      <div class="jp-sec">
-        <div class="jp-sec-head"><h4>Context</h4></div>
-        <div class="jp-ctx">
-          <div><dt>Provider</dt><dd>{{ provider|capitalize }}{% if not key_configured %} — no key{% endif %}</dd></div>
-          <div><dt>Model</dt><dd>{{ model }}</dd></div>
-          <div><dt>Knowledge base</dt><dd>{% if docs_present %}loaded{% else %}missing{% endif %}</dd></div>
-          <div><dt>Boards</dt><dd>data/journey_designs/</dd></div>
-          <div><dt>Tokens</dt><dd id="jpUsage">—</dd></div>
-        </div>
-      </div>
-    </aside>
+    {# The inspector rail is gone at the operator's request: the conversation
+       gets the full width. Its two useful actions moved into the bar above.
+       jpPerImage stays as a hidden control because renderDesign() reads it and
+       dropping it would silently change how many journeys land per board. #}
+    <select id="jpPerImage" hidden>
+      <option value="1">1</option><option value="2" selected>2</option>
+      <option value="3">3</option><option value="0">0</option>
+    </select>
   </div>
 </div>
 
@@ -417,6 +370,8 @@
         scriptCount = document.getElementById("jpScriptCount"),
         jlist = document.getElementById("jpJourneyList"),
         jempty = document.getElementById("jpJourneyEmpty");
+  // jlist/jempty/meter belonged to the removed rail — every use below is
+  // guarded, so the journey index and token meter just stop being drawn.
   if (!log || !input || !sendBtn) return;
   const history = [];
   const spent = { calls: 0, input: 0, cached: 0, thought: 0, answer: 0 };
@@ -435,36 +390,11 @@
     + '<path d="M5 15H4a1 1 0 01-1-1V4a1 1 0 011-1h10a1 1 0 011 1v1"/>');
   let busy = false, boards = 0, scripts = 0;
 
-  // ── stage rail ────────────────────────────────────────────────────────────
-  // Derived state, never stored: the rail is a read-out of history/boards/
-  // scripts, so it cannot drift from what the session actually produced. Called
-  // at the end of every action below.
-  const stageEls = {};
-  document.querySelectorAll("#jpStages [data-stage]").forEach(el => {
-    stageEls[el.dataset.stage] = el;
-  });
-  const stageBoards = document.getElementById("jpStageBoards"),
-        stageScript = document.getElementById("jpStageScript");
-  function paintStages(active){
-    const sent = history.some(m => m.role === "user");
-    const replied = history.some(m => m.role === "model");
-    const state = {
-      brief:  sent ? "done" : "",
-      plan:   replied ? "done" : "",
-      boards: boards ? "done" : "",
-      script: scripts ? "done" : "",
-    };
-    // The active stage wins over "done" so a re-run reads as in progress.
-    if (active) state[active] = "on";
-    else if (!sent) state.brief = "on";
-    else if (!replied) state.plan = "on";
-    for (const [k, el] of Object.entries(stageEls)){
-      el.classList.toggle("done", state[k] === "done");
-      el.classList.toggle("on", state[k] === "on");
-    }
-    if (stageBoards) stageBoards.textContent = boards ? String(boards) : "";
-    if (stageScript) stageScript.textContent = scripts ? String(scripts) : "";
-  }
+  // The stage rail was removed at the operator's request, so there is nothing
+  // to paint. Kept as a no-op rather than deleting the call sites: the handlers
+  // below each report progress, and stripping calls out of five of them is more
+  // churn than one empty function.
+  function paintStages(){}
 
   // Sample brief inlined so the button works without an extra fetch/route.
   const BRIEF = `CAMPAIGN BRIEF — "Spin the Wheel — 3 Years JugaBet"
@@ -674,7 +604,7 @@ NOTES
           spent.cached += data.usage.cached; spent.thought += data.usage.thought;
           spent.answer += data.usage.answer;
           const pct = spent.input ? Math.round(100 * spent.cached / spent.input) : 0;
-          meter.textContent = `${spent.calls} call(s) · in ${(spent.input/1000).toFixed(1)}k `
+          if (meter) meter.textContent = `${spent.calls} call(s) · in ${(spent.input/1000).toFixed(1)}k `
                             + `(${pct}% cached) · thought ${(spent.thought/1000).toFixed(1)}k `
                             + `· out ${(spent.answer/1000).toFixed(1)}k`;
         }
@@ -694,11 +624,15 @@ NOTES
   input.addEventListener("keydown", e => {
     if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); send(); }
   });
-  document.getElementById("jpInsert").onclick = () => { input.value = BRIEF; input.focus(); };
+  const _jpInsert = document.getElementById("jpInsert");
+  if (_jpInsert) _jpInsert.onclick = () => { input.value = BRIEF; input.focus(); };
   document.querySelectorAll("[data-starter]").forEach(chip => {
     chip.onclick = () => { input.value = STARTERS[chip.dataset.starter] || ""; input.focus(); };
   });
-  document.getElementById("jpClear").onclick = () => {
+  // Clear / Insert / Copy lived in the removed rail. Guarded so the handlers
+  // simply do not bind when the button is absent.
+  const clearBtn = document.getElementById("jpClear");
+  if (clearBtn) clearBtn.onclick = () => {
     history.length = 0;
     log.querySelectorAll(".jp-msg").forEach(n => n.remove());
     empty.style.display = ""; hint.textContent = "";
@@ -706,12 +640,13 @@ NOTES
     boards = scripts = 0; boardCount.textContent = "(0)"; scriptCount.textContent = "(0)";
     history.length = 0; paintStages();
     results.hidden = true;
-    jlist.querySelectorAll(".jp-jrow").forEach(n => n.remove());
-    jempty.hidden = false;
+    if (jlist) jlist.querySelectorAll(".jp-jrow").forEach(n => n.remove());
+    if (jempty) jempty.hidden = false;
     Object.keys(spent).forEach(k => { spent[k] = 0; });
     if(meter) meter.textContent = "—";
   };
-  document.getElementById("jpCopy").onclick = () => {
+  const _jpCopy = document.getElementById("jpCopy");
+  if (_jpCopy) _jpCopy.onclick = () => {
     const last = [...history].reverse().find(m => m.role === "model");
     if(last){ navigator.clipboard.writeText(last.text); hint.textContent = "Copied last reply."; }
     else { hint.textContent = "Nothing to copy yet."; }
@@ -773,8 +708,8 @@ NOTES
         hint.textContent = "";
       } else {
         boardsBox.innerHTML = ""; boards = 0;
-        jlist.querySelectorAll(".jp-jrow").forEach(n => n.remove());
-        jempty.hidden = true;
+        if (jlist) jlist.querySelectorAll(".jp-jrow").forEach(n => n.remove());
+        if (jempty) jempty.hidden = true;
         let jn = 0;
         data.images.forEach((im, i) => {
           const box = document.createElement("div"); box.className = "jp-board"; box.id = `jpBoard${i}`;
@@ -807,7 +742,7 @@ NOTES
               document.getElementById(`jpBoard${i}`)
                       ?.scrollIntoView({ behavior: "smooth", block: "center" });
             };
-            jlist.append(row);
+            if (jlist) jlist.append(row);
           });
         });
         boardCount.textContent = `(${boards})`;
