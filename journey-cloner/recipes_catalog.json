@@ -298,7 +298,17 @@
         ],
         "follow": "SuccessEmailSend",
         "inline_keys": [
+          "creative",
+          "cta",
+          "desc_es",
+          "email_name",
           "from_name",
+          "heading",
+          "hero",
+          "hero_link",
+          "preheader_es",
+          "promo_page_id",
+          "subject_es",
           "template"
         ]
       },
@@ -375,6 +385,7 @@
           "nc",
           "notification",
           "notification_center",
+          "notification_center#contract1",
           "onsite"
         ],
         "follow": "NotificationSent",
@@ -387,11 +398,14 @@
       },
       "notification_center#contract5": {
         "aliases": [
+          "notification_center#contract5",
           "popup"
         ],
         "follow": "NotificationSent",
         "inline_keys": [
+          "deeplink",
           "image",
+          "link_en/es",
           "title_en/es, desc_en/es, caption_en/es"
         ]
       },

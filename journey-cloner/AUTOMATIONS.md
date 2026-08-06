@@ -294,26 +294,6 @@ sheet's window, that would start on publish, or that has a dangling
 `positionAbsolute`. Contract: `scripts/test_tournament_comms.py` — the **same
 suite runs against both brands**, so a change that only fixes one fails.
 
-### Comms journey from content — `journey_composer.py` → **AI** page
-Composes an arbitrary comms chain from captured nodes with **your** copy:
-`nc` → `popup` → `sms` → `email`, one journey per date (the channels are nodes in
-one chain, not separate journeys).
-
-Four settings are not optional here, because a comms node is copied whole and
-whatever you leave unset stays the captured campaign's:
-
-| setting | on | leaving it unset ships |
-| --- | --- | --- |
-| `icon` | `nc` | the old promotion's card artwork |
-| `image` | `popup` | the old pop-up background (`background_image_src`, *not* `icon`) |
-| `template` | `email` | the old campaign's content-studio email |
-| `link_en/es` | `nc` | players sent to the old promo page |
-
-The inherited-content check refuses a build that still shares any content value
-with its reference, so an unset one is a failed build rather than a cosmetic
-slip. That check exists because a "Physical Prize" journey once shipped carrying
-the Game of the Week SMS, email and promo link.
-
 ### Scratch Card Comms — `sport_comms_campaign.py` → Optimization ▸ Scratch Card Comms
 The fixture scratch-card promo announced on four channels from **one** journey:
 SMS, Notification Center, Cat-fish pop-up and email, with waits, two decision
@@ -402,20 +382,6 @@ notification's caption, while the sheet's pop-up caption was parsed and
 discarded. It looked fine: the captured literal was gone, so every
 leftover-detection check passed.
 
-Note what the slug checks do **not** assert. A real run deliberately reused the
-promo page the capture used (`arg-eng-sc`), and three checks read that as "never
-replaced" and refused a correct build. The test is that **no other** slug
-survives, not that the captured string is absent — reusing a promo page is
-legitimate, a second stale slug is not.
-
-`displayData` is the other trap, found on a real run: it is the label the
-builder prints on a node, it duplicates the copy, and in the mirror it hangs off
-the config entry rather than its `data` — so nothing that walks settings touches
-it. The SMS node kept the previous campaign's message and the email node its
-name. `set_display_data` rewrites both, and because the label *is* the value
-there, it replaces every string element rather than matching on content (the
-promo slug inside the SMS label is already rewritten by then).
-
 `set_channel_copy` / `set_sms_text` address each field by **name** instead —
 the template already encodes the language (`title-en`, `caption_es`, `des-en`,
 `description_es`) — and write both storages. `verify()` then reads the copy back
@@ -433,6 +399,157 @@ Contract: `scripts/test_sport_comms.py` — offline, no key. It asserts the
 prepared body differs from the template only in leaves holding a value the
 generator meant to write, and feeds `verify()` eight bodies that each break one
 rule to prove it refuses rather than warns.
+
+### Comms journey from content — `journey_composer.py` → **AI** page
+Composes an arbitrary comms chain from captured nodes with **your** copy:
+`nc` → `popup` → `sms` → `email`, one journey per date (the channels are nodes in
+one chain, not separate journeys).
+
+Four settings are not optional here, because a comms node is copied whole and
+whatever you leave unset stays the captured campaign's:
+
+| setting | on | leaving it unset ships |
+| --- | --- | --- |
+| `icon` | `nc` | the old promotion's card artwork |
+| `image` | `popup` | the old pop-up background (`background_image_src`, *not* `icon`) |
+| `template` | `email` | the old campaign's content-studio email |
+| `subject_es` + `hero` + `hero_link`/`promo_page_id` | `email` | *(authors a new content instead — see below)* |
+| `link_en/es` | `nc`, `popup` | players sent to the old promo page |
+
+`icon` and `image` take a URL **or** the literal `PICK`. A brief carries files,
+not media-library URLs, so `PICK` writes a placeholder that the emitted console
+script resolves at paste time: it opens a file picker, uploads to the media
+library, and substitutes the returned `absolute_link`. It is not a way to skip
+the artwork — the script refuses to POST while any placeholder survives, and a
+`PICK` build with no `--script` fails, since the placeholder would otherwise sit
+where a URL belongs.
+
+Two things about that table are easy to get wrong, and both shipped a draft that
+reported VERIFIED OK:
+
+- **The pop-up's link is language-independent.** It keeps one `link` in the
+  `common` tab (`buttons_1_link` is the `%link%` indirection), so `link_en` /
+  `link_es` both write that one slot. Before they did, neither matched and the
+  pop-up button kept sending players to the captured campaign's promo page.
+- **`deeplink` now defaults to the link.** Unset, it was the reference's own
+  in-app URL — so the card was right on web and wrong in the app.
+
+`desc_en` vs `desc_es` is matched on the language **suffix**, not by substring:
+`"es" in "des-en"` is true, and that made the Spanish pass overwrite every
+English description, so the EN notification shipped the ES copy.
+
+#### The email: author a content, don't borrow one
+
+An email's copy is not inline on the activity — the activity references a
+content-studio content by id, which is why `template` alone can only ever reuse
+someone else's creative. Setting `subject_es` / `preheader_es` / `heading` /
+`hero` / `hero_link` (or `promo_page_id`) instead **authors a new content**: the
+composer substitutes the captured JBCL creative, and the console script creates
+it, publishes it, and repoints the journey at the id it gets back — the same
+create → save → publish flow `comms_campaign.py` uses for GOW. The content the
+spec names is never edited; a new one is always created. `template` and the
+authoring settings are mutually exclusive, and asking for both is refused.
+
+Two captured JBCL creatives, with different slots. `creative` picks one; left
+unset, whichever fits the settings given is used and reported:
+
+| creative | template | slots | when |
+| --- | --- | --- | --- |
+| `hero_only` | `gow_email.json` | `heading`, `hero` | the copy is *in* the image (how GOW works) |
+| `text_body` | `jbcl_tournament_email.json` | `desc_es`, `hero`, `cta` | the brief has body paragraphs |
+
+`desc_es` takes the brief's Description verbatim — blank lines become the
+`<br><br>` breaks the creative uses, and the text is **escaped**, so a stray `<`
+in a spreadsheet cell shows up instead of breaking the body. `cta` is the button
+image *below* the text; both it and `hero` accept a URL or `PICK`.
+
+What these creatives can and cannot carry, because they are real captures and
+not a layout invented per campaign:
+
+- **A setting the chosen creative has no slot for is refused**, never dropped.
+  Giving `desc_es` to `hero_only` is a refusal — silently ignoring it is how a
+  brief's body copy "shipped" while the email showed only a picture.
+- **The CTA is an image in `text_body`.** A sheet's email Button *text* has
+  nowhere to go: it has to be part of the button image. `comms_builder.py` says
+  so rather than dropping it quietly.
+- **`hero_link` vs `promo_page_id`.** One is required — unset, the email ships a
+  dead link. `hero_only` bakes the promo path around an id token, `text_body`
+  holds the whole href, so a promo id is expanded into one.
+- **The brand must match.** Both captures are JBCL's; a PMCL run authoring one is
+  refused. Emailing one brand's players another brand's creative is a brand swap,
+  not a substitution.
+
+The inherited-content check refuses a build that still shares any content value
+with its reference, so an unset one is a failed build rather than a cosmetic
+slip. That check exists because a "Physical Prize" journey once shipped carrying
+the Game of the Week SMS, email and promo link.
+
+### Comms builder — `comms_builder.py` → shell
+**The JBCL comms entry point.** Pick the channels, say where you want engagement
+splits and waits, paste the sheet, get the script. **No model is involved**,
+which is the point: a comms chain is not something worth inferring.
+
+`--variant` starts from a shape that used to be a script of its own. A variant is
+only defaults — anything on the command line still wins — so four near-identical
+generators became four rows of data, not four code paths:
+
+| `--variant` | chain | replaces |
+| --- | --- | --- |
+| `tournament` | NC → wait → split → pop-up → wait → split → email → wait → split → SMS | hand-written specs |
+| `gow` | NC → pop-up → SMS | `comms_campaign.py` (standalone use) |
+| `scratch_card` | NC → pop-up → email | `sport_comms_campaign.py` |
+| `nc_only` | NC | `nc_discount_campaign.py` |
+
+The superseded generators still exist and still work — the GOW tab calls
+`comms_campaign.py`, and `nc_discount_campaign.py` owns the baked calendar. They
+are marked `superseded_by` in the registry so the Optimization list says which to
+reach for. Reach for the builder for anything new.
+
+**PMCL comms is deliberately not here.** `journey_composer`'s node library is
+entirely JBCL-captured (`SOURCES` is `gow`, `gow_comms` and the two `udch`
+files); `tournament_pmcl_comms.json` is PMCL and excluded. Routing PMCL through
+the builder would build PMCL copy into JBCL nodes — the brand swap the email
+guard already refuses — and adding a second brand's capture to the node library
+is the node-schema-mixing risk `COMPOSER_RULES.md` exists for. So
+`tournament_pmcl_campaign.py` and `nc_discount_pmcl_campaign.py` stay separate
+until that capture is added to `SOURCES` on purpose, with the blank-canvas checks
+re-run.
+
+```bash
+.venv/bin/python journey-cloner/comms_builder.py --sheet sheet.tsv \
+    --channels nc,popup,email,sms --splits nc,popup,email \
+    --wait nc=2h --wait popup=1d --wait email=1d --script
+```
+
+Where each input comes from — nothing else is consulted:
+
+| | |
+| --- | --- |
+| the chain shape | `--channels` / `--splits` / `--wait`, verbatim |
+| every word of copy | `spec_parser.py` reading the pasted sheet |
+| the link, date, journey name | the sheet's `Link`, `Start date`, `Event` rows |
+| the journey body | `journey_composer.py` cloning captured nodes |
+
+Waits take shorthand (`30m`, `2h`, `1d`, `1w`) or an ISO-8601 duration. A split
+after a channel ends the *engaged* path and continues down the unengaged one.
+Artwork defaults to `PICK`, so the script prompts for each image at paste time.
+
+Every gap refuses instead of being filled:
+
+- **A channel picked with no copy in the sheet.** This was the whole risk — an
+  empty channel ships the captured campaign's words.
+- **A split on SMS.** No SMS engagement event is captured, so it would branch on
+  nothing. Splits exist for `nc`, `popup` and `email`.
+- A split or wait naming a channel that was not picked; a channel picked twice;
+  no channels; an unreadable wait; no link, date, or email heading anywhere.
+
+`scripts/test_comms_builder.py` asserts the copy reaching the spec is the
+sheet's cells byte for byte, and that each refusal above fires.
+
+### GOW comms — `comms_campaign.py` → built with GOW
+The comms half of a GOW campaign; runs as part of that tab by default.
+
+---
 
 ## Assets
 

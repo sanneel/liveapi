@@ -36,7 +36,7 @@ from pathlib import Path
 
 from create_journeys import BRAND, LOCAL_TZ, UTC, utc_api
 from casino_journey import DEFAULT_BASE_URL
-from comms_campaign import DEFAULT_FOLDER_ID
+from media_library import DEFAULT_FOLDER_ID
 
 HERE = Path(__file__).resolve().parent
 TEMPLATE_PATH = HERE / "templates" / "casino" / "nc_discount.json"

@@ -151,10 +151,18 @@ GENERATORS: List[dict] = [
      "label": "Instant free spins",
      "what": "Promotion → free spins, no deposit gate (composer recipe)",
      "script": "compose.py", "route": "/admin/ai"},
+    {"key": "comms_builder", "group": "Comms", "brand": "JBCL",
+     "label": "Comms builder",
+     "what": "THE JBCL comms entry point: pick channels/splits/waits, paste the sheet. "
+             "--variant gow / scratch_card / nc_only / tournament covers the shapes that "
+             "used to be a script each. No model involved",
+     "script": "comms_builder.py", "tab": "comms_builder"},
     {"key": "nc_discount", "group": "Casino", "brand": "JBCL",
      "label": "Discount NC",
-     "what": "One notification journey per game/day from the calendar",
-     "script": "nc_discount_campaign.py", "tab": "nc_discount"},
+     "what": "One notification journey per game/day from the calendar. Superseded by "
+             "Comms builder --variant nc_only; kept for the baked calendar",
+     "script": "nc_discount_campaign.py", "tab": "nc_discount",
+     "superseded_by": "comms_builder"},
     {"key": "nc_discount_pmcl", "group": "Casino", "brand": "PMCL",
      "label": "Discount NC — PMCL",
      "what": "The fortunazo.cl variant, same shape",
@@ -173,6 +181,12 @@ GENERATORS: List[dict] = [
      "label": "Prediction",
      "what": "Multi-number prediction promo from a pasted sheet",
      "script": "prediction_campaign.py", "tab": "prediction"},
+    {"key": "sport_comms", "group": "Sport", "brand": "JBCL",
+     "label": "Scratch Card Comms",
+     "what": "SMS + notification + pop-up + email for a liveapi campaign. Superseded by "
+             "Comms builder --variant scratch_card, except the liveapi card fetch",
+     "script": "sport_comms_campaign.py", "tab": "sport_comms",
+     "superseded_by": "comms_builder"},
 
     # ── Wheels & cards ────────────────────────────────────────────────────
     {"key": "randomizers", "group": "Wheels & cards", "brand": "JBCL/PMCL",
@@ -193,10 +207,12 @@ GENERATORS: List[dict] = [
      "label": "Comms journey from content",
      "what": "NC + pop-up + SMS + email with your copy, one journey per date",
      "script": "journey_composer.py", "route": "/admin/ai"},
-    {"key": "sport_comms", "group": "Sport", "brand": "JBCL",
-     "label": "Scratch Card Comms",
-     "what": "SMS + NC + pop-up + email for a fixture scratch card, one journey",
-     "script": "sport_comms_campaign.py", "tab": "sport_comms"},
+    {"key": "gow_comms", "group": "Comms", "brand": "JBCL",
+     "label": "GOW comms",
+     "what": "The comms half of a GOW campaign (built with it by default). Superseded "
+             "for standalone use by Comms builder --variant gow",
+     "script": "comms_campaign.py", "tab": "gow",
+     "superseded_by": "comms_builder"},
 
     # ── Assets ────────────────────────────────────────────────────────────
     {"key": "slot_cards", "group": "Assets", "brand": "JBCL",
@@ -212,7 +228,8 @@ GENERATORS: List[dict] = [
 # Scripts that are library/tooling, not campaign generators — excluded from the
 # "unregistered" warning so it only fires on something genuinely new.
 _NOT_GENERATORS = {
-    "__init__.py", "spec_parser.py", "email_content.py", "compose_comms.py",
+    "__init__.py", "spec_parser.py", "email_content.py", "media_library.py",
+    "har_analyse.py",
     "journey_composer.py", "compose.py", "plan_lint.py", "extract_fragments.py",
     "extract_knobs.py", "extract_templates.py", "mine_flows.py", "web_ui.py",
     "generate_console_script.py", "ai_campaign_builder.py", "casino_journey.py",

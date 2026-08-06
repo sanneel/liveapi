@@ -1,0 +1,179 @@
+{# ── Comms builder: tick channels, paste the sheet, get the script ─────── #}
+{% if comms.error %}<div class="alert err">{{ comms.error }}</div>{% endif %}
+{% if comms.result %}
+  <div class="alert {% if comms.result.ok %}ok{% else %}err{% endif %}">
+    {% if comms.result.ok %}Console script generated.{% else %}Refused with exit code {{ comms.result.exit_code }} — the reason is in the output below.{% endif %}
+  </div>
+{% endif %}
+
+<div class="row-flex">
+  <form method="post" action="/admin/promotions/comms-builder" class="card card-pad col-rail" style="display:flex; flex-direction:column; gap:14px">
+    <div>
+      <h2 class="card-title">Build a comms journey</h2>
+      <p class="card-sub">Tick the channels, choose where engagement splits and waits go, paste the sheet. <b>No model is involved</b> — the chain is exactly what you tick and every word of copy is read out of your sheet, so there is nothing to hallucinate. A channel ticked with no copy in the sheet is refused, not filled in.</p>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Start from a known shape <span style="color:var(--t-faint)">(optional)</span></span>
+      <select class="input" name="variant">
+        <option value="">— none, use my picks below —</option>
+        <option value="tournament" {% if comms.form.variant == 'tournament' %}selected{% endif %}>Tournament — NC → pop-up → email → SMS, splits + waits</option>
+        <option value="gow" {% if comms.form.variant == 'gow' %}selected{% endif %}>GOW — NC → pop-up → SMS</option>
+        <option value="scratch_card" {% if comms.form.variant == 'scratch_card' %}selected{% endif %}>Scratch card — NC → pop-up → email</option>
+        <option value="nc_only" {% if comms.form.variant == 'nc_only' %}selected{% endif %}>Notification only</option>
+      </select>
+      <p class="help" style="margin-top:6px">Only fills what you leave alone — your ticks below always win.</p>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Channels</span>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px">
+        {% for key, label in [('nc','Notification (bell)'), ('popup','Pop-up (Cat-fish)'), ('email','Email'), ('sms','SMS')] %}
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer">
+            <input type="checkbox" name="channels" value="{{ key }}" {% if key in comms.form.channels %}checked{% endif %}/>
+            <span class="lbl" style="margin:0">{{ label }}</span>
+          </label>
+        {% endfor %}
+      </div>
+      <p class="help" style="margin-top:6px">Used in this order. Each needs its rows in the sheet.</p>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Engagement split after</span>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:4px">
+        {% for key, label in [('nc','Notification'), ('popup','Pop-up'), ('email','Email')] %}
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer">
+            <input type="checkbox" name="splits" value="{{ key }}" {% if key in comms.form.splits %}checked{% endif %}/>
+            <span class="lbl" style="margin:0">{{ label }}</span>
+          </label>
+        {% endfor %}
+      </div>
+      <p class="help" style="margin-top:6px">The engaged path ends; the chain continues down the unengaged one. <b>SMS has none</b> — no engagement event was ever captured for it, so it would branch on nothing.</p>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Wait after each channel <span style="color:var(--t-faint)">(blank = no wait)</span></span>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; margin-top:4px">
+        {% for key, label in [('nc','After NC'), ('popup','After pop-up'), ('email','After email'), ('sms','After SMS')] %}
+          <div>
+            <div class="help" style="margin:0 0 4px">{{ label }}</div>
+            <input class="input mono" name="wait_{{ key }}" value="{{ comms.form['wait_' ~ key] or '' }}" placeholder="2h"/>
+          </div>
+        {% endfor %}
+      </div>
+      <p class="help" style="margin-top:6px">A duration, not a date: <span class="mono">30m</span>, <span class="mono">2h</span>, <span class="mono">1d</span>, <span class="mono">1w</span>.</p>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Content sheet</span>
+      <textarea class="input mono" name="sheet" rows="10" spellcheck="false" style="font-size:12px" placeholder="Paste the whole block: Specifications rows (Event, Start date, Link) plus the Notification / Notification Pop-up / Email / Sms copy rows, EN then ES.">{{ comms.form.sheet or '' }}</textarea>
+      <p class="help" style="margin-top:6px">Read by label, not column — the Max&nbsp;symb / Left&nbsp;symb counters are ignored. <b>Link</b>, <b>Start date</b> and <b>Event</b> supply the destination, the date and the journey name.</p>
+    </div>
+
+    <details>
+      <summary class="lbl" style="cursor:pointer">Overrides <span style="color:var(--t-faint)">(all optional — the sheet wins by default)</span></summary>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px">
+        <div class="field">
+          <span class="lbl">Start date</span>
+          <input class="input" name="date" type="date" value="{{ comms.form.date or '' }}"/>
+          <p class="help" style="margin-top:6px">Default: the sheet's Start date row.</p>
+        </div>
+        <div class="field">
+          <span class="lbl">Days</span>
+          <input class="input mono" name="days" value="{{ comms.form.days or '' }}" placeholder="1"/>
+          <p class="help" style="margin-top:6px">One journey per day, from the start date.</p>
+        </div>
+        <div class="field">
+          <span class="lbl">Journey name</span>
+          <input class="input" name="journey_name" value="{{ comms.form.journey_name or '' }}" placeholder="JBCL | … | Comms"/>
+          <p class="help" style="margin-top:6px">Default: built from the sheet's Event.</p>
+        </div>
+        <div class="field">
+          <span class="lbl">Link</span>
+          <input class="input mono" name="link" value="{{ comms.form.link or '' }}" placeholder="https://jugabet.cl/…"/>
+          <p class="help" style="margin-top:6px">Default: the sheet's Link row.</p>
+        </div>
+        <div class="field">
+          <span class="lbl">Reuse an email content</span>
+          <input class="input mono" name="email_template" value="{{ comms.form.email_template or '' }}" placeholder="CSE-0-14726"/>
+          <p class="help" style="margin-top:6px">Point at an existing email instead of authoring one. Leave blank to author from the sheet's copy.</p>
+        </div>
+        <div class="field">
+          <span class="lbl">Email heading</span>
+          <input class="input" name="email_heading" value="{{ comms.form.email_heading or '' }}"/>
+          <p class="help" style="margin-top:6px">Only used by the image-only creative, when the sheet has no email Description.</p>
+        </div>
+      </div>
+    </details>
+
+    <button class="btn primary" style="justify-content:center">Generate console script</button>
+    <p class="help">Nothing is written unless every check passes — a refusal names the field and what to do. JBCL only: PMCL comms has its own captured nodes and its own tab.</p>
+  </form>
+
+  <div class="col-main stack">
+    {% if comms.console_script %}
+      <section class="card" style="overflow:hidden">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">Console Script Ready</h2>
+            <p class="card-sub">{{ comms.console_script.name }}</p>
+          </div>
+          <button type="button" id="comms-copy" class="btn primary">Copy script</button>
+        </div>
+        <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+          <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
+            <li>Click <b>Copy script</b> above.</li>
+            <li>Open the backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
+            <li>Paste and press Enter. If it says "Waiting for a token", click anything in the UI.</li>
+            <li>It opens a <b>file picker</b> for each image it needs — the NC icon, the pop-up background, and the email hero and CTA button when the email is authored. The picker appears at the top-left of the page.</li>
+            <li>Watch for the green line naming the created journey id.</li>
+          </ol>
+          <textarea id="comms-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ comms.console_script.text }}</textarea>
+        </div>
+      </section>
+      <script>
+        (function () {
+          var btn = document.getElementById('comms-copy');
+          var area = document.getElementById('comms-script-text');
+          if (!btn || !area) return;
+          btn.addEventListener('click', function () {
+            var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); });
+            } else { area.select(); document.execCommand('copy'); done(); }
+          });
+        })();
+      </script>
+    {% endif %}
+
+    {% if comms.result %}
+      <section class="card" style="overflow:hidden">
+        <div class="card-head"><h2 class="card-title">Run Output</h2></div>
+        <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+          <div>
+            <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Chain + every value it set</div>
+            <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0">{{ comms.result.output }}</pre>
+          </div>
+        </div>
+      </section>
+    {% endif %}
+
+    {% if not comms.console_script and not comms.result %}
+      <section class="card">
+        <div class="card-head"><h2 class="card-title">What this builds</h2></div>
+        <div class="card-pad">
+          <p class="help" style="margin:0 0 10px; line-height:1.7">One journey carrying the channels you tick, in order, with the splits and waits you ask for:</p>
+          <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0 0 12px">segment → NC → [wait] → [split] → pop-up → [wait] → [split]
+        → email → [wait] → [split] → SMS → end</pre>
+          <p class="help" style="margin:0; line-height:1.7">Where each input comes from — nothing else is consulted:</p>
+          <ul class="help" style="margin:8px 0 0; padding-left:18px; line-height:1.7">
+            <li><b>The chain shape</b> — your ticks, verbatim.</li>
+            <li><b>Every word of copy</b> — the sheet, read by row label.</li>
+            <li><b>Link, date, journey name</b> — the sheet's Link / Start date / Event rows.</li>
+            <li><b>The journey body</b> — captured nodes, cloned with fresh ids.</li>
+          </ul>
+        </div>
+      </section>
+    {% endif %}
+  </div>
+</div>

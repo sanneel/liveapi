@@ -80,10 +80,15 @@ for names, want in ((["A"], "A"), (["A", "B"], "A + B"),
 print("\nno existing campaign changed meaning")
 with db_session() as s:
     autos = [c for c in CampaignRepository(s).list_all() if c.mode == "auto"]
-    changed = [c.slug for c in autos
-               if c.league_names != ([c.league] if c.league else [])]
-    check(f"all {len(autos)} auto campaigns parse to their original league",
+    # Only the plain-string rows are "pre-existing": a JSON-array row was written
+    # by this feature and is meant to parse to several.
+    legacy = [c for c in autos if c.league and not c.league.strip().startswith("[")]
+    changed = [c.slug for c in legacy if c.league_names != [c.league]]
+    check(f"all {len(legacy)} single-league rows parse to their original league",
           not changed, str(changed))
+    multi = [c for c in autos if len(c.league_names) > 1]
+    print(f"  (note: {len(multi)} campaign(s) already use several leagues"
+          f"{': ' + ', '.join('/' + c.slug for c in multi) if multi else ''})")
 
 print("\nthe engine unions the leagues")
 with db_session() as s:

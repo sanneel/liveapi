@@ -58,6 +58,8 @@ Offline, no key, safe to run any time:
 
 ```bash
 .venv/bin/python scripts/test_composer_contract.py   # planner -> composer contract
+.venv/bin/python scripts/test_comms_chain.py         # comms chain: languages, links, artwork pickers
+.venv/bin/python scripts/test_comms_builder.py       # pick channels + paste sheet -> spec
 .venv/bin/python scripts/test_journey_design.py      # design-board renderer
 .venv/bin/python scripts/test_har_analyse.py         # HAR analyser + secret scrubbing
 .venv/bin/python scripts/test_sport_comms.py         # sport scratch-card comms generator
