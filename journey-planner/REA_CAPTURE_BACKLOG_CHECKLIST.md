@@ -49,7 +49,21 @@ Input Source
 
 Flow control
 - [ ] `Random split`      — wire name unknown
-- [ ] `Email engagement split`      — wire name assumed `email_engagement_split`, unconfirmed
+- [x] `Email engagement split`      — CAPTURED as `email_engagement_split` in
+      templates/casino/gow_comms.json. Completion events are `Path1`..`Path6`;
+      the capture takes `Path2` into the SMS. Composable today.
+
+> **This file is no longer part of the planner's system prompt.** It answered
+> "what is composable" in hand-written prose while the generated RECIPES CATALOG
+> answers the same question from the code that does the building — and this prose
+> had drifted: the line above sat unticked long after `gow_comms.json` captured
+> that activity, so the prompt shipped a section contradicting its own catalog.
+> Dropping it saved ~2.2K tokens and removed a class of contradiction.
+>
+> Keep using it as a **human** capture-planning note: what to record next, and
+> what a HAR still needs to prove. Just never treat it as the answer to "can the
+> composer build X" — run `python journey-cloner/compose.py --catalog` and read
+> `chain_composer.activities` instead.
 - [ ] `Native push engagement split`— wire name unconfirmed
 
 Communication

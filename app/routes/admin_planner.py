@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import base64
 import contextvars
+import hashlib
 import json
 import re
 import shutil
@@ -250,6 +251,69 @@ def _call_groq(settings, system_prompt: str, messages: list, temperature: float)
     return text, None
 
 
+GEMINI_CACHE_URL = "https://generativelanguage.googleapis.com/v1beta/cachedContents"
+# How long a cached system prompt lives server-side. Long enough that a whole
+# campaign session (plan -> specs -> repairs -> compose) reuses one entry, short
+# enough that an edited corrections.md is picked up soon after. The digest check
+# below makes a stale entry impossible anyway — this only bounds the idle cost.
+GEMINI_CACHE_TTL_SECONDS = 3600
+# Below this the API rejects the cache create, and the saving would not be worth
+# a round trip. 2.5 Flash's documented floor is 1024 tokens; ~4 chars/token.
+GEMINI_CACHE_MIN_CHARS = 6000
+_gemini_cache: dict = {"name": "", "digest": "", "expires": 0.0, "disabled": False}
+
+
+def _ensure_gemini_cache(settings, system_prompt: str, model: str) -> str:
+    """Cache the system prompt server-side and return its handle, or "".
+
+    The system prompt is byte-identical on every call and is ~19K tokens, so
+    without this every request re-bills the whole thing at full input price — a
+    campaign is a dozen calls. Cached input bills far below fresh input.
+
+    Keyed on a digest of the prompt AND the model, so editing corrections.md or
+    switching model silently starts a new entry instead of serving a stale one.
+
+    FAILS OPEN. Any error disables caching for the process and the caller sends
+    the prompt inline as before: a planner that still works uncached beats one
+    that 500s because a cache create was rejected.
+    """
+    if _gemini_cache["disabled"] or len(system_prompt) < GEMINI_CACHE_MIN_CHARS:
+        return ""
+    digest = hashlib.sha256(f"{model}\x00{system_prompt}".encode("utf-8")).hexdigest()
+    now = time.time()
+    if _gemini_cache["digest"] == digest and _gemini_cache["expires"] > now + 60:
+        return _gemini_cache["name"]
+    body = {
+        "model": f"models/{model}",
+        "systemInstruction": {"parts": [{"text": system_prompt}]},
+        "ttl": f"{GEMINI_CACHE_TTL_SECONDS}s",
+    }
+    try:
+        r = requests.post(GEMINI_CACHE_URL,
+                          params={"key": settings.gemini_api_key.strip()},
+                          json=body, timeout=30)
+    except requests.RequestException as exc:
+        logger.warning("gemini cache create failed (continuing uncached): %s", exc)
+        return ""
+    if r.status_code != 200:
+        detail = r.text[:200]
+        # A model that does not support explicit caching will keep rejecting it;
+        # stop asking rather than paying a failed round trip on every call.
+        logger.warning("gemini cache create %s — continuing uncached: %s",
+                       r.status_code, detail)
+        _gemini_cache["disabled"] = True
+        return ""
+    name = (r.json() or {}).get("name") or ""
+    if not name:
+        _gemini_cache["disabled"] = True
+        return ""
+    _gemini_cache.update({"name": name, "digest": digest,
+                          "expires": now + GEMINI_CACHE_TTL_SECONDS})
+    logger.info("gemini system prompt cached as %s (%d chars, ttl %ds)",
+                name, len(system_prompt), GEMINI_CACHE_TTL_SECONDS)
+    return name
+
+
 def _call_gemini(settings, system_prompt: str, messages: list, temperature: float,
                  thinking: int | None = None, model: str | None = None):
     """Gemini (fallback). Returns (text, error).
@@ -275,12 +339,16 @@ def _call_gemini(settings, system_prompt: str, messages: list, temperature: floa
     budget = settings.gemini_thinking_budget if thinking is None else thinking
     if budget and budget > 0:
         gen_config["thinkingConfig"] = {"thinkingBudget": budget}
-    body = {
-        "system_instruction": {"parts": [{"text": system_prompt}]},
-        "contents": contents,
-        "generationConfig": gen_config,
-    }
-    url = GEMINI_URL.format(model=model or settings.gemini_model)
+    use_model = model or settings.gemini_model
+    body = {"contents": contents, "generationConfig": gen_config}
+    # Either reference the cached system prompt OR send it inline — the API
+    # rejects both together.
+    cache_name = _ensure_gemini_cache(settings, system_prompt, use_model)
+    if cache_name:
+        body["cachedContent"] = cache_name
+    else:
+        body["system_instruction"] = {"parts": [{"text": system_prompt}]}
+    url = GEMINI_URL.format(model=use_model)
     try:
         r = requests.post(url, params={"key": settings.gemini_api_key.strip()},
                           json=body, timeout=120)
@@ -311,21 +379,17 @@ def _call_gemini(settings, system_prompt: str, messages: list, temperature: floa
     return text, None
 
 
-# Lean-prompt stand-ins for the two big reference docs. Groq's free tier caps
-# tokens/minute (12K on 70b), and the full KB (~7.7K tok) + backlog (~2.2K)
-# blow past it. The operational essentials the planner actually needs to emit
-# specs — recipes, games, corrections — stay full; the deep reference is dropped
-# with a pointer. Gemini (no such cap) still gets the full docs.
+# Lean-prompt stand-in for the deep reference doc. Groq's free tier caps
+# tokens/minute (12K on 70b) and the full KB blows past it. The essentials the
+# planner actually needs to emit specs — recipes, games, corrections — stay full;
+# only the deep reference is dropped, with a pointer. Gemini has no such cap and
+# gets the full doc.
 _LEAN_KB = (
     "(Knowledge base omitted to fit this model's token budget. Rely on the "
     "RECIPES CATALOG, GAMES REGISTRY and CORRECTIONS below — they are the "
     "authoritative, up-to-date truth. Do NOT invent activities or recipes not "
     "listed there; if the brief needs something absent, output the ⛔ UNCAPTURED "
     "line.)"
-)
-_LEAN_BACKLOG = (
-    "(Capture backlog omitted. Only build recipes in the RECIPES CATALOG below; "
-    "anything else is ⛔ UNCAPTURED.)"
 )
 
 
@@ -337,11 +401,17 @@ def _build_system_prompt(lean: bool = False) -> str:
     recipes/games/corrections — what specs are actually built from — stay full.
     Raises FileNotFoundError if the docs are missing."""
     tpl = (PLANNER_DIR / "system_prompt.txt").read_text(encoding="utf-8")
+    # The capture backlog is NO LONGER injected. It answered "what is composable"
+    # in hand-written prose while the generated RECIPES CATALOG answers the same
+    # question from the code that does the building — and the prose had drifted,
+    # so the prompt shipped a section contradicting its own catalog (it still
+    # called email_engagement_split unconfirmed long after gow_comms.json captured
+    # it). ~2.2k tokens saved and one whole class of contradiction with it. The
+    # file stays on disk as a human capture-planning note.
     if lean:
-        kb, backlog = _LEAN_KB, _LEAN_BACKLOG
+        kb = _LEAN_KB
     else:
         kb = (PLANNER_DIR / "REA_KNOWLEDGE_BASE.md").read_text(encoding="utf-8")
-        backlog = (PLANNER_DIR / "REA_CAPTURE_BACKLOG_CHECKLIST.md").read_text(encoding="utf-8")
     corr_file = PLANNER_DIR / "corrections.md"
     corrections = corr_file.read_text(encoding="utf-8") if corr_file.exists() else ""
     cat_file = REPO_ROOT / "journey-cloner" / "recipes_catalog.json"
@@ -359,7 +429,6 @@ def _build_system_prompt(lean: bool = False) -> str:
     return (
         tpl
         .replace("<KNOWLEDGE_BASE>\n</KNOWLEDGE_BASE>", kb)
-        .replace("<CAPTURE_BACKLOG>\n</CAPTURE_BACKLOG>", backlog)
         .replace("<RECIPES_CATALOG>\n</RECIPES_CATALOG>", catalog)
         .replace("<GAMES_REGISTRY>\n</GAMES_REGISTRY>", games)
         .replace("<CORRECTIONS>\n</CORRECTIONS>", corrections)
