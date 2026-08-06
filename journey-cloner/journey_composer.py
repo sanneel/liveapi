@@ -358,6 +358,8 @@ EMAIL_PROMO_PAGE_TOKEN = "@@PROMO_PAGE_ID@@"
 # Authoring settings collected while the chain is applied; the content itself is
 # built in compose(), which is where the journey name and date are known.
 _email_authoring: list[dict] = []
+# Set when a promotion node asks for its page tree to be cloned at paste time.
+_promo_page_requested: list = []
 
 
 def build_email_content(s: dict, journey_name: str, date_str: str,
@@ -508,7 +510,13 @@ SETTINGS_DOC = {
     "promotion": {"content_id": "ContentId of a promo page YOU built (gow_campaign.py / the GOW tab). "
                                 "Without it the composer mints a fresh id, which owns no content tree, "
                                 "so the offer card renders EMPTY",
-                  "front_id": "FrontId of that same promo page — set it whenever you set content_id"},
+                  "front_id": "FrontId of that same promo page — set it whenever you set content_id",
+                  "promo_page": "\"clone\" copies the captured campaign's page tree onto this "
+                                "draft's own freshly-minted ids at paste time, so the offer card "
+                                "renders instead of being empty. It carries the captured words and "
+                                "artwork — change them in the backoffice, or build the page in GOW "
+                                "where the text rewrites live. Leave unset to keep the INCOMPLETE "
+                                "warning and wire content_id/front_id yourself."},
     "deposit": {"min_deposit": "minimum deposit amount, platform minor units (all tiers set to this)",
                 "timeout": "ISO-8601 window, e.g. P0Y0M1DT0H0M0S"},
     "freespin_bonus": {"spins": "free-spin count",
@@ -943,6 +951,8 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
             note("displayData", init["displayData"], [body_text])
             init["displayData"] = [body_text]
     elif kind == "promotion":
+        if str(s.get("promo_page") or "").strip().lower() == "clone":
+            _promo_page_requested.append(True)
         # Point the offer card at a promo page the operator actually built.
         # Every promotion-bearing capture carries a promo-page placement
         # (ContentId + FrontId). Left as captured, the draft shares the captured
@@ -1049,6 +1059,7 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
         "notification_center#contract1": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "image", "deeplink"},
         "notification_center#contract5": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "image", "deeplink"},
         "promotion": {"content_id", "front_id"},
+        "promotion": {"content_id", "front_id", "promo_page"},
         "dextra_sms": {"text_en", "text_es"},
         "dextra_email": {"template", "from_name"} | EMAIL_AUTHORING_KEYS,
         "wait_interval": {"wait"},
@@ -1077,6 +1088,7 @@ def compose(spec: dict) -> dict:
     warnings: list[str] = []
     _pick_counter[0] = 0     # per-build, so the same spec yields the same tokens
     _email_authoring.clear()
+    _promo_page_requested.clear()
 
     # resolve source
     src_spec = spec.get("source") or {}
@@ -1865,7 +1877,8 @@ def cmd_describe(spec: dict) -> int:
     return 0
 
 
-def emit_console_script(body: dict, out_path: Path, email_content: dict | None = None) -> str:
+def emit_console_script(body: dict, out_path: Path, email_content: dict | None = None,
+                        promo_clones: list[dict] | None = None) -> str:
     """Render the paste-ready browser console script using the PROVEN scaffold
     from casino_journey.py (token auto-capture -> reserve JRN id -> regenerate
     activity uuids at paste time -> POST /journey-drafts -> aggregatedError log).
@@ -1873,7 +1886,7 @@ def emit_console_script(body: dict, out_path: Path, email_content: dict | None =
     from casino_journey import build_js  # the battle-tested JS template
     # body already carries the DRY-RUN-CASINO placeholder the script swaps
     js = build_js(body)
-    js = _inject_pickers(js, pick_slots(body), email_content)
+    js = _inject_pickers(js, pick_slots(body), email_content, promo_clones)
     out_path.write_text(js, encoding="utf-8")
     return str(out_path)
 
@@ -1977,8 +1990,107 @@ _EMAIL_JS = """
 """
 
 
-def _inject_pickers(js: str, slots: list[dict], email_content: dict | None = None) -> str:
-    if not slots and not email_content:
+_PROMO_PAGE_JS = """
+  // --- clone the promo page ---------------------------------------------------
+  // A minted ContentId/FrontId owns no content tree, so the offer card renders
+  // empty — every composed casino journey reported INCOMPLETE for that reason.
+  // These are gow_campaign.py's own calls, unchanged: a per-target
+  // /contents/v1/copy from the captured id to the fresh one. The copy is always
+  // scoped by fileFilters, because an unfiltered copy of a years-old bundle
+  // folder stalls recursively enumerating ancient assets — the backoffice's own
+  // duplicate action scopes it the same way.
+  //
+  // What this does NOT do: rewrite the marketing text baked into the content, or
+  // upload new artwork. The page comes out as the captured campaign's page under
+  // ids this draft owns. That is the template being the source of truth for
+  // shape; change the words in the backoffice, or build the page in GOW where
+  // those rewrites live.
+  const PROMO_CLONES = @PROMO_CLONES@;
+  async function copyContentsTarget(srcPath, destPath, fileFilters) {
+    const body = { sourcePath: srcPath, destinationPath: destPath };
+    if (fileFilters) body.fileFilters = fileFilters;
+    const r = await fetch(CRM_BASE + '/contents/v1/copy', { method: 'POST', headers: headers('application/json'), credentials: 'include', body: JSON.stringify(body) });
+    if (!r.ok) throw new Error('promo page copy failed ' + srcPath + ' -> ' + destPath + ': HTTP ' + r.status + ' ' + await r.text());
+  }
+  const JSON_FILTERS = ['manifest.json', 'content/content-es.json', 'content/content-en.json'];
+  function contentFileFilters(target, role, itemContentIds) {
+    if (target === 'widgetModulor' || target === 'cashier') return JSON_FILTERS;
+    if (target === 'widget') return JSON_FILTERS.concat(['media/box.png', 'media/widgetImgKey.png']);
+    if (target === 'spa') {
+      if (role === 'offer') {
+        return JSON_FILTERS.concat(
+          ['media/HeaderImageKey.png', 'media/prizeImageKey.png'],
+          (itemContentIds || []).map((id) => `media/${id}.itemImageKey.png`)
+        );
+      }
+      return JSON_FILTERS.concat(['media/box.png', 'media/bonusHeaderImage.png']);
+    }
+    return undefined;
+  }
+  async function cloneBundle(oldId, newId, targets, role, itemContentIds) {
+    await Promise.all(targets.map((t) =>
+      copyContentsTarget(`mf/v1/${oldId}/${t}`, `mf/v1/${newId}/${t}`,
+                         role ? contentFileFilters(t, role, itemContentIds) : undefined)));
+  }
+  if (PROMO_CLONES.length) {
+    console.log('Cloning the promo page bundle(s)...');
+    await Promise.all(PROMO_CLONES.map(async (c) => {
+      console.log('  [' + c.role + '] content ' + c.old_content + ' -> ' + c.new_content);
+      await Promise.all([
+        cloneBundle(c.old_content, c.new_content,
+                    ['spa', 'widget', 'widgetModulor', 'cashier'], c.role, c.item_content_ids),
+        cloneBundle(c.old_front, c.new_front, ['spa', 'widget']),
+      ]);
+    }));
+    console.log('%c  promo page cloned — it carries the captured campaign\\'s words and artwork.',
+                'color:#eab308');
+  }
+"""
+
+
+def promo_page_clones(id_map: dict) -> tuple[list[dict], list[str]]:
+    """Pair each minted ContentId with its FrontId and the role that names its
+    fileFilters. Returns (clones, problems).
+
+    The role comes from gow_campaign.PLACEMENTS, which records the captured
+    content ids — so it is looked up, not guessed. An id that is not in there has
+    no known filter set, and an unfiltered copy of an old bundle can stall, so it
+    is reported rather than attempted.
+    """
+    try:
+        from gow_campaign import PLACEMENTS
+    except Exception:
+        return [], ["cannot import gow_campaign.PLACEMENTS — promo-page roles unknown"]
+    by_content = {p["contentId"]: p for p in PLACEMENTS}
+    by_front = {p["frontId"]: p for p in PLACEMENTS}
+    clones, problems = [], []
+    for old, info in id_map.items():
+        if info.get("key") not in ("ContentId", "contentId"):
+            continue
+        placement = by_content.get(old)
+        if placement is None:
+            problems.append(
+                f"ContentId {old} is not one of the captured GOW placements, so its "
+                f"fileFilters are unknown — refusing to copy it unfiltered (that "
+                f"stalls on old bundles). Build the page in GOW and pass content_id "
+                f"/ front_id instead.")
+            continue
+        front_old = placement["frontId"]
+        front_new = (id_map.get(front_old) or {}).get("new")
+        if not front_new:
+            problems.append(f"ContentId {old} was minted but its FrontId {front_old} "
+                            f"was not — the pair must move together")
+            continue
+        clones.append({"role": placement["role"],
+                       "old_content": old, "new_content": info["new"],
+                       "old_front": front_old, "new_front": front_new,
+                       "item_content_ids": placement.get("itemContentIds") or []})
+    return clones, problems
+
+
+def _inject_pickers(js: str, slots: list[dict], email_content: dict | None = None,
+                    promo_clones: list[dict] | None = None) -> str:
+    if not slots and not email_content and not promo_clones:
         return js
     from media_library import DEFAULT_FOLDER_ID
     block = (_PICKER_JS
@@ -1992,6 +2104,9 @@ def _inject_pickers(js: str, slots: list[dict], email_content: dict | None = Non
                   .replace("@EMAIL_CONTENT@", ctext)
                   .replace("@EMAIL_IMAGE_SLOTS@", json.dumps(slots, ensure_ascii=False))
                   .replace("@EMAIL_CONTENT_ID_TOKEN@", json.dumps(EMAIL_CONTENT_ID_TOKEN)))
+    if promo_clones:
+        block += _PROMO_PAGE_JS.replace("@PROMO_CLONES@",
+                                        json.dumps(promo_clones, ensure_ascii=False))
     # After the ids are regenerated and before the body is parsed and POSTed:
     # substituting on the serialised text hits the compiled activities and the
     # rawJourneyData mirror in one pass, which is what keeps them byte-identical.
@@ -2032,6 +2147,9 @@ def _inherited_content_errors(body: dict) -> list[str]:
 
 def cmd_compose(spec: dict, as_json: bool, script: bool, basename: str | None = None) -> int:
     res = compose(spec)
+    _id_map: dict = {}
+    promo_clones: list[dict] = []
+    errs_extra: list[str] = []
     # A chain clones its promotion node whole, so the draft arrives owning the
     # CAPTURED campaign's promotionId / campaignId and promo-page ContentId. Mint
     # fresh ones before verifying, or the draft hangs off that live campaign and
@@ -2044,11 +2162,34 @@ def cmd_compose(spec: dict, as_json: bool, script: bool, basename: str | None = 
                 _ref = json.loads(_src.read_text(encoding="utf-8-sig"))
             except (OSError, ValueError):
                 continue
-            for _line in refresh_promotion_identity(res["body"], _ref):
+            for _line in refresh_promotion_identity(res["body"], _ref, _id_map):
                 res.setdefault("report", []).append(_line)
     except Exception:
         pass
-    errs = verify(res["body"])
+    # Cloning the page turns those minted ids from blanks into a real tree, which
+    # is the difference between a shippable journey and one the player sees an
+    # empty card in. Only when asked for: a silent clone of another campaign's
+    # page is a surprise, and the INCOMPLETE warning is the honest default.
+    if _promo_page_requested and _id_map:
+        promo_clones, promo_problems = promo_page_clones(_id_map)
+        for _line in promo_problems:
+            errs_extra.append(f"promo_page — {_line}")
+        if promo_clones:
+            # refresh_promotion_identity warns INCOMPLETE because a minted id owns
+            # no tree. We are about to give it one, so that line now contradicts
+            # what the run does — drop it rather than print both.
+            res["report"] = [ln for ln in res.get("report", [])
+                             if "INCOMPLETE — the promo page" not in ln]
+            res.setdefault("report", []).append(
+                f"promotion: cloning {len(promo_clones)} promo-page bundle(s) at paste "
+                f"time ({', '.join(c['role'] for c in promo_clones)}) — the page will "
+                f"carry the captured campaign's words and artwork, so change the copy "
+                f"in the backoffice or build it in GOW instead")
+    elif _promo_page_requested:
+        errs_extra.append("promo_page: 'clone' was asked for but no ContentId was "
+                          "minted — this journey shares no page with its reference, "
+                          "so there is nothing to copy")
+    errs = verify(res["body"]) + errs_extra
     # Treat leaked campaign content as a verification failure: a journey that
     # messages players with another campaign's copy is not a usable draft, and
     # "VERIFIED OK" on one is exactly how the wrong SMS reached a real draft.
@@ -2087,10 +2228,10 @@ def cmd_compose(spec: dict, as_json: bool, script: bool, basename: str | None = 
             # other generator. Bare CLI runs keep the name-derived out/ path.
             CONSOLE_OUT.mkdir(parents=True, exist_ok=True)
             js_path = emit_console_script(res["body"], CONSOLE_OUT / f"{basename}_console.js",
-                                          res.get("email_content"))
+                                          res.get("email_content"), promo_clones)
         else:
             js_path = emit_console_script(res["body"], OUT / f"{slug}.console.js",
-                                          res.get("email_content"))
+                                          res.get("email_content"), promo_clones)
 
     summary = {
         "ok": not errs,

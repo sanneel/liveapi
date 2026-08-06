@@ -426,7 +426,8 @@
         "follow": "PromotionAccepted",
         "inline_keys": [
           "content_id",
-          "front_id"
+          "front_id",
+          "promo_page"
         ]
       },
       "random_split": {

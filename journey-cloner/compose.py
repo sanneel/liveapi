@@ -1221,7 +1221,8 @@ def audit_shared_promotion_identity(body: dict, reference: dict) -> list[str]:
     return leaks
 
 
-def refresh_promotion_identity(body: dict, reference: dict) -> list[str]:
+def refresh_promotion_identity(body: dict, reference: dict,
+                               out_mapping: dict | None = None) -> list[str]:
     """Give this draft its OWN promotion + content ids instead of the capture's.
 
     A cloned promotion node arrives carrying the captured campaign's
@@ -1239,6 +1240,12 @@ def refresh_promotion_identity(body: dict, reference: dict) -> list[str]:
 
     Only ids the draft SHARES with its reference are touched — an id the
     operator supplied is theirs and is left alone. Returns a report line per id.
+
+    `out_mapping`, when given, is filled with {old_id: {"new": new_id, "key":
+    "ContentId"|"FrontId"|...}}. A caller that wants the promo page to EXIST needs
+    it: cloning the captured bundle is a copy from the old id to the new one, so
+    minting without telling anyone which pair to copy is what left every composed
+    casino journey reporting INCOMPLETE.
     """
     shared: set[str] = set()
 
@@ -1265,6 +1272,9 @@ def refresh_promotion_identity(body: dict, reference: dict) -> list[str]:
         text = text.replace(old, new)
     body.clear()
     body.update(json.loads(text))
+    if out_mapping is not None:
+        for old, new in mapping.items():
+            out_mapping[old] = {"new": new, "key": _id_key_of(reference, old)}
     lines = [f"promotion identity {old} -> {new} (was the reference's own object)"
              for old, new in mapping.items()]
     # A minted ContentId/FrontId owns no content tree, so the offer card renders

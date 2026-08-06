@@ -302,6 +302,67 @@ try:
 except BaseException as exc:
     check("a parallel chain composes", False, f"{type(exc).__name__}: {exc}")
 
+print("\nthe promo page can be built, not just warned about")
+# A minted ContentId owns no content tree, so the offer card rendered empty and
+# every composed casino journey reported INCOMPLETE. promo_page: "clone" copies the
+# captured page onto the draft's own ids using gow_campaign's proven calls.
+import io  # noqa: E402
+import contextlib  # noqa: E402
+
+
+def _promo_run(promo_page=None, basename="zz_test_promo"):
+    node = {"type": "promotion"}
+    if promo_page:
+        node["promo_page"] = promo_page
+    sp = {"name": "zz promo probe", "source": {"type": "api"},
+          "chain": [node, {"type": "freespins", "game": "lagrancopa",
+                           "with_wagering": False}],
+          "date": "2026-08-01"}
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rc = JC.cmd_compose(sp, as_json=False, script=True, basename=basename)
+    js_path = REPO / "journey-cloner" / "console_scripts" / f"{basename}_console.js"
+    js = js_path.read_text(encoding="utf-8") if js_path.exists() else ""
+    js_path.unlink(missing_ok=True)
+    (REPO / "journey-cloner" / "out" / f"{basename}.journey.json").unlink(missing_ok=True)
+    return rc, buf.getvalue(), js
+
+
+rc, out, js = _promo_run()
+check("without the setting it still warns INCOMPLETE",
+      "INCOMPLETE — the promo page" in out)
+check("and emits no clone", "PROMO_CLONES" not in js)
+
+rc, out, js = _promo_run("clone")
+check("with clone it composes", rc == 0, out.strip()[-160:])
+check("it reports which bundle it will copy", "cloning 1 promo-page bundle" in out)
+check("the contradictory INCOMPLETE line is gone",
+      "INCOMPLETE — the promo page" not in out,
+      "it warned the page is missing while building it")
+check("it says the page carries the captured words",
+      "captured campaign's words" in out)
+check("the script carries the clone calls",
+      "PROMO_CLONES" in js and "contents/v1/copy" in js)
+check("the copy is scoped by fileFilters, never unfiltered",
+      "fileFilters" in js and "JSON_FILTERS" in js,
+      "an unfiltered copy of an old bundle stalls")
+check("the clone runs before the draft is POSTed",
+      js.index("PROMO_CLONES") < js.index("journey-drafts"))
+import json as _json  # noqa: E402
+import re as _re  # noqa: E402
+clones = _json.loads(_re.search(r"const PROMO_CLONES = (\[.*?\]);", js, _re.DOTALL).group(1))
+check("each clone names a captured role", all(c["role"] for c in clones), str(clones))
+check("content and front both move", all(c["old_front"] and c["new_front"] for c in clones))
+check("old and new are different ids",
+      all(c["old_content"] != c["new_content"] for c in clones))
+
+# The role comes from gow_campaign.PLACEMENTS, so an id that is not one of those
+# has unknown filters — that must be reported, not copied unfiltered.
+clones, problems = JC.promo_page_clones(
+    {"11111111-1111-1111-1111-111111111111": {"new": "x", "key": "ContentId"}})
+check("an unknown ContentId is refused rather than copied unfiltered",
+      not clones and any("not one of the captured" in p for p in problems), str(problems))
+
 print("\nthe email content name is one Content Studio will accept")
 # It rejects *@#?|&<>"'/ with 422 RESTRICTED_SYMBOLS_IN_CONTENT_NAME. Journey
 # names here are pipe-separated and the default content name is derived from one,
