@@ -20,7 +20,258 @@ export default function OverviewScreen({ name }: { name: ScreenName }) {
       return <PromoPageForm />
     case 'promotions-site':
       return <PromotionsSite />
+    case 'journey-log':
+      return <JourneyLog />
+    case 'randomizer-players':
+      return <RandomizerPlayers />
+    case 'player-bonus-card':
+      return <PlayerBonusCard />
   }
+}
+
+// ─── One real spin, three screens ────────────────────────────────────────────
+//
+// Captured 07.08.2026 from randomizer RND-0-17731 (JBCL|CS|WOF|07.08.26) and the
+// journey it feeds, JRN-0-572381. Reproduced rather than screenshotted so the
+// account number can be truncated and the type stays legible at any width.
+
+const LOG_ROWS = [
+  {
+    time: '08:12:11',
+    name: 'Deposit',
+    flow: 'Flow 1',
+    event: 'Activated',
+    detail: ['Deposit condition status: Active', 'Expired at: 08.08.2026 08:12:10'],
+  },
+  {
+    time: '08:12:10',
+    name: '15k dep',
+    kind: 'Promotion',
+    flow: 'Flow 1',
+    event: 'Accepted',
+    detail: ['Promotion status: Accepted', 'Display ID: 672078'],
+  },
+  {
+    time: '08:12:10',
+    name: 'Multipurpose Promotion',
+    event: 'Accepted',
+    detail: ['Promotion status: Accepted', 'Promotion Currency: CLP'],
+  },
+  {
+    time: '08:10:23',
+    name: 'Multipurpose Promotion',
+    event: 'Offered',
+    detail: ['Promotion offer expired at: 08.08.2026 08:10:22', 'Promotion status: Offered'],
+  },
+  { time: '08:10:22', name: 'Decision split', event: 'Other', detail: [] },
+  {
+    time: '08:10:07',
+    name: 'API',
+    event: 'Player added to journey',
+    detail: ['Player currency: CLP', 'Added by system'],
+  },
+]
+
+function JourneyLog() {
+  return (
+    <ScreenFrame>
+      <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: '#E4E6E0' }}>
+        <span style={{ fontSize: '12.5px', fontWeight: 500, color: '#1F2328' }}>
+          Player Details <span style={{ color: '#6B7280' }}>jbcl4660…8434</span>
+        </span>
+        <span
+          className="rounded-full px-2 py-0.5"
+          style={{ background: '#E7F4ED', color: PRODUCT_GREEN, fontSize: '10px', fontWeight: 600 }}
+        >
+          ● Active
+        </span>
+      </div>
+      <Tabs tabs={['Journey log', 'Journey data', 'Journey flow', 'Exit criteria']} />
+      <table className="w-full" style={{ fontSize: '10.5px' }}>
+        <thead>
+          <tr style={{ color: '#8A8F86' }}>
+            <Th>Event date</Th>
+            <Th>Activity name</Th>
+            <Th>Event</Th>
+            <Th>Event details</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {LOG_ROWS.map((r, i) => (
+            <tr key={i} style={{ background: i % 2 ? '#FAFAF8' : undefined }}>
+              <Td>
+                <span style={{ color: '#6B7280' }}>07.08.2026</span>
+                <br />
+                <span style={{ fontWeight: 600, color: '#1F2328' }}>{r.time}</span>
+              </Td>
+              <Td>
+                <span style={{ color: '#1F2328', fontWeight: 500 }}>{r.name}</span>
+                {r.flow && (
+                  <span
+                    className="ml-1.5 rounded px-1 py-0.5"
+                    style={{ background: '#EDEEEA', color: '#4B5563', fontSize: '9px', fontWeight: 600 }}
+                  >
+                    {r.flow}
+                  </span>
+                )}
+                {r.kind && (
+                  <>
+                    <br />
+                    <span style={{ color: '#9A9E96', fontSize: '9.5px' }}>{r.kind}</span>
+                  </>
+                )}
+              </Td>
+              <Td>
+                <span style={{ color: '#1F2328' }}>{r.event}</span>
+              </Td>
+              <Td>
+                {r.detail.map(d => (
+                  <span key={d} style={{ color: '#6B7280', display: 'block', lineHeight: 1.5 }}>
+                    {d}
+                  </span>
+                ))}
+              </Td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </ScreenFrame>
+  )
+}
+
+function RandomizerPlayers() {
+  const meta = [
+    ['Published at', '07 Aug 2026 08:01'],
+    ['Start date', '07 Aug 2026 08:02'],
+    ['End date', '08 Aug 2026 07:58'],
+    ['Use in journeys', 'No'],
+  ]
+  return (
+    <ScreenFrame>
+      <div className="flex">
+        <div
+          className="shrink-0 w-[150px] border-r px-3 py-3 flex flex-col gap-2.5"
+          style={{ borderColor: '#E4E6E0', background: '#FAFAF8' }}
+        >
+          <span style={{ color: PRODUCT_GREEN, fontSize: '10px', fontWeight: 600 }}>● Active</span>
+          <div>
+            <span style={{ fontSize: '10.5px', fontWeight: 600, color: '#1F2328' }}>
+              Randomizer: RND-0-17731
+            </span>
+            <br />
+            <span style={{ fontSize: '10px', color: '#6B7280' }}>JBCL|CS|WOF|07.08.26</span>
+          </div>
+          <div>
+            <span style={{ fontSize: '9px', color: '#8A8F86' }}>URL</span>
+            <div
+              className="mt-0.5 rounded border px-1.5 py-1 truncate"
+              style={{ borderColor: '#E4E6E0', background: '#fff', fontSize: '9px', color: '#4B5563' }}
+            >
+              jugabet.cl/services/promo…
+            </div>
+          </div>
+          {meta.map(([k, v]) => (
+            <div key={k}>
+              <span style={{ fontSize: '9px', color: '#8A8F86' }}>{k}</span>
+              <br />
+              <span style={{ fontSize: '10px', color: '#1F2328' }}>{v}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <ScreenHeader title="Players list" />
+          <Tabs tabs={['All players']} />
+          <table className="w-full" style={{ fontSize: '10.5px' }}>
+            <thead>
+              <tr style={{ color: '#8A8F86' }}>
+                <Th>Account</Th>
+                <Th>Claimed at</Th>
+                <Th>Bonus campaign</Th>
+                <Th>Description</Th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style={{ background: '#FAFAF8' }}>
+                <Td>
+                  <span style={{ color: '#1F2328' }}>jbcl4660…8434</span>
+                </Td>
+                <Td>
+                  <span style={{ color: '#6B7280' }}>07.08.2026</span>
+                  <br />
+                  <span style={{ fontWeight: 600, color: '#1F2328' }}>16:10</span>
+                </Td>
+                <Td>
+                  <span style={{ fontWeight: 600, color: '#1F2328' }}>JRN-0-572381</span>
+                </Td>
+                <Td>
+                  <span style={{ color: '#6B7280' }}>Wheel of fortune | 50FS to dep</span>
+                </Td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </ScreenFrame>
+  )
+}
+
+// The player-facing screens are the app's own dark navy, not backoffice white.
+const SITE_INK = '#1C2951'
+const SITE_CARD = '#141F3D'
+const SITE_LIME = '#C4EE2B'
+
+function PlayerBonusCard() {
+  return (
+    <ScreenFrame>
+      <div className="px-4 py-4" style={{ background: SITE_INK }}>
+        <p className="text-center" style={{ color: '#fff', fontSize: '12px', fontWeight: 600 }}>
+          Promoción
+        </p>
+        <div className="mt-3 rounded-xl px-3 py-3" style={{ background: SITE_CARD }}>
+          <p style={{ color: '#fff', fontSize: '11.5px', fontWeight: 700 }}>Bonificaciones</p>
+          <p className="mt-2" style={{ color: 'rgba(255,255,255,.55)', fontSize: '9.5px' }}>
+            ACTIVA · 1
+          </p>
+          <div
+            className="mt-2 rounded-lg overflow-hidden"
+            style={{ background: '#0F1830', border: '1px solid rgba(255,255,255,.08)' }}
+          >
+            <div className="px-3 pt-3 pb-2 flex items-start gap-2">
+              <span
+                className="rounded px-1.5 py-0.5"
+                style={{ background: '#E879C6', color: '#2A0A20', fontSize: '8.5px', fontWeight: 700 }}
+              >
+                CASINO
+              </span>
+              <span style={{ color: SITE_LIME, fontSize: '8.5px', fontWeight: 700 }}>
+                ⏱ 23H 59M RESTANTES
+              </span>
+            </div>
+            <p className="px-3 pb-3" style={{ color: '#fff', fontSize: '13px', fontWeight: 700, lineHeight: 1.25 }}>
+              50 Giros Gratis | Apuesta $200
+            </p>
+            <div
+              className="px-3 py-2.5 flex items-center justify-between"
+              style={{ borderTop: '1px solid rgba(255,255,255,.08)' }}
+            >
+              <span>
+                <span style={{ color: '#fff', fontSize: '12px', fontWeight: 700 }}>15000 CLP</span>
+                <br />
+                <span style={{ color: 'rgba(255,255,255,.5)', fontSize: '9px' }}>Depósito mínimo</span>
+              </span>
+              <span
+                className="rounded-full px-3 py-1.5"
+                style={{ background: SITE_LIME, color: '#16210A', fontSize: '10px', fontWeight: 700 }}
+              >
+                Depósito
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ScreenFrame>
+  )
 }
 
 // ─── The promo page form, and the field that does the wiring ─────────────────

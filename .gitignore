@@ -5,7 +5,10 @@
 !.env.example
 
 # Database
-data/
+# Anchored to the repo root on purpose: a bare `data/` matches any directory of
+# that name at any depth, which silently kept onboarding/src/data (the whole
+# course content) out of version control.
+/data/
 *.db
 *.db-journal
 *.db-wal
