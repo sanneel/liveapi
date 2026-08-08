@@ -127,15 +127,17 @@ arrival. Stated so you do not produce it; not argued, because the code decides.
   completion events — an invented one is refused, so the shape is buildable but
   the wiring is still not yours to guess. Do not flatten breadth into a linear
   recipe merely because a recipe exists for the reward.
-- **Simultaneous rewards hang off a plain `promotion`; only a real choice needs
-  `multipurpose_promotion`.** The offer node is also what feeds `PromotionId` /
-  `PromotionAcceptedAt` to the rewards, and only `promotion` satisfies that today:
-  put `parallel` on a `promotion` and the flows build clean. The multipurpose node
-  is for when the player genuinely picks — and it costs something, so spend it
-  only then: the composer drops those dependencies ("the platform may reject") and
-  does not re-draw the choosable sub-elements. Read the build's own warnings and
-  carry them into the answer, with "open the draft and verify the flows", rather
-  than calling the draft finished.
+- **A chooser sits IN FRONT of an ordinary promotion, never instead of one.** The
+  captured live shape is `multipurpose_promotion` → per-flow `promotion` →
+  condition → reward. The chooser records which flow the player picked and awards
+  nothing; the plain `promotion` inside that flow is the actual offer, and it is
+  what feeds `PromotionId` / `PromotionAcceptedAt` to everything behind it. So
+  give every flow its own promotion. If a build reports dropped `PromotionId`
+  ("the platform may reject"), that is the symptom of a missing inner promotion —
+  fix the shape, never read it as a reason to avoid choosable flows. Simultaneous
+  rewards with no choice still hang off one plain `promotion` with `parallel`.
+  One caveat worth carrying: the composer does not re-draw choosable
+  sub-elements, so pass on its warning to open the draft and verify the flows.
 
 ## THE GENERATORS — finished tools, not things to compose
 
