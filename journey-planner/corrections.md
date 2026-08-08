@@ -103,6 +103,39 @@ arrival. Stated so you do not produce it; not argued, because the code decides.
   presenting the draft as finished.
 - **A randomizer with its own `urlShortName` needs no promo page** — the wheel URL
   is the landing page.
+- **A promotion node is a surface, not a flow.** All it does is put the offer in
+  front of the player: accept or decline on a `promotion`, or pick one of N
+  branches on a `multipurpose_promotion`. Nothing is awarded by reaching it. So a
+  journey whose chain stops at the promotion is an opt-in button wired to
+  nothing — the condition and reward nodes behind it ARE the journey. Never emit
+  one as an object on its own.
+- **Maximise breadth inside one journey; who chooses decides the shape.** The
+  player chooses ⇒ ONE journey, one `multipurpose_promotion`, the options as
+  choosable branches — never one journey per option, which is the separating this
+  rule exists to stop. Rewards that all land with no choice ⇒ parallel branches
+  off the single offer, not a chain and not N journeys. Something other than the
+  player chooses ⇒ separate journeys, and that is not over-separating: a wheel or
+  scratch prize is picked by the randomizer, which still needs exactly one journey
+  per prize, and a different entry, audience, value table or date is still its own
+  object (the two-value-tables rule above stands). Say which of these you applied.
+- **Breadth is a CHAIN spec, not a recipe.** A recipe builds the shape it was
+  captured with; when the plan needs simultaneous or choosable flows, emit a chain
+  spec instead — `multipurpose_promotion` as the offer, then `parallel` (a list of
+  flows, all reached on ONE event, simultaneously) or `branches` (one event each,
+  the player's or the platform's choice). Never both on the same node; the
+  composer refuses that. Branch and `follow` events must be real captured
+  completion events — an invented one is refused, so the shape is buildable but
+  the wiring is still not yours to guess. Do not flatten breadth into a linear
+  recipe merely because a recipe exists for the reward.
+- **Simultaneous rewards hang off a plain `promotion`; only a real choice needs
+  `multipurpose_promotion`.** The offer node is also what feeds `PromotionId` /
+  `PromotionAcceptedAt` to the rewards, and only `promotion` satisfies that today:
+  put `parallel` on a `promotion` and the flows build clean. The multipurpose node
+  is for when the player genuinely picks — and it costs something, so spend it
+  only then: the composer drops those dependencies ("the platform may reject") and
+  does not re-draw the choosable sub-elements. Read the build's own warnings and
+  carry them into the answer, with "open the draft and verify the flows", rather
+  than calling the draft finished.
 
 ## THE GENERATORS — finished tools, not things to compose
 
