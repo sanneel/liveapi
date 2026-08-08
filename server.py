@@ -73,6 +73,7 @@ from app.routes.admin_slot_cards import router as admin_slot_cards_router
 from app.routes.admin_hot import router as admin_hot_router
 from app.routes.admin_hot_override import router as admin_hot_override_router
 from app.routes.admin_logs import router as admin_logs_router
+from app.routes.admin_onboarding import router as admin_onboarding_router
 from app.routes.admin_planner import router as admin_planner_router
 from app.routes.admin_tutorials import router as admin_tutorials_router
 from app.routes.admin_weights import router as admin_weights_router
@@ -178,18 +179,11 @@ async def _global_exception_handler(request: _FRequest, exc: Exception):
     return _FJSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 # ─── Mount the new admin (Phase 2+) ───────────────────────────────────
-# Onboarding SPA (React/Vite) — must be mounted BEFORE any router includes.
-# The catch-all /{rest:path} in a router would win over a later Mount for
-# /admin/onboarding/assets/* requests; mounting first avoids that race.
-# html=True serves index.html for directory requests and unknown sub-paths (SPA mode).
-from pathlib import Path as _PPath
-_ONBOARDING_DIST = _PPath(__file__).resolve().parent / "onboarding" / "dist"
-if _ONBOARDING_DIST.exists():
-    app.mount(
-        "/admin/onboarding",
-        StaticFiles(directory=str(_ONBOARDING_DIST), html=True),
-        name="onboarding-spa",
-    )
+# The onboarding SPA used to be a StaticFiles mount here, registered before the
+# routers so it would win their /admin/onboarding/{rest:path} wildcard. A Mount
+# takes no dependencies, though, so it served the SPA and its bundle to anyone —
+# 200 where every other /admin/* path 404s for anonymous callers. It is now
+# served by admin_onboarding.py behind require_login, assets included.
 
 # Order matters: include these BEFORE legacy /admin so they take precedence.
 # Auth routes (login/logout/2fa) MUST be registered before admin_views_router
@@ -205,6 +199,7 @@ app.include_router(admin_cube_router)        # /admin/cube + /api/admin/cube/* o
 app.include_router(admin_slot_cards_router)  # /admin/slot-cards + generate (photo -> card GIF)
 app.include_router(admin_tutorials_router)   # /admin/tutorials + /api/tutorials (help library)
 app.include_router(admin_planner_router)     # /admin/planner + Gemini proxy (journey planner chat)
+app.include_router(admin_onboarding_router)  # /admin/onboarding + its built assets (login required)
 app.include_router(admin_views_router)       # /admin (dashboard), /admin/matches
 app.include_router(admin_api_router)
 app.include_router(public_hot_router)        # /hot, /hot/{sport}, /hot/{sport}.png
