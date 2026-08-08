@@ -364,7 +364,11 @@
   const history = [];
   const spent = { calls: 0, input: 0, cached: 0, thought: 0, answer: 0 };
   const meter = document.getElementById("jpUsage");
-  const SPARK = document.querySelector(".jp-mark").innerHTML;
+  // Rendered straight from the `spark` icon above, not scraped off a .jp-mark
+  // element: the bar's brand mark went away with the rail, so the old lookup
+  // returned null and threw here — killing every handler bound below, Send
+  // included. One source of truth, and no dependency on the markup's shape.
+  const SPARK = {{ spark|tojson }};
   // Icons for JS-built summaries, so the emoji that used to sit in these
   // strings do not come back at a different weight on every platform.
   const SVG = (d) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"'
