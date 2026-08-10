@@ -17,16 +17,22 @@ export type ContentBlock =
   | { kind: 'paragraph'; html: string }
   | { kind: 'screen'; name: ScreenName; caption?: string }
   /**
-   * A real screenshot, served as a static file. `src` is relative to the SPA
-   * base: a file dropped at onboarding/public/<src> is copied into dist by Vite
-   * and served by the /admin/onboarding routes. Renders a labelled slot naming
-   * the file until it exists, so a missing capture never ships as a broken image.
+   * One to three real screenshots on a single screen. Files live at
+   * onboarding/public/<src> and are copied into dist by Vite. Two or three
+   * items lay out side by side, so pairing photos costs one photo of height
+   * instead of two, which is what keeps a step inside the viewport.
    */
-  | { kind: 'shot'; src: string; alt: string; caption?: string }
+  | { kind: 'shots'; items: Shot[] }
   | { kind: 'diagram'; boxes: DiagramBox[]; arrows: DiagramArrow[] }
   | { kind: 'table'; rows: TableRow[] }
   | { kind: 'rule-list'; rules: Rule[] }
   | { kind: 'split-card'; left: SplitPanel; right: SplitPanel }
+
+export interface Shot {
+  src: string
+  alt: string
+  caption?: string
+}
 
 export interface DiagramBox {
   id: string

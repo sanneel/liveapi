@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { LessonStep as LessonStepType, ContentBlock } from '../../data/types'
+import type { LessonStep as LessonStepType, ContentBlock, Shot } from '../../data/types'
 import OverviewScreen from '../replica/OverviewScreens'
 
 interface Props {
@@ -8,18 +8,23 @@ interface Props {
 }
 
 export default function LessonStep({ step, onContinue }: Props) {
+  // Three bands: heading, content, action. The action is shrink-0 and last, so
+  // Continue is on screen whatever the content does. Only the middle band can
+  // ever scroll, and with photos capped it usually does not.
   return (
-    <article>
-      {step.eyebrow && <p className="mono-label">{step.eyebrow}</p>}
-      <h1 className="headline mt-5">{step.title}</h1>
+    <article className="h-full flex flex-col">
+      <div className="shrink-0">
+        {step.eyebrow && <p className="mono-label">{step.eyebrow}</p>}
+        <h1 className="headline mt-3">{step.title}</h1>
+      </div>
 
-      <div className="mt-8 flex flex-col gap-7">
+      <div className="flex-1 min-h-0 overflow-y-auto mt-5 flex flex-col gap-4">
         {step.content.map((block, i) => (
           <ContentBlockRenderer key={i} block={block} />
         ))}
       </div>
 
-      <div className="mt-12">
+      <div className="shrink-0 pt-5">
         <button className="btn-primary" onClick={onContinue}>
           Continue
         </button>
@@ -30,30 +35,43 @@ export default function LessonStep({ step, onContinue }: Props) {
 
 // ─── Content blocks ───────────────────────────────────────────────────────────
 
-/** A captured screenshot, with a labelled fallback naming the file it wants. */
-function ShotBlock({ block }: { block: Extract<ContentBlock, { kind: 'shot' }> }) {
+/** One to three captures on a row. Heights shrink as the count grows so the
+ *  row costs about the same vertical space either way. */
+function ShotsBlock({ items }: { items: Shot[] }) {
+  // Literal class names: Tailwind scans source text, so a built-up string like
+  // `sm:grid-cols-${n}` would be purged out of the stylesheet.
+  const cap = items.length >= 3 ? 'max-h-[24vh]' : items.length === 2 ? 'max-h-[28vh]' : 'max-h-[34vh]'
+  const cols =
+    items.length >= 3 ? 'sm:grid-cols-3' : items.length === 2 ? 'sm:grid-cols-2' : ''
+  return (
+    <div className={`not-prose grid gap-4 ${cols}`}>
+      {items.map(shot => (
+        <ShotFigure key={shot.src} shot={shot} cap={cap} />
+      ))}
+    </div>
+  )
+}
+
+function ShotFigure({ shot, cap }: { shot: Shot; cap: string }) {
   const [failed, setFailed] = useState(false)
   return (
-    <figure className="not-prose">
+    <figure className="min-w-0 flex flex-col gap-2">
       {failed ? (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center">
+        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
           <p className="text-caption text-muted">Screenshot not added yet</p>
-          <p className="mono-label mt-2 text-slate-500">public/{block.src}</p>
+          <p className="mono-label mt-2 text-slate-500">public/{shot.src}</p>
         </div>
       ) : (
         <img
-          src={import.meta.env.BASE_URL + block.src}
-          alt={block.alt}
+          src={import.meta.env.BASE_URL + shot.src}
+          alt={shot.alt}
           loading="lazy"
           onError={() => setFailed(true)}
-          // capped against the viewport so the step never needs scrolling
-          className="mx-auto block w-auto max-w-full max-h-[46vh] rounded-lg border border-slate-200 shadow-sm"
+          className={`block w-auto max-w-full ${cap} mx-auto rounded-lg border border-slate-200 shadow-sm`}
         />
       )}
-      {block.caption && (
-        <figcaption className="text-caption text-muted mt-3 leading-relaxed">
-          {block.caption}
-        </figcaption>
+      {shot.caption && (
+        <figcaption className="text-caption text-muted leading-snug">{shot.caption}</figcaption>
       )}
     </figure>
   )
@@ -79,8 +97,8 @@ function ContentBlockRenderer({ block }: { block: ContentBlock }) {
           )}
         </figure>
       )
-    case 'shot':
-      return <ShotBlock block={block} />
+    case 'shots':
+      return <ShotsBlock items={block.items} />
     case 'diagram':
       return <DiagramBlock block={block} />
     case 'table':

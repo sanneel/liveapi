@@ -65,8 +65,8 @@ export default function OnboardingShell({
       <main className="flex-1 min-h-0 overflow-y-auto flex px-6 sm:px-10">
         <div
           key={step.id}
-          className={`w-full mx-auto my-auto py-7 ${
-            isTask ? 'max-w-[1180px]' : 'max-w-column'
+          className={`w-full mx-auto ${
+            isTask ? 'max-w-[1180px] my-auto py-7' : 'max-w-column h-full py-5'
           } ${leaving ? 'animate-step-out' : 'animate-step-in'}`}
         >
           {step.type === 'lesson'   && <LessonStep   step={step} onContinue={requestAdvance} />}
