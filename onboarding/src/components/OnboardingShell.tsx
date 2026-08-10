@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react'
 import type { MachineState } from '../engine/stateMachine'
-import { currentStep, progressPct } from '../engine/stateMachine'
+import { currentStep, progressPct, canGoBack } from '../engine/stateMachine'
 import LessonStep from './steps/LessonStep'
 import ShowcaseStep from './steps/ShowcaseStep'
 import TaskStep from './steps/TaskStep'
@@ -9,6 +9,7 @@ import type { Step } from '../data/types'
 interface Props {
   state: MachineState
   onAdvance: () => void
+  onBack: () => void
   onSetField: (elementId: string, value: string) => void
   onCanvasAdd: (activityId: string, index?: number) => void
   onCanvasMove: (from: number, to: number) => void
@@ -37,6 +38,7 @@ function chaptersOf(steps: Step[]) {
 export default function OnboardingShell({
   state,
   onAdvance,
+  onBack,
   onSetField,
   onCanvasAdd,
   onCanvasMove,
@@ -57,7 +59,7 @@ export default function OnboardingShell({
   const chapters = useMemo(() => chaptersOf(state.track.steps), [state.track.steps])
 
   if (state.trackDone) {
-    return <TrackComplete trackName={state.track.name} onRestart={onRestart} />
+    return <TrackComplete trackName={state.track.name} onRestart={onRestart} onBack={onBack} />
   }
 
   const isTask = step.type === 'task'
@@ -158,7 +160,14 @@ export default function OnboardingShell({
         {/* Continue lives here, outside the scrolling area, so it is never
             below the fold. Tasks keep their own gated button instead. */}
         {!isTask && (
-          <footer className="shrink-0 px-5 sm:px-8 py-3.5 border-t border-line bg-surface flex items-center gap-4">
+          <footer className="shrink-0 px-5 sm:px-8 py-3.5 border-t border-line bg-surface flex items-center gap-3 sm:gap-4">
+            <button
+              className="btn-ghost shrink-0"
+              onClick={onBack}
+              disabled={!canGoBack(state)}
+            >
+              <span aria-hidden="true">←</span> Back
+            </button>
             {step.tip ? (
               <p className="flex-1 min-w-0 text-[12.5px] text-muted leading-snug">
                 <span className="mr-1.5">💡</span>
@@ -179,7 +188,15 @@ export default function OnboardingShell({
 
 // ─── Finish ──────────────────────────────────────────────────────────────────
 
-function TrackComplete({ trackName, onRestart }: { trackName: string; onRestart: () => void }) {
+function TrackComplete({
+  trackName,
+  onRestart,
+  onBack,
+}: {
+  trackName: string
+  onRestart: () => void
+  onBack: () => void
+}) {
   return (
     <div className="h-full flex flex-col bg-canvas">
       <header className="shrink-0 h-14 px-8 border-b border-line bg-surface flex items-center">
@@ -193,7 +210,10 @@ function TrackComplete({ trackName, onRestart }: { trackName: string; onRestart:
             You can read any journey on the canvas, you know which node does what, and you have built
             one from an empty screen. {trackName} is done.
           </p>
-          <div className="mt-8">
+          <div className="mt-8 flex items-center gap-3">
+            <button className="btn-ghost" onClick={onBack}>
+              <span aria-hidden="true">←</span> Back
+            </button>
             <button className="btn-primary" onClick={onRestart}>
               Start again
             </button>

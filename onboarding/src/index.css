@@ -91,6 +91,15 @@
     @apply cursor-default opacity-30;
   }
 
+  /* Secondary control. Back is available but never competes with Continue. */
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-control
+           border border-line bg-surface text-ink-soft font-medium
+           px-4 py-3 text-[14px] transition-colors duration-150;
+  }
+  .btn-ghost:hover:not(:disabled) { @apply bg-line-soft text-ink; }
+  .btn-ghost:disabled { @apply opacity-40 cursor-default; }
+
   /* White card surface. */
   .surface-card {
     @apply rounded-card bg-surface shadow-soft;

@@ -49,242 +49,341 @@ const track: Track = {
       ],
     },
 
-    // ── 1a · one real spin, paired onto as few screens as possible ───────────
+    // ── Promotion walkthroughs ───────────────────────────────────────────────
     //
-    // Captured 07.08.2026 from randomizer RND-0-17731 and journey JRN-0-572381.
-    // Every capture is the same wheel and the same player, so the ids line up
-    // across screens and a trainee can follow one story rather than samples.
+    // One template, repeated per promotion, so the shape is learned once:
+    //
+    //   1 OFFER    how a player finds it        · where the object lives for us
+    //   2 INSIDE   what opens when they tap     · how it is configured
+    //   3 ACTION   what pressing the button did · the record it wrote
+    //   4 CHOICE   only if the promo asks       · the flows behind the options
+    //   5 HELD     what they end up holding     · that player's journey log
+    //
+    // Every screen is the same two photos in the same order, player then ours.
+    // Files: public/shots/<promo>/<n>-<beat>-<player|ours>.png
     {
-      id: 'lesson-spin-01',
-      chapter: 'One real spin',
-      tip: 'A journey never goes looking for players. The promo page delivers them.',
+      id: 'lesson-how-to-read',
+      chapter: 'How to read this',
+      tip: 'Left is always the player. Right is always us.',
       type: 'lesson',
-      eyebrow: 'One real spin · 1 of 6',
-      title: 'It starts on the promo page.',
+      eyebrow: 'Before we start',
+      title: 'Two views of the same moment.',
       content: [
         {
-          kind: 'shots',
-          items: [
-            {
-              src: 'shots/16.09.43.png',
-              alt: 'The Bonificaciones list on the site, with a Casino card reading ¡Gira la Rueda de la Fortuna ahora! counting down 15H 48M.',
-              caption: '16:09:43. The wheel is one card among the rest, with its own countdown.',
-            },
-            {
-              src: 'shots/16.09.52.png',
-              alt: 'The Rueda de la fortuna page: a twelve wedge wheel showing 50 GG con depósito, 50 GG sin depósito, Bonos de depósito and Jackpot 200 FS, with a Spin button.',
-              caption: '16:09:52. Nine seconds later, on the wheel itself.',
-            },
-          ],
-        },
-        {
           kind: 'paragraph',
-          html: 'Nothing runs until someone taps. At 16:09:43 our side has <strong>no record of this player at all</strong>. A journey never goes looking for anyone.',
+          html: 'Every screen from here shows one moment twice. On the <strong>left</strong> is what the player sees on the site. On the <strong>right</strong> is what that same moment looks like to us in the backoffice. Same second, two windows.',
         },
-        {
-          kind: 'paragraph',
-          html: 'On the wheel, count the labels rather than the wedges. There are <strong>four</strong> prizes, each repeated three times around the rim so it looks full. The draw only ever sees four outcomes.',
-        },
-      ],
-    },
-
-    {
-      id: 'lesson-spin-02',
-      chapter: 'One real spin',
-      tip: 'A prize is a probability and a destination journey. Nothing more.',
-      type: 'lesson',
-      eyebrow: 'One real spin · 2 of 6',
-      title: 'The wheel decides, and we set the odds.',
-      content: [
-        {
-          kind: 'shots',
-          items: [
-            {
-              src: 'shots/16.10.13.png',
-              alt: 'A Tu recompensa dialog over the wheel, confetti around a 50 GG CON DEPÓSITO badge, saying the bonus will activate automatically.',
-              caption: '16:10:13. Tu recompensa. They drew 50 GG con depósito, the 55% slice.',
-            },
-            {
-              src: 'shots/17.31.21.png',
-              alt: 'The randomizer prize table for this wheel: four rows, each a JRN journey id against a probability of 55, 42, 2.7 and 0.3, above a greyed out Add prize button, with the promo link casino-wof-07-08-2026.',
-              caption: 'The prize table for this exact wheel. Four journeys, four probabilities, totalling 100.',
-            },
-          ],
-        },
-        {
-          kind: 'paragraph',
-          html: 'The player did not choose that prize and neither did we, on the day. The wheel did.',
-        },
-        {
-          kind: 'paragraph',
-          html: 'But the odds are ours. Someone typed them, and they must total 100. <em>Add prize</em> is greyed out because the slices come from the captured template, so you set the weights, never the count. A slice left at 0% stays on the wheel and never lands.',
-        },
-        {
-          kind: 'paragraph',
-          html: 'Now look at what a prize actually <em>is</em>. Every row is a <strong>JRN, a journey id</strong>. Winning a slice does one single thing: it <strong>adds the player into that journey</strong>. Nothing is awarded by the wheel itself.',
-        },
-        {
-          kind: 'paragraph',
-          html: 'So everything that happens next lives inside that journey: the offer, the deposit gate, the free spins, the wagering bonus, and an exit for every player who does not finish. The 55% row, <strong>JRN-0-572381</strong>, is the one this player drew. Which fixes the build order: <strong>the journeys exist first</strong>, because this table can only point at journeys that are already there.',
-        },
-      ],
-    },
-
-    {
-      id: 'lesson-spin-03',
-      chapter: 'One real spin',
-      tip: 'Naming is how you find one object among thousands.',
-      type: 'lesson',
-      eyebrow: 'One real spin · 3 of 6',
-      title: 'Where that lives on our side.',
-      content: [
-        {
-          kind: 'shots',
-          items: [
-            {
-              src: 'shots/16.10.45.png',
-              alt: 'The backoffice Promo list filtered to Active, showing randomizer RND-0-17731 JBCL|CS|WOF|07.08.26 with an open row menu offering Duplicate, View player list, Export players and Terminate.',
-              caption: '16:10:45. The same wheel in the Promo list, as an object you can find.',
-            },
-          ],
-        },
-        {
-          kind: 'paragraph',
-          html: 'One row, one wheel: <strong>RND-0-17731</strong>, mechanics <em>Randomizer / Fortune wheel</em>, brand <code>.jbcl</code>, live 07.08 08:02 until 08.08 07:58. The row menu is where you go to see who played it.',
-        },
-      ],
-    },
-
-    {
-      id: 'lesson-spin-04',
-      chapter: 'One real spin',
-      tip: 'A chooser asks. It awards nothing on its own.',
-      type: 'lesson',
-      eyebrow: 'One real spin · 4 of 6',
-      title: 'Now the player chooses.',
-      content: [
-        {
-          kind: 'shots',
-          items: [
-            {
-              src: 'shots/16.12.04.png',
-              alt: 'A promotion screen titled 50 GG CON DEPÓSITO DE LA RUEDA DE LA FORTUNA, ID 672079, with a notice reading Selecciona 1 de los 3 bonos and three options at $200, $100 and $1,000 bet, each with Seleccionar and Detalles buttons.',
-              caption: '16:12:04. Selecciona 1 de los 3 bonos. Three bets: $200, $100, $1,000.',
-            },
-            {
-              src: 'shots/17.30.42.png',
-              alt: 'The same offer on the journey canvas: Accepted 17678 branching into Flow 1, Flow 2 and Flow 3, labelled 15k dep, 10k dep and big, each running its own deposit gate, Casino FreeSpin and Casino bonus with player counts on every path.',
-              caption: 'The same offer on our canvas. Three flows, one per option, each complete on its own.',
-            },
-          ],
-        },
-        {
-          kind: 'paragraph',
-          html: 'This is the most useful screen in the course. It is what a <strong>Multipurpose Promotion</strong> looks like from the outside: it awards nothing, it <em>asks</em>. The player picks one of three flows and only that one runs.',
-        },
-        {
-          kind: 'paragraph',
-          html: 'On our canvas those three options are <strong>three flows</strong>, named 15k dep, 10k dep and big. Each one is complete on its own: its own offer, deposit gate, free spins and bonus. A player runs exactly one of them, the one they picked, and the counts on each path show how the 17 678 who accepted split across them.',
-        },
-        {
-          kind: 'paragraph',
-          html: 'It also explains a gap in the log. The offer went up at 16:10 and was accepted at 16:12, nearly two minutes, because a person was reading three options. Every other step took about a second.',
-        },
-      ],
-    },
-
-    {
-      id: 'lesson-spin-05',
-      chapter: 'One real spin',
-      tip: 'The terms belong to the option the player picked.',
-      type: 'lesson',
-      eyebrow: 'One real spin · 5 of 6',
-      title: 'One bonus, with its own terms.',
-      content: [
-        {
-          kind: 'shots',
-          items: [
-            {
-              src: 'shots/16.12.20.png',
-              alt: 'The Bonificaciones page showing ACTIVA · 1 and a single card, 50 Giros Gratis | Apuesta $200, with 15000 CLP minimum deposit, a Depósito button and 23H 59M remaining.',
-              caption: '16:12:20. They chose the $200 bet. It is now their one active bonus.',
-            },
-          ],
-        },
-        {
-          kind: 'paragraph',
-          html: 'The chosen flow brought its own offer with it: <strong>15.000 CLP minimum deposit</strong>. In the log that node is called “15k dep”. The terms belong to the option, not to the chooser.',
-        },
-        {
-          kind: 'paragraph',
-          html: 'A <strong>second</strong> clock also started. One day to accept the offer, a separate day to deposit now they have. A player can beat the first and still miss the second.',
-        },
-      ],
-    },
-
-    {
-      id: 'lesson-spin-06',
-      chapter: 'One real spin',
-      tip: 'Every prize needs its journey built first.',
-      type: 'lesson',
-      eyebrow: 'One real spin · 6 of 6',
-      title: 'Who spun, and what happened next.',
-      content: [
-        {
-          kind: 'shots',
-          items: [
-            {
-              src: 'shots/16.13.34.png',
-              alt: 'The randomizer players list for RND-0-17731 showing one account, added 16:09, activated 16:09, claimed 16:10, with bonus campaign JRN-0-572381 described as Wheel of fortune | 50FS to dep.',
-              caption: '16:13:34. Who spun, and the journey the prize routed into.',
-            },
-            {
-              src: 'shots/16.13.54.png',
-              alt: 'The Journey log for one player: deposit activated 08:12:11, 15k dep promotion accepted 08:12:10 in Flow 1, Multipurpose Promotion accepted then offered, a decision split, and API player added to journey 08:10:07.',
-              caption: '16:13:54. That player’s whole journey. Newest first, so read upward.',
-            },
-          ],
-        },
-        {
-          kind: 'paragraph',
-          html: 'A prize slice is not a prize. It is a weight plus a journey id, which is why <strong>every prize needs its journey built first</strong>. A wheel can only point at journeys that already exist.',
-        },
-        {
-          kind: 'paragraph',
-          html: 'The log on the right is what you open when someone says “I did not get my bonus”. Read upward: added by API, routed by a split, offered, accepted, the real offer accepted inside <strong>Flow 1</strong>, and the deposit gate armed one second later.',
-        },
-      ],
-    },
-
-    // ── 1b · what that log settles ───────────────────────────────────────────
-    {
-      id: 'lesson-spin-rules',
-      chapter: 'One real spin',
-      tip: 'Give every flow its own promotion inside it.',
-      type: 'lesson',
-      eyebrow: 'One real spin · what it proves',
-      title: 'Three things that log settles.',
-      content: [
         {
           kind: 'rule-list',
           rules: [
             {
-              text: 'Two promotions accepted, one second apart.',
-              sub: 'The Multipurpose Promotion is the chooser. It records which flow was picked and awards nothing. “15k dep” is the real offer inside that flow, and the deposit gate hangs off it. A reward needs that inner promotion; behind the chooser alone it has no offer to belong to.',
+              text: 'We walk one promotion at a time.',
+              sub: 'How it is found, what opens, what the button does, and what the player is left holding. Then the next promotion, in the same order.',
             },
             {
-              text: 'One node can fire twice.',
-              sub: 'Offered and Accepted share the same activity id. Choosing a flow adds nodes. It never re-uses the chooser.',
+              text: 'Nothing here is a mock-up.',
+              sub: 'Every photo is a real capture of a real campaign with a real player in it, so the ids and the numbers can be traced across screens.',
             },
             {
-              text: 'A promotion node awards nothing on its own.',
-              sub: 'It is the surface a player opts in on. The condition and reward nodes behind it are the journey. A flow that stops at the promotion is a button wired to nothing.',
+              text: 'Click any photo to open it full size.',
+              sub: 'The tables and logs are readable that way. Back and Continue are always at the bottom.',
+            },
+          ],
+        },
+      ],
+    },
+
+    {
+      id: 'wheel-1-offer',
+      chapter: 'Promotion · Fortune Wheel',
+      tip: 'A journey never goes looking for players. The promotion delivers them.',
+      type: 'lesson',
+      eyebrow: 'Fortune Wheel · 1 of 5',
+      title: 'How a player finds it.',
+      content: [
+        {
+          kind: 'paragraph',
+          html: 'A promotion has to be found before it can run. This one sits on the promotions page as a card, alongside everything else live that week.',
+        },
+        {
+          kind: 'shots',
+          items: [
+            {
+              src: 'shots/wheel/1-offer-player.png',
+              alt: 'The Bonificaciones list on the site with a Casino card reading Gira la Rueda de la Fortuna ahora, counting down 15H 48M, beside sports promos.',
+              caption: 'THE PLAYER. One card among the rest, with its own countdown and a Gira button.',
+            },
+            {
+              src: 'shots/wheel/1-offer-ours.png',
+              alt: 'The backoffice Promo list filtered to Active, showing randomizer RND-0-17731 named JBCL|CS|WOF|07.08.26 with a row menu open.',
+              caption: 'OUR SIDE. The same thing as an object we own: RND-0-17731, live 07.08 to 08.08.',
             },
           ],
         },
         {
           kind: 'paragraph',
-          html: 'That is one promo, both sides, start to finish. Now the parts it was built from.',
+          html: 'For the player it is one tap. Nothing runs until they take it, and at this moment we have <strong>no record of this player at all</strong>.',
+        },
+        {
+          kind: 'paragraph',
+          html: 'For us it is a row we can find, open and inspect. The name is how you find one object among thousands, which is why the naming convention matters.',
+        },
+      ],
+    },
+
+    {
+      id: 'wheel-2-inside',
+      chapter: 'Promotion · Fortune Wheel',
+      tip: 'A prize is not a bonus. It is a probability and a journey to be added to.',
+      type: 'lesson',
+      eyebrow: 'Fortune Wheel · 2 of 5',
+      title: 'What opens when they tap.',
+      content: [
+        {
+          kind: 'paragraph',
+          html: 'Inside the promotion is the thing the player actually plays. Behind it is the configuration that decides what it can do.',
+        },
+        {
+          kind: 'shots',
+          items: [
+            {
+              src: 'shots/wheel/2-inside-player.png',
+              alt: 'The Rueda de la fortuna page: a twelve wedge wheel showing 50 GG con depósito, 50 GG sin depósito, Bonos de depósito and Jackpot 200 FS, with a Spin button.',
+              caption: 'THE PLAYER. Twelve wedges, but count the labels: four prizes, each repeated three times.',
+            },
+            {
+              src: 'shots/wheel/2-inside-ours.png',
+              alt: 'The randomizer prize table: four rows, each a JRN journey id against a probability of 55, 42, 2.7 and 0.3, with a greyed out Add prize button.',
+              caption: 'OUR SIDE. Four rows. A journey id, and the odds of landing on it.',
+            },
+          ],
+        },
+        {
+          kind: 'paragraph',
+          html: 'The player sees prizes. They cannot see the odds, and the rim repeats each prize to make the wheel look full.',
+        },
+        {
+          kind: 'paragraph',
+          html: 'We see what a prize really is: a <strong>JRN, a journey id</strong>, plus a probability. Winning a slice does one thing, it <strong>adds the player into that journey</strong>. The weights must total 100, and <em>Add prize</em> is greyed out because the slice count comes from the template.',
+        },
+      ],
+    },
+
+    {
+      id: 'wheel-3-action',
+      chapter: 'Promotion · Fortune Wheel',
+      tip: 'The wheel picks the prize. The journey delivers it.',
+      type: 'lesson',
+      eyebrow: 'Fortune Wheel · 3 of 5',
+      title: 'What the button did.',
+      content: [
+        {
+          kind: 'paragraph',
+          html: 'The player presses Spin once. That single press is the moment we first hear about them.',
+        },
+        {
+          kind: 'shots',
+          items: [
+            {
+              src: 'shots/wheel/3-action-player.png',
+              alt: 'A Tu recompensa dialog over the wheel, confetti around a 50 GG CON DEPÓSITO badge, saying the bonus will activate automatically.',
+              caption: 'THE PLAYER. They drew 50 GG con depósito, the 55% slice. The wheel is now finished.',
+            },
+            {
+              src: 'shots/wheel/3-action-ours.png',
+              alt: 'The randomizer players list showing one account, added 16:09, activated 16:09, claimed 16:10, with bonus campaign JRN-0-572381 described as Wheel of fortune 50FS to dep.',
+              caption: 'OUR SIDE. One row appears: who spun, when they claimed, and the journey they went into.',
+            },
+          ],
+        },
+        {
+          kind: 'paragraph',
+          html: 'The player is told the bonus will activate automatically. From their side the wheel is over.',
+        },
+        {
+          kind: 'paragraph',
+          html: 'From ours it has just started. The wheel hands the winner to <strong>JRN-0-572381</strong> and takes no further part. Everything after this happens inside that journey.',
+        },
+      ],
+    },
+
+    {
+      id: 'wheel-4-choice',
+      chapter: 'Promotion · Fortune Wheel',
+      tip: 'A chooser awards nothing. Each flow needs its own promotion inside it.',
+      type: 'lesson',
+      eyebrow: 'Fortune Wheel · 4 of 5',
+      title: 'When the promotion asks.',
+      content: [
+        {
+          kind: 'paragraph',
+          html: 'Some promotions do not hand over a fixed reward. They ask the player to pick, and this is what that looks like on both sides.',
+        },
+        {
+          kind: 'shots',
+          items: [
+            {
+              src: 'shots/wheel/4-choice-player.png',
+              alt: 'A promotion screen with ID 672079 headed Selecciona 1 de los 3 bonos, offering 50 free spins at $200, $100 and $1,000 bet, each with Seleccionar and Detalles.',
+              caption: 'THE PLAYER. Selecciona 1 de los 3 bonos. Three bets: $200, $100, $1,000.',
+            },
+            {
+              src: 'shots/wheel/4-choice-ours.png',
+              alt: 'The journey canvas showing Accepted 17678 branching into Flow 1, Flow 2 and Flow 3 labelled 15k dep, 10k dep and big, each with its own deposit gate, Casino FreeSpin and Casino bonus and player counts.',
+              caption: 'OUR SIDE. Three flows, one per option, each complete on its own.',
+            },
+          ],
+        },
+        {
+          kind: 'paragraph',
+          html: 'The player picks one. Nothing has been awarded yet, and the screen is only asking.',
+        },
+        {
+          kind: 'paragraph',
+          html: 'On our canvas that is <strong>three flows</strong>, named 15k dep, 10k dep and big. Each carries its own deposit gate, free spins and bonus. A player runs exactly one, and the counts show how 17 678 acceptances split.',
+        },
+      ],
+    },
+
+    {
+      id: 'wheel-5-held',
+      chapter: 'Promotion · Fortune Wheel',
+      tip: 'Two clocks, started at different moments. Beating one is not beating both.',
+      type: 'lesson',
+      eyebrow: 'Fortune Wheel · 5 of 5',
+      title: 'What they end up holding.',
+      content: [
+        {
+          kind: 'paragraph',
+          html: 'The end of the promotion for the player is a single card with terms on it. The end for us is a log we can read back.',
+        },
+        {
+          kind: 'shots',
+          items: [
+            {
+              src: 'shots/wheel/5-held-player.png',
+              alt: 'The Bonificaciones page showing ACTIVA 1 and one card, 50 Giros Gratis Apuesta $200, with 15000 CLP minimum deposit, a Depósito button and 23H 59M remaining.',
+              caption: 'THE PLAYER. One active bonus, 15.000 CLP minimum deposit, and a clock.',
+            },
+            {
+              src: 'shots/wheel/5-held-ours.png',
+              alt: 'The Journey log for that player: deposit activated, 15k dep promotion accepted in Flow 1, Multipurpose Promotion accepted then offered, a decision split, and API player added to journey.',
+              caption: 'OUR SIDE. Six events for that one player. Newest first, so read upward.',
+            },
+          ],
+        },
+        {
+          kind: 'paragraph',
+          html: 'The terms came with the option they chose, not with the chooser: 15.000 CLP. A second clock also started, one to accept and a separate one to deposit.',
+        },
+        {
+          kind: 'paragraph',
+          html: 'The log is where you go when someone says they did not get their bonus. Read upward: added by API, split, offered, accepted, the real offer accepted inside <strong>Flow 1</strong>, deposit gate armed one second later.',
+        },
+      ],
+    },
+
+    // ── Template to copy for the next promotion ─────────────────────────────
+    //
+    // Fill these three, add a CHOICE screen only if the promotion asks the player
+    // to pick, and drop the files at public/shots/promo-2/. Delete this chapter if
+    // it is still empty when the course goes to a real trainee.
+    {
+      id: 'promo2-1-offer',
+      chapter: 'Promotion · next',
+      type: 'lesson',
+      eyebrow: 'Next promotion · 1 of 3',
+      title: 'How a player finds it.',
+      content: [
+        {
+          kind: 'paragraph',
+          html: 'Same template as the wheel: where the player meets this promotion, and where it lives for us.',
+        },
+        {
+          kind: 'shots',
+          items: [
+            { src: 'shots/promo-2/1-offer-player.png', alt: 'How the player finds this promotion.', caption: 'THE PLAYER. Where they meet it.' },
+            { src: 'shots/promo-2/1-offer-ours.png', alt: 'The same promotion as an object in the backoffice.', caption: 'OUR SIDE. The object we own.' },
+          ],
+        },
+      ],
+    },
+
+    {
+      id: 'promo2-2-inside',
+      chapter: 'Promotion · next',
+      type: 'lesson',
+      eyebrow: 'Next promotion · 2 of 3',
+      title: 'What opens when they tap.',
+      content: [
+        {
+          kind: 'paragraph',
+          html: 'What the player actually plays or reads, and the configuration behind it.',
+        },
+        {
+          kind: 'shots',
+          items: [
+            { src: 'shots/promo-2/2-inside-player.png', alt: 'What opens for the player.', caption: 'THE PLAYER. What opens.' },
+            { src: 'shots/promo-2/2-inside-ours.png', alt: 'How that is configured on our side.', caption: 'OUR SIDE. How it is set up.' },
+          ],
+        },
+      ],
+    },
+
+    {
+      id: 'promo2-3-after',
+      chapter: 'Promotion · next',
+      type: 'lesson',
+      eyebrow: 'Next promotion · 3 of 3',
+      title: 'What the button did.',
+      content: [
+        {
+          kind: 'paragraph',
+          html: 'What the player is left with, and the record it wrote for us.',
+        },
+        {
+          kind: 'shots',
+          items: [
+            { src: 'shots/promo-2/3-after-player.png', alt: 'What the player ends up with.', caption: 'THE PLAYER. What they hold.' },
+            { src: 'shots/promo-2/3-after-ours.png', alt: 'The record on our side.', caption: 'OUR SIDE. The record it wrote.' },
+          ],
+        },
+      ],
+    },
+
+    // ── What was true in every one of them ───────────────────────────────────
+    {
+      id: 'lesson-what-repeats',
+      chapter: 'What repeats',
+      tip: 'These four hold for every promotion, not just the wheel.',
+      type: 'lesson',
+      eyebrow: 'Across every promotion',
+      title: 'Four things that were true every time.',
+      content: [
+        {
+          kind: 'paragraph',
+          html: 'Different promotions, same skeleton. Whatever you are handed next, these four hold.',
+        },
+        {
+          kind: 'rule-list',
+          rules: [
+            {
+              text: 'A promotion node awards nothing.',
+              sub: 'It is the surface a player opts in on, or picks from. The condition and reward nodes behind it are the journey. A flow that stops at the promotion is a button wired to nothing.',
+            },
+            {
+              text: 'A prize is a probability and a journey.',
+              sub: 'Wheels and scratch cards do not award anything themselves. They add the winner to a JRN, which is where the real work sits. So the journeys are built first.',
+            },
+            {
+              text: 'A chooser sits in front of a promotion, never instead of one.',
+              sub: 'Every flow needs its own promotion inside it. That inner one carries the terms and is what the reward depends on.',
+            },
+            {
+              text: 'Clocks are per step, not per campaign.',
+              sub: 'Accepting an offer and satisfying a deposit have separate windows that start at different moments. Check both before you promise a player anything.',
+            },
+          ],
         },
       ],
     },

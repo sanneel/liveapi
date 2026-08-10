@@ -1,7 +1,11 @@
-// ─── Forward-only state machine ──────────────────────────────────────────────
+// ─── Step state machine ──────────────────────────────────────────────────────
 //
 // Holds which track, which step, the values typed into replica forms, and what
-// has been dropped on the journey canvas. It only moves forward.
+// has been dropped on the journey canvas.
+//
+// It moves both ways. Going back keeps fieldValues and canvas untouched, so a
+// trainee who steps back to re-read a screen returns to their task exactly as
+// they left it, and nothing has to be replayed.
 //
 // Note what it does NOT hold: any notion of "the current instruction". Tasks are
 // judged by their checks against the state as it stands, so the trainee can do
@@ -80,6 +84,21 @@ export function advance(state: MachineState): MachineState {
   capture('step.enter', { stepId: nextStep.id, stepType: nextStep.type })
 
   return { ...state, stepIndex: nextIndex }
+}
+
+/** Step back one screen. Work in progress is deliberately preserved: the
+ *  trainee is re-reading, not restarting. From the finish screen it re-enters
+ *  the last step. */
+export function goBack(state: MachineState): MachineState {
+  if (state.trackDone) return { ...state, trackDone: false }
+  if (state.stepIndex === 0) return state
+  const prevIndex = state.stepIndex - 1
+  capture('step.back', { stepId: state.track.steps[prevIndex].id })
+  return { ...state, stepIndex: prevIndex }
+}
+
+export function canGoBack(state: MachineState): boolean {
+  return state.trackDone || state.stepIndex > 0
 }
 
 /** Record a field value change (replica form controls). */

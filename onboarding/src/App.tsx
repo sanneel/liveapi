@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import {
   createMachine,
   advance,
+  goBack,
   setFieldValue,
   addToCanvas,
   moveOnCanvas,
@@ -15,6 +16,7 @@ export default function App() {
   const [state, setState] = useState<MachineState>(() => createMachine(crmChile))
 
   const handleAdvance = useCallback(() => setState(s => advance(s)), [])
+  const handleBack = useCallback(() => setState(s => goBack(s)), [])
 
   const handleSetField = useCallback((elementId: string, value: string) => {
     setState(s => setFieldValue(s, elementId, value))
@@ -38,6 +40,7 @@ export default function App() {
     <OnboardingShell
       state={state}
       onAdvance={handleAdvance}
+      onBack={handleBack}
       onSetField={handleSetField}
       onCanvasAdd={handleCanvasAdd}
       onCanvasMove={handleCanvasMove}
