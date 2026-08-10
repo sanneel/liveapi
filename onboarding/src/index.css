@@ -163,6 +163,29 @@
   }
   .shot-open:hover .badge, .shot-open:focus-visible .badge { @apply opacity-100; }
 
+  /* A red pointer over a screenshot. Positioned in percentages by the caller. */
+  .mark {
+    @apply absolute z-10 pointer-events-none flex items-center gap-1;
+  }
+  .mark-dot {
+    @apply block w-3.5 h-3.5 rounded-full border-2 border-white;
+    background: #E4342B;
+    box-shadow: 0 0 0 2px rgba(228,52,43,.35);
+  }
+  .mark-label {
+    @apply rounded-chip px-1.5 py-0.5 text-[10.5px] font-semibold text-white whitespace-nowrap;
+    background: #E4342B;
+  }
+  .mark-stem { @apply block h-0.5 rounded; background: #E4342B; }
+
+  /* Flick, the guide. */
+  .flick-bubble {
+    @apply flex items-start gap-3 rounded-card border border-line bg-surface p-3;
+  }
+  .flick-face {
+    @apply shrink-0 rounded-chip object-cover bg-line-soft;
+  }
+
   /* ── Content blocks inside lessons ──────────────────────────────────────── */
 
   /* Paragraph body text */

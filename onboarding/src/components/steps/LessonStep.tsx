@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import type { LessonStep as LessonStepType, ContentBlock, Shot } from '../../data/types'
+import type { LessonStep as LessonStepType, ContentBlock, Shot, ShotMark } from '../../data/types'
 import OverviewScreen from '../replica/OverviewScreens'
 
 interface Props {
@@ -29,6 +29,17 @@ export default function LessonStep({ step }: Props) {
           className="text-lede text-ink-soft mt-3 max-w-[76ch] [&_strong]:font-semibold [&_strong]:text-ink"
           dangerouslySetInnerHTML={{ __html: lede.html }}
         />
+      )}
+
+      {step.flick && (
+        <div className="flick-bubble mt-4 max-w-[62ch]">
+          <img
+            src={`${import.meta.env.BASE_URL}flick/${step.flick.pose}.png`}
+            alt=""
+            className="flick-face w-11 h-11"
+          />
+          <p className="text-[14px] text-ink-soft leading-snug">{step.flick.say}</p>
+        </div>
       )}
 
       {media.length > 0 ? (
@@ -89,12 +100,14 @@ function Lightbox({ shot, onClose }: { shot: Shot; onClose: () => void }) {
       aria-label={shot.alt}
       onClick={onClose}
     >
-      <img
-        src={import.meta.env.BASE_URL + shot.src}
-        alt={shot.alt}
-        className="max-w-full max-h-[84vh] object-contain rounded-card shadow-raised bg-surface"
-        onClick={e => e.stopPropagation()}
-      />
+      <div className="relative" onClick={e => e.stopPropagation()}>
+        <img
+          src={import.meta.env.BASE_URL + shot.src}
+          alt={shot.alt}
+          className="max-w-full max-h-[84vh] object-contain rounded-card shadow-raised bg-surface"
+        />
+        <Marks marks={shot.marks} />
+      </div>
       {shot.caption && (
         <p className="text-caption text-white/75 max-w-[90ch] text-center">{shot.caption}</p>
       )}
@@ -156,13 +169,16 @@ function ShotFigure({
               so a full-width box plus object-contain letterboxed the squarer ones
               with white bars down both sides. Letting the frame hug the image
               removes the bars at every ratio. */}
-          <img
-            src={import.meta.env.BASE_URL + shot.src}
-            alt={shot.alt}
-            loading="lazy"
-            onError={() => setFailed(true)}
-            className={`block w-auto max-w-full ${cap}`}
-          />
+          <span className="relative block">
+            <img
+              src={import.meta.env.BASE_URL + shot.src}
+              alt={shot.alt}
+              loading="lazy"
+              onError={() => setFailed(true)}
+              className={`block w-auto max-w-full ${cap}`}
+            />
+            <Marks marks={shot.marks} />
+          </span>
           <span className="badge" aria-hidden="true">Click to enlarge</span>
         </button>
       )}
@@ -170,6 +186,44 @@ function ShotFigure({
         <figcaption className="text-caption text-muted leading-snug">{shot.caption}</figcaption>
       )}
     </figure>
+  )
+}
+
+/** Red pointers over a photo. Percentage coordinates so one set of numbers works
+ *  inline and full screen, at any width. */
+function Marks({ marks }: { marks?: ShotMark[] }) {
+  if (!marks?.length) return null
+  return (
+    <>
+      {marks.map((m, i) => {
+        const from = m.from ?? 'left'
+        const horizontal = from === 'left' || from === 'right'
+        return (
+          <span
+            key={i}
+            className="mark"
+            style={{
+              left: `${m.x * 100}%`,
+              top: `${m.y * 100}%`,
+              transform:
+                from === 'left'
+                  ? 'translate(-100%, -50%)'
+                  : from === 'right'
+                    ? 'translate(0, -50%)'
+                    : from === 'top'
+                      ? 'translate(-50%, -100%)'
+                      : 'translate(-50%, 0)',
+              flexDirection:
+                from === 'right' ? 'row-reverse' : from === 'top' ? 'column' : from === 'bottom' ? 'column-reverse' : 'row',
+            }}
+          >
+            {m.label && <span className="mark-label">{m.label}</span>}
+            <span className="mark-stem" style={horizontal ? { width: 26 } : { width: 2, height: 22 }} />
+            <span className="mark-dot" />
+          </span>
+        )
+      })}
+    </>
   )
 }
 

@@ -15,36 +15,32 @@ const track: Track = {
       chapter: 'Welcome',
       type: 'lesson',
       eyebrow: 'Welcome',
-      title: 'Welcome in. Here is the plan.',
+      title: 'Welcome onboard.',
+      flick: {
+        pose: 'hi',
+        say: 'Hi, I am Flick. I will walk you through it, one screen at a time. Nothing you do in here touches anything real.',
+      },
       content: [
         {
           kind: 'paragraph',
-          html: 'Hello, and welcome to the CRM team. This takes about half an hour, and <strong>nothing you do here touches anything real</strong>. Every screen is a safe copy, so click freely and get things wrong. That is what it is for.',
-        },
-        {
-          kind: 'paragraph',
-          html: 'The job you are learning is building <strong>promotions</strong>: the offers players see on the site, and the automations behind them that decide who gets what, and when.',
+          html: 'I am going to explain some <strong>standards of our CRM</strong>, so you know how we use them. Here is the order.',
         },
         {
           kind: 'rule-list',
           rules: [
             {
-              text: 'First, a real example.',
-              sub: 'One of our own promos, the Fortune Wheel, followed from the player’s screen through to our logs, so you can see what you are aiming at before anyone explains a single term.',
+              text: 'First, some standard promotions.',
+              sub: 'What the player flow looks like from their side, and then how we track it from ours.',
             },
             {
-              text: 'Then the building blocks.',
-              sub: 'The node types, and the handful of rules that decide whether a journey works or quietly does nothing at all.',
+              text: 'Then the important nodes.',
+              sub: 'What rules they have and how to use them, plus how our journeys are set up and why those particular nodes.',
             },
             {
-              text: 'Then you build one yourself.',
-              sub: 'Set a journey up, assemble the flow, and wire a promo page to it, on replicas of the screens you will use for real.',
+              text: 'Then a playground.',
+              sub: 'Tasks you can build freely. Nothing there can damage anything, it is only there to build your knowledge.',
             },
           ],
-        },
-        {
-          kind: 'paragraph',
-          html: 'Take it in order, and use Continue when you are ready.',
         },
       ],
     },
@@ -96,14 +92,18 @@ const track: Track = {
     {
       id: 'wheel-1-offer',
       chapter: 'Promotion · Fortune Wheel',
-      tip: 'A journey never goes looking for players. The promotion delivers them.',
+      tip: 'Every promotion the player sees is an object we own and can open.',
       type: 'lesson',
       eyebrow: 'Fortune Wheel · 1 of 5',
-      title: 'How a player finds it.',
+      title: 'Casino Wheel of Fortune.',
+      flick: {
+        pose: 'explore',
+        say: 'This one was live on the day the screenshots were taken, so everything you are about to see really happened.',
+      },
       content: [
         {
           kind: 'paragraph',
-          html: 'A promotion has to be found before it can run. This one sits on the promotions page as a card, alongside everything else live that week.',
+          html: 'Now I will show you the <strong>Casino Wheel of Fortune</strong>. It was active on the day I captured these screenshots. On the left is where the player meets it. On the right is the same thing as an object we own.',
         },
         {
           kind: 'shots',
@@ -111,22 +111,16 @@ const track: Track = {
             {
               src: 'shots/wheel/1-offer-player.png',
               alt: 'The Bonificaciones list on the site with a Casino card reading Gira la Rueda de la Fortuna ahora, counting down 15H 48M, beside sports promos.',
-              caption: 'THE PLAYER. One card among the rest, with its own countdown and a Gira button.',
+              caption: 'THE PLAYER. The promotions page, with the wheel among the live promos.',
+              marks: [{ x: 0.25, y: 0.47, label: 'Wheel of Fortune', from: 'left' }],
             },
             {
               src: 'shots/wheel/1-offer-ours.png',
-              alt: 'The backoffice Promo list filtered to Active, showing randomizer RND-0-17731 named JBCL|CS|WOF|07.08.26 with a row menu open.',
-              caption: 'OUR SIDE. The same thing as an object we own: RND-0-17731, live 07.08 to 08.08.',
+              alt: 'The backoffice Promo list filtered to Active, showing randomizer RND-0-17731 named JBCL|CS|WOF|07.08.26.',
+              caption: 'OUR SIDE. The same promotion in the Promo list.',
+              marks: [{ x: 0.27, y: 0.42, label: 'Our RND', from: 'left' }],
             },
           ],
-        },
-        {
-          kind: 'paragraph',
-          html: 'For the player it is one tap. Nothing runs until they take it, and at this moment we have <strong>no record of this player at all</strong>.',
-        },
-        {
-          kind: 'paragraph',
-          html: 'For us it is a row we can find, open and inspect. The name is how you find one object among thousands, which is why the naming convention matters.',
         },
       ],
     },
@@ -134,14 +128,18 @@ const track: Track = {
     {
       id: 'wheel-2-inside',
       chapter: 'Promotion · Fortune Wheel',
-      tip: 'A prize is not a bonus. It is a probability and a journey to be added to.',
+      tip: 'A prize is never a bonus. It is always a JRN.',
       type: 'lesson',
       eyebrow: 'Fortune Wheel · 2 of 5',
-      title: 'What opens when they tap.',
+      title: 'Four prizes, twelve places.',
+      flick: {
+        pose: 'study',
+        say: 'This is the part people get wrong at first, so take your time with the right-hand photo.',
+      },
       content: [
         {
           kind: 'paragraph',
-          html: 'Inside the promotion is the thing the player actually plays. Behind it is the configuration that decides what it can do.',
+          html: 'The wheel has <strong>four different prizes</strong>, and each one sits on the wheel <strong>three times</strong>, which is why you count twelve wedges. We set the percentages, and the machine calculates which prize the player gets when they spin.',
         },
         {
           kind: 'shots',
@@ -149,22 +147,31 @@ const track: Track = {
             {
               src: 'shots/wheel/2-inside-player.png',
               alt: 'The Rueda de la fortuna page: a twelve wedge wheel showing 50 GG con depósito, 50 GG sin depósito, Bonos de depósito and Jackpot 200 FS, with a Spin button.',
-              caption: 'THE PLAYER. Twelve wedges, but count the labels: four prizes, each repeated three times.',
+              caption: 'THE PLAYER. Twelve wedges, four prizes, no odds shown.',
             },
             {
               src: 'shots/wheel/2-inside-ours.png',
               alt: 'The randomizer prize table: four rows, each a JRN journey id against a probability of 55, 42, 2.7 and 0.3, with a greyed out Add prize button.',
-              caption: 'OUR SIDE. Four rows. A journey id, and the odds of landing on it.',
+              caption: 'OUR SIDE. Four rows. A JRN id, and the odds of landing on it.',
             },
           ],
         },
         {
           kind: 'paragraph',
-          html: 'The player sees prizes. They cannot see the odds, and the rim repeats each prize to make the wheel look full.',
+          html: 'Now the important part. <strong>A prize cannot just be free spins, or money, or anything else.</strong> Every prize is a <strong>JRN, a journey</strong>, and each of those journeys starts with an <strong>API entry source</strong>. That is how the wheel hands a winner over: it adds the player into the journey through that entry. All four prizes on this wheel are JRNs.',
+        },
+        {
+          kind: 'table',
+          rows: [
+            { node: 'JRN-0-572381', role: '50 free spins, deposit linked', detail: '55%' },
+            { node: 'JRN-0-572307', role: 'Deposit bonuses', detail: '42%' },
+            { node: 'JRN-0-423152', role: '50 free spins, no deposit', detail: '2.7%' },
+            { node: 'JRN-0-572386', role: '50 free spins, no deposit', detail: '0.3%' },
+          ],
         },
         {
           kind: 'paragraph',
-          html: 'We see what a prize really is: a <strong>JRN, a journey id</strong>, plus a probability. Winning a slice does one thing, it <strong>adds the player into that journey</strong>. The weights must total 100, and <em>Add prize</em> is greyed out because the slice count comes from the template.',
+          html: 'Which fixes the build order: the journeys exist first, because this table can only point at JRNs that already exist. The weights must total 100, and <em>Add prize</em> is greyed out because the number of slices comes from the template.',
         },
       ],
     },
@@ -172,14 +179,14 @@ const track: Track = {
     {
       id: 'wheel-3-action',
       chapter: 'Promotion · Fortune Wheel',
-      tip: 'The wheel picks the prize. The journey delivers it.',
+      tip: 'The players list is how you prove a spin happened and where it went.',
       type: 'lesson',
       eyebrow: 'Fortune Wheel · 3 of 5',
-      title: 'What the button did.',
+      title: 'He spun, and we can prove it.',
       content: [
         {
           kind: 'paragraph',
-          html: 'The player presses Spin once. That single press is the moment we first hear about them.',
+          html: 'The player spun the wheel and won the <strong>deposit linked free spins</strong>. From our side we can check that he actually spun, and <strong>which JRN id he won</strong>, so winners are traceable.',
         },
         {
           kind: 'shots',
@@ -187,22 +194,19 @@ const track: Track = {
             {
               src: 'shots/wheel/3-action-player.png',
               alt: 'A Tu recompensa dialog over the wheel, confetti around a 50 GG CON DEPÓSITO badge, saying the bonus will activate automatically.',
-              caption: 'THE PLAYER. They drew 50 GG con depósito, the 55% slice. The wheel is now finished.',
+              caption: 'THE PLAYER. Tu recompensa. 50 GG con depósito, the 55% prize.',
             },
             {
               src: 'shots/wheel/3-action-ours.png',
-              alt: 'The randomizer players list showing one account, added 16:09, activated 16:09, claimed 16:10, with bonus campaign JRN-0-572381 described as Wheel of fortune 50FS to dep.',
-              caption: 'OUR SIDE. One row appears: who spun, when they claimed, and the journey they went into.',
+              alt: 'The randomizer players list showing one account, added 16:09, activated 16:09, claimed 16:10, with bonus campaign JRN-0-572381.',
+              caption: 'OUR SIDE. Who spun, when they claimed, and the JRN they won.',
+              marks: [{ x: 0.66, y: 0.27, label: 'The JRN he won', from: 'right' }],
             },
           ],
         },
         {
           kind: 'paragraph',
-          html: 'The player is told the bonus will activate automatically. From their side the wheel is over.',
-        },
-        {
-          kind: 'paragraph',
-          html: 'From ours it has just started. The wheel hands the winner to <strong>JRN-0-572381</strong> and takes no further part. Everything after this happens inside that journey.',
+          html: 'Once the player is added into that journey he can go straight to the promotions page. And what does he see there? <strong>Several options to choose from.</strong> That is exactly the <strong>Multipurpose Promotion</strong> we created inside the journey, which is the next screen.',
         },
       ],
     },
@@ -210,14 +214,18 @@ const track: Track = {
     {
       id: 'wheel-4-choice',
       chapter: 'Promotion · Fortune Wheel',
-      tip: 'A chooser awards nothing. Each flow needs its own promotion inside it.',
+      tip: 'Choosing adds the player to one promotion id, not to all three.',
       type: 'lesson',
       eyebrow: 'Fortune Wheel · 4 of 5',
-      title: 'When the promotion asks.',
+      title: 'One promotion holding three.',
+      flick: {
+        pose: 'gotit',
+        say: 'Follow the arrow first, then read down the three columns. Same shape three times.',
+      },
       content: [
         {
           kind: 'paragraph',
-          html: 'Some promotions do not hand over a fixed reward. They ask the player to pick, and this is what that looks like on both sides.',
+          html: 'This journey has one big <strong>Multipurpose Promotion</strong> which includes <strong>three promotions</strong>. So how does the flow work?',
         },
         {
           kind: 'shots',
@@ -229,18 +237,19 @@ const track: Track = {
             },
             {
               src: 'shots/wheel/4-choice-ours.png',
-              alt: 'The journey canvas showing Accepted 17678 branching into Flow 1, Flow 2 and Flow 3 labelled 15k dep, 10k dep and big, each with its own deposit gate, Casino FreeSpin and Casino bonus and player counts.',
-              caption: 'OUR SIDE. Three flows, one per option, each complete on its own.',
+              alt: 'The journey canvas showing a Multipurpose Promotion node offered within 1 day, Accepted 17678 below it, branching into Flow 1, Flow 2 and Flow 3 named 15k dep, 10k dep and big, each with its own deposit gate, Casino FreeSpin and Casino bonus.',
+              caption: 'OUR SIDE. The Multipurpose Promotion, and the three flows under it.',
+              marks: [{ x: 0.62, y: 0.075, label: 'The Multipurpose Promotion', from: 'right' }],
             },
           ],
         },
         {
           kind: 'paragraph',
-          html: 'The player picks one. Nothing has been awarded yet, and the screen is only asking.',
+          html: 'The player <strong>chooses one promotion</strong> and is added into <strong>that promotion id</strong>. So on his promotions page a new <em>chosen</em> promotion appears, with its own terms, and only the flow behind it runs. The other two never start for him.',
         },
         {
           kind: 'paragraph',
-          html: 'On our canvas that is <strong>three flows</strong>, named 15k dep, 10k dep and big. Each carries its own deposit gate, free spins and bonus. A player runs exactly one, and the counts show how 17 678 acceptances split.',
+          html: 'The counts show how it split in practice: 17 678 accepted the offer, then 8 252 took 15k dep, 6 766 took 10k dep and 2 660 took big.',
         },
       ],
     },

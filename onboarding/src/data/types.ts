@@ -32,6 +32,18 @@ export interface Shot {
   src: string
   alt: string
   caption?: string
+  /** Red pointers drawn over the photo. Coordinates are fractions of the image
+   *  (0..1) rather than pixels, so they stay put at any rendered size and in the
+   *  full-screen view. `from` is where the arrow tail starts, also fractional. */
+  marks?: ShotMark[]
+}
+
+export interface ShotMark {
+  x: number
+  y: number
+  label?: string
+  /** Which side the arrow comes in from. Default 'left'. */
+  from?: 'left' | 'right' | 'top' | 'bottom'
 }
 
 export interface DiagramBox {
@@ -79,6 +91,8 @@ export interface BaseStep {
   chapter?: string
   /** One line for the footer, the thing to remember off this screen. */
   tip?: string
+  /** Flick, the guide. A pose from public/flick and what he says here. */
+  flick?: { pose: string; say: string }
 }
 
 export interface LessonStep extends BaseStep {

@@ -169,10 +169,14 @@ export default function OnboardingShell({
               <span aria-hidden="true">←</span> Back
             </button>
             {step.tip ? (
-              <p className="flex-1 min-w-0 text-[12.5px] text-muted leading-snug">
-                <span className="mr-1.5">💡</span>
-                {step.tip}
-              </p>
+              <div className="flex-1 min-w-0 flex items-center gap-2">
+                <img
+                  src={`${import.meta.env.BASE_URL}flick/gotit.png`}
+                  alt=""
+                  className="shrink-0 w-8 h-8 rounded-chip object-cover bg-line-soft"
+                />
+                <p className="min-w-0 text-[12.5px] text-muted leading-snug">{step.tip}</p>
+              </div>
             ) : (
               <span className="flex-1" />
             )}
