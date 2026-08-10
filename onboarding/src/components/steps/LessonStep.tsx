@@ -31,12 +31,13 @@ export default function LessonStep({ step }: Props) {
         />
       )}
 
+      {/* Below lg the rail is hidden, so Flick says his line here instead. */}
       {step.flick && (
-        <div className="flick-bubble mt-4 max-w-[62ch]">
+        <div className="flick-bubble mt-4 max-w-[62ch] lg:hidden">
           <img
             src={`${import.meta.env.BASE_URL}flick/${step.flick.pose}.png`}
             alt=""
-            className="flick-face w-11 h-11"
+            className="flick-face w-14 h-14 object-contain"
           />
           <p className="text-[14px] text-ink-soft leading-snug">{step.flick.say}</p>
         </div>

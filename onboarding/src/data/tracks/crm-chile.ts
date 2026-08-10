@@ -17,7 +17,7 @@ const track: Track = {
       eyebrow: 'Welcome',
       title: 'Welcome onboard.',
       flick: {
-        pose: 'hi',
+        pose: 'teach',
         say: 'Hi, I am Flick. I will walk you through it, one screen at a time. Nothing you do in here touches anything real.',
       },
       content: [
@@ -97,7 +97,7 @@ const track: Track = {
       eyebrow: 'Fortune Wheel · 1 of 5',
       title: 'Casino Wheel of Fortune.',
       flick: {
-        pose: 'explore',
+        pose: 'inspect',
         say: 'This one was live on the day the screenshots were taken, so everything you are about to see really happened.',
       },
       content: [
@@ -133,7 +133,7 @@ const track: Track = {
       eyebrow: 'Fortune Wheel · 2 of 5',
       title: 'Four prizes, twelve places.',
       flick: {
-        pose: 'study',
+        pose: 'work',
         say: 'This is the part people get wrong at first, so take your time with the right-hand photo.',
       },
       content: [
@@ -219,7 +219,7 @@ const track: Track = {
       eyebrow: 'Fortune Wheel · 4 of 5',
       title: 'One promotion holding three.',
       flick: {
-        pose: 'gotit',
+        pose: 'lead',
         say: 'Follow the arrow first, then read down the three columns. Same shape three times.',
       },
       content: [
