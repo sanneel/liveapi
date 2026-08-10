@@ -48,7 +48,7 @@ export default function TaskStep({
             <p className="mono-label">Checks</p>
             <span
               className="mono-label tabular-nums"
-              style={{ color: done ? '#0E7A5A' : undefined }}
+              style={{ color: done ? 'var(--accent)' : undefined }}
             >
               {passed}/{results.length}
             </span>
@@ -116,8 +116,8 @@ function CheckIcon({ done }: { done: boolean }) {
       className="mt-[2px] w-[18px] h-[18px] rounded-full shrink-0 flex items-center justify-center
                  transition-all duration-300"
       style={{
-        background: done ? '#0E7A5A' : 'transparent',
-        border: done ? 'none' : '1.5px solid #D0D4CC',
+        background: done ? 'var(--accent)' : 'transparent',
+        border: done ? 'none' : '1.5px solid var(--line)',
       }}
       aria-hidden="true"
     >

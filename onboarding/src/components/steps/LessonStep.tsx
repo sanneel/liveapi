@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type { LessonStep as LessonStepType, ContentBlock, Shot } from '../../data/types'
 import OverviewScreen from '../replica/OverviewScreens'
 
@@ -12,6 +12,7 @@ interface Props {
 const MEDIA: ContentBlock['kind'][] = ['shots', 'screen']
 
 export default function LessonStep({ step }: Props) {
+  const [zoom, setZoom] = useState<Shot | null>(null)
   const media = step.content.filter(b => MEDIA.includes(b.kind))
   const rest = step.content.filter(b => !MEDIA.includes(b.kind))
 
@@ -34,7 +35,7 @@ export default function LessonStep({ step }: Props) {
         <div className="mt-5 grid gap-5 items-start lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
           <div className="flex flex-col gap-4 min-w-0">
             {media.map((b, i) => (
-              <ContentBlockRenderer key={i} block={b} />
+              <ContentBlockRenderer key={i} block={b} onZoom={setZoom} />
             ))}
           </div>
           {aside.length > 0 && (
@@ -52,7 +53,60 @@ export default function LessonStep({ step }: Props) {
           ))}
         </div>
       )}
+
+      {zoom && <Lightbox shot={zoom} onClose={() => setZoom(null)} />}
     </article>
+  )
+}
+
+// ─── Full screen ─────────────────────────────────────────────────────────────
+
+/** A screenshot at readable size. Inline the column caps these at about 650px
+ *  wide while the captures are 2800px, so the log rows and prize tables are
+ *  unreadable until they are opened. */
+function Lightbox({ shot, onClose }: { shot: Shot; onClose: () => void }) {
+  const onKey = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    },
+    [onClose],
+  )
+  useEffect(() => {
+    document.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prev
+    }
+  }, [onKey])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-ink/85 flex flex-col items-center justify-center gap-3 p-4 sm:p-8"
+      role="dialog"
+      aria-modal="true"
+      aria-label={shot.alt}
+      onClick={onClose}
+    >
+      <img
+        src={import.meta.env.BASE_URL + shot.src}
+        alt={shot.alt}
+        className="max-w-full max-h-[84vh] object-contain rounded-card shadow-raised bg-surface"
+        onClick={e => e.stopPropagation()}
+      />
+      {shot.caption && (
+        <p className="text-caption text-white/75 max-w-[90ch] text-center">{shot.caption}</p>
+      )}
+      <button
+        className="absolute right-4 top-4 rounded-chip bg-surface/15 hover:bg-surface/25 text-white w-9 h-9 grid place-items-center text-[15px]"
+        onClick={onClose}
+        aria-label="Close"
+      >
+        ✕
+      </button>
+      <p className="text-[11.5px] text-white/50">Click anywhere or press Esc to close</p>
+    </div>
   )
 }
 
@@ -60,21 +114,29 @@ export default function LessonStep({ step }: Props) {
 
 /** One to three captures on a row. In the two-column layout the column is
  *  already narrow, so heights can stay generous. */
-function ShotsBlock({ items }: { items: Shot[] }) {
-  // Literal class names: Tailwind scans source text, so a built-up
-  // `sm:grid-cols-${n}` would be purged out of the stylesheet.
-  const cols = items.length >= 3 ? 'sm:grid-cols-3' : items.length === 2 ? 'sm:grid-cols-2' : ''
-  const cap = items.length > 1 ? 'max-h-[30vh]' : 'max-h-[46vh]'
+function ShotsBlock({ items, onZoom }: { items: Shot[]; onZoom?: (s: Shot) => void }) {
+  // Stacked, not side by side. Two photos across a 1.2fr column left each about
+  // 315px wide against a 2800px capture, which is why they read as invisible.
+  // Full column width plus click-to-open beats fitting them on one row.
+  const cap = items.length > 2 ? 'max-h-[26vh]' : items.length === 2 ? 'max-h-[34vh]' : 'max-h-[52vh]'
   return (
-    <div className={`not-prose grid gap-3 ${cols}`}>
+    <div className="not-prose flex flex-col gap-3">
       {items.map(shot => (
-        <ShotFigure key={shot.src} shot={shot} cap={cap} />
+        <ShotFigure key={shot.src} shot={shot} cap={cap} onZoom={onZoom} />
       ))}
     </div>
   )
 }
 
-function ShotFigure({ shot, cap }: { shot: Shot; cap: string }) {
+function ShotFigure({
+  shot,
+  cap,
+  onZoom,
+}: {
+  shot: Shot
+  cap: string
+  onZoom?: (s: Shot) => void
+}) {
   const [failed, setFailed] = useState(false)
   return (
     <figure className="min-w-0 flex flex-col gap-2">
@@ -84,13 +146,21 @@ function ShotFigure({ shot, cap }: { shot: Shot; cap: string }) {
           <p className="mono-label mt-2">public/{shot.src}</p>
         </div>
       ) : (
-        <img
-          src={import.meta.env.BASE_URL + shot.src}
-          alt={shot.alt}
-          loading="lazy"
-          onError={() => setFailed(true)}
-          className={`block w-full ${cap} object-contain object-top rounded-card border border-line bg-surface`}
-        />
+        <button
+          type="button"
+          className="shot-open"
+          onClick={() => onZoom?.(shot)}
+          aria-label={`Enlarge: ${shot.alt}`}
+        >
+          <img
+            src={import.meta.env.BASE_URL + shot.src}
+            alt={shot.alt}
+            loading="lazy"
+            onError={() => setFailed(true)}
+            className={`block w-full ${cap} object-contain object-top`}
+          />
+          <span className="badge" aria-hidden="true">Click to enlarge</span>
+        </button>
       )}
       {shot.caption && (
         <figcaption className="text-caption text-muted leading-snug">{shot.caption}</figcaption>
@@ -101,7 +171,15 @@ function ShotFigure({ shot, cap }: { shot: Shot; cap: string }) {
 
 // ─── Blocks ──────────────────────────────────────────────────────────────────
 
-function ContentBlockRenderer({ block, inAside }: { block: ContentBlock; inAside?: boolean }) {
+function ContentBlockRenderer({
+  block,
+  inAside,
+  onZoom,
+}: {
+  block: ContentBlock
+  inAside?: boolean
+  onZoom?: (s: Shot) => void
+}) {
   switch (block.kind) {
     case 'paragraph':
       return (
@@ -111,7 +189,7 @@ function ContentBlockRenderer({ block, inAside }: { block: ContentBlock; inAside
         />
       )
     case 'shots':
-      return <ShotsBlock items={block.items} />
+      return <ShotsBlock items={block.items} onZoom={onZoom} />
     case 'screen':
       return (
         <figure className="not-prose">

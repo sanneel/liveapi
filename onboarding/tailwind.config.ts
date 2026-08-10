@@ -7,13 +7,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        canvas: '#F6F7F4',
+        canvas: '#F7F7FA',
         surface: '#FFFFFF',
-        rail: '#FBFCFA',                 // sidebar ground, a shade off surface
+        rail: '#FBFBFE',                 // sidebar ground, a shade off surface
         ink: { DEFAULT: '#16191C', soft: '#454B50' },
         muted: '#7A8078',
-        line: { DEFAULT: '#E4E6E0', soft: '#EFF1EC' },
-        accent: { DEFAULT: '#0E7A5A', weak: '#E3F1EC' },
+        line: { DEFAULT: '#E4E4EC', soft: '#EFEFF5' },
+        accent: { DEFAULT: '#6B48F2', weak: '#F0ECFE', deep: '#5B37E0' },
         // Soft chips behind the takeaway icons. Semantic, not decorative: one
         // hue per kind of point so a returning trainee recognises them.
         tint: {
