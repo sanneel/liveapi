@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { LessonStep as LessonStepType, ContentBlock } from '../../data/types'
 import OverviewScreen from '../replica/OverviewScreens'
 
@@ -29,6 +30,34 @@ export default function LessonStep({ step, onContinue }: Props) {
 
 // ─── Content blocks ───────────────────────────────────────────────────────────
 
+/** A captured screenshot, with a labelled fallback naming the file it wants. */
+function ShotBlock({ block }: { block: Extract<ContentBlock, { kind: 'shot' }> }) {
+  const [failed, setFailed] = useState(false)
+  return (
+    <figure className="not-prose">
+      {failed ? (
+        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center">
+          <p className="text-caption text-muted">Screenshot not added yet</p>
+          <p className="mono-label mt-2 text-slate-500">public/{block.src}</p>
+        </div>
+      ) : (
+        <img
+          src={import.meta.env.BASE_URL + block.src}
+          alt={block.alt}
+          loading="lazy"
+          onError={() => setFailed(true)}
+          className="w-full rounded-lg border border-slate-200 shadow-sm"
+        />
+      )}
+      {block.caption && (
+        <figcaption className="text-caption text-muted mt-3 leading-relaxed">
+          {block.caption}
+        </figcaption>
+      )}
+    </figure>
+  )
+}
+
 function ContentBlockRenderer({ block }: { block: ContentBlock }) {
   switch (block.kind) {
     case 'paragraph':
@@ -49,6 +78,8 @@ function ContentBlockRenderer({ block }: { block: ContentBlock }) {
           )}
         </figure>
       )
+    case 'shot':
+      return <ShotBlock block={block} />
     case 'diagram':
       return <DiagramBlock block={block} />
     case 'table':
