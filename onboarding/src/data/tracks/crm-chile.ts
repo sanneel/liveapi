@@ -12,6 +12,7 @@ const track: Track = {
     // ── 0 · say hello before anything else ──────────────────────────────────
     {
       id: 'lesson-welcome',
+      chapter: 'Welcome',
       type: 'lesson',
       eyebrow: 'Welcome',
       title: 'Welcome in. Here is the plan.',
@@ -55,6 +56,8 @@ const track: Track = {
     // screen costs one photo of height, which is what keeps Continue on screen.
     {
       id: 'lesson-spin-01',
+      chapter: 'One real spin',
+      tip: 'A journey never goes looking for players. The promo page delivers them.',
       type: 'lesson',
       eyebrow: 'One real spin · 1 of 6',
       title: 'It starts on the promo page.',
@@ -87,6 +90,8 @@ const track: Track = {
 
     {
       id: 'lesson-spin-02',
+      chapter: 'One real spin',
+      tip: 'A prize is a probability and a destination journey. Nothing more.',
       type: 'lesson',
       eyebrow: 'One real spin · 2 of 6',
       title: 'The wheel decides, and we set the odds.',
@@ -119,6 +124,8 @@ const track: Track = {
 
     {
       id: 'lesson-spin-03',
+      chapter: 'One real spin',
+      tip: 'Naming is how you find one object among thousands.',
       type: 'lesson',
       eyebrow: 'One real spin · 3 of 6',
       title: 'Where that lives on our side.',
@@ -142,6 +149,8 @@ const track: Track = {
 
     {
       id: 'lesson-spin-04',
+      chapter: 'One real spin',
+      tip: 'A chooser asks. It awards nothing on its own.',
       type: 'lesson',
       eyebrow: 'One real spin · 4 of 6',
       title: 'Now the player chooses.',
@@ -169,6 +178,8 @@ const track: Track = {
 
     {
       id: 'lesson-spin-05',
+      chapter: 'One real spin',
+      tip: 'The terms belong to the option the player picked.',
       type: 'lesson',
       eyebrow: 'One real spin · 5 of 6',
       title: 'One bonus, with its own terms.',
@@ -196,6 +207,8 @@ const track: Track = {
 
     {
       id: 'lesson-spin-06',
+      chapter: 'One real spin',
+      tip: 'Every prize needs its journey built first.',
       type: 'lesson',
       eyebrow: 'One real spin · 6 of 6',
       title: 'Who spun, and what happened next.',
@@ -229,6 +242,8 @@ const track: Track = {
     // ── 1b · what that log settles ───────────────────────────────────────────
     {
       id: 'lesson-spin-rules',
+      chapter: 'One real spin',
+      tip: 'Give every flow its own promotion inside it.',
       type: 'lesson',
       eyebrow: 'One real spin · what it proves',
       title: 'Three things that log settles.',
@@ -260,6 +275,7 @@ const track: Track = {
     // ── 1 ───────────────────────────────────────────────────────────────────
     {
       id: 'lesson-what-is',
+      chapter: 'Foundations',
       type: 'lesson',
       eyebrow: 'The idea',
       title: 'Player Journeys is a decision engine.',
@@ -298,6 +314,7 @@ const track: Track = {
     // ── 2 ───────────────────────────────────────────────────────────────────
     {
       id: 'lesson-timeline',
+      chapter: 'Foundations',
       type: 'lesson',
       eyebrow: 'How it runs',
       title: 'Every player runs on their own clock.',
@@ -316,6 +333,7 @@ const track: Track = {
     // ── 3 ───────────────────────────────────────────────────────────────────
     {
       id: 'lesson-where',
+      chapter: 'Foundations',
       type: 'lesson',
       eyebrow: 'Where it lives',
       title: 'Journey builder is the list of everything running.',
@@ -336,6 +354,7 @@ const track: Track = {
     // ── 4 ───────────────────────────────────────────────────────────────────
     {
       id: 'lesson-promo',
+      chapter: 'Foundations',
       type: 'lesson',
       eyebrow: 'What we create',
       title: 'Three things. Not nine.',
@@ -355,6 +374,7 @@ const track: Track = {
     // ── 5 ───────────────────────────────────────────────────────────────────
     {
       id: 'lesson-nodes',
+      chapter: 'The blocks',
       type: 'lesson',
       eyebrow: 'The blocks',
       title: 'Six blocks. The whole language.',
@@ -380,6 +400,7 @@ const track: Track = {
     // ── 4 ───────────────────────────────────────────────────────────────────
     {
       id: 'lesson-rules-shape',
+      chapter: 'The rules',
       type: 'lesson',
       eyebrow: 'Rules — shape',
       title: 'Three rules about shape.',
@@ -411,6 +432,7 @@ const track: Track = {
     // ── 5 ───────────────────────────────────────────────────────────────────
     {
       id: 'lesson-rules-behaviour',
+      chapter: 'The rules',
       type: 'lesson',
       eyebrow: 'Rules — behaviour',
       title: 'Three rules about behaviour.',
@@ -438,6 +460,7 @@ const track: Track = {
     // ── 6 ───────────────────────────────────────────────────────────────────
     {
       id: 'lesson-promo-vs-journey',
+      chapter: 'Distinctions',
       type: 'lesson',
       eyebrow: 'A distinction',
       title: 'A promotion is not a journey.',
@@ -469,6 +492,7 @@ const track: Track = {
     // ── 6b ──────────────────────────────────────────────────────────────────
     {
       id: 'lesson-connection',
+      chapter: 'Distinctions',
       type: 'lesson',
       eyebrow: 'The wiring',
       title: 'One field connects the two.',
@@ -493,6 +517,7 @@ const track: Track = {
     // ── 6c ──────────────────────────────────────────────────────────────────
     {
       id: 'lesson-player-side',
+      chapter: 'Distinctions',
       type: 'lesson',
       eyebrow: 'The player’s side',
       title: 'The button is the door.',
@@ -517,6 +542,7 @@ const track: Track = {
     // ── 7 ───────────────────────────────────────────────────────────────────
     {
       id: 'showcase-gotw',
+      chapter: 'A real campaign',
       type: 'showcase',
       eyebrow: 'One real campaign',
       title: 'Game of the Week, set up.',
@@ -577,6 +603,7 @@ const track: Track = {
     // ── 8 ───────────────────────────────────────────────────────────────────
     {
       id: 'task-journey-settings',
+      chapter: 'Build it',
       type: 'task',
       eyebrow: 'Your turn',
       title: 'Set the journey up.',
@@ -628,6 +655,7 @@ const track: Track = {
     // ── 9 ───────────────────────────────────────────────────────────────────
     {
       id: 'task-journey-builder',
+      chapter: 'Build it',
       type: 'task',
       eyebrow: 'Your turn',
       title: 'Build the flow.',
@@ -688,6 +716,7 @@ const track: Track = {
     // ── 10 ──────────────────────────────────────────────────────────────────
     {
       id: 'task-gotw',
+      chapter: 'Build it',
       type: 'task',
       eyebrow: 'Your turn',
       title: 'Fill the campaign.',

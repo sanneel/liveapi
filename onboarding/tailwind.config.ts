@@ -9,10 +9,17 @@ export default {
       colors: {
         canvas: '#F6F7F4',
         surface: '#FFFFFF',
+        rail: '#FBFCFA',                 // sidebar ground, a shade off surface
         ink: { DEFAULT: '#16191C', soft: '#454B50' },
         muted: '#7A8078',
-        line: '#E4E6E0',
+        line: { DEFAULT: '#E4E6E0', soft: '#EFF1EC' },
         accent: { DEFAULT: '#0E7A5A', weak: '#E3F1EC' },
+        // Soft chips behind the takeaway icons. Semantic, not decorative: one
+        // hue per kind of point so a returning trainee recognises them.
+        tint: {
+          green: '#E6F4EC', purple: '#EFEAFB', amber: '#FCF3E2',
+          pink: '#FBEAF0', blue: '#E8F0FB', grey: '#EEF0EC',
+        },
       },
       fontFamily: {
         display: ['"Bricolage Grotesque"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
@@ -20,15 +27,19 @@ export default {
         mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
       fontSize: {
-        // The entire scale. Four sizes, nothing else.
-        headline: ['clamp(30px, 5vw, 44px)', { lineHeight: '1.05', letterSpacing: '-0.02em' }],
-        body: ['18px', { lineHeight: '1.6' }],
-        caption: ['14px', { lineHeight: '1.5' }],
-        label: ['12px', { lineHeight: '1.4', letterSpacing: '0.08em' }],
+        // Retuned down a step. The old headline ran to 44px and the body to
+        // 18px, which on a screen carrying a screenshot AND its explanation
+        // read as a poster rather than a lesson.
+        headline: ['clamp(23px, 2.5vw, 30px)', { lineHeight: '1.15', letterSpacing: '-0.02em' }],
+        lede: ['16px', { lineHeight: '1.55' }],
+        body: ['15px', { lineHeight: '1.6' }],
+        caption: ['12.5px', { lineHeight: '1.45' }],
+        label: ['11px', { lineHeight: '1.4', letterSpacing: '0.08em' }],
       },
       borderRadius: {
-        card: '16px',
-        control: '12px',
+        card: '14px',
+        control: '10px',
+        chip: '9px',
       },
       boxShadow: {
         soft: '0 2px 4px rgba(20,30,25,.04), 0 8px 24px -8px rgba(20,30,25,.10)',
@@ -36,6 +47,7 @@ export default {
       },
       maxWidth: {
         column: '620px',
+        wide: '1240px',
       },
       animation: {
         // Forward-only. There is no reverse because there is no going back.

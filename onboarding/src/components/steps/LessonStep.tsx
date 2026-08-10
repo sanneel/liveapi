@@ -4,47 +4,69 @@ import OverviewScreen from '../replica/OverviewScreens'
 
 interface Props {
   step: LessonStepType
-  onContinue: () => void
 }
 
-export default function LessonStep({ step, onContinue }: Props) {
-  // Three bands: heading, content, action. The action is shrink-0 and last, so
-  // Continue is on screen whatever the content does. Only the middle band can
-  // ever scroll, and with photos capped it usually does not.
+// Media goes in the left column, everything else in the right one. Splitting on
+// kind rather than on hand-authored slots means the 22 existing steps did not
+// have to be rewritten to get the two-column layout.
+const MEDIA: ContentBlock['kind'][] = ['shots', 'screen']
+
+export default function LessonStep({ step }: Props) {
+  const media = step.content.filter(b => MEDIA.includes(b.kind))
+  const rest = step.content.filter(b => !MEDIA.includes(b.kind))
+
+  // The opening paragraph reads as a standfirst under the heading, full width.
+  const lede = rest[0]?.kind === 'paragraph' ? rest[0] : null
+  const aside = lede ? rest.slice(1) : rest
+
   return (
-    <article className="h-full flex flex-col">
-      <div className="shrink-0">
-        {step.eyebrow && <p className="mono-label">{step.eyebrow}</p>}
-        <h1 className="headline mt-3">{step.title}</h1>
-      </div>
+    <article>
+      {step.eyebrow && <p className="mono-label">{step.eyebrow}</p>}
+      <h1 className="headline mt-2">{step.title}</h1>
+      {lede && (
+        <p
+          className="text-lede text-ink-soft mt-3 max-w-[76ch] [&_strong]:font-semibold [&_strong]:text-ink"
+          dangerouslySetInnerHTML={{ __html: lede.html }}
+        />
+      )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto mt-5 flex flex-col gap-4">
-        {step.content.map((block, i) => (
-          <ContentBlockRenderer key={i} block={block} />
-        ))}
-      </div>
-
-      <div className="shrink-0 pt-5">
-        <button className="btn-primary" onClick={onContinue}>
-          Continue
-        </button>
-      </div>
+      {media.length > 0 ? (
+        <div className="mt-5 grid gap-5 items-start lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+          <div className="flex flex-col gap-4 min-w-0">
+            {media.map((b, i) => (
+              <ContentBlockRenderer key={i} block={b} />
+            ))}
+          </div>
+          {aside.length > 0 && (
+            <div className="flex flex-col gap-3.5 min-w-0">
+              {aside.map((b, i) => (
+                <ContentBlockRenderer key={i} block={b} inAside />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="mt-5 max-w-column flex flex-col gap-3.5">
+          {aside.map((b, i) => (
+            <ContentBlockRenderer key={i} block={b} />
+          ))}
+        </div>
+      )}
     </article>
   )
 }
 
-// ─── Content blocks ───────────────────────────────────────────────────────────
+// ─── Photos ──────────────────────────────────────────────────────────────────
 
-/** One to three captures on a row. Heights shrink as the count grows so the
- *  row costs about the same vertical space either way. */
+/** One to three captures on a row. In the two-column layout the column is
+ *  already narrow, so heights can stay generous. */
 function ShotsBlock({ items }: { items: Shot[] }) {
-  // Literal class names: Tailwind scans source text, so a built-up string like
+  // Literal class names: Tailwind scans source text, so a built-up
   // `sm:grid-cols-${n}` would be purged out of the stylesheet.
-  const cap = items.length >= 3 ? 'max-h-[24vh]' : items.length === 2 ? 'max-h-[28vh]' : 'max-h-[34vh]'
-  const cols =
-    items.length >= 3 ? 'sm:grid-cols-3' : items.length === 2 ? 'sm:grid-cols-2' : ''
+  const cols = items.length >= 3 ? 'sm:grid-cols-3' : items.length === 2 ? 'sm:grid-cols-2' : ''
+  const cap = items.length > 1 ? 'max-h-[30vh]' : 'max-h-[46vh]'
   return (
-    <div className={`not-prose grid gap-4 ${cols}`}>
+    <div className={`not-prose grid gap-3 ${cols}`}>
       {items.map(shot => (
         <ShotFigure key={shot.src} shot={shot} cap={cap} />
       ))}
@@ -57,9 +79,9 @@ function ShotFigure({ shot, cap }: { shot: Shot; cap: string }) {
   return (
     <figure className="min-w-0 flex flex-col gap-2">
       {failed ? (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
+        <div className="rounded-card border border-dashed border-line bg-surface px-4 py-8 text-center">
           <p className="text-caption text-muted">Screenshot not added yet</p>
-          <p className="mono-label mt-2 text-slate-500">public/{shot.src}</p>
+          <p className="mono-label mt-2">public/{shot.src}</p>
         </div>
       ) : (
         <img
@@ -67,7 +89,7 @@ function ShotFigure({ shot, cap }: { shot: Shot; cap: string }) {
           alt={shot.alt}
           loading="lazy"
           onError={() => setFailed(true)}
-          className={`block w-auto max-w-full ${cap} mx-auto rounded-lg border border-slate-200 shadow-sm`}
+          className={`block w-full ${cap} object-contain object-top rounded-card border border-line bg-surface`}
         />
       )}
       {shot.caption && (
@@ -77,34 +99,48 @@ function ShotFigure({ shot, cap }: { shot: Shot; cap: string }) {
   )
 }
 
-function ContentBlockRenderer({ block }: { block: ContentBlock }) {
+// ─── Blocks ──────────────────────────────────────────────────────────────────
+
+function ContentBlockRenderer({ block, inAside }: { block: ContentBlock; inAside?: boolean }) {
   switch (block.kind) {
     case 'paragraph':
       return (
         <p
-          className="text-body leading-[1.75] text-ink-soft"
+          className="lesson-prose"
           dangerouslySetInnerHTML={{ __html: block.html }}
         />
       )
+    case 'shots':
+      return <ShotsBlock items={block.items} />
     case 'screen':
       return (
         <figure className="not-prose">
           <OverviewScreen name={block.name} />
           {block.caption && (
-            <figcaption className="text-caption text-muted mt-3 leading-relaxed">
+            <figcaption className="text-caption text-muted mt-2 leading-snug">
               {block.caption}
             </figcaption>
           )}
         </figure>
       )
-    case 'shots':
-      return <ShotsBlock items={block.items} />
     case 'diagram':
-      return <DiagramBlock block={block} />
+      return inAside ? (
+        <div className="pane">
+          <p className="pane-title">What happens next?</p>
+          <DiagramBlock block={block} />
+        </div>
+      ) : (
+        <DiagramBlock block={block} />
+      )
     case 'table':
       return <TableBlock block={block} />
     case 'rule-list':
-      return <RuleListBlock block={block} />
+      return (
+        <div className="pane">
+          <p className="pane-title">Key takeaway</p>
+          <RuleListBlock block={block} />
+        </div>
+      )
     case 'split-card':
       return <SplitCardBlock block={block} />
     default:

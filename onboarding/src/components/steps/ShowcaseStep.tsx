@@ -3,10 +3,9 @@ import type { ShowcaseStep as ShowcaseStepType } from '../../data/types'
 
 interface Props {
   step: ShowcaseStepType
-  onContinue: () => void
 }
 
-export default function ShowcaseStep({ step, onContinue }: Props) {
+export default function ShowcaseStep({ step }: Props) {
   const [openId, setOpenId] = useState<string | null>(step.items[0]?.id ?? null)
 
   return (
@@ -66,11 +65,6 @@ export default function ShowcaseStep({ step, onContinue }: Props) {
         })}
       </ol>
 
-      <div className="mt-12">
-        <button className="btn-primary" onClick={onContinue}>
-          Continue
-        </button>
-      </div>
     </article>
   )
 }

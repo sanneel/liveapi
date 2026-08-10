@@ -13,7 +13,7 @@
     background-color: theme('colors.canvas');
     color: theme('colors.ink.DEFAULT');
     font-family: theme('fontFamily.sans');
-    font-size: 18px;
+    font-size: 15px;   /* base matches the retuned body size */
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -68,7 +68,7 @@
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2
            rounded-control bg-accent text-white font-semibold
-           px-7 py-4 text-[17px]
+           px-6 py-3 text-[15px]
            shadow-[0_1px_3px_rgba(0,0,0,.12),0_4px_12px_-4px_rgba(14,122,90,.35)]
            transition-all duration-150;
   }
@@ -89,12 +89,56 @@
     @apply rounded-card bg-surface shadow-soft;
   }
 
+  /* ── The rail ───────────────────────────────────────────────────────────── */
+
+  .rail-item {
+    @apply w-full text-left flex items-start gap-3 rounded-control px-3 py-2.5
+           transition-colors duration-100;
+  }
+  .rail-item .num {
+    @apply shrink-0 grid place-items-center w-6 h-6 rounded-full
+           text-[11px] font-semibold font-mono;
+    @apply bg-line-soft text-muted;
+  }
+  .rail-item .nm { @apply text-[13.5px] font-semibold text-ink-soft leading-tight; }
+  .rail-item .hn { @apply text-[11.5px] text-muted leading-tight mt-0.5; }
+  .rail-item:hover { @apply bg-line-soft; }
+
+  .rail-item[data-state='current'] { @apply bg-accent-weak; }
+  .rail-item[data-state='current'] .num { @apply bg-accent text-white; }
+  .rail-item[data-state='current'] .nm { @apply text-ink; }
+
+  .rail-item[data-state='done'] .num { @apply bg-accent-weak text-accent; }
+
+  /* ── Step dots across the top ───────────────────────────────────────────── */
+
+  .dot {
+    @apply grid place-items-center w-7 h-7 rounded-full border text-[11px]
+           font-mono font-semibold shrink-0;
+    @apply border-line bg-surface text-muted;
+  }
+  .dot[data-state='current'] { @apply bg-accent border-accent text-white; }
+  .dot[data-state='done']    { @apply bg-accent-weak border-accent-weak text-accent; }
+  .dot-line { @apply h-px flex-1 bg-line min-w-[10px]; }
+  .dot-line[data-state='done'] { @apply bg-accent-weak; }
+
+  /* ── Cards in the right-hand column ─────────────────────────────────────── */
+
+  .pane {
+    @apply rounded-card border border-line bg-surface p-4;
+  }
+  .pane-title {
+    @apply text-[13.5px] font-semibold text-ink mb-3;
+  }
+  .chip {
+    @apply shrink-0 grid place-items-center w-8 h-8 rounded-chip text-[15px];
+  }
+
   /* ── Content blocks inside lessons ──────────────────────────────────────── */
 
   /* Paragraph body text */
   .lesson-prose {
-    @apply text-body text-ink leading-[1.7];
-    /* Slightly more line-height than default for long-read comfort */
+    @apply text-body text-ink-soft leading-[1.65];
   }
   .lesson-prose strong {
     @apply font-semibold text-ink;

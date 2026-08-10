@@ -74,6 +74,11 @@ export interface BaseStep {
   id: string
   type: StepType
   title: string
+  /** Which rail entry this step belongs under. Several steps share a chapter;
+   *  the rail and the dots count chapters, the progress bar counts steps. */
+  chapter?: string
+  /** One line for the footer, the thing to remember off this screen. */
+  tip?: string
 }
 
 export interface LessonStep extends BaseStep {
