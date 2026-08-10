@@ -28,6 +28,11 @@ export type ContentBlock =
   | { kind: 'rule-list'; rules: Rule[] }
   | { kind: 'split-card'; left: SplitPanel; right: SplitPanel }
 
+export interface FlickLine {
+  pose: string
+  say: string
+}
+
 export interface Shot {
   src: string
   alt: string
@@ -91,8 +96,9 @@ export interface BaseStep {
   chapter?: string
   /** One line for the footer, the thing to remember off this screen. */
   tip?: string
-  /** Flick, the guide. A pose from public/flick and what he says here. */
-  flick?: { pose: string; say: string }
+  /** Flick, the guide. `pose` names a file in public/flick. `more` lets him be
+   *  clicked through extra lines, each able to change his pose. */
+  flick?: FlickLine & { more?: FlickLine[] }
 }
 
 export interface LessonStep extends BaseStep {

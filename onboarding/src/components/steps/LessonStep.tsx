@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import type { LessonStep as LessonStepType, ContentBlock, Shot, ShotMark } from '../../data/types'
+import type { LessonStep as LessonStepType, ContentBlock, Shot, ShotMark, FlickLine } from '../../data/types'
 import OverviewScreen from '../replica/OverviewScreens'
 
 interface Props {
@@ -20,8 +20,17 @@ export default function LessonStep({ step }: Props) {
   const lede = rest[0]?.kind === 'paragraph' ? rest[0] : null
   const aside = lede ? rest.slice(1) : rest
 
+  const lines: FlickLine[] = step.flick ? [step.flick, ...(step.flick.more ?? [])] : []
+
   return (
-    <article>
+    <article
+      className={
+        lines.length
+          ? 'grid gap-6 items-start lg:grid-cols-[minmax(0,1fr)_260px] xl:grid-cols-[minmax(0,1fr)_320px]'
+          : undefined
+      }
+    >
+      <div className="min-w-0">
       {step.eyebrow && <p className="mono-label">{step.eyebrow}</p>}
       <h1 className="headline mt-2">{step.title}</h1>
       {lede && (
@@ -29,18 +38,6 @@ export default function LessonStep({ step }: Props) {
           className="text-lede text-ink-soft mt-3 max-w-[76ch] [&_strong]:font-semibold [&_strong]:text-ink"
           dangerouslySetInnerHTML={{ __html: lede.html }}
         />
-      )}
-
-      {/* Below lg the rail is hidden, so Flick says his line here instead. */}
-      {step.flick && (
-        <div className="flick-bubble mt-4 max-w-[62ch] lg:hidden">
-          <img
-            src={`${import.meta.env.BASE_URL}flick/${step.flick.pose}.png`}
-            alt=""
-            className="flick-face w-14 h-14 object-contain"
-          />
-          <p className="text-[14px] text-ink-soft leading-snug">{step.flick.say}</p>
-        </div>
       )}
 
       {media.length > 0 ? (
@@ -67,7 +64,66 @@ export default function LessonStep({ step }: Props) {
       )}
 
       {zoom && <Lightbox shot={zoom} onClose={() => setZoom(null)} />}
+      </div>
+
+      {lines.length > 0 && <FlickPanel lines={lines} />}
     </article>
+  )
+}
+
+// ─── Flick ───────────────────────────────────────────────────────────────────
+
+/** Flick, to the right of the lesson. Clicking him steps through his lines for
+ *  this screen and changes his pose with them, so he is worth poking at rather
+ *  than being wallpaper. */
+function FlickPanel({ lines }: { lines: FlickLine[] }) {
+  const [i, setI] = useState(0)
+  const line = lines[i % lines.length]
+  const hasMore = lines.length > 1
+  const advance = () => setI(n => (n + 1) % lines.length)
+
+  return (
+    <aside className="flick-panel">
+      <div className="relative w-full rounded-card border border-line bg-surface px-3.5 py-3">
+        <p key={line.say} className="text-[13.5px] text-ink-soft leading-snug animate-pop">
+          {line.say}
+        </p>
+        <span
+          className="absolute left-8 -bottom-[7px] w-3 h-3 rotate-45 bg-surface border-b border-r border-line"
+          aria-hidden="true"
+        />
+      </div>
+
+      <button
+        type="button"
+        className="flick-hit"
+        onClick={advance}
+        aria-label={hasMore ? 'Flick: show me the next tip' : 'Flick, your guide'}
+        title={hasMore ? 'Click Flick for the next tip' : undefined}
+      >
+        <img
+          key={line.pose}
+          src={`${import.meta.env.BASE_URL}flick/${line.pose}.png`}
+          alt="Flick, your guide"
+          className="flick-figure animate-bob"
+          draggable={false}
+        />
+      </button>
+
+      <p className="mono-label">{hasMore ? 'Click Flick' : 'Flick'}</p>
+      {hasMore && (
+        <div className="flex items-center gap-1.5" aria-hidden="true">
+          {lines.map((_, n) => (
+            <span
+              key={n}
+              className={`block w-1.5 h-1.5 rounded-full ${
+                n === i % lines.length ? 'bg-accent' : 'bg-line'
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </aside>
   )
 }
 

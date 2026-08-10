@@ -72,7 +72,7 @@ export default function OnboardingShell({
   return (
     <div className="h-full flex bg-canvas">
       {/* ── Rail: where you are in the whole thing ─────────────────────────── */}
-      <aside className="hidden lg:flex w-[262px] shrink-0 flex-col border-r border-line bg-rail">
+      <aside className="hidden lg:flex w-[246px] shrink-0 flex-col border-r border-line bg-rail">
         <div className="shrink-0 px-5 pt-5 pb-4">
           <div className="flex items-center gap-2">
             <span className="grid place-items-center w-7 h-7 rounded-control bg-accent text-white font-display font-extrabold text-[14px]">
@@ -100,27 +100,6 @@ export default function OnboardingShell({
             ))}
           </ul>
         </nav>
-
-        {/* Flick stands here rather than inside the lesson: full height, present
-            on every screen, and costing the content area nothing. */}
-        <div className="shrink-0 px-4">
-          {step.flick && (
-            <div className="relative rounded-card border border-line bg-surface px-3 py-2.5">
-              <p className="text-[12.5px] text-ink-soft leading-snug">{step.flick.say}</p>
-              <span
-                className="absolute left-7 -bottom-[7px] w-3 h-3 rotate-45 bg-surface border-b border-r border-line"
-                aria-hidden="true"
-              />
-            </div>
-          )}
-          <img
-            src={`${import.meta.env.BASE_URL}flick/${step.flick?.pose ?? 'teach'}.png`}
-            alt="Flick, your guide"
-            className="block w-full max-w-[190px] mx-auto -mt-1 select-none pointer-events-none"
-            draggable={false}
-          />
-          <p className="mono-label text-center -mt-2 pb-1">Flick</p>
-        </div>
 
         <div className="shrink-0 px-5 pb-5 pt-3 border-t border-line">
           <p className="mono-label">Your progress</p>

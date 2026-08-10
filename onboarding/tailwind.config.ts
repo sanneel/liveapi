@@ -54,6 +54,8 @@ export default {
         'step-in': 'stepIn 320ms ease forwards',
         'step-out': 'stepOut 320ms ease forwards',
         shake: 'shake 0.4s ease',
+        bob: 'bob 4s ease-in-out infinite',
+        pop: 'pop 260ms ease',
       },
       keyframes: {
         stepIn: {
@@ -63,6 +65,15 @@ export default {
         stepOut: {
           '0%': { opacity: '1', transform: 'translateX(0)' },
           '100%': { opacity: '0', transform: 'translateX(-24px)' },
+        },
+        bob: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-6px)' },
+        },
+        pop: {
+          '0%': { transform: 'scale(0.94)' },
+          '60%': { transform: 'scale(1.03)' },
+          '100%': { transform: 'scale(1)' },
         },
         shake: {
           '0%, 100%': { transform: 'translateX(0)' },

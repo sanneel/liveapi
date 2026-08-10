@@ -19,6 +19,11 @@ const track: Track = {
       flick: {
         pose: 'teach',
         say: 'Hi, I am Flick. I will walk you through it, one screen at a time. Nothing you do in here touches anything real.',
+        more: [
+          { pose: 'inspect', say: 'Click any screenshot and it opens full size. The tables and logs are only readable that way.' },
+          { pose: 'work', say: 'Back and Continue are always at the bottom, so you can go over a screen again whenever you want.' },
+          { pose: 'lead', say: 'About twenty minutes end to end. Ready when you are.' },
+        ],
       },
       content: [
         {
@@ -62,6 +67,13 @@ const track: Track = {
       chapter: 'How to read this',
       tip: 'Left is always the player. Right is always us.',
       type: 'lesson',
+      flick: {
+        pose: 'teach',
+        say: 'One habit to build: whenever you see a player screen, ask what it looked like on our side at that second.',
+        more: [
+          { pose: 'inspect', say: 'That is the whole job, really. Two windows onto the same moment.' },
+        ],
+      },
       eyebrow: 'Before we start',
       title: 'Two views of the same moment.',
       content: [
@@ -99,6 +111,10 @@ const track: Track = {
       flick: {
         pose: 'inspect',
         say: 'This one was live on the day the screenshots were taken, so everything you are about to see really happened.',
+        more: [
+          { pose: 'work', say: 'Follow the red arrows. Left is what the player sees, right is the same thing in our backoffice.' },
+          { pose: 'teach', say: 'RND is a randomizer. Wheels and scratch cards are both randomizers to us.' },
+        ],
       },
       content: [
         {
@@ -135,6 +151,11 @@ const track: Track = {
       flick: {
         pose: 'work',
         say: 'This is the part people get wrong at first, so take your time with the right-hand photo.',
+        more: [
+          { pose: 'teach', say: 'Twelve wedges but only four outcomes. The rim repeats each prize three times so the wheel looks full.' },
+          { pose: 'inspect', say: 'The player never sees the percentages. Only we do.' },
+          { pose: 'lead', say: 'If you remember one thing here: a prize is a JRN, never a bonus.' },
+        ],
       },
       content: [
         {
@@ -221,6 +242,10 @@ const track: Track = {
       flick: {
         pose: 'lead',
         say: 'Follow the arrow first, then read down the three columns. Same shape three times.',
+        more: [
+          { pose: 'work', say: 'Three flows, but a player only ever runs one of them. The other two never start for him.' },
+          { pose: 'teach', say: 'The chooser awards nothing by itself. The promotion inside the chosen flow is the real offer.' },
+        ],
       },
       content: [
         {
@@ -366,6 +391,13 @@ const track: Track = {
       chapter: 'What repeats',
       tip: 'These four hold for every promotion, not just the wheel.',
       type: 'lesson',
+      flick: {
+        pose: 'lead',
+        say: 'These four are worth memorising. They hold for any promotion you are handed, not just this wheel.',
+        more: [
+          { pose: 'teach', say: 'Next we go into the nodes themselves, and why we pick the ones we pick.' },
+        ],
+      },
       eyebrow: 'Across every promotion',
       title: 'Four things that were true every time.',
       content: [

@@ -179,6 +179,17 @@
   .mark-stem { @apply block h-0.5 rounded; background: #E4342B; }
 
   /* Flick, the guide. */
+  .flick-panel { @apply flex flex-col items-center gap-2 select-none; }
+  .flick-figure { @apply block w-full h-auto; }
+  .flick-hit {
+    @apply block w-full rounded-card transition-transform duration-150;
+  }
+  .flick-hit:hover { transform: translateY(-2px) scale(1.02); }
+  .flick-hit:active { transform: translateY(0) scale(0.99); }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-bob { animation: none !important; }
+  }
+
   .flick-bubble {
     @apply flex items-start gap-3 rounded-card border border-line bg-surface p-3;
   }
