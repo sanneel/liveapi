@@ -58,7 +58,7 @@ const track: Track = {
     {
       id: 'lesson-spin-01',
       type: 'lesson',
-      eyebrow: 'One real spin · 1 of 8',
+      eyebrow: 'One real spin · 1 of 9',
       title: 'It starts on the promo page.',
       content: [
         {
@@ -77,7 +77,7 @@ const track: Track = {
     {
       id: 'lesson-spin-02',
       type: 'lesson',
-      eyebrow: 'One real spin · 2 of 8',
+      eyebrow: 'One real spin · 2 of 9',
       title: 'Twelve wedges. Four prizes.',
       content: [
         {
@@ -96,7 +96,7 @@ const track: Track = {
     {
       id: 'lesson-spin-03',
       type: 'lesson',
-      eyebrow: 'One real spin · 3 of 8',
+      eyebrow: 'One real spin · 3 of 9',
       title: 'The wheel decides. Not the player.',
       content: [
         {
@@ -113,9 +113,32 @@ const track: Track = {
     },
 
     {
+      id: 'lesson-spin-03b',
+      type: 'lesson',
+      eyebrow: 'One real spin · 4 of 9',
+      title: 'Those odds are ours.',
+      content: [
+        {
+          kind: 'shot',
+          src: 'shots/15.11.28.png',
+          alt: 'The randomizer prize table in the backoffice: three rows, each a journey id with a probability — 55, 42 and 3 — with Empty prize and Limited prize toggles, and a greyed-out Add prize button.',
+          caption: 'The prize table behind a wheel. Three rows, three probabilities, and they must total 100.',
+        },
+        {
+          kind: 'paragraph',
+          html: 'The wheel did not invent those odds — someone typed them. Each row is a <strong>journey id plus a probability</strong>, which is the whole definition of a prize: not an image, not a bonus, but a chance and a destination.',
+        },
+        {
+          kind: 'paragraph',
+          html: 'Note <em>Add prize</em> is greyed out. Slices come from the captured template and cannot be added or removed — you set the weights, never the count. A slice at 0% stays on the wheel and never lands.',
+        },
+      ],
+    },
+
+    {
       id: 'lesson-spin-04',
       type: 'lesson',
-      eyebrow: 'One real spin · 4 of 8',
+      eyebrow: 'One real spin · 5 of 9',
       title: 'Where that lives on our side.',
       content: [
         {
@@ -128,17 +151,13 @@ const track: Track = {
           kind: 'paragraph',
           html: 'One row, one wheel: <strong>RND-0-17731</strong>, mechanics <em>Randomizer / Fortune wheel</em>, brand <code>.jbcl</code>, live 07.08 08:02 → 08.08 07:58. The row menu is where you go to see who played it.',
         },
-        {
-          kind: 'paragraph',
-          html: 'The row above it is a different object entirely — a <em>PromoPage</em> for another brand. Naming is how you tell them apart in a list of thousands, which is why the convention matters.',
-        },
       ],
     },
 
     {
       id: 'lesson-spin-05',
       type: 'lesson',
-      eyebrow: 'One real spin · 5 of 8',
+      eyebrow: 'One real spin · 6 of 9',
       title: 'Now the player chooses.',
       content: [
         {
@@ -161,7 +180,7 @@ const track: Track = {
     {
       id: 'lesson-spin-06',
       type: 'lesson',
-      eyebrow: 'One real spin · 6 of 8',
+      eyebrow: 'One real spin · 7 of 9',
       title: 'One bonus, with its own terms.',
       content: [
         {
@@ -184,7 +203,7 @@ const track: Track = {
     {
       id: 'lesson-spin-07',
       type: 'lesson',
-      eyebrow: 'One real spin · 7 of 8',
+      eyebrow: 'One real spin · 8 of 9',
       title: 'Who spun, and where they went.',
       content: [
         {
@@ -207,7 +226,7 @@ const track: Track = {
     {
       id: 'lesson-spin-08',
       type: 'lesson',
-      eyebrow: 'One real spin · 8 of 8',
+      eyebrow: 'One real spin · 9 of 9',
       title: 'Six events, one player.',
       content: [
         {
@@ -220,12 +239,22 @@ const track: Track = {
           kind: 'paragraph',
           html: 'This is the screen you open when someone says “I did not get my bonus”. Bottom to top: added by API, routed by a decision split, offered, accepted, the real offer accepted inside <strong>Flow 1</strong>, and the deposit gate armed one second later.',
         },
+      ],
+    },
+
+    // ── 1b · what the log just proved, on its own screen ─────────────────────
+    {
+      id: 'lesson-spin-rules',
+      type: 'lesson',
+      eyebrow: 'One real spin · what it proves',
+      title: 'Three things that log settles.',
+      content: [
         {
           kind: 'rule-list',
           rules: [
             {
               text: 'Two promotions accepted, one second apart.',
-              sub: 'The Multipurpose Promotion is the chooser you saw at 16:12:04 — it records which flow was picked and awards nothing. “15k dep” is the real offer inside that flow, and the deposit gate hangs off it. A reward needs that inner promotion; behind the chooser alone it has no offer to belong to.',
+              sub: 'The Multipurpose Promotion is the chooser — it records which flow was picked and awards nothing. “15k dep” is the real offer inside that flow, and the deposit gate hangs off it. A reward needs that inner promotion; behind the chooser alone it has no offer to belong to.',
             },
             {
               text: 'One node can fire twice.',

@@ -50,7 +50,7 @@ export default function OnboardingShell({
   const current = state.stepIndex + 1
 
   return (
-    <div className="min-h-full flex flex-col bg-canvas">
+    <div className="h-full flex flex-col bg-canvas">
       <ProgressBar pct={progressPct(state)} />
 
       {/* Shell header — brand left, position right */}
@@ -59,10 +59,13 @@ export default function OnboardingShell({
         <span className="mono-label tabular-nums">{current}&thinsp;/&thinsp;{total}</span>
       </header>
 
-      <main className="flex-1 flex px-6 sm:px-10">
+      {/* min-h-0 lets flex-1 actually shrink, so a tall step is bounded by the
+          viewport instead of growing the page. py was 10vh top AND bottom, which
+          pushed every image step off-screen; the step is still centred by my-auto. */}
+      <main className="flex-1 min-h-0 overflow-y-auto flex px-6 sm:px-10">
         <div
           key={step.id}
-          className={`w-full mx-auto my-auto py-[10vh] ${
+          className={`w-full mx-auto my-auto py-7 ${
             isTask ? 'max-w-[1180px]' : 'max-w-column'
           } ${leaving ? 'animate-step-out' : 'animate-step-in'}`}
         >
@@ -110,13 +113,13 @@ function ProgressBar({ pct }: { pct: number }) {
 
 function TrackComplete({ trackName, onRestart }: { trackName: string; onRestart: () => void }) {
   return (
-    <div className="min-h-full flex flex-col bg-canvas">
+    <div className="h-full flex flex-col bg-canvas">
       <ProgressBar pct={100} />
       <header className="shrink-0 px-6 pt-5 sm:px-10 flex items-center justify-between">
         <span className="mono-label">Growe · CRM Chile</span>
       </header>
-      <main className="flex-1 flex px-6 sm:px-10">
-        <div className="w-full max-w-column mx-auto my-auto py-[10vh] animate-step-in">
+      <main className="flex-1 min-h-0 overflow-y-auto flex px-6 sm:px-10">
+        <div className="w-full max-w-column mx-auto my-auto py-7 animate-step-in">
           <p className="mono-label">Finished</p>
           <h1 className="headline mt-6">That's the whole thing.</h1>
           <p className="text-body text-ink-soft mt-8 leading-[1.7]">

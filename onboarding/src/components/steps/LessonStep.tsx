@@ -46,7 +46,8 @@ function ShotBlock({ block }: { block: Extract<ContentBlock, { kind: 'shot' }> }
           alt={block.alt}
           loading="lazy"
           onError={() => setFailed(true)}
-          className="w-full rounded-lg border border-slate-200 shadow-sm"
+          // capped against the viewport so the step never needs scrolling
+          className="mx-auto block w-auto max-w-full max-h-[46vh] rounded-lg border border-slate-200 shadow-sm"
         />
       )}
       {block.caption && (
