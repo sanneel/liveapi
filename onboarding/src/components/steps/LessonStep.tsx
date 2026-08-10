@@ -152,12 +152,16 @@ function ShotFigure({
           onClick={() => onZoom?.(shot)}
           aria-label={`Enlarge: ${shot.alt}`}
         >
+          {/* w-auto, not w-full. The captures range from 1.04 to 2.90 in aspect,
+              so a full-width box plus object-contain letterboxed the squarer ones
+              with white bars down both sides. Letting the frame hug the image
+              removes the bars at every ratio. */}
           <img
             src={import.meta.env.BASE_URL + shot.src}
             alt={shot.alt}
             loading="lazy"
             onError={() => setFailed(true)}
-            className={`block w-full ${cap} object-contain object-top`}
+            className={`block w-auto max-w-full ${cap}`}
           />
           <span className="badge" aria-hidden="true">Click to enlarge</span>
         </button>

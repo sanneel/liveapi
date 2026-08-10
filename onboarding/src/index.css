@@ -144,8 +144,8 @@
   /* A screenshot you can open. Legibility inline is limited by the column, so
      the affordance matters as much as the size. */
   .shot-open {
-    @apply relative block w-full rounded-card border border-line bg-surface
-           overflow-hidden transition-shadow duration-150 cursor-zoom-in;
+    @apply relative block w-fit max-w-full mx-auto rounded-card border border-line
+           bg-surface overflow-hidden transition-shadow duration-150 cursor-zoom-in;
   }
   .shot-open:hover { @apply shadow-raised border-accent; }
   .shot-open .badge {

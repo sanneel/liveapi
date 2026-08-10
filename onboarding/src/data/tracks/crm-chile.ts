@@ -51,9 +51,9 @@ const track: Track = {
 
     // ── 1a · one real spin, paired onto as few screens as possible ───────────
     //
-    // Captured 07.08.2026 from randomizer RND-0-17731 and journey JRN-0-572381,
-    // plus a prize table from a JBCOM wheel. Photos are paired side by side so a
-    // screen costs one photo of height, which is what keeps Continue on screen.
+    // Captured 07.08.2026 from randomizer RND-0-17731 and journey JRN-0-572381.
+    // Every capture is the same wheel and the same player, so the ids line up
+    // across screens and a trainee can follow one story rather than samples.
     {
       id: 'lesson-spin-01',
       chapter: 'One real spin',
@@ -105,9 +105,9 @@ const track: Track = {
               caption: '16:10:13. Tu recompensa. They drew 50 GG con depósito, the 55% slice.',
             },
             {
-              src: 'shots/15.11.28.png',
-              alt: 'The randomizer prize table in the backoffice: three rows, each a journey id with a probability of 55, 42 and 3, with a greyed out Add prize button.',
-              caption: 'The prize table behind a wheel. Three journeys, three probabilities, totalling 100.',
+              src: 'shots/17.31.21.png',
+              alt: 'The randomizer prize table for this wheel: four rows, each a JRN journey id against a probability of 55, 42, 2.7 and 0.3, above a greyed out Add prize button, with the promo link casino-wof-07-08-2026.',
+              caption: 'The prize table for this exact wheel. Four journeys, four probabilities, totalling 100.',
             },
           ],
         },
@@ -117,7 +117,15 @@ const track: Track = {
         },
         {
           kind: 'paragraph',
-          html: 'But the odds are ours. Someone typed them. Each row is a <strong>journey id plus a probability</strong>, which is all a prize ever is: a chance and a destination. <em>Add prize</em> is greyed out because the slices come from the captured template, so you set the weights, never the count. A slice left at 0% stays on the wheel and never lands.',
+          html: 'But the odds are ours. Someone typed them, and they must total 100. <em>Add prize</em> is greyed out because the slices come from the captured template, so you set the weights, never the count. A slice left at 0% stays on the wheel and never lands.',
+        },
+        {
+          kind: 'paragraph',
+          html: 'Now look at what a prize actually <em>is</em>. Every row is a <strong>JRN, a journey id</strong>. Winning a slice does one single thing: it <strong>adds the player into that journey</strong>. Nothing is awarded by the wheel itself.',
+        },
+        {
+          kind: 'paragraph',
+          html: 'So everything that happens next lives inside that journey: the offer, the deposit gate, the free spins, the wagering bonus, and an exit for every player who does not finish. The 55% row, <strong>JRN-0-572381</strong>, is the one this player drew. Which fixes the build order: <strong>the journeys exist first</strong>, because this table can only point at journeys that are already there.',
         },
       ],
     },
@@ -163,11 +171,20 @@ const track: Track = {
               alt: 'A promotion screen titled 50 GG CON DEPÓSITO DE LA RUEDA DE LA FORTUNA, ID 672079, with a notice reading Selecciona 1 de los 3 bonos and three options at $200, $100 and $1,000 bet, each with Seleccionar and Detalles buttons.',
               caption: '16:12:04. Selecciona 1 de los 3 bonos. Three bets: $200, $100, $1,000.',
             },
+            {
+              src: 'shots/17.30.42.png',
+              alt: 'The same offer on the journey canvas: Accepted 17678 branching into Flow 1, Flow 2 and Flow 3, labelled 15k dep, 10k dep and big, each running its own deposit gate, Casino FreeSpin and Casino bonus with player counts on every path.',
+              caption: 'The same offer on our canvas. Three flows, one per option, each complete on its own.',
+            },
           ],
         },
         {
           kind: 'paragraph',
           html: 'This is the most useful screen in the course. It is what a <strong>Multipurpose Promotion</strong> looks like from the outside: it awards nothing, it <em>asks</em>. The player picks one of three flows and only that one runs.',
+        },
+        {
+          kind: 'paragraph',
+          html: 'On our canvas those three options are <strong>three flows</strong>, named 15k dep, 10k dep and big. Each one is complete on its own: its own offer, deposit gate, free spins and bonus. A player runs exactly one of them, the one they picked, and the counts on each path show how the 17 678 who accepted split across them.',
         },
         {
           kind: 'paragraph',
