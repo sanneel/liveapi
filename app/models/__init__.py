@@ -12,6 +12,7 @@ from .hot_boost import HotBoost
 from .hot_override import HotOverrideConfig, HotOverrideMatch
 from .hot_weight import HotWeight
 from .match import Match
+from .onboarding_progress import OnboardingProgress
 from .tutorial import Tutorial
 from .user import User
 
@@ -29,6 +30,7 @@ __all__ = [
     "HotOverrideMatch",
     "HotWeight",
     "Match",
+    "OnboardingProgress",
     "Tutorial",
     "User",
 ]

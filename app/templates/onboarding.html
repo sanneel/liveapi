@@ -1,0 +1,2205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Flick · CRM onboarding 01</title>
+
+<style>
+  /* ── tokens: cool petrol slate, complementary to the fox ── */
+  :root{
+    --void:#DDE5E9; --panel:#F5F8F9; --raise:#E8EFF2; --sink:#CBD8DE;
+    --ink:#112229; --body:#3A525E; --muted:#5C7583; --faint:#8399A5;
+    --line:#C1D0D7; --line-2:#A6BAC4;
+    --key:var(--h-teal); --key-ink:#FFFFFF;
+    --key-soft:color-mix(in srgb, var(--key) 14%, var(--panel));
+    --h-green:#2E7D4F; --h-amber:#A2631A; --h-blue:#1F6591; --h-olive:#68781E;
+    --h-salmon:#B54A2E; --h-pink:#A63C74; --h-purple:#6B46A8; --h-indigo:#3F4BA8;
+    --h-teal:#0D5D6C;
+
+    --ok:#2B7550; --ok-soft:#DCEEE4;
+    --flag:#C10021;
+    --w1:#1F6E7C; --w2:#7A4A8C; --w3:#9C6224; --w4:#4C6B2F; --wink:#FFFFFF;
+        --disp:ui-rounded,"SF Pro Rounded","Hiragino Maru Gothic ProN","Trebuchet MS",system-ui,sans-serif;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --r:14px; --lift:0 1px 2px rgba(17,34,41,.06), 0 18px 34px -26px rgba(17,34,41,.45);
+    --i-wave:url("/static/onboarding/j_wave.jpg");   --m-wave:url("/static/onboarding/m_wave.png");
+    --i-think:url("/static/onboarding/j_think.jpg");  --m-think:url("/static/onboarding/m_think.png");
+    --i-book:url("/static/onboarding/j_book.jpg");    --m-book:url("/static/onboarding/m_book.png");
+    --i-thumb:url("/static/onboarding/j_thumb.jpg");  --m-thumb:url("/static/onboarding/m_thumb.png");
+    --i-flag:url("/static/onboarding/j_flag.jpg");    --m-flag:url("/static/onboarding/m_flag.png");
+    --i-party:url("/static/onboarding/j_party.jpg");  --m-party:url("/static/onboarding/m_party.png");
+    --i-glass:url("/static/onboarding/j_glass.jpg");  --m-glass:url("/static/onboarding/m_glass.png");
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --void:#0E1D24; --panel:#152730; --raise:#1C333D; --sink:#0A171D;
+      --ink:#E7EFF2; --body:#B2C6CF; --muted:#89A2AE; --faint:#5E7885;
+      --line:#223944; --line-2:#2F4A57;
+      --key:var(--h-teal); --key-ink:#06222A;
+      --key-soft:color-mix(in srgb, var(--key) 22%, var(--panel));
+      --h-green:#63C88E; --h-amber:#E0A93F; --h-blue:#62B4E8; --h-olive:#AFC44F;
+      --h-salmon:#F0846A; --h-pink:#E884B4; --h-purple:#B69AEE; --h-indigo:#8E97F0;
+      --h-teal:#4FC0D6;
+
+      --ok:#5CC48C; --ok-soft:#0F2A20;
+      --flag:#FF4D63;
+      --w1:#4FB6C6; --w2:#B98FD0; --w3:#DDA05F; --w4:#93BE6A; --wink:#06222A;
+      --lift:0 1px 0 rgba(255,255,255,.03) inset, 0 20px 40px -28px #000;
+    }
+  }
+  :root[data-theme="dark"]{
+    --void:#0E1D24; --panel:#152730; --raise:#1C333D; --sink:#0A171D;
+    --ink:#E7EFF2; --body:#B2C6CF; --muted:#89A2AE; --faint:#5E7885;
+    --line:#223944; --line-2:#2F4A57;
+    --key:var(--h-teal); --key-ink:#06222A;
+    --key-soft:color-mix(in srgb, var(--key) 22%, var(--panel));
+    --h-green:#63C88E; --h-amber:#E0A93F; --h-blue:#62B4E8; --h-olive:#AFC44F;
+    --h-salmon:#F0846A; --h-pink:#E884B4; --h-purple:#B69AEE; --h-indigo:#8E97F0;
+    --h-teal:#4FC0D6;
+
+    --ok:#5CC48C; --ok-soft:#0F2A20;
+    --flag:#FF4D63;
+    --w1:#4FB6C6; --w2:#B98FD0; --w3:#DDA05F; --w4:#93BE6A; --wink:#06222A;
+    --lift:0 1px 0 rgba(255,255,255,.03) inset, 0 20px 40px -28px #000;
+  }
+  :root[data-theme="light"]{
+    --void:#DDE5E9; --panel:#F5F8F9; --raise:#E8EFF2; --sink:#CBD8DE;
+    --ink:#112229; --body:#3A525E; --muted:#5C7583; --faint:#8399A5;
+    --line:#C1D0D7; --line-2:#A6BAC4;
+    --key:var(--h-teal); --key-ink:#FFFFFF;
+    --key-soft:color-mix(in srgb, var(--key) 14%, var(--panel));
+    --h-green:#2E7D4F; --h-amber:#A2631A; --h-blue:#1F6591; --h-olive:#68781E;
+    --h-salmon:#B54A2E; --h-pink:#A63C74; --h-purple:#6B46A8; --h-indigo:#3F4BA8;
+    --h-teal:#0D5D6C;
+
+    --ok:#2B7550; --ok-soft:#DCEEE4;
+    --flag:#C10021;
+    --w1:#1F6E7C; --w2:#7A4A8C; --w3:#9C6224; --w4:#4C6B2F; --wink:#FFFFFF;
+    --lift:0 1px 2px rgba(17,34,41,.06), 0 18px 34px -26px rgba(17,34,41,.45);
+  }
+
+  /* the screen's node family sets the accent, so colour means something */
+  :root[data-hue="green"]{--key:var(--h-green)}
+  :root[data-hue="amber"]{--key:var(--h-amber)}
+  :root[data-hue="blue"]{--key:var(--h-blue)}
+  :root[data-hue="olive"]{--key:var(--h-olive)}
+  :root[data-hue="salmon"]{--key:var(--h-salmon)}
+  :root[data-hue="pink"]{--key:var(--h-pink)}
+  :root[data-hue="purple"]{--key:var(--h-purple)}
+  :root[data-hue="indigo"]{--key:var(--h-indigo)}
+  :root[data-hue="teal"]{--key:var(--h-teal)}
+
+  *,*::before,*::after{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{margin:0;background:var(--void);color:var(--body);font-family:var(--sans);
+    font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  img{max-width:100%;display:block}
+  button{font:inherit;color:inherit;cursor:pointer}
+
+  /* ── rail: brand, step pills, and the controls that never scroll away ── */
+  .rail{position:sticky;top:0;z-index:40;background:var(--panel);
+    border-bottom:1px solid var(--line)}
+  .rail::after{content:"";position:absolute;left:0;bottom:-1px;height:2px;width:var(--prog,0%);
+    background:var(--key);transition:width .32s cubic-bezier(.3,.8,.3,1),background-color .32s}
+  .rail-in{max-width:1280px;margin:0 auto;padding:9px 18px;display:flex;align-items:center;gap:14px}
+  .brand{display:flex;align-items:center;gap:9px;flex:none;text-decoration:none;
+    border-radius:10px;padding:2px 6px 2px 2px;transition:background .15s}
+  .brand:hover{background:var(--raise)}
+  .brand:focus-visible{outline:2px solid var(--key);outline-offset:2px}
+  .brand i{width:30px;height:32px;flex:none;background-image:var(--i-wave);
+    background-size:contain;background-position:center;background-repeat:no-repeat;
+    -webkit-mask-image:var(--m-wave);mask-image:var(--m-wave);
+    -webkit-mask-size:contain;mask-size:contain;
+    -webkit-mask-position:center;mask-position:center;
+    -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+  .brand span{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.13em;
+    text-transform:uppercase;color:var(--faint);line-height:1.35}
+  .brand b{display:block;color:var(--ink)}
+  .pills{display:flex;gap:4px;margin:0 auto;flex-wrap:nowrap;overflow:hidden}
+  .pill{width:22px;height:7px;border-radius:99px;border:1px solid var(--line-2);background:none;
+    padding:0;transition:background .15s,width .18s,border-color .15s}
+  .pill:hover{border-color:var(--key)}
+  .pill.done{background:var(--line-2)}
+  .pill.now{background:var(--key);border-color:var(--key);width:34px}
+  .pill.done{background:color-mix(in srgb, var(--key) 45%, var(--line-2))}
+  .pill:focus-visible{outline:2px solid var(--key);outline-offset:3px}
+  .ctrl{display:flex;align-items:center;gap:8px;flex:none}
+  .n{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--faint);
+    font-variant-numeric:tabular-nums;flex:none}
+  @media (max-width:820px){.pills{display:none}.brand span{display:none}}
+
+  .btn{border:1px solid transparent;border-radius:99px;padding:8px 17px;font-size:14px;font-weight:600;
+    background:var(--key);color:var(--key-ink);white-space:nowrap;
+    transition:transform .12s,opacity .15s,box-shadow .15s}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 8px 18px -12px var(--key)}
+  .btn[disabled]{opacity:.4;cursor:default;transform:none;box-shadow:none}
+  .btn.g{background:none;border-color:var(--line-2);color:var(--body)}
+  .btn.g:hover{border-color:var(--key);color:var(--ink);box-shadow:none}
+  .btn.s{padding:6px 13px;font-size:12.5px}
+  .btn:focus-visible{outline:2px solid var(--key);outline-offset:3px}
+
+  /* ── deck ── */
+  .deck{max-width:1280px;margin:0 auto;padding:18px 18px 24px;display:grid;align-items:center;
+    min-height:560px}
+  .step{display:none}
+  .step.on{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:26px;align-items:center}
+  .step.wide.on{grid-template-columns:minmax(0,1fr) 330px;gap:20px}
+  @media (max-width:1000px){.step.on,.step.wide.on{grid-template-columns:minmax(0,1fr);gap:18px}}
+  @media (prefers-reduced-motion:no-preference){
+    .step.on{animation:in .3s cubic-bezier(.2,.7,.3,1) both}
+    @keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  }
+
+  /* ── stage ── */
+  .stage{min-width:0;display:flex;justify-content:center}
+  .shot{position:relative;border:2px solid color-mix(in srgb, var(--key) 34%, var(--line));
+    border-radius:var(--r);overflow:hidden;background:var(--key-soft);box-shadow:var(--lift);
+    aspect-ratio:var(--ar);width:100%;max-width:var(--w,100%)}
+  .shot-in{position:absolute;top:0;left:0;width:100%;line-height:0}
+  .anno{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .anno .ink{fill:none;stroke:var(--flag);stroke-linecap:round}
+  .anno .halo{fill:none;stroke:#fff;stroke-linecap:round;opacity:.3}
+  .anno rect{fill:none;stroke:var(--flag)}
+  .anno polygon{fill:var(--flag)}
+  @media (prefers-reduced-motion:no-preference){
+    .step.on .anno path{stroke-dasharray:1;stroke-dashoffset:1;animation:draw .7s ease .2s forwards}
+    .step.on .anno rect,.step.on .anno polygon{opacity:0;animation:fade .35s ease .75s forwards}
+    @keyframes draw{to{stroke-dashoffset:0}}
+    @keyframes fade{to{opacity:1}}
+  }
+
+  /* ── mascot + speech ── */
+  .talk{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:end}
+  .mascot{height:238px;display:block;padding:0;border:0;background:none;box-shadow:none;
+    position:relative;transition:transform .25s}
+  .fox{display:block;height:100%;aspect-ratio:var(--fr,4/5);
+    background-repeat:no-repeat;background-size:100% 100%;
+    -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+    -webkit-mask-size:100% 100%;mask-size:100% 100%}
+  .fox.wave{--fr:161/193;background-image:var(--i-wave);
+    -webkit-mask-image:var(--m-wave);mask-image:var(--m-wave)}
+  .fox.think{--fr:138/181;background-image:var(--i-think);
+    -webkit-mask-image:var(--m-think);mask-image:var(--m-think)}
+  .fox.book{--fr:153/208;background-image:var(--i-book);
+    -webkit-mask-image:var(--m-book);mask-image:var(--m-book)}
+  .fox.thumb{--fr:138/192;background-image:var(--i-thumb);
+    -webkit-mask-image:var(--m-thumb);mask-image:var(--m-thumb)}
+  .fox.flag{--fr:223/235;background-image:var(--i-flag);
+    -webkit-mask-image:var(--m-flag);mask-image:var(--m-flag)}
+  .fox.party{--fr:192/232;background-image:var(--i-party);
+    -webkit-mask-image:var(--m-party);mask-image:var(--m-party)}
+  .fox.glass{--fr:140/234;background-image:var(--i-glass);
+    -webkit-mask-image:var(--m-glass);mask-image:var(--m-glass)}
+  .mascot:hover{transform:translateY(-5px) rotate(-1.5deg)}
+  .mascot:active{transform:translateY(-1px)}
+  .mascot:focus-visible{outline:2px solid var(--key);outline-offset:6px;border-radius:12px}
+  @media (prefers-reduced-motion:no-preference){
+    .mascot{animation:bob 4.2s ease-in-out infinite}
+    @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+    .mascot:hover{animation:none}
+  }
+  .mascot::after{content:"tap me";position:absolute;bottom:-13px;left:50%;transform:translateX(-50%);
+    font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+    background:var(--key);color:var(--key-ink);padding:3px 8px;border-radius:99px;white-space:nowrap;
+    opacity:.85;transition:opacity .2s}
+  .mascot:hover::after{opacity:1}
+
+  /* on the playground the column is narrower, so Flick stands under his line */
+  .step.wide .talk{grid-template-columns:minmax(0,1fr);gap:8px;align-items:start}
+  .step.wide .talk #note{order:0}
+  .step.wide .talk .bubble{order:1}
+  .step.wide .talk .mascot{order:2;height:150px;justify-self:start;margin-left:10px}
+  .step.wide .talk .bubble::before{left:28px;bottom:-7px;top:auto}
+  .step.wide .talk .mascot::after{bottom:-11px}
+
+  .bubble{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:18px;
+    padding:16px 18px;box-shadow:var(--lift);font-family:var(--disp);font-size:16px;line-height:1.5;
+    color:var(--ink);min-width:0}
+  .bubble::before{content:"";position:absolute;left:-8px;bottom:26px;width:13px;height:13px;
+    background:var(--panel);border-left:1px solid var(--line);border-bottom:1px solid var(--line);
+    transform:rotate(45deg)}
+  .bubble p{margin:0 0 9px}
+  .bubble p:last-child{margin:0}
+  .bubble b{font-weight:700}
+  .bubble.tip{background:var(--key-soft);border-color:color-mix(in srgb,var(--key) 40%,transparent)}
+  .bubble.tip::before{background:var(--key-soft);border-color:color-mix(in srgb,var(--key) 40%,transparent)}
+  .id{font-family:var(--mono);font-size:.82em;background:var(--key-soft);
+    border:1px solid color-mix(in srgb, var(--key) 34%, transparent);
+    border-radius:5px;padding:1px 5px;white-space:nowrap;color:var(--ink)}
+  @media (max-width:1000px){
+    .talk{grid-template-columns:120px minmax(0,1fr);align-items:end}
+    .mascot{width:120px;height:150px;border-radius:60px 60px 20px 20px}
+    .bubble{font-size:15px;padding:13px 15px}
+  }
+  @media (max-width:560px){.mascot::after{display:none}}
+
+  /* ── route card (step 1) ── */
+  .route{width:100%;max-width:520px;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--r);box-shadow:var(--lift);overflow:hidden}
+  .route div{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:12px;align-items:center;
+    padding:14px 16px;border-bottom:1px solid var(--line)}
+  .route div:last-child{border-bottom:0}
+  .route i{font-family:var(--mono);font-size:11px;font-weight:700;border-radius:6px;height:26px;
+    display:grid;place-items:center;font-style:normal;color:#fff}
+  .route div:nth-child(1) i{background:var(--h-green)}
+  .route div:nth-child(2) i{background:var(--h-blue)}
+  .route div:nth-child(3) i{background:var(--h-purple)}
+  .route div:nth-child(4) i{background:var(--h-pink)}
+  @media (prefers-color-scheme:dark){.route i{color:#0C1A20}}
+  :root[data-theme="dark"] .route i{color:#0C1A20}
+  :root[data-theme="light"] .route i{color:#fff}
+  .route div{border-left:3px solid transparent}
+  .route div:nth-child(1){border-left-color:color-mix(in srgb,var(--h-green) 55%,transparent)}
+  .route div:nth-child(2){border-left-color:color-mix(in srgb,var(--h-blue) 55%,transparent)}
+  .route div:nth-child(3){border-left-color:color-mix(in srgb,var(--h-purple) 55%,transparent)}
+  .route div:nth-child(4){border-left-color:color-mix(in srgb,var(--h-pink) 55%,transparent)}
+  .route b{font-size:14.5px;color:var(--ink);font-weight:600}
+  .route em{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;font-style:normal;padding:3px 8px;border-radius:99px;
+    border:1px solid var(--line-2);color:var(--faint)}
+  .route em.a{border-color:color-mix(in srgb,var(--ok) 45%,transparent);color:var(--ok);
+    background:var(--ok-soft)}
+
+  /* ── check ── */
+  .quiz{width:100%;max-width:560px;display:flex;flex-direction:column;gap:9px}
+  .q{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 15px;
+    display:flex;flex-direction:column;gap:8px;box-shadow:var(--lift)}
+  .q>b{font-size:14px;color:var(--ink);font-weight:600}
+  .q>b i{font-family:var(--mono);font-size:10.5px;color:var(--key);font-style:normal;margin-right:7px}
+  .qo{display:flex;flex-direction:column;gap:5px}
+  .qo button{text-align:left;background:var(--raise);border:1px solid var(--line);border-radius:9px;
+    padding:8px 11px;font-size:13.5px;transition:border-color .15s}
+  .qo button:hover{border-color:var(--key)}
+  .qo button.ok{border-color:var(--ok);background:var(--ok-soft);color:var(--ink)}
+  .qo button.no{border-color:var(--flag);background:color-mix(in srgb,var(--flag) 10%,transparent)}
+  .qo button[disabled]{cursor:default}
+
+  /* ── click a capture to see all of it ── */
+  .shot{cursor:zoom-in}
+  .shot::after{content:"open";position:absolute;right:8px;bottom:8px;z-index:3;
+    font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;
+    background:var(--key);color:var(--key-ink);padding:3px 8px;border-radius:99px;opacity:0;
+    transition:opacity .16s;pointer-events:none}
+  .shot:hover::after,.shot:focus-visible::after{opacity:.95}
+  .shot:focus-visible{outline:2px solid var(--key);outline-offset:3px}
+  .lb{position:fixed;inset:0;z-index:80;display:none;place-items:center;padding:26px;
+    background:rgba(8,14,18,.86)}
+  .lb.on{display:grid}
+  .lb-in{position:relative;line-height:0}
+  .lb-in img{display:block;border-radius:8px;box-shadow:0 30px 70px -30px #000}
+  .lb-in .anno{position:absolute;inset:0;width:100%;height:100%}
+  .lb-x{position:absolute;top:-34px;right:0;background:none;border:1px solid rgba(255,255,255,.38);
+    color:#EDF3F5;border-radius:99px;padding:4px 12px;font-family:var(--mono);font-size:10px;
+    letter-spacing:.1em;text-transform:uppercase}
+  .lb-x:hover{border-color:#fff}
+  @media (prefers-reduced-motion:no-preference){.lb.on .lb-in{animation:in .2s ease both}}
+
+  /* ── two captures on one screen: player on the left, ours on the right ── */
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;width:100%}
+  .duo .shot{max-width:100%}
+  @media (max-width:820px){.duo{grid-template-columns:1fr}}
+
+  /* ── what a duplicate carries ── */
+  .clone{width:100%;max-width:600px;display:grid;gap:9px}
+  .cl-grp{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+    box-shadow:var(--lift);overflow:hidden}
+  .cl-h{display:flex;align-items:center;gap:8px;padding:9px 13px;border-bottom:1px solid var(--line);
+    font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase}
+  .cl-h i{width:7px;height:7px;border-radius:50%;font-style:normal;flex:none}
+  .cl-h span{margin-left:auto;font-weight:400;letter-spacing:.04em;text-transform:none;
+    color:var(--faint);font-size:10px}
+  .cl-grp.chg .cl-h{color:var(--flag)} .cl-grp.chg .cl-h i{background:var(--flag)}
+  .cl-grp.keep .cl-h{color:var(--ok)}  .cl-grp.keep .cl-h i{background:var(--ok)}
+  .cl-grp.mint .cl-h{color:var(--h-blue)} .cl-grp.mint .cl-h i{background:var(--h-blue)}
+  .cl-grp ul{margin:0;padding:7px 13px 9px;list-style:none;display:flex;flex-wrap:wrap;gap:5px 7px}
+  .cl-grp li{font-size:12px;color:var(--body);background:var(--raise);border:1px solid var(--line);
+    border-radius:99px;padding:2px 9px}
+  .cl-grp li b{color:var(--ink);font-weight:600}
+  .cl-err{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--raise);
+    border:1px dashed var(--line-2);border-radius:9px;padding:9px 12px;line-height:1.5}
+  .cl-err b{color:var(--flag);font-weight:700}
+
+  /* ── the duplicate, read as a diff: what arrived, what this week says ── */
+  .dq{width:100%;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--r);box-shadow:var(--lift)}
+  .dqwrap{width:100%;max-width:820px;display:grid;gap:10px;align-content:start}
+  .dq-lead{margin:0;font-size:13.5px;color:var(--body)}
+  .dq-lead b{color:var(--ink);font-weight:600}
+
+  /* the duplicate is performed here, not described */
+  button.dq-jrn{width:100%;font:inherit;color:inherit;text-align:left;cursor:context-menu}
+  button.dq-jrn:hover{border-color:var(--line-2)}
+  button.dq-jrn:focus-visible{outline:2px solid var(--key);outline-offset:2px}
+  .dq-ctx.done{padding-bottom:0}
+  .dq-copy{margin-top:6px;border-style:dashed;
+    border-color:color-mix(in srgb, var(--flag) 45%, transparent);
+    background:color-mix(in srgb, var(--flag) 6%, var(--raise))}
+  .dq-copy u{color:var(--flag)}
+  .dq-copy.done{border-style:solid;border-color:color-mix(in srgb, var(--ok) 45%, transparent);
+    background:color-mix(in srgb, var(--ok) 9%, var(--raise))}
+  .dq-copy.done u{color:var(--ok)}
+  button.dq-mi{width:100%;font:inherit;text-align:left;border:0;cursor:pointer}
+  button.dq-mi:focus-visible{outline:2px solid color-mix(in srgb, var(--key-ink) 75%, transparent);
+    outline-offset:-4px}
+  .dq-set.field{display:flex;align-items:center;gap:6px;background:var(--raise);
+    border-color:var(--line-2);cursor:text}
+  .dq-set.field.locked{opacity:.5;cursor:default}
+  .dq-set.field.good{background:color-mix(in srgb, var(--ok) 10%, transparent);
+    border-color:color-mix(in srgb, var(--ok) 42%, transparent)}
+  .dq-set.field.bad{background:color-mix(in srgb, var(--flag) 9%, transparent);
+    border-color:var(--flag)}
+  .dq-set.field:focus-within{box-shadow:0 0 0 3px color-mix(in srgb, var(--key) 22%, transparent)}
+  .dq-in{flex:1;min-width:0;width:100%;font:inherit;font-family:var(--sans);font-size:12.5px;
+    color:var(--ink);background:transparent;border:0;padding:0}
+  .dq-in.mono{font-family:var(--mono);font-size:11.5px}
+  .dq-in:focus{outline:none}
+  .dq-in:disabled{color:var(--muted)}
+  .dq-set.field em{font-style:normal;font-size:11.5px;color:var(--faint);flex:none}
+  .dq-btn{margin-left:auto;font:inherit;font-family:var(--sans);font-size:11.5px;font-weight:700;
+    background:var(--key);color:var(--key-ink);border:1px solid transparent;border-radius:99px;
+    padding:3px 13px}
+  .dq-btn:disabled{background:var(--raise);color:var(--faint);cursor:not-allowed}
+  .dq-btn.ghost{background:transparent;color:var(--body);border-color:var(--line-2);font-weight:600}
+  .dq-btn:focus-visible{outline:2px solid var(--key);outline-offset:2px}
+  .dq-msg{margin:9px 0 0;font-size:12px;min-height:17px;color:var(--faint)}
+  .dq-msg.bad{color:var(--flag)}
+  .dq-msg.good{color:var(--ok)}
+  .dq-msg code{font-family:var(--mono);font-size:11.5px}
+
+  /* the journey in the list, right clicked */
+  .dq-ctx{position:relative}
+  .dq-jrn{display:flex;align-items:center;gap:11px;background:var(--raise);
+    border:1px solid var(--line);border-radius:9px;padding:9px 12px}
+  .dq-jrn i{width:15px;height:15px;flex:none;border-radius:4px;
+    border:1.5px solid color-mix(in srgb, var(--key) 60%, transparent);
+    background:var(--key-soft)}
+  .dq-jrn b{font-family:var(--disp);font-size:13.5px;font-weight:800;color:var(--ink)}
+  .dq-jrn code{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .dq-jrn u{text-decoration:none;margin-left:auto;font-size:11.5px;color:var(--faint);
+    font-variant-numeric:tabular-nums}
+  .dq-menu{position:absolute;left:168px;top:33px;min-width:158px;z-index:6;background:var(--panel);
+    border:1px solid var(--line-2);border-radius:9px;padding:4px;display:grid;gap:2px;
+    box-shadow:0 2px 4px rgba(0,0,0,.08), 0 18px 30px -18px rgba(0,0,0,.45)}
+  .dq-mi{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--body);
+    padding:5px 9px;border-radius:6px}
+  .dq-mi.on{background:var(--key);color:var(--key-ink);font-weight:700}
+  .dq-mi.off{color:var(--faint)}
+  .dq-mi em{font-style:normal;margin-left:auto;font-size:10.5px;opacity:.75}
+  .dq-ptr{position:absolute;z-index:7;left:160px;top:26px;width:11px;height:16px;
+    background:var(--ink);clip-path:polygon(0 0,0 100%,28% 76%,48% 100%,68% 88%,46% 62%,100% 46%);
+    filter:drop-shadow(0 1px 1px rgba(255,255,255,.5))}
+  .dq-rc{position:absolute;left:16px;top:38px;font-size:11px;color:var(--faint)}
+  .dq-rc::after{content:"";position:absolute;left:100%;top:8px;width:26px;height:1px;
+    background:var(--line-2);margin-left:6px}
+
+  .dq-band{padding:12px 18px 13px}
+  .dq-band + .dq-band{border-top:1px solid var(--line)}
+  .dq-h{display:flex;align-items:baseline;gap:10px;margin:0 0 10px;font-family:var(--disp);
+    font-size:13.5px;font-weight:800;color:var(--ink)}
+  .dq-h span{font-family:var(--sans);font-size:11.5px;font-weight:400;color:var(--faint)}
+
+  .dq-rows{display:grid;gap:7px}
+  .dq-row{display:grid;grid-template-columns:66px minmax(0,1fr) 22px minmax(0,1fr);
+    align-items:center;gap:0 11px}
+  .dq-key{grid-column:1;font-size:11.5px;font-weight:600;color:var(--faint)}
+  .dq-was,.dq-set{border-radius:8px;padding:6px 11px;font-size:12.5px;
+    font-variant-numeric:tabular-nums}
+  .dq-was{background:color-mix(in srgb, var(--flag) 7%, transparent);
+    border:1px solid color-mix(in srgb, var(--flag) 20%, transparent);color:var(--muted)}
+  .dq-set{background:color-mix(in srgb, var(--ok) 10%, transparent);
+    border:1px solid color-mix(in srgb, var(--ok) 32%, transparent);color:var(--ink);font-weight:500}
+  .dq-was.mono,.dq-set.mono{font-family:var(--mono);font-size:11.5px}
+  .dq-was mark,.dq-set mark{background:none;font-weight:700;padding:0 1px}
+  .dq-was mark{color:var(--flag);box-shadow:inset 0 -2px 0 color-mix(in srgb, var(--flag) 42%, transparent)}
+  .dq-set mark{color:var(--ok);box-shadow:inset 0 -2px 0 color-mix(in srgb, var(--ok) 48%, transparent)}
+  .dq-arw{justify-self:center;width:13px;height:1px;background:var(--line-2);position:relative}
+  .dq-arw::after{content:"";position:absolute;right:-1px;top:-2.5px;border:3px solid transparent;
+    border-left-color:var(--line-2)}
+  .dq-cap{padding-bottom:2px;font-size:10.5px;font-weight:600;letter-spacing:.03em}
+  .dq-cap .a{color:var(--muted)} .dq-cap .b{color:var(--ok)}
+
+  .dq-band.tight{display:flex;align-items:center;gap:6px 11px;flex-wrap:wrap}
+  .dq-band.tight .dq-h{margin:0}
+  .dq-keep{display:flex;flex-wrap:wrap;gap:5px;margin:0;font-size:12px;color:var(--muted)}
+  .dq-keep span{background:var(--raise);border-radius:6px;padding:2px 8px;white-space:nowrap}
+  .dq-keep b{color:var(--body);font-weight:600}
+
+  .dq-flow{display:grid;gap:7px;justify-items:start}
+  .dq-line{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .dq-node{display:flex;align-items:center;gap:7px;background:var(--raise);
+    border:1px solid var(--line);border-radius:9px;padding:5px 10px;font-family:var(--disp);
+    font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap}
+  .dq-node u{text-decoration:none;font-family:var(--sans);font-size:11px;font-weight:400;
+    color:var(--muted)}
+  .dq-node.lead{background:var(--key-soft);
+    border-color:color-mix(in srgb, var(--key) 32%, transparent)}
+  .dq-node.flagged{background:color-mix(in srgb, var(--flag) 8%, var(--raise));
+    border-color:color-mix(in srgb, var(--flag) 50%, transparent)}
+  .dq-node em{font-style:normal;font-family:var(--sans);font-size:10.5px;font-weight:700;
+    color:var(--flag)}
+  .dq-fan{display:flex;align-items:center;gap:10px;width:100%;font-size:11.5px;color:var(--faint)}
+  .dq-fan::before,.dq-fan::after{content:"";height:1px;background:var(--line);flex:1}
+  .dq-note{margin:11px 0 0;font-size:11.5px;color:var(--faint)}
+  @media (max-width:860px){
+    .dq-row{grid-template-columns:66px minmax(0,1fr);gap:5px 11px}
+    .dq-arw{display:none} .dq-set{grid-column:2} .dq-cap{display:none}
+  }
+
+  /* ── where an object lives ── */
+  .linkcard{width:100%;max-width:560px;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--r);box-shadow:var(--lift);overflow:hidden}
+  .lk-h{display:flex;align-items:baseline;gap:8px;padding:12px 15px 10px;
+    border-bottom:1px solid var(--line);font-family:var(--disp);font-size:15px;font-weight:800;
+    color:var(--ink)}
+  .lk-h span{font-family:var(--mono);font-size:9px;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--faint);margin-left:auto}
+  .lk-row{display:grid;grid-template-columns:52px minmax(0,1fr);gap:10px;align-items:baseline;
+    padding:9px 15px;border-top:1px solid var(--line)}
+  .lk-row:first-of-type{border-top:0}
+  .lk-row b{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);font-weight:700}
+  .lk-row code{font-family:var(--mono);font-size:12px;color:var(--ink);background:var(--key-soft);
+    border:1px solid color-mix(in srgb, var(--key) 30%, transparent);border-radius:5px;
+    padding:2px 7px;overflow-wrap:anywhere}
+
+  /* ── a promotion's tiers, as a table rather than a screenshot ── */
+  .tiers{width:100%;max-width:520px;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--r);box-shadow:var(--lift);overflow:hidden}
+  .tiers-h{display:flex;align-items:baseline;gap:8px;padding:11px 14px 9px;
+    border-bottom:1px solid var(--line)}
+  .tiers-h b{font-family:var(--disp);font-size:14.5px;font-weight:800;color:var(--ink)}
+  .tiers-h span{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);margin-left:auto}
+  .tiers table{width:100%;border-collapse:collapse;font-size:13px}
+  .tiers th{font-family:var(--mono);font-size:9px;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--faint);text-align:left;font-weight:700;padding:8px 14px 6px}
+  .tiers th.r,.tiers td.r{text-align:right}
+  .tiers td{padding:7px 14px;border-top:1px solid var(--line);vertical-align:middle}
+  .tiers tbody tr:nth-child(odd){background:var(--raise)}
+  .tiers .flow{font-family:var(--mono);font-size:10px;color:#fff;border-radius:5px;padding:2px 7px;
+    white-space:nowrap}
+  .tiers tr:nth-child(1) .flow{background:var(--h-green)}
+  .tiers tr:nth-child(2) .flow{background:var(--h-blue)}
+  .tiers tr:nth-child(3) .flow{background:var(--h-purple)}
+  .tiers tr:nth-child(4) .flow{background:var(--h-pink)}
+  @media (prefers-color-scheme:dark){.tiers .flow{color:#0C1A20}}
+  :root[data-theme="dark"] .tiers .flow{color:#0C1A20}
+  :root[data-theme="light"] .tiers .flow{color:#fff}
+  .tiers .num{font-family:var(--mono);font-weight:700;color:var(--ink);
+    font-variant-numeric:tabular-nums;white-space:nowrap}
+  .tiers tfoot td{font-family:var(--mono);font-size:10.5px;color:var(--faint);background:var(--raise);
+    border-top:1px solid var(--line)}
+
+  /* ── playground: the palette, canvas and validator ── */
+  .pg{display:grid;grid-template-columns:264px minmax(0,1fr);gap:14px;width:100%;align-items:start}
+  @media (max-width:1180px){.pg{grid-template-columns:1fr}}
+
+  .pgp{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+    box-shadow:var(--lift);overflow:hidden}
+  .pgp-h{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);
+    font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--faint)}
+  .pgp-h b{color:var(--ink);letter-spacing:.06em}
+  .pgp-b{padding:10px 12px}
+
+  /* palette, four across like the real sidebar, scrolls on its own */
+  .plist{max-height:376px;overflow-y:auto;padding:4px 10px 12px;scrollbar-width:thin}
+  .pgrp{font-size:12px;color:var(--muted);padding:11px 2px 7px;display:flex;align-items:center;gap:6px}
+  .pgrp i{font-style:normal;color:var(--faint);font-size:9px}
+  .pgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}
+  .ptile{background:none;border:0;padding:4px 1px 6px;display:flex;flex-direction:column;align-items:center;
+    gap:4px;border-radius:8px;text-align:center}
+  .ptile span{font-size:8.5px;line-height:1.2;color:var(--ink);font-weight:600}
+  .ptile em{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;font-style:normal}
+  .ptile em svg{width:19px;height:19px}
+  .ptile.round em{border-radius:50%}
+  .ptile:hover:not(.off){background:var(--raise)}
+  .ptile:hover:not(.off) em{transform:translateY(-1px)}
+  .ptile.off{cursor:default}
+  .ptile.off span{color:var(--faint);font-weight:400}
+  .ptile.off em{opacity:.45}
+  .ptile.off em svg{opacity:.5}
+  .ptile:focus-visible{outline:2px solid var(--key);outline-offset:2px}
+  .ptile em{transition:transform .12s}
+  /* group tints, taken off the real palette */
+  .t-src em{background:#CBE3C2;color:#4C7A44}
+  .nd em svg{display:block}
+  .t-flow em{background:#FBE6BE;color:#C98A26}
+  .t-comm em{background:#CDE2F4;color:#4C86BE}
+  .t-delay em{background:#EEF3C6;color:#7E8F2C}
+  .t-conn em{background:#FBDCD1;color:#D8552F}
+  .t-flows em{background:#FAD8E4;color:#D24C86}
+  .t-promo em{background:#D5E9DB;color:#42906A}
+  .t-cond em{background:#E8DBF6;color:#7E52C0}
+  .t-rew em{background:#DBDDF4;color:#4F58AF}
+  .t-fin em{background:#DFE3E6;color:#5E7280}
+  .cap-no{position:relative}
+  .cap-no span::after{content:" ?";color:var(--flag);font-weight:700}
+
+  /* canvas: node cards and connectors, laid out like the real one */
+  .cvwrap{position:relative;height:272px;overflow:auto;
+    background:var(--sink);border:1px solid var(--line);border-radius:10px}
+  .cvwrap.empty{display:grid;place-items:center}
+  .cv-empty{font-family:var(--mono);font-size:11.5px;color:var(--faint);text-align:center;line-height:1.8}
+  .cvin{position:relative;padding:0;transform-origin:0 0}
+  .cvsvg{position:absolute;top:0;left:0;overflow:visible;pointer-events:none}
+  .nd{position:absolute;width:154px;background:var(--panel);border:1px solid var(--line-2);
+    border-radius:7px;padding:5px 7px 6px;display:grid;grid-template-columns:22px minmax(0,1fr);
+    gap:6px;align-items:start;text-align:left;box-shadow:0 1px 2px rgba(0,0,0,.14)}
+  button.nd:hover{border-color:var(--key)}
+  span.nd{cursor:default}
+  .nd.sel{border-color:var(--key);box-shadow:0 0 0 2px color-mix(in srgb,var(--key) 35%,transparent)}
+  .nd em{width:22px;height:22px;border-radius:5px;display:grid;place-items:center;font-style:normal;
+    align-self:start}
+  .nd em svg{width:13px;height:13px}
+  .nd b{font-size:10.5px;font-weight:700;color:var(--ink);line-height:1.2;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .nd s{font-size:9.5px;color:var(--muted);text-decoration:none;display:flex;line-height:1.3;
+    gap:6px;align-items:baseline;white-space:nowrap;overflow:hidden}
+  .nd s u{margin-left:auto;font-family:var(--mono);font-size:7.5px;color:var(--faint);
+    text-decoration:none;flex:none}
+
+  .nd.term{width:30px;height:30px;border-radius:50%;padding:0;place-items:center;
+    grid-template-columns:1fr;background:var(--raise)}
+  .nd.term em{background:none!important;color:var(--faint)!important}
+  .nd.term b,.nd.term s,.nd.term u{display:none}
+  .ev{position:absolute;font-family:var(--mono);font-size:8px;background:var(--panel);
+    border:1px solid var(--line);border-radius:99px;padding:1px 6px;color:var(--muted);
+    white-space:nowrap;transform:translate(-50%,-50%);max-width:150px;overflow:hidden;
+    text-overflow:ellipsis;z-index:2}
+  .ev.unseen{border-color:color-mix(in srgb,var(--flag) 45%,transparent);color:var(--flag)}
+  .flowchip{position:absolute;font-family:var(--mono);font-size:8px;background:var(--raise);
+    border:1px solid var(--line-2);border-radius:4px;padding:1px 6px;color:var(--muted);
+    transform:translate(-50%,-100%);white-space:nowrap}
+  .ptile[draggable="true"]{cursor:grab}
+  .ptile[draggable="true"]:active{cursor:grabbing}
+  .ptile.dragging{opacity:.4}
+  .cvwrap.dragover{outline:2px dashed var(--key);outline-offset:-4px}
+  .nd.drop{border-color:var(--key);box-shadow:0 0 0 3px color-mix(in srgb,var(--key) 30%,transparent)}
+  .nd.drop::after{content:"drop here";position:absolute;left:50%;bottom:-15px;transform:translateX(-50%);
+    font-family:var(--mono);font-size:7.5px;letter-spacing:.06em;text-transform:uppercase;
+    background:var(--key);color:var(--key-ink);padding:1px 6px;border-radius:99px;white-space:nowrap}
+
+  /* the task list lives on a note, and it remembers what you finished */
+  .note-pad{background:#F5E7A8;color:#4A3C10;border-radius:3px;padding:12px 14px 13px;
+    box-shadow:0 10px 22px -14px rgba(20,20,10,.7),0 1px 0 rgba(0,0,0,.05);
+    transform:rotate(-1.2deg);font-family:var(--sans)}
+  .note-pad h4{margin:0 0 8px;font-family:var(--disp);font-size:14px;font-weight:800;letter-spacing:-.01em;
+    display:flex;align-items:center;gap:7px}
+  .note-pad h4 span{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
+    text-transform:uppercase;opacity:.6;margin-left:auto}
+  .note-pad ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px}
+  .note-pad li button{display:grid;grid-template-columns:16px minmax(0,1fr);gap:8px;align-items:start;
+    width:100%;text-align:left;background:none;border:0;padding:2px 0;font-size:12.5px;line-height:1.35;
+    color:#4A3C10;border-radius:4px}
+  .note-pad li button:hover{background:rgba(0,0,0,.05)}
+  .note-pad li i{width:15px;height:15px;border:1.4px solid #A8913C;border-radius:4px;font-style:normal;
+    display:grid;place-items:center;font-size:10px;margin-top:1px}
+  .note-pad li.done i{background:#4A3C10;border-color:#4A3C10;color:#F5E7A8}
+  .note-pad li.done button{opacity:.62;text-decoration:line-through}
+  .note-pad li.now button{font-weight:700}
+  .note-pad li.now i{border-color:#4A3C10;border-width:2px}
+  .note-pad p{margin:9px 0 0;font-size:11.5px;line-height:1.4;opacity:.75}
+
+  .attach{display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:7px 0 0;font-size:11px;
+    color:var(--faint)}
+  .attach span.lbl{font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;text-transform:uppercase}
+  .port{font-family:var(--mono);font-size:8.5px;border:1px dashed var(--line-2);border-radius:99px;
+    padding:2px 7px;color:var(--muted);background:none}
+  .port:hover{border-color:var(--key);color:var(--ink)}
+  .port.on{border-style:solid;border-color:var(--key);background:var(--key-soft);color:var(--ink)}
+
+  /* validator */
+  .vr{max-height:116px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+  .vrow{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:start;font-size:12px;
+    color:var(--muted);line-height:1.45}
+  .vrow b{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.06em;padding:2px 6px;
+    border-radius:4px;white-space:nowrap;margin-top:1px}
+  .vrow.ok b{background:var(--ok-soft);color:var(--ok)}
+  .vrow.warn b{background:#FBE6BE;color:#8A5A08}
+  .vrow.err b,.vrow.blocked b{background:color-mix(in srgb,var(--flag) 16%,transparent);color:var(--flag)}
+  .vrow code{font-family:var(--mono);font-size:11px;color:var(--ink)}
+  .verdict{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;padding:4px 10px;border-radius:99px;margin-left:auto}
+  .verdict.yes{background:var(--ok-soft);color:var(--ok);
+    border:1px solid color-mix(in srgb,var(--ok) 40%,transparent)}
+  .verdict.no{background:color-mix(in srgb,var(--flag) 12%,transparent);color:var(--flag);
+    border:1px solid color-mix(in srgb,var(--flag) 35%,transparent)}
+  .pgbar{display:flex;gap:6px;align-items:center;padding:9px 12px;border-top:1px solid var(--line)}
+  .task{font-size:12px;color:var(--muted);padding:7px 12px;border-top:1px solid var(--line);
+    background:var(--raise);display:none}
+  .task.on{display:block}
+  .task b{color:var(--ink)}
+</style>
+</head>
+<body>
+
+<nav class="rail">
+  <div class="rail-in">
+    <a class="brand" href="/admin" title="Back to the admin portal">
+      <i></i><span>Flick<b>CRM 01</b></span></a>
+    <span class="pills" id="pills" role="tablist" aria-label="Steps"></span>
+    <span class="ctrl">
+      <span class="n" id="num"></span>
+      <button class="btn g s" id="back">Back</button>
+      <button class="btn" id="fwd">Continue</button>
+    </span>
+  </div>
+</nav>
+
+<main class="deck" id="deck">
+<section class="step" data-hue="green" data-t="Start" data-pose="wave"
+    data-tip="You can move with the arrow keys as well as the buttons, and jump around with the little bars up top.">
+    <div class="stage">
+      <div class="route">
+        <div><i>1</i><b>Standards of the CRM</b><em class="a">this tour</em></div>
+        <div><i>2</i><b>A promotion, and how we track it</b><em class="a">this tour</em></div>
+        <div><i>3</i><b>Nodes and their rules</b><em>next</em></div>
+        <div><i>4</i><b>Playground</b><em class="a">this tour</em></div>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox wave"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Hi, I'm Flick. Two real promotions, then you build one yourself.</p>
+        <p>Tap me on any screen for the thing people get wrong there.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 -->
+    <section class="step" data-hue="green" data-t="Promotions" data-pose="glass"
+    data-tip="A promotion the player cannot see in this list is not live for them, whatever the back office says.">
+    <div class="stage">
+      <div class="duo">
+        <figure class="shot" tabindex="0" style="--ar:1470/1010;--w:470px;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/p1.jpg" alt="Player promotions list with the Casino Wheel of Fortune card">
+          <svg class="anno" viewBox="0 0 1470 1404" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="36" y="474" width="692" height="400" rx="18" stroke-width="6"/>
+            <path class="halo" pathLength="1" d="M1100 240 Q 930 320 757 467" stroke-width="16"/>
+            <path class="ink" pathLength="1" d="M1100 240 Q 930 320 757 467" stroke-width="8"/>
+            <polygon points="725,490 748.8,454.6 766.2,479"/>
+          </svg>
+        </div>
+      </figure>
+        <figure class="shot" tabindex="0" style="--ar:2814/1200;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/p2.jpg" alt="Back office promo list with the randomizer row RND-0-17731">
+          <svg class="anno" viewBox="0 0 2814 1460" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="78" y="566" width="1010" height="106" rx="14" stroke-width="8"/>
+            <path class="halo" pathLength="1" d="M1450 1080 Q 1010 1010 641 711" stroke-width="22"/>
+            <path class="ink" pathLength="1" d="M1450 1080 Q 1010 1010 641 711" stroke-width="11"/>
+            <polygon points="600,690 648.7,695.9 633.3,726.1"/>
+          </svg>
+        </div>
+      </figure>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox glass"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Players see their active promotions here, one card with a clock.</p>
+        <p>On the right the same promotion on our side, active in the Promo list.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="amber" data-t="The wheel" data-pose="flag"
+    data-tip="The four percentages have to total 100. How the rim is arranged never changes the odds.">
+    <div class="stage">
+      <div class="duo">
+        <figure class="shot" tabindex="0" style="--ar:1520/1396;--w:400px;margin:0">
+          <div class="shot-in"><img src="/static/onboarding/p3_wheel.jpg" alt=""></div>
+        </figure>
+        <figure class="shot" tabindex="0" style="--ar:2188/1080;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/p4.jpg" alt="Randomizer prizes table with four journey ids and probabilities">
+          <svg class="anno" viewBox="0 0 2188 1306" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="145" y="742" width="750" height="298" rx="12" stroke-width="7"/>
+          </svg>
+        </div>
+      </figure>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox flag"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Twelve wedges, four prizes, and we set a percentage for each one.</p>
+        <p>A prize is always a journey, so every prize connects the player to one.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="indigo" data-t="Randomizer logs" data-pose="thumb"
+    data-tip="Added, activated and claimed are three different moments. A row with no claim means they opened the wheel and never spun.">
+    <div class="stage">
+      <div class="duo">
+        <figure class="shot" tabindex="0" style="--ar:1562/1100;--w:430px;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/p5.jpg" alt="Tu recompensa modal showing 50 GG con deposito">
+        </div>
+      </figure>
+        <figure class="shot" tabindex="0" style="--ar:2810/640;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/p6.jpg" alt="Randomizer players list with one account and bonus campaign id JRN-0-572381">
+          <svg class="anno" viewBox="0 0 2810 1508" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="575" y="382" width="240" height="62" rx="10" stroke-width="8"/>
+            <rect x="1735" y="380" width="205" height="66" rx="10" stroke-width="8"/>
+          </svg>
+        </div>
+      </figure>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox thumb"></i></button>
+      <div class="bubble" data-bubble>
+        <p>The player sees what they won.</p>
+        <p>In the randomizer logs we see what they won and which journey they were added to.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="blue" data-t="Journey logs" data-pose="think"
+    data-tip="The top row is where the player stands right now, not the first thing that happened to them.">
+    <div class="stage">
+      <div class="duo">
+        <figure class="shot" tabindex="0" style="--ar:2784/1060;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/p7.jpg" alt="Journey log rows for the player">
+          <svg class="anno" viewBox="0 0 2784 1508" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="300" y="500" width="1820" height="235" rx="12" stroke-width="8"/>
+          </svg>
+        </div>
+      </figure>
+        <figure class="shot" tabindex="0" style="--ar:2704/1388;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/p9.jpg" alt="Journey canvas with one multipurpose promotion node and three flows">
+          <svg class="anno" viewBox="0 0 2704 1388" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="1506" y="76" width="236" height="68" rx="10" stroke-width="8"/>
+            <path class="halo" pathLength="1" d="M700 250 Q 1050 210 1452 116" stroke-width="22"/>
+            <path class="ink" pathLength="1" d="M700 250 Q 1050 210 1452 116" stroke-width="10"/>
+            <polygon points="1500,107 1456,133.3 1449.6,97.9"/>
+            <rect x="375" y="458" width="232" height="68" rx="10" stroke-width="7"/>
+            <rect x="1344" y="458" width="232" height="68" rx="10" stroke-width="7"/>
+            <rect x="2315" y="458" width="232" height="68" rx="10" stroke-width="7"/>
+          </svg>
+        </div>
+      </figure>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox think"></i></button>
+      <div class="bubble" data-bubble>
+        <p>What is happening inside journey logs? Read it from the bottom up.</p>
+        <p>He is added into the journey and he can see it. On the right, the journey he is in.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="pink" data-t="His choice" data-pose="book"
+    data-tip="The chooser awards nothing. Everything a player can spend comes from the plain promotion inside the flow they pick.">
+    <div class="stage">
+      <figure class="shot" tabindex="0" style="--ar:1454/1404;--w:370px;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/p8.jpg" alt="Journey page asking the player to select one of three bonuses">
+          <svg class="anno" viewBox="0 0 1454 1404" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="18" y="420" width="1386" height="940" rx="18" stroke-width="6"/>
+            <path class="halo" pathLength="1" d="M1270 115 Q 1080 190 938 274" stroke-width="16"/>
+            <path class="ink" pathLength="1" d="M1270 115 Q 1080 190 938 274" stroke-width="8"/>
+            <polygon points="900,292 930.8,259.2 944.8,288"/>
+          </svg>
+        </div>
+      </figure>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox book"></i></button>
+      <div class="bubble" data-bubble>
+        <p>The journey asks before it gives anything.</p>
+        <p>Three bonuses, one choice, and the chooser itself awards nothing.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="purple" data-t="His bonus" data-pose="thumb"
+    data-tip="Two clocks here, not one: one to accept the offer and a separate one to deposit after accepting.">
+    <div class="stage">
+      <figure class="shot" tabindex="0" style="--ar:1478/1118;--w:430px;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/p10.jpg" alt="Player promotions page with one active chosen bonus">
+          <svg class="anno" viewBox="0 0 1478 1118" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="32" y="614" width="696" height="412" rx="18" stroke-width="6"/>
+            <path class="halo" pathLength="1" d="M1340 760 Q 1000 800 786 800" stroke-width="16"/>
+            <path class="ink" pathLength="1" d="M1340 760 Q 1000 800 786 800" stroke-width="8"/>
+            <polygon points="740,800 786,784 786,816"/>
+          </svg>
+        </div>
+      </figure>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox thumb"></i></button>
+      <div class="bubble" data-bubble>
+        <p>The bonus he holds now, id <span class="id">672078</span>.</p>
+        <p>A different object from the chooser, and the deposit hangs off this one.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="teal" data-t="Where it lives" data-pose="flag"
+    data-tip="Open the object itself before you trust any brief about it. The row is the truth, the brief is a description of it.">
+    <div class="stage">
+      <div class="linkcard">
+        <div class="lk-h">Casino Wheel of Fortune <span>randomizer</span></div>
+        <div class="lk-row"><b>id</b><code>RND-0-17731</code></div>
+        <div class="lk-row"><b>open</b><code>pmi.rea-backoffice.gr8.tech/promo/campaign/JBCL/Randomizer/view/RND-0-17731</code></div>
+        <div class="lk-row"><b>next</b><code>Game of the Week, every Wednesday</code></div>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox flag"></i></button>
+      <div class="bubble" data-bubble>
+        <p>That was the Casino Wheel of Fortune, and this is where the object lives.</p>
+        <p>Now the Game of the Week, which runs every Wednesday.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="green" data-t="Week game" data-pose="book"
+    data-tip="The ladder is fixed. The only thing that changes on a Wednesday is which game the spins are on.">
+    <div class="stage">
+      <figure class="shot" tabindex="0" style="--ar:734/472;--w:470px;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/g1_card.jpg" alt="The Game of the Week card in the player's bonus list">
+        </div>
+      </figure>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox book"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Players choose one of four deposit values, and the deposit decides what each spin is worth.</p>
+        <p>10 000, 20 000, 30 000 or 50 000 CLP.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="green" data-t="Promo page" data-pose="glass"
+    data-tip="A promo page carries no prizes of its own. One field points it at a journey, so check that journey dates cover the page.">
+    <div class="stage">
+      <div class="duo">
+        <figure class="shot" tabindex="0" style="--ar:2000/965;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/g2_page.jpg" alt="The Game of the Week promo page with four bet rows and an Activar button">
+          <svg class="anno" viewBox="0 0 2000 965" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="645" y="540" width="712" height="240" rx="12" stroke-width="5"/>
+          </svg>
+        </div>
+      </figure>
+        <figure class="shot" tabindex="0" style="--ar:1986/1486;--w:560px;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/g6_config.jpg" alt="Promo page setup showing the Journey Builder connection and the journey id">
+          <svg class="anno" viewBox="0 0 1986 1486" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="660" y="1178" width="836" height="80" rx="12" stroke-width="6"/>
+          </svg>
+        </div>
+      </figure>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox glass"></i></button>
+      <div class="bubble" data-bubble>
+        <p>This is the promo page visual. Clicking Activar joins them to a journey that holds four
+          choosable flows.</p>
+        <p>On the right, the setting that points this page at that journey.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="pink" data-t="Four flows" data-pose="glass"
+    data-tip="Every flow is the same shape. Only the deposit and the spin value differ, which is why one journey can serve four tiers.">
+    <div class="stage">
+      <div class="duo">
+        <figure class="shot" tabindex="0" style="--ar:962/1432;--w:400px;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/g3_choose.jpg" alt="Journey page asking the player to select one of four Game of the Week bonuses">
+          <svg class="anno" viewBox="0 0 962 1432" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="16" y="428" width="124" height="40" rx="10" stroke-width="5"/>
+            <rect x="16" y="488" width="930" height="66" rx="10" stroke-width="5"/>
+          </svg>
+        </div>
+      </figure>
+        <figure class="shot" tabindex="0" style="--ar:2000/716;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/g5_canvas.jpg" alt="The Game of the Week journey canvas with one chooser and four tier flows">
+          <svg class="anno" viewBox="0 0 2000 716" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="1312" y="142" width="106" height="30" rx="7" stroke-width="4"/>
+            <rect x="126" y="303" width="106" height="28" rx="7" stroke-width="4"/>
+            <rect x="730" y="303" width="106" height="28" rx="7" stroke-width="4"/>
+            <rect x="1222" y="303" width="106" height="28" rx="7" stroke-width="4"/>
+            <rect x="1838" y="303" width="106" height="28" rx="7" stroke-width="4"/>
+          </svg>
+        </div>
+      </figure>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox glass"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Four bonuses to choose from, one per deposit value.</p>
+        <p>On the right the journey behind them, <span class="id">JRN-0-639700</span>, with its four
+          flows.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="purple" data-t="Her bonus" data-pose="thumb"
+    data-tip="Rollover is the wagering. Until it is met the money is bonus money, not cash.">
+    <div class="stage">
+      <figure class="shot" tabindex="0" style="--ar:936/808;--w:470px;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/g4_bonus.jpg" alt="The chosen Game of the Week bonus showing spin value, minimum deposit and rollover">
+          <svg class="anno" viewBox="0 0 936 808" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="10" y="320" width="916" height="262" rx="12" stroke-width="6"/>
+          </svg>
+        </div>
+      </figure>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox thumb"></i></button>
+      <div class="bubble" data-bubble>
+        <p>The tier they took, id <span class="id">711837</span>.</p>
+        <p>Spin value, minimum deposit, rollover. Nothing else differs between the flows.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="salmon" data-t="Cloning" data-pose="book"
+    data-tip="Never re-run the same paste twice. The second run reuses ids the first one already used, and the platform refuses the whole journey.">
+    <div class="stage">
+      <div class="clone">
+        <div class="cl-grp chg">
+          <div class="cl-h"><i></i>change before you save<span>comes across from last week</span></div>
+          <ul>
+            <li><b>name</b>, still last week's date</li>
+            <li><b>start and end dates</b></li>
+            <li>the <b>game</b></li>
+            <li>images and copy</li>
+            <li>the <b>journey link</b> on the promo page</li>
+            <li>comms links</li>
+          </ul>
+        </div>
+        <div class="cl-grp keep">
+          <div class="cl-h"><i></i>leave alone<span>points at real objects</span></div>
+          <ul>
+            <li>promotion links</li>
+            <li>content ids</li>
+            <li>node wiring and flow shapes</li>
+          </ul>
+        </div>
+        <div class="cl-grp mint">
+          <div class="cl-h"><i></i>the platform mints these<span>never reuse</span></div>
+          <ul>
+            <li>journey id</li>
+            <li>activity ids</li>
+            <li>display ids</li>
+          </ul>
+        </div>
+        <div class="cl-err">If you see <b>the journey with the same identifier already exists</b> or
+          <b>activities with the same identifier already exist</b>, something from last week travelled
+          with the copy.</div>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox book"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Most weeks you duplicate last week rather than build from scratch.</p>
+        <p>The copy arrives with last week's name, dates and game, so change those before you save.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="blue" data-t="Duplicating" data-pose="think"
+    data-tip="Save the copy before you touch the dates and it is live on last week&#39;s window. Change the dates first, then save.">
+    <div class="stage">
+      <div class="dqwrap">
+      <p class="dq-lead">Recurring promotions are not created from scratch every time, we duplicate.</p>
+      <div class="dq">
+        <div class="dq-band">
+          <h4 class="dq-h">Now duplicate the Game of the Week journey
+            <span>right click it, pick Duplicate</span></h4>
+          <div class="dq-ctx" id="dqCtx">
+            <button class="dq-jrn" id="dqRow" type="button" aria-haspopup="menu">
+              <i></i><b>Game of the Week</b><code>JRN-0-639700</code><u>opened 05.08</u></button>
+            <div class="dq-jrn dq-copy" id="dqCopy" hidden><i></i><b>Game of the Week</b>
+              <code id="dqCopyId">no id yet</code><u id="dqCopyState">three edits to make</u></div>
+            <div class="dq-menu" id="dqMenu" role="menu" hidden>
+              <button class="dq-mi on" id="dqDup" type="button" role="menuitem">Duplicate</button>
+            </div>
+            <span class="dq-ptr" id="dqPtr" aria-hidden="true"></span>
+            <span class="dq-rc" id="dqHint">right click</span>
+          </div>
+        </div>
+
+        <div class="dq-band">
+          <h4 class="dq-h">Then three edits, and save <span id="dqCount">duplicate it first</span>
+            <button class="dq-btn" id="dqSave" type="button" disabled>Save</button></h4>
+          <div class="dq-rows">
+            <div class="dq-row dq-cap" aria-hidden="true">
+              <span></span><span class="a">as the copy arrives</span><span></span><span class="b">this week, you type it</span>
+            </div>
+            <div class="dq-row">
+              <label class="dq-key" for="dqName">Name</label>
+              <span class="dq-was mono">JBCL|CS|GOW-<mark>05-08-26</mark></span>
+              <span class="dq-arw" aria-hidden="true"></span>
+              <span class="dq-set field locked">
+                <input class="dq-in mono" id="dqName" value="JBCL|CS|GOW-05-08-26"
+                  spellcheck="false" autocomplete="off" disabled></span>
+            </div>
+            <div class="dq-row">
+              <label class="dq-key" for="dqFrom">Window</label>
+              <span class="dq-was"><mark>05.08</mark> 09:00 to <mark>11.08</mark> 23:59</span>
+              <span class="dq-arw" aria-hidden="true"></span>
+              <span class="dq-set field locked">
+                <input class="dq-in" id="dqFrom" value="05.08 09:00" autocomplete="off" disabled>
+                <em>to</em>
+                <input class="dq-in" id="dqTo" value="11.08 23:59" autocomplete="off" disabled></span>
+            </div>
+            <div class="dq-row">
+              <label class="dq-key" for="dqGame">Game</label>
+              <span class="dq-was">last Wednesday's game, on <mark>all four tiers</mark></span>
+              <span class="dq-arw" aria-hidden="true"></span>
+              <span class="dq-set field locked">
+                <input class="dq-in" id="dqGame" value="last week's game" autocomplete="off"
+                  disabled></span>
+            </div>
+          </div>
+          <p class="dq-msg" id="dqMsg"></p>
+        </div>
+
+        <div class="dq-band tight">
+          <h4 class="dq-h">Carried across <span>leave it</span></h4>
+          <p class="dq-keep">
+            <span>campaign <b>JBCL</b></span><span>promo page entry</span>
+            <span><b>America/Santiago</b></span><span>promotion links</span><span>content ids</span>
+          </p>
+        </div>
+
+        <div class="dq-band">
+          <h4 class="dq-h">The flow comes with it <span>every activity gets a new id on save</span></h4>
+          <div class="dq-flow">
+            <div class="dq-line">
+              <span class="dq-node lead">Promo page entry <u>who joins</u></span>
+              <span class="dq-arw" aria-hidden="true"></span>
+              <span class="dq-node lead">The chooser <u>awards nothing itself</u></span>
+            </div>
+            <div class="dq-fan"><span>four identical tiers behind it</span></div>
+            <div class="dq-line">
+              <span class="dq-node">Promotion</span>
+              <span class="dq-arw" aria-hidden="true"></span>
+              <span class="dq-node">Deposit</span>
+              <span class="dq-arw" aria-hidden="true"></span>
+              <span class="dq-node flagged" id="dqSpin">Free spins <em id="dqChip">new game</em></span>
+              <span class="dq-arw" aria-hidden="true"></span>
+              <span class="dq-node">Wagering bonus</span>
+              <span class="dq-arw" aria-hidden="true"></span>
+              <span class="dq-node">End of path</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox think"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Every Wednesday is last Wednesday, duplicated.</p>
+        <p>Right click the journey, Duplicate, then change the name, the window and the game.</p>
+      </div>
+    </div>
+  </section>
+
+<section class="step" data-hue="olive" data-t="Check" data-pose="party"
+    data-tip="The playground works like this check. Nothing you build there is published, and nothing reaches a player.">
+    <div class="stage">
+      <div class="quiz" id="quiz">
+        <div class="q" data-a="1">
+          <b><i>01</i>A player says they won a bonus on the wheel. Which screen proves it and names the JRN?</b>
+          <div class="qo">
+            <button>The journey canvas</button>
+            <button>The randomizer player list</button>
+            <button>The player promotions page</button>
+          </div>
+        </div>
+        <div class="q" data-a="1">
+          <b><i>02</i>What is a wheel prize here?</b>
+          <div class="qo">
+            <button>A freespin or money reward</button>
+            <button>A JRN that starts with an API entry source</button>
+            <button>A promo page with its own link</button>
+          </div>
+        </div>
+        <div class="q" data-a="1">
+          <b><i>03</i>Where does the deposit condition hang?</b>
+          <div class="qo">
+            <button>On the multipurpose chooser</button>
+            <button>On the promotion inside the chosen flow</button>
+            <button>On the API entry source</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox party"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Three questions to close part one.</p>
+        <p>Nothing here touches a real object.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14 · PLAYGROUND -->
+  <section class="step wide" data-hue="teal" data-t="Playground" data-pose="flag"
+    data-tip="Drag onto a node and it hangs off that node. Drop on empty canvas and it starts the journey. A question mark on a tile means we have never captured that node from a real journey, so no generator may build it yet.">
+    <div class="stage">
+      <div class="pg">
+        <div class="pgp">
+          <div class="pgp-h">Nodes <b>drag onto the canvas</b></div>
+          <div class="plist" id="plist"></div>
+        </div>
+        <div style="display:grid;gap:14px;min-width:0">
+          <div class="pgp">
+            <div class="pgp-h">Your journey <b id="cvCount"></b>
+              <span class="verdict no" id="verdict" hidden>not approvable</span></div>
+            <div class="pgp-b">
+              <div class="cvwrap empty" id="cvwrap"><div class="cvin" id="cv"></div></div>
+              <div class="attach" id="attach"></div>
+            </div>
+            <div class="pgbar">
+              <button class="btn s" id="pgCheck">Validate</button>
+              <button class="btn g s" id="pgUndo">Undo</button>
+              <button class="btn g s" id="pgClear">Clear</button>
+            </div>
+          </div>
+          <div class="pgp">
+            <div class="pgp-h">Validator <b>catalog grammar + capture status</b></div>
+            <div class="pgp-b"><div class="vr" id="vr"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="talk">
+      <div class="note-pad" id="note">
+        <h4>Practice tasks<span id="noteCount"></span></h4>
+        <ol id="noteList"></ol>
+        <p id="noteHint">Pick one and I will read it out. Ticks are saved on this machine.</p>
+      </div>
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox flag"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Your turn. Drag nodes onto the canvas, or onto the node they follow.</p>
+        <p>Press Validate and I will tell you if it would build.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Full screen capture"></div>
+
+<script>
+'use strict';
+(function(){
+  var steps = [].slice.call(document.querySelectorAll('.step'));
+  var pills = document.getElementById('pills');
+  var back = document.getElementById('back'), fwd = document.getElementById('fwd');
+  var num = document.getElementById('num');
+  var cur = 0;
+
+  var dots = steps.map(function(s, i){
+    var b = document.createElement('button');
+    b.className = 'pill'; b.type = 'button';
+    b.title = (i + 1) + '. ' + s.dataset.t;
+    b.setAttribute('aria-label', 'Step ' + (i + 1) + ', ' + s.dataset.t);
+    b.onclick = function(){ go(i); };
+    pills.appendChild(b);
+    return b;
+  });
+
+  function go(i){
+    cur = Math.max(0, Math.min(steps.length - 1, i));
+    steps.forEach(function(s, n){ s.classList.toggle('on', n === cur); });
+    dots.forEach(function(d, n){
+      d.classList.toggle('now', n === cur);
+      d.classList.toggle('done', n < cur);
+    });
+    back.disabled = cur === 0;
+    fwd.disabled = cur === steps.length - 1;
+    num.textContent = String(cur + 1).padStart(2, '0') + ' / ' + steps.length;
+    document.documentElement.dataset.hue = steps[cur].dataset.hue || 'teal';
+    document.documentElement.style.setProperty('--prog',
+      Math.round((cur + 1) / steps.length * 100) + '%');
+    if (location.hash !== '#s' + (cur + 1)) history.replaceState(null, '', '#s' + (cur + 1));
+    window.scrollTo(0, 0);
+  }
+  back.onclick = function(){ go(cur - 1); };
+  fwd.onclick = function(){ go(cur + 1); };
+  document.addEventListener('keydown', function(e){
+    var open = document.getElementById('lb');
+    if (open && open.classList.contains('on')) return;
+    /* the duplicate screen has real fields, so typing wins over the deck */
+    var t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' ||
+              t.isContentEditable)) return;
+    if (e.key === 'ArrowRight') go(cur + 1);
+    if (e.key === 'ArrowLeft') go(cur - 1);
+  });
+
+  /* mascot: pose swap + the tip for this step */
+  var POSES = ['wave','think','book','thumb','flag','party','glass'];
+  function pose(el, p){
+    var f = el.classList.contains('fox') ? el : el.querySelector('.fox');
+    if (!f) return;
+    POSES.forEach(function(x){ f.classList.remove(x); });
+    f.classList.add(p);
+  }
+  function say(step, html, isTip){
+    var b = step.querySelector('[data-bubble]');
+    if (!b.dataset.keep) b.dataset.keep = b.innerHTML;
+    b.innerHTML = html;
+    b.classList.toggle('tip', !!isTip);
+  }
+  document.addEventListener('click', function(e){
+    var m = e.target.closest('[data-buddy]');
+    if (!m) return;
+    var step = m.closest('.step');
+    var b = step.querySelector('[data-bubble]');
+    if (b.classList.contains('tip')){
+      b.innerHTML = b.dataset.keep;
+      b.classList.remove('tip');
+      pose(m, step.dataset.pose);
+    } else {
+      say(step, '<p><b>Careful here.</b> ' + step.dataset.tip + '</p>', true);
+      pose(m, 'think');
+    }
+  });
+
+  /* check */
+  var quiz = document.getElementById('quiz');
+  if (quiz){
+    var done = 0, right = 0;
+    quiz.addEventListener('click', function(e){
+      var b = e.target.closest('.qo button');
+      if (!b) return;
+      var q = b.closest('.q');
+      if (q.dataset.done) return;
+      q.dataset.done = '1';
+      var list = [].slice.call(q.querySelectorAll('.qo button'));
+      var ok = list.indexOf(b) === Number(q.dataset.a);
+      list.forEach(function(x, i){
+        x.disabled = true;
+        if (i === Number(q.dataset.a)) x.classList.add('ok');
+      });
+      if (!ok) b.classList.add('no');
+      done++; if (ok) right++;
+      var st = quiz.closest('.step');
+      pose(st.querySelector('[data-buddy]'), ok ? (done === 3 && right === 3 ? 'party' : 'thumb') : 'think');
+      var msg;
+      if (done < 3) msg = ok ? '<p>Right. Keep going.</p>' : '<p>Not that one. The green answer is the one to remember.</p>';
+      else if (right === 3) msg = '<p>All three. That is part 1 done.</p><p>See you in the nodes.</p>';
+      else msg = '<p>You have ' + right + ' of 3.</p><p>Go back over the ones you missed, they are the three that catch people.</p>';
+      say(st, msg, false);
+    });
+  }
+
+
+  /* ── playground ───────────────────────────────────────────
+     Grammar is the real one: activities, the events each emits, the
+     transitions seen in captured journeys, and the data each node needs
+     from upstream. Capture status follows the backlog checklist, where
+     anything not captured must be refused rather than generated. */
+  var GRAM = {"acts":{"ams_decision_split":{"ev":["DecisionSplitPassedPath01","DecisionSplitPassedPath02","DecisionSplitPassedPath03","DecisionSplitPassedPath04","DecisionSplitPassedPath05","DecisionSplitPassedPath06","DecisionSplitPassedPath07","DecisionSplitPassedPath08","DecisionSplitPassedPath09","DecisionSplitPassedPath10","DecisionSplitPassedPath11","DecisionSplitPassedPath12","DecisionSplitPassedPath13","DecisionSplitPassedPath14","DecisionSplitPassedPath15","DecisionSplitPassedPath16","DecisionSplitPassedPath17","DecisionSplitPassedPath18","DecisionSplitPassedPath19","DecisionSplitPassedPath20","DecisionSplitPassedRemainderPath"],"dep":[["CurrencyCode","dwh_source"]]},"casino_bonus_v2":{"ev":["WageringBonusAwardAborted","WageringBonusCancelConfirmed","WageringBonusCancelledByWithdrawalConfirmed","WageringBonusExpired","WageringBonusFinished","WageringBonusForfeited","WageringBonusLost","WageringBonusRejectConfirmed"],"dep":[["CurrencyCode","external_system_source"],["DepositAmount","deposit"],["DepositPaidAmount","deposit"],["PromotionId","promotion"],["bonusAmountCollected","freespin_bonus"]]},"deposit":{"ev":["DepositConditionCanceled","DepositConditionSatisfied","DepositConditionUnsatisfied"],"dep":[["CurrencyCode","external_system_source"],["PromotionAcceptedAt","promotion"],["PromotionId","promotion"]]},"dextra_email":{"ev":["FailedEmailSend","SuccessEmailSend"],"dep":[]},"dextra_sms":{"ev":["FailedSmsSend","SuccessSmsSend"],"dep":[]},"dwh_source":{"ev":["PlayerAdded"],"dep":[]},"email_engagement_split":{"ev":["Path1","Path2","Path3","Path4","Path5","Path6"],"dep":[["CommunicationId","dextra_email"]]},"end_of_journey":{"ev":[],"dep":[]},"end_of_path":{"ev":[],"dep":[]},"event_detector":{"ev":["DetectorFailed","DetectorSuccess"],"dep":[]},"external_system_source":{"ev":["PlayerAdded"],"dep":[]},"freespin_bonus":{"ev":["FreeSpinsBonusTermsNotComplied","FreespinBonusAwardAborted","FreespinBonusCancelConfirmed","FreespinBonusCancelledByWithdrawalConfirmed","FreespinBonusCollectingFinished","FreespinBonusNotUsed","FreespinBonusRejectConfirmed"],"dep":[["CurrencyCode","external_system_source"],["DepositAmount","deposit"],["DepositPaidAmount","deposit"],["PromotionId","promotion"]]},"multipurpose_promotion":{"ev":["PromotionAccepted","PromotionExpired"],"dep":[["CurrencyCode","external_system_source"],["PromotionLinkId","external_system_source"]]},"notification_center#contract1":{"ev":["NotificationNotSent","NotificationSent"],"dep":[]},"notification_center#contract5":{"ev":["NotificationNotSent","NotificationSent"],"dep":[]},"notification_center_engagement_split":{"ev":["NCEngagementSplitPassedPath01","NCEngagementSplitPassedPath02","NCEngagementSplitPassedPath03","NCEngagementSplitPassedPath04","NCEngagementSplitPassedPath05"],"dep":[]},"promotion":{"ev":["PromotionAccepted","PromotionExpired"],"dep":[["CurrencyCode","external_system_source"],["PromotionLinkId","external_system_source"],["SelectedCurrencyCode","external_system_source"]]},"wait_interval":{"ev":["WaitTimeCompleted"],"dep":[]}},"tr":[["ams_decision_split","DecisionSplitPassedPath01","dextra_email"],["ams_decision_split","DecisionSplitPassedPath02","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath03","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath04","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath05","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath06","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath07","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath08","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath09","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath10","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath11","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath12","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath13","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath14","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath15","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath16","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath17","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath18","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath19","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath20","end_of_journey"],["ams_decision_split","DecisionSplitPassedRemainderPath","wait_interval"],["casino_bonus_v2","WageringBonusAwardAborted","end_of_journey"],["casino_bonus_v2","WageringBonusAwardAborted","end_of_path"],["casino_bonus_v2","WageringBonusCancelConfirmed","end_of_path"],["casino_bonus_v2","WageringBonusCancelledByWithdrawalConfirmed","end_of_path"],["casino_bonus_v2","WageringBonusExpired","end_of_path"],["casino_bonus_v2","WageringBonusFinished","end_of_path"],["casino_bonus_v2","WageringBonusForfeited","end_of_path"],["casino_bonus_v2","WageringBonusLost","end_of_path"],["casino_bonus_v2","WageringBonusRejectConfirmed","end_of_path"],["deposit","DepositConditionCanceled","end_of_journey"],["deposit","DepositConditionCanceled","end_of_path"],["deposit","DepositConditionSatisfied","freespin_bonus"],["deposit","DepositConditionUnsatisfied","end_of_path"],["dextra_email","FailedEmailSend","dextra_sms"],["dextra_email","SuccessEmailSend","wait_interval"],["dextra_sms","FailedSmsSend","end_of_path"],["dextra_sms","SuccessSmsSend","end_of_path"],["email_engagement_split","Path1","end_of_path"],["email_engagement_split","Path2","dextra_sms"],["email_engagement_split","Path3","dextra_sms"],["email_engagement_split","Path4","dextra_sms"],["email_engagement_split","Path5","dextra_sms"],["email_engagement_split","Path6","dextra_sms"],["event_detector","DetectorFailed","end_of_path"],["event_detector","DetectorSuccess","end_of_path"],["external_system_source","PlayerAdded","multipurpose_promotion"],["freespin_bonus","FreeSpinsBonusTermsNotComplied","end_of_path"],["freespin_bonus","FreespinBonusAwardAborted","end_of_journey"],["freespin_bonus","FreespinBonusCancelConfirmed","end_of_journey"],["freespin_bonus","FreespinBonusCancelledByWithdrawalConfirmed","end_of_journey"],["freespin_bonus","FreespinBonusCollectingFinished","casino_bonus_v2"],["freespin_bonus","FreespinBonusNotUsed","end_of_path"],["freespin_bonus","FreespinBonusRejectConfirmed","end_of_path"],["notification_center#contract1","NotificationNotSent","notification_center#contract5"],["notification_center#contract1","NotificationSent","wait_interval"],["notification_center#contract5","NotificationNotSent","dextra_email"],["notification_center#contract5","NotificationSent","wait_interval"],["notification_center_engagement_split","NCEngagementSplitPassedPath01","end_of_path"],["notification_center_engagement_split","NCEngagementSplitPassedPath02","ams_decision_split"],["notification_center_engagement_split","NCEngagementSplitPassedPath02","notification_center#contract5"],["notification_center_engagement_split","NCEngagementSplitPassedPath03","ams_decision_split"],["notification_center_engagement_split","NCEngagementSplitPassedPath03","notification_center#contract5"],["notification_center_engagement_split","NCEngagementSplitPassedPath04","ams_decision_split"],["notification_center_engagement_split","NCEngagementSplitPassedPath04","notification_center#contract5"],["notification_center_engagement_split","NCEngagementSplitPassedPath05","ams_decision_split"],["notification_center_engagement_split","NCEngagementSplitPassedPath05","notification_center#contract5"],["promotion","PromotionAccepted","deposit"],["promotion","PromotionExpired","end_of_path"],["wait_interval","WaitTimeCompleted","email_engagement_split"],["wait_interval","WaitTimeCompleted","notification_center_engagement_split"]]};
+
+  var IC = {
+    seg:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="8" r="3.4"/><path d="M3 19c0-3.2 2.7-5 6-5s6 1.8 6 5z"/><ellipse cx="18.5" cy="8" rx="3" ry="1.3"/><path d="M15.5 10v3c0 .7 1.3 1.3 3 1.3s3-.6 3-1.3v-3c0 .7-1.3 1.3-3 1.3s-3-.6-3-1.3z"/></svg>',
+    ref:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="8" r="3.4"/><path d="M3 19c0-3.2 2.7-5 6-5s6 1.8 6 5z"/><path d="M16 9.6l1.7 1.7 3.4-3.4-1.2-1.2-2.2 2.2-.5-.5z"/></svg>',
+    csv:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8.5" cy="8" r="3.4"/><path d="M2.5 19c0-3.2 2.7-5 6-5s6 1.8 6 5z"/><rect x="14" y="12" width="8" height="6" rx="1.2"/><text x="18" y="16.6" font-size="4.2" text-anchor="middle" fill="#fff" font-family="monospace">CSV</text></svg>',
+    api:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8.5" cy="8" r="3.4"/><path d="M2.5 19c0-3.2 2.7-5 6-5s6 1.8 6 5z"/><path d="M18 10.5l3.4 1.9v3.9L18 18.2l-3.4-1.9v-3.9z" opacity=".85"/></svg>',
+    pre:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8.5" cy="8" r="3.4"/><path d="M2.5 19c0-3.2 2.7-5 6-5s6 1.8 6 5z"/><circle cx="18.3" cy="13.6" r="3.6"/><circle cx="18.3" cy="13.6" r="1.4" fill="#fff"/></svg>',
+    evt:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="3.5" width="16" height="17" rx="2.4"/><path d="M8 9h3M8 13h3M8 17h3" stroke-linecap="round"/><path d="M14 8.4l1.4 1.4 2.4-2.4M14 12.4l1.4 1.4 2.4-2.4" stroke-linecap="round"/></svg>',
+    mon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2.5" y="4.5" width="14" height="10" rx="1.8"/><path d="M7 18h6" stroke-linecap="round"/><rect x="18" y="8" width="4" height="8" rx="1.2"/><path d="M9.5 7.2l.9 1.9 2 .3-1.5 1.4.4 2-1.8-1-1.8 1 .4-2L6.6 9.4l2-.3z" fill="currentColor" stroke="none"/></svg>',
+    dsp:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 4v6M12 10l-6 5M12 10l6 5"/><path d="M9 4l3-2 3 2M3 14l3 2 3-2M15 14l3 2 3-2"/></svg>',
+    rsp:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8" cy="6.5" r="2.6"/><circle cx="16" cy="6.5" r="2.6"/><path d="M3.5 13.5c0-2.3 2-3.6 4.5-3.6s4.5 1.3 4.5 3.6zM11.5 13.5c0-2.3 2-3.6 4.5-3.6s4.5 1.3 4.5 3.6z" opacity=".9"/><path d="M6 18h5l-1.6-1.6L10.5 15 7 18l3.5 3-1.1-1.4H6z" opacity=".8"/><path d="M18 18h-5l1.6-1.6L13.5 15 17 18l-3.5 3 1.1-1.4H18z" opacity=".8"/></svg>',
+    chs:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="4" y="6" width="11" height="8" rx="1.6"/><path d="M17 9h4M17 12h4"/><path d="M7 18h9"/></svg>',
+    env:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3.6 7l8.4 6 8.4-6" stroke-linecap="round"/></svg>',
+    envs:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="10.5" rx="1.8"/><path d="M4.6 5.2L12 10.6l7.4-5.4" stroke-linecap="round"/><path d="M6 19h4M6 19l1.6-1.5M6 19l1.6 1.5M18 19h-4M18 19l-1.6-1.5M18 19l-1.6 1.5" stroke-linecap="round"/></svg>',
+    sms:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4.5h16a1.5 1.5 0 011.5 1.5v8A1.5 1.5 0 0120 15.5h-7l-4.5 4v-4H4A1.5 1.5 0 012.5 14V6A1.5 1.5 0 014 4.5z"/></svg>',
+    smss:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4.5 5h15a1 1 0 011 1v7a1 1 0 01-1 1h-6l-3.5 3v-3h-5.5a1 1 0 01-1-1V6a1 1 0 011-1z"/><path d="M6 20h3.5M6 20l1.4-1.3M6 20l1.4 1.3M18 20h-3.5M18 20l-1.4-1.3M18 20l-1.4 1.3" stroke-linecap="round"/></svg>',
+    phn:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="7" y="2.5" width="10" height="19" rx="2.4"/><path d="M10.5 5.5h3" stroke-linecap="round"/></svg>',
+    phns:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="8.5" y="2.5" width="7" height="13" rx="1.8"/><path d="M6 19h3.5M6 19l1.4-1.3M6 19l1.4 1.3M18 19h-3.5M18 19l-1.4-1.3M18 19l-1.4 1.3" stroke-linecap="round"/></svg>',
+    web:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2.5" y="5" width="13" height="9.5" rx="1.8"/><rect x="16.5" y="9" width="5" height="10" rx="1.4"/><path d="M6.5 18h5" stroke-linecap="round"/></svg>',
+    wap:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 00-7.7 13.6L3 21l4.5-1.2A9 9 0 1012 3zm0 2a7 7 0 11-3.6 13l-.4-.2-2.3.6.6-2.2-.2-.4A7 7 0 0112 5z"/><path d="M9.2 8.3c.2-.4.5-.4.8-.4h.5c.2 0 .4.1.5.4l.6 1.3c.1.2 0 .4-.1.6l-.4.4c-.1.2-.2.3 0 .5.4.7 1.2 1.4 1.9 1.7.2.1.4.1.5-.1l.4-.5c.2-.2.4-.2.6-.1l1.3.7c.2.1.3.3.3.5 0 .5-.3 1-.7 1.2-.4.2-.9.3-1.4.2-1.6-.4-3.5-2-4.3-3.5-.4-.7-.5-1.5-.3-2.2z"/></svg>',
+    det:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="3.5" width="16" height="17" rx="2.4"/><path d="M8 8.5h8M8 12h8M8 15.5h5" stroke-linecap="round"/></svg>',
+    cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3.5" y="5" width="17" height="15" rx="2.2"/><path d="M3.5 9.5h17M8 3.5v3M16 3.5v3" stroke-linecap="round"/></svg>',
+    hrg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M7 3.5h10M7 20.5h10M8 3.5v3.2c0 2 4 3.6 4 5.3s-4 3.3-4 5.3v3.2M16 3.5v3.2c0 2-4 3.6-4 5.3s4 3.3 4 5.3v3.2"/></svg>',
+    hook:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 7.5a3 3 0 10-2.6 3l-2.7 4.7"/><path d="M8.4 18.5a3 3 0 101.5-3.6"/><path d="M16.5 18.5a3 3 0 10-1.2-5.7l-2.6-4.6"/></svg>',
+    plug:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M8 4v6a4 4 0 004 4h0a4 4 0 014 4v2"/><path d="M16 4v4M8 20v-4"/><path d="M6 8h4M14 16h4"/></svg>',
+    par:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 4v13M15 4v13"/><path d="M6.5 14.5L9 17l2.5-2.5M12.5 14.5L15 17l2.5-2.5"/></svg>',
+    tree:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="5" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="12" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M12 7v4M6 16v-2h12v2M12 14v-3" stroke-linecap="round"/></svg>',
+    star:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4.5" width="16" height="15" rx="2.4"/><path d="M12 8l1.3 2.7 3 .4-2.2 2.1.5 3-2.6-1.4-2.6 1.4.5-3-2.2-2.1 3-.4z" fill="currentColor" stroke="none"/></svg>',
+    dol:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12.8 6.5v1.2c1.3.2 2.2 1 2.3 2.2h-1.7c-.1-.5-.5-.9-1.4-.9-.8 0-1.3.4-1.3.9 0 .6.5.8 1.8 1.1 1.8.4 2.8 1 2.8 2.5 0 1.3-.9 2.2-2.5 2.4v1.2h-1.4v-1.2c-1.5-.2-2.5-1.1-2.6-2.4h1.8c.1.6.6 1 1.5 1 .9 0 1.4-.4 1.4-1 0-.6-.5-.8-1.9-1.1-1.7-.4-2.7-1-2.7-2.4 0-1.3.9-2.1 2.4-2.3V6.5z" fill="#fff"/></svg>',
+    undol:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 12a8 8 0 10-3 6.2"/><path d="M20 5v5h-5"/><path d="M12 9v6M13.6 10.4c-.3-.6-1-.9-1.8-.9-1 0-1.7.5-1.7 1.3 0 .8.7 1 1.7 1.2 1 .2 1.9.5 1.9 1.4 0 .8-.8 1.4-1.9 1.4-.9 0-1.6-.4-1.8-1"/></svg>',
+    shld:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l7 2.6v6c0 4.3-2.9 8-7 10.4-4.1-2.4-7-6.1-7-10.4v-6z"/><rect x="8" y="9.5" width="8" height="6" rx="1.4" fill="#fff"/><circle cx="10.4" cy="12.5" r=".9"/><circle cx="13.6" cy="12.5" r=".9"/></svg>',
+    tkt:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 8.5h18v2.1a1.4 1.4 0 000 2.8v2.1H3v-2.1a1.4 1.4 0 000-2.8z"/></svg>',
+    tktu:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9h13v1.8a1.2 1.2 0 000 2.4V15H3v-1.8a1.2 1.2 0 000-2.4z"/><path d="M18.6 5.4l2.9 2.9-2.9 2.9-1.1-1.1 1-1h-2.6V7.5h2.6l-1-1z"/></svg>',
+    chipu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="13" cy="13" r="6.4"/><circle cx="13" cy="13" r="2.3"/><path d="M13 6.6v2M13 17.4v2M6.6 13h2M17.4 13h2"/><path d="M6.5 4.5v3.5h3.5" stroke-linecap="round"/></svg>',
+    ball:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7.6l2.8 2-1 3.3h-3.6l-1-3.3z" fill="currentColor" stroke="none"/><path d="M12 3v4.6M4.2 9.4l5.9 3.5M19.8 9.4l-5.9 3.5M7.6 20.4l2.5-7.5M16.4 20.4l-2.5-7.5"/></svg>',
+    chip:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3.4M12 17.6V21M3 12h3.4M17.6 12H21M5.6 5.6l2.4 2.4M16 16l2.4 2.4M18.4 5.6L16 8M8 16l-2.4 2.4"/></svg>',
+    slot:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4.5" y="4" width="15" height="16" rx="2.2"/><text x="11" y="16" font-size="10" font-family="monospace" font-weight="700" fill="currentColor" stroke="none">7</text></svg>',
+    free:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 8h18v2.1a1.4 1.4 0 000 2.8V15H3v-2.1a1.4 1.4 0 000-2.8z"/><text x="12" y="14" font-size="5.4" text-anchor="middle" font-family="monospace" font-weight="700" fill="#fff">FREE</text></svg>',
+    wal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2.5" y="7" width="15" height="10.5" rx="2"/><path d="M13 12.2h4.5" stroke-linecap="round"/><path d="M20 9v6M17 12h6" stroke-linecap="round"/></svg>',
+    coin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.4"/><path d="M14.4 10.2A3 3 0 1014.4 13.8" stroke-linecap="round"/></svg>',
+    end:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 12h11M11 8l4 4-4 4M19 5v14"/></svg>'
+  };
+
+  /* the palette exactly as the back office lists it: same groups, same order,
+     same greyed-out tiles. key = catalog wire name, cap = captured example. */
+  var PAL = [
+    ['Input Source','t-src',0,[
+      ['Custom Segment','seg','dwh_source',1,1],
+      ['Reference codes','ref','',1,0],
+      ['CSV','csv','',0,0],
+      ['API','api','external_system_source',1,0],
+      ['Predefined Segment','pre','',0,0],
+      ['Events','evt','',0,0],
+      ['Promotion','mon','',1,1]]],
+    ['Flow control','t-flow',0,[
+      ['Decision split','dsp','ams_decision_split',1,0],
+      ['Random split','rsp','',0,0],
+      ['Sms engagement split','smss','',0,1],
+      ['Email engagement split','envs','email_engagement_split',0,1],
+      ['Native push engagement split','phns','',0,1],
+      ['On-site messaging engagement split','chs','notification_center_engagement_split',1,1]]],
+    ['Communication','t-comm',0,[
+      ['Native push','phn','',0,0],
+      ['Web push','web','',0,0],
+      ['SMS','sms','dextra_sms',1,0],
+      ['Email','env','dextra_email',1,0],
+      ['On-site messaging','mon','notification_center#contract1',1,0],
+      ['WhatsApp','wap','',0,0]]],
+    ['Delays','t-delay',1,[
+      ['Event Detector','det','event_detector',1,0],
+      ['Date','cal','',1,0],
+      ['Wait','hrg','wait_interval',1,0]]],
+    ['Connectors','t-conn',0,[
+      ['Outgoing API request','hook','',0,0],
+      ['Campaign Connector','plug','',1,0]]],
+    ['Multiple flows','t-flows',0,[
+      ['Parallel flows','par','',1,0],
+      ['Choosable flows','tree','',0,1]]],
+    ['Promotion type','t-promo',0,[
+      ['Promotion','mon','promotion',1,0],
+      ['Multipurpose Promotion','star','multipurpose_promotion',1,0]]],
+    ['Conditions','t-cond',0,[
+      ['Deposit','dol','deposit',1,0],
+      ['Deposit Collection','undol','',0,0],
+      ['Bet Insurance','shld','',0,0],
+      ['Bet','tkt','',1,0],
+      ['Bet Collection','tktu','',0,0],
+      ['Casino Bet Collection','chipu','',0,0]]],
+    ['Reward type','t-rew',0,[
+      ['Sport Bonus','ball','',0,0],
+      ['Casino Bonus','chip','casino_bonus_v2',1,0],
+      ['Casino FreeSpin','slot','freespin_bonus',1,0],
+      ['Sport FreeBet','free','',1,0],
+      ['Money Bonus','wal','',0,0],
+      ['Coins Bonus','coin','',0,0]]],
+    ['Finish','t-fin',0,[
+      ['End of journey','end','end_of_journey',1,0],
+      ['End of path','end','end_of_path',1,0]]]
+  ];
+
+  /* what the real canvas prints under each node title */
+  var SUB = {
+    external_system_source:'PromoPage', dwh_source:'Segment',
+    multipurpose_promotion:'Offered within 1d 0h 0m',
+    promotion:'Accepted by default', deposit:'1 days',
+    freespin_bonus:'Activity customized', casino_bonus_v2:'Activity customized',
+    wait_interval:'2 hours', event_detector:'Waiting for event',
+    ams_decision_split:'2 paths', 'notification_center#contract1':'On-site',
+    dextra_email:'Email content', dextra_sms:'SMS text',
+    end_of_journey:'', end_of_path:''
+  };
+  var SOURCES = ['dwh_source','external_system_source'];
+  var TERMINALS = ['end_of_journey','end_of_path'];
+  var CHANNELS = ['dextra_sms','dextra_email','notification_center#contract1','notification_center#contract5'];
+
+  var TASKS = [
+    { k:'chooser-two-prizes', t:'A chooser with two different prizes',
+      b:'Build a promotion where the player picks one of two. Both start with their own promotion and a deposit. The first one ends in free spins with wagering on top. The second one stops at the free spins, no wagering. Two flows, and they are not the same shape.',
+      need:[['external_system_source|dwh_source','an entry source'],
+            ['multipurpose_promotion','the multipurpose promotion that asks'],
+            ['fork2','two flows hanging off the chooser'],
+            ['promotion*2','a promotion inside each flow'],
+            ['deposit*2','a deposit inside each flow'],
+            ['freespin_bonus*2','free spins inside each flow'],
+            ['casino_bonus_v2*1','wagering on one flow only'],
+            ['!casino_bonus_v2*2','wagering on one flow only, not both']] },
+    { k:'gow-three-tiers', t:'Game of the Week, four tiers',
+      b:'The real Game of the Week shape. A promo page door, one chooser, and four tiers under it, the ones we call small dep, middle dep, big dep and bigger dep. Every tier runs its own promotion, deposit, free spins and wagering bonus.',
+      need:[['external_system_source','an API entry source'],['multipurpose_promotion','the chooser'],
+            ['fork4','four flows hanging off the chooser'],
+            ['promotion*4','a promotion per tier'],['deposit*4','a deposit per tier'],
+            ['freespin_bonus*4','free spins per tier'],
+            ['casino_bonus_v2*4','a wagering bonus per tier']] },
+    { k:'clone-gow', t:"Clone last week's Game of the Week",
+      b:'This is last week duplicated. It ran three tiers, this week runs four, one tier lost its wagering bonus and one path never ends. Fix all three, then validate.',
+      pre:[['API',null],['Multipurpose Promotion',0],
+           ['Promotion',1],['Deposit',2],['Casino FreeSpin',3],['Casino Bonus',4],['End of path',5],
+           ['Promotion',1],['Deposit',7],['Casino FreeSpin',8],['End of path',9],
+           ['Promotion',1],['Deposit',11],['Casino FreeSpin',12],['Casino Bonus',13]],
+      need:[['multipurpose_promotion','the chooser'],['fork4','a fourth tier on the chooser'],
+            ['promotion*4','a promotion per tier'],['deposit*4','a deposit per tier'],
+            ['freespin_bonus*4','free spins per tier'],
+            ['casino_bonus_v2*4','the wagering bonus on every tier'],
+            ['allterm','an ending on every path']] },
+    { k:'comms-only', t:'A comms only journey',
+      b:'No bonus at all. An entry source, an on-site message, a wait, then an email, then out. This is the shape our comms halves use.',
+      need:[['external_system_source|dwh_source','an entry source'],
+            ['notification_center#contract1','an on-site message'],
+            ['wait_interval','a wait'],['dextra_email','an email'],['term','a terminal on the end']] },
+    { k:'winback-split', t:'Win back with a split',
+      b:'An entry source, a decision split, and two different endings under it. One path gets an email, the other goes straight out.',
+      need:[['external_system_source|dwh_source','an entry source'],['ams_decision_split','a decision split'],
+            ['fork2','two paths under the split'],['dextra_email','an email on one path']] }
+  ];
+
+  var tree = [], nid = 0, sel = null, selPort = null, taskIx = -1, checked = false, drag = null;
+
+  var plist = document.getElementById('plist');
+  if (plist) {
+    var cv = document.getElementById('cv'), vr = document.getElementById('vr');
+    var verdict = document.getElementById('verdict'), cvCount = document.getElementById('cvCount');
+    var pgStep = plist.closest('.step');
+    var byLabel = {}, LBL = {};
+    function nice(k){ return LBL[k] || k; }
+
+    PAL.forEach(function(grp){
+      var h = document.createElement('div');
+      h.className = 'pgrp';
+      h.innerHTML = '<i>&#94;</i>' + grp[0];
+      plist.appendChild(h);
+      var g = document.createElement('div');
+      g.className = 'pgrid';
+      grp[3].forEach(function(it){
+        byLabel[it[0]] = { label:it[0], key:it[2], cap:it[3], tint:grp[1], ic:it[1] };
+        if (it[2] && !LBL[it[2]]) LBL[it[2]] = it[0];
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'ptile ' + grp[1] + (grp[2] ? ' round' : '') + (it[4] ? ' off' : '') +
+          (!it[3] && !it[4] ? ' cap-no' : '');
+        b.innerHTML = '<em aria-hidden="true">' + (IC[it[1]] || '') + '</em><span>' + it[0] + '</span>';
+        if (it[4]) {
+          b.disabled = true;
+          b.title = 'Greyed out in the back office too';
+        } else {
+          b.title = it[3] ? '' : 'never captured from a real journey';
+          b.draggable = true;
+          b.addEventListener('dragstart', function(e){
+            drag = it[0];
+            b.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', it[0]);
+            e.dataTransfer.effectAllowed = 'copy';
+          });
+          b.addEventListener('dragend', function(){ drag = null; b.classList.remove('dragging'); clearDrop(); });
+          b.onclick = function(){ place(it[0]); };
+        }
+        g.appendChild(b);
+      });
+      plist.appendChild(g);
+    });
+
+    function talkPg(html, p){ say(pgStep, html, false); if (p) pose(pgStep.querySelector('[data-buddy]'), p); }
+    function node(id){ for (var i=0;i<tree.length;i++) if (tree[i].id===id) return tree[i]; return null; }
+    function kids(id){ return tree.filter(function(n){ return n.parent===id; }); }
+    function ancestors(n){ var out=[], c=n; while (c && c.parent!==null){ c=node(c.parent); if(c) out.push(c); } return out; }
+    var PREF = /Satisfied|CollectingFinished|Finished|Accepted|Sent$|Success|Completed|PassedPath01|PlayerAdded|DetectorSuccess/;
+    /* rule 7 of the composer rules: wire the PRIMARY completion event, not a
+       failure one. The primary is the event a capture uses to reach a node that
+       is not a terminal; otherwise the friendliest-named completion event. */
+    function primaryEv(key){
+      var a = GRAM.acts[key];
+      if (!a || !a.ev.length) return '';
+      var happy = GRAM.tr.filter(function(t){
+        return t[0] === key && TERMINALS.indexOf(t[2]) === -1;
+      }).map(function(t){ return t[1]; });
+      for (var i=0;i<happy.length;i++) if (PREF.test(happy[i])) return happy[i];
+      if (happy.length) return happy[0];
+      for (var j=0;j<a.ev.length;j++) if (PREF.test(a.ev[j])) return a.ev[j];
+      return a.ev[0];
+    }
+    function ports(n){
+      var a = GRAM.acts[n.key];
+      if (!a) return [];
+      var pri = primaryEv(n.key);
+      return a.ev.slice().sort(function(x, y){
+        return (x === pri ? -1 : 0) - (y === pri ? -1 : 0);
+      });
+    }
+    function isTerm(k){ return TERMINALS.indexOf(k) !== -1; }
+
+    function place(label){
+      var it = byLabel[label];
+      if (!tree.length) {
+        if (SOURCES.indexOf(it.key) === -1 && !(it.key === '' && /segment|reference|csv|api|events|promotion/i.test(label))) {
+          talkPg('<p>A journey starts with an input source. Pick one from the top group first.</p>', 'think');
+          return;
+        }
+      } else if (sel === null) {
+        talkPg('<p>Select the node you want to hang this off first. Click it in your journey.</p>', 'think');
+        return;
+      } else {
+        var p = node(sel);
+        if (isTerm(p.key)) {
+          talkPg('<p>Nothing runs after a terminal. That path is finished, so select another node.</p>', 'think');
+          return;
+        }
+        if (SOURCES.indexOf(it.key) !== -1) {
+          talkPg('<p>One input source per journey, and it has to be the first node.</p>', 'think');
+          return;
+        }
+      }
+      var ev = '';
+      if (tree.length) {
+        var pn = node(sel);
+        ev = selPort || primaryEv(pn.key) || ports(pn)[0] || '';
+      }
+      var n = { id:++nid, key:it.key, label:it.label, tint:it.tint, cap:it.cap, ic:it.ic,
+                uid:'\u2026' + (0x1000 + (nid * 2477 % 0xefff)).toString(16),
+                parent: tree.length ? sel : null, via: ev, flow:'' };
+      if (n.parent !== null){
+        var par = node(n.parent);
+        if (par.key === 'multipurpose_promotion' || par.key === 'ams_decision_split' ||
+            par.label === 'Parallel flows')
+          n.flow = 'Flow ' + (kids(par.id).length + 1);
+      }
+      tree.push(n);
+      sel = n.id; selPort = null; checked = false;
+      draw();
+      var line = it.cap
+        ? '<p>Added ' + it.label + '.</p>'
+        : '<p>Added ' + it.label + ', but we have never captured one from a real journey, so no ' +
+          'generator may build it yet. Validate and I will flag it.</p>';
+      talkPg(line + (tree.length === 1 ? '<p>Now hang the next node off it.</p>' : ''),
+             it.cap ? 'book' : 'think');
+    }
+
+    /* is this edge one a captured journey actually shows? */
+    function edgeSeen(n){
+      if (n.parent === null) return true;
+      var p = node(n.parent);
+      if (!p || !p.key || !n.key || !n.via) return true;
+      for (var i = 0; i < GRAM.tr.length; i++){
+        var t = GRAM.tr[i];
+        if (t[0] === p.key && t[1] === n.via && t[2] === n.key) return true;
+      }
+      return false;
+    }
+
+    var CARD_W = 154, CARD_H = 48, TERM = 28, GAP_X = 16, ROW_H = 70;
+
+    /* tidy tree: leaves take the next free column, parents centre over kids */
+    function layout(){
+      var pos = {}, cursor = 0, maxd = 0;
+      function walk(n, d){
+        maxd = Math.max(maxd, d);
+        var ch = kids(n.id), w = isTerm(n.key) ? TERM : CARD_W;
+        if (!ch.length){
+          pos[n.id] = { x:cursor + (CARD_W - w) / 2, y:d, w:w };
+          cursor += CARD_W + GAP_X;
+          return pos[n.id];
+        }
+        var boxes = ch.map(function(c){ return walk(c, d + 1); });
+        var a = boxes[0], z = boxes[boxes.length - 1];
+        pos[n.id] = { x:(a.x + z.x + z.w) / 2 - w / 2, y:d, w:w };
+        return pos[n.id];
+      }
+      tree.filter(function(n){ return n.parent === null; }).forEach(function(r){ walk(r, 0); });
+      var minx = 0, maxx = 0;
+      Object.keys(pos).forEach(function(k){
+        minx = Math.min(minx, pos[k].x);
+        maxx = Math.max(maxx, pos[k].x + pos[k].w);
+      });
+      Object.keys(pos).forEach(function(k){ pos[k].x -= minx; });
+      return { pos:pos, w:Math.max(maxx - minx, 180), h:(maxd + 1) * ROW_H };
+    }
+
+    function elbow(x1, y1, x2, y2){
+      var my = y1 + (y2 - y1) / 2, r = 7;
+      if (Math.abs(x1 - x2) < 1) return 'M' + x1 + ' ' + y1 + 'V' + y2;
+      var dir = x2 > x1 ? 1 : -1;
+      return 'M' + x1 + ' ' + y1 + 'V' + (my - r) +
+             'Q' + x1 + ' ' + my + ' ' + (x1 + dir * r) + ' ' + my +
+             'H' + (x2 - dir * r) +
+             'Q' + x2 + ' ' + my + ' ' + x2 + ' ' + (my + r) + 'V' + y2;
+    }
+
+    function draw(){
+      var wrap = document.getElementById('cvwrap');
+      var attach = document.getElementById('attach');
+      if (!tree.length){
+        wrap.classList.add('empty');
+        cv.innerHTML = '<span class="cv-empty">empty canvas<br>start with an input source</span>';
+        cvCount.textContent = '';
+        attach.innerHTML = '';
+        verdict.hidden = true; vr.innerHTML = '';
+        return;
+      }
+      wrap.classList.remove('empty');
+      var L = layout(), paths = [], pills = [], cards = [];
+      tree.forEach(function(n){
+        var p = L.pos[n.id];
+        var h = isTerm(n.key) ? TERM : CARD_H;
+        if (n.parent !== null){
+          var pp = L.pos[n.parent], ph = isTerm(node(n.parent).key) ? TERM : CARD_H;
+          var x1 = pp.x + pp.w / 2, y1 = pp.y * ROW_H + ph, x2 = p.x + p.w / 2, y2 = p.y * ROW_H;
+          paths.push('<path d="' + elbow(x1, y1, x2, y2) + '" fill="none" stroke="var(--line-2)" ' +
+            'stroke-width="1.2" stroke-dasharray="2 3"/>');
+          if (n.via)
+            pills.push('<span class="ev' + (edgeSeen(n) ? '' : ' unseen') + '" title="' + n.via +
+              '" style="left:' + x2 + 'px;top:' + (y2 - 9) + 'px">' + n.via + '</span>');
+          if (n.flow)
+            pills.push('<span class="flowchip" style="left:' + x2 + 'px;top:' + (y2 - 27) + 'px">' +
+              n.flow + '</span>');
+        }
+        var sub = SUB[n.key] === undefined ? 'not captured' : SUB[n.key];
+        cards.push('<button class="nd ' + (isTerm(n.key) ? 'term ' : '') + (sel === n.id ? 'sel' : '') +
+          '" data-id="' + n.id + '" type="button" style="left:' + p.x + 'px;top:' + (p.y * ROW_H) +
+          'px"><em class="' + n.tint + '" aria-hidden="true">' + (IC[n.ic] || '') + '</em>' +
+          (isTerm(n.key) ? '' : '<span><b>' + n.label + '</b><s>' + (sub || '') +
+           '<u>' + n.uid + '</u></s></span>') + '</button>');
+      });
+      var W = L.w + 8, H = L.h + 30;
+      cv.style.width = W + 'px';
+      cv.style.height = H + 'px';
+      cv.innerHTML = '<svg class="cvsvg" width="' + W + '" height="' + H + '">' +
+        paths.join('') + '</svg>' + pills.join('') + cards.join('');
+      /* fit sideways so every flow is visible, then pan to follow the selection */
+      var k = Math.max(Math.min(1, (wrap.clientWidth - 26) / W), 0.62);
+      cv.style.transform = 'translate(12px,20px) scale(' + k.toFixed(3) + ')';
+      cv.style.width = (W * k + 24) + 'px';
+      cv.style.height = (H * k + 28) + 'px';
+      var selp = sel === null ? null : L.pos[sel];
+      if (selp){
+        var sy = selp.y * ROW_H * k, sh = 60 * k;
+        if (sy + sh + 20 > wrap.scrollTop + wrap.clientHeight)
+          wrap.scrollTop = sy + sh + 40 - wrap.clientHeight;
+        else if (sy < wrap.scrollTop) wrap.scrollTop = Math.max(0, sy - 20);
+      }
+      cvCount.textContent = tree.length + (tree.length === 1 ? ' node' : ' nodes');
+
+      var selN = sel === null ? null : node(sel);
+      if (selN && !isTerm(selN.key)){
+        var pl = ports(selN);
+        attach.innerHTML = '<span class="lbl">attach after</span><b style="color:var(--ink);' +
+          'font-size:11px">' + selN.label + '</b>' +
+          (pl.length ? '<span class="lbl">via</span>' + pl.slice(0, 3).map(function(e){
+            return '<button class="port' + ((selPort || pl[0]) === e ? ' on' : '') +
+                   '" data-ev="' + e + '" type="button">' + e + '</button>';
+          }).join('') + (pl.length > 3 ? '<span class="port" style="border:0">+' + (pl.length - 3) +
+          '</span>' : '') : '');
+        if (kids(selN.id).length === 0 && tree.length > 1)
+          attach.innerHTML += '<button class="btn g s" data-drop="1" type="button">remove</button>';
+      } else {
+        attach.innerHTML = selN
+          ? '<span class="lbl">that path is finished</span>' +
+            (kids(selN.id).length === 0 && tree.length > 1
+              ? '<button class="btn g s" data-drop="1" type="button">remove</button>' : '')
+          : '';
+      }
+      if (!checked){ verdict.hidden = true; vr.innerHTML = ''; }
+    }
+
+    document.getElementById('attach').addEventListener('click', function(e){
+      if (e.target.closest('[data-drop]')){
+        /* a leaf can be taken off, which is how you correct a duplicate */
+        var n = node(sel);
+        if (!n || kids(n.id).length) return;
+        tree = tree.filter(function(x){ return x.id !== n.id; });
+        sel = n.parent; selPort = null; checked = false; draw();
+        talkPg('<p>Taken off. That path needs a new ending.</p>', 'flag');
+        return;
+      }
+      var p = e.target.closest('.port');
+      if (!p || !p.dataset.ev) return;
+      selPort = p.dataset.ev; draw();
+    });
+    cv.addEventListener('click', function(e){
+      var b = e.target.closest('.nd');
+      if (!b) return;
+      sel = Number(b.dataset.id); selPort = null; draw();
+      var n = node(sel), a = GRAM.acts[n.key];
+      var msg = '<p><b>' + n.label + '.</b> ';
+      if (!n.key) msg += 'We have no captured example of this one, so I cannot tell you what it emits.</p>';
+      else {
+        msg += 'It emits ' + (a ? a.ev.length : 0) + ' completion events, and the first one is what ' +
+               'the next node normally hangs off.</p>';
+        if (a && a.dep.length)
+          msg += '<p>It needs ' + a.dep.map(function(d){ return d[0]; }).join(', ') +
+                 ' from the nodes above it.</p>';
+      }
+      talkPg(msg, 'glass');
+    });
+
+    function validate(){
+      var rows = [], errs = 0;
+      var roots = tree.filter(function(n){ return n.parent === null; });
+      if (!tree.length) { rows.push(['err','nothing on the canvas yet']); errs++; }
+      if (roots.length > 1) { rows.push(['err','more than one root node. A journey has one input source']); errs++; }
+      roots.forEach(function(r){
+        if (SOURCES.indexOf(r.key) === -1 && r.key !== '')
+          { rows.push(['err','the first node must be an input source, not ' + r.label]); errs++; }
+      });
+      tree.forEach(function(n){
+        if (!n.cap) { rows.push(['blocked', n.label + ': no captured example, cannot build safely']); errs++; }
+      });
+      tree.forEach(function(n){
+        var a = GRAM.acts[n.key];
+        if (!a || !a.dep.length) return;
+        var up = ancestors(n).map(function(x){ return x.key; });
+        var gone = {};
+        a.dep.forEach(function(d){
+          if (SOURCES.indexOf(d[1]) !== -1 && up.some(function(k){ return SOURCES.indexOf(k) !== -1; })) return;
+          if (up.indexOf(d[1]) !== -1) return;
+          (gone[d[1]] = gone[d[1]] || []).push(d[0]);
+        });
+        Object.keys(gone).forEach(function(from){
+          rows.push(['err', n.label + ' needs ' + gone[from].join(' and ') + ' from a ' + nice(from) +
+                     ', and there is none above it']); errs++;
+        });
+      });
+      tree.forEach(function(n){
+        if (n.parent === null || !n.key) return;
+        var p = node(n.parent);
+        if (!p.key) return;
+        if (edgeSeen(n)) rows.push(['ok', nice(p.key) + ' --' + n.via + '--> ' + nice(n.key)]);
+        else {
+          var note = ' never seen in a captured journey, verify it is legal';
+          if (p.key === 'multipurpose_promotion' && n.key === 'promotion')
+            note = ' is not in our captures, though the live wheel and Game of the Week journeys both' +
+                   ' do exactly this. Our capture set is behind, the shape is fine';
+          rows.push(['warn','transition ' + nice(p.key) + ' --' + n.via + '--> ' + nice(n.key) + note]);
+        }
+      });
+      tree.forEach(function(n){
+        if (kids(n.id).length === 0 && !isTerm(n.key))
+          rows.push(['warn','the path ending at ' + n.label + ' has no terminal']);
+        if (CHANNELS.indexOf(n.key) !== -1)
+          rows.push(['warn', n.label + ' has no copy set in this plan']);
+      });
+      if (taskIx >= 0) {
+        var miss = taskCheck(TASKS[taskIx]);
+        if (miss.length) { miss.forEach(function(m){ rows.push(['err','task: still missing ' + m]); errs++; }); }
+        else if (errs) rows.push(['warn','task: the shape is right, but fix the problems above first']);
+        else {
+          rows.push(['ok','task complete: ' + TASKS[taskIx].t]);
+          markDone(TASKS[taskIx].k);
+        }
+      }
+      checked = true;
+      verdict.hidden = false;
+      verdict.className = 'verdict ' + (errs ? 'no' : 'yes');
+      verdict.textContent = errs ? 'not approvable' : 'approvable';
+      vr.innerHTML = rows.map(function(r){
+        return '<div class="vrow ' + r[0] + '"><b>' + r[0].toUpperCase() + '</b><span>' + r[1] + '</span></div>';
+      }).join('') || '<div class="vrow ok"><b>OK</b><span>nothing to flag</span></div>';
+      var nWarn = rows.filter(function(r){ return r[0] === 'warn'; }).length;
+      if (!errs && !nWarn)
+        talkPg('<p>Clean. That would build.</p><p>Every edge here matches one we have seen in a real ' +
+               'journey, and every node has what it needs from above.</p>', 'party');
+      else if (!errs)
+        talkPg('<p>It would build, with ' + nWarn + (nWarn === 1 ? ' thing' : ' things') +
+               ' worth a look. Warnings mean I cannot confirm it from a capture, not that it is wrong.</p>', 'thumb');
+      else
+        talkPg('<p>Not approvable yet. ' + errs + (errs === 1 ? ' problem' : ' problems') +
+               ' in the list, and the red ones are the ones that stop a build.</p>', 'think');
+      draw();
+      verdict.hidden = false;
+    }
+
+    function taskCheck(task){
+      var keys = tree.map(function(n){ return n.key || n.label; });
+      var count = function(k){ return keys.filter(function(x){ return x === k; }).length; };
+      var forks = tree.map(function(n){ return kids(n.id).length; });
+      var miss = [];
+      task.need.forEach(function(nd){
+        var spec = nd[0], what = nd[1], m;
+        if ((m = /^fork(\d+)$/.exec(spec))){
+          if (!forks.some(function(f){ return f >= Number(m[1]); })) miss.push(what);
+          return;
+        }
+        if (spec === 'allterm'){
+          var loose = tree.filter(function(n){
+            return kids(n.id).length === 0 && TERMINALS.indexOf(n.key) === -1;
+          });
+          if (loose.length) miss.push(what);
+          return;
+        }
+        if (spec === 'term'){
+          if (!keys.some(function(k){ return TERMINALS.indexOf(k) !== -1; })) miss.push(what);
+          return;
+        }
+        if (spec.charAt(0) === '!'){
+          m = /^!(.+)\*(\d+)$/.exec(spec);
+          if (m){ if (count(m[1]) >= Number(m[2])) miss.push(what); return; }
+          if (keys.indexOf(spec.slice(1)) !== -1) miss.push(what);
+          return;
+        }
+        if ((m = /^(.+)\*(\d+)$/.exec(spec))){
+          if (count(m[1]) < Number(m[2])) miss.push(what);
+          return;
+        }
+        if (!spec.split('|').some(function(k){ return keys.indexOf(k) !== -1; })) miss.push(what);
+      });
+      return miss;
+    }
+
+    /* ── drag and drop ── */
+    function clearDrop(){
+      wrapEl.classList.remove('dragover');
+      var d = cv.querySelector('.nd.drop');
+      if (d) d.classList.remove('drop');
+    }
+    var wrapEl = document.getElementById('cvwrap');
+    wrapEl.addEventListener('dragover', function(e){
+      if (!drag) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      var card = e.target.closest ? e.target.closest('.nd') : null;
+      var cur = cv.querySelector('.nd.drop');
+      if (cur && cur !== card) cur.classList.remove('drop');
+      if (card && !isTerm(node(Number(card.dataset.id)).key)) card.classList.add('drop');
+      wrapEl.classList.add('dragover');
+    });
+    wrapEl.addEventListener('dragleave', function(e){
+      if (e.target === wrapEl) clearDrop();
+    });
+    wrapEl.addEventListener('drop', function(e){
+      if (!drag) return;
+      e.preventDefault();
+      var label = e.dataTransfer.getData('text/plain') || drag;
+      var card = e.target.closest ? e.target.closest('.nd') : null;
+      if (card){
+        var id = Number(card.dataset.id);
+        if (id !== sel){ sel = id; selPort = null; }
+      }
+      clearDrop();
+      drag = null;
+      place(label);
+    });
+
+    /* ── the note: tasks, and which ones this operator has finished ──
+       Progress is stored against the logged-in operator at
+       /api/admin/onboarding/progress, so it follows the person and not the
+       browser. The shared copy of this page has no server behind it, so it
+       falls back to this machine only when the endpoint is not there. */
+    var PROGRESS_URL = '/api/admin/onboarding/progress';
+    var LOCAL_KEY = 'flick.playground.done.v1';
+    var done = [];
+    var serverBacked = false;
+    var noteList = document.getElementById('noteList');
+    var noteCount = document.getElementById('noteCount');
+    var noteHint = document.getElementById('noteHint');
+
+    function localDone(){
+      var keys = TASKS.map(function(t){ return t.k; });
+      try {
+        var raw = JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]') || [];
+        return raw.filter(function(k){ return keys.indexOf(k) !== -1; });
+      } catch (e) { return []; }
+    }
+    function localSave(){
+      try { localStorage.setItem(LOCAL_KEY, JSON.stringify(done)); } catch (e) {}
+    }
+
+    function drawNote(){
+      noteList.innerHTML = TASKS.map(function(t, i){
+        var isDone = done.indexOf(t.k) !== -1;
+        return '<li class="' + (isDone ? 'done ' : '') + (taskIx === i ? 'now' : '') +
+          '"><button type="button" data-i="' + i + '"><i>' + (isDone ? '✓' : '') + '</i>' +
+          '<span>' + t.t + '</span></button></li>';
+      }).join('');
+      noteCount.textContent = done.length + ' / ' + TASKS.length;
+    }
+
+    function markDone(key){
+      if (done.indexOf(key) !== -1) return;
+      done.push(key);
+      drawNote();
+      if (!serverBacked){ localSave(); return; }
+      fetch(PROGRESS_URL, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        credentials:'same-origin',
+        body: JSON.stringify({ task:key, done:true })
+      }).then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(d){ if (d && d.done){ done = d.done; drawNote(); } })
+        .catch(function(){ localSave(); });
+    }
+
+    /* ask the server first; fall back to this machine when there is none */
+    fetch(PROGRESS_URL, { credentials:'same-origin', headers:{ 'Accept':'application/json' } })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        if (d && d.done){
+          serverBacked = true;
+          done = d.done;
+          noteHint.textContent = 'Ticks are saved to your operator account.';
+        } else {
+          done = localDone();
+        }
+        drawNote();
+      })
+      .catch(function(){ done = localDone(); drawNote(); });
+
+    function preload(rows){
+      tree = []; nid = 0; sel = null; selPort = null;
+      var ids = [];
+      rows.forEach(function(row){
+        var it = byLabel[row[0]];
+        var parent = row[1] === null ? null : ids[row[1]];
+        var par = parent === null ? null : node(parent);
+        var n = { id:++nid, key:it.key, label:it.label, tint:it.tint, cap:it.cap, ic:it.ic,
+                  uid:'\u2026' + (0x1000 + (nid * 2477 % 0xefff)).toString(16),
+                  parent:parent, via: par ? primaryEv(par.key) : '', flow:'' };
+        if (par && (par.key === 'multipurpose_promotion' || par.key === 'ams_decision_split'))
+          n.flow = 'Flow ' + (kids(par.id).length + 1);
+        tree.push(n);
+        ids.push(n.id);
+      });
+      sel = null; checked = false;
+    }
+
+    noteList.addEventListener('click', function(e){
+      var b = e.target.closest('button');
+      if (!b) return;
+      taskIx = Number(b.dataset.i);
+      checked = false;
+      if (TASKS[taskIx].pre) preload(TASKS[taskIx].pre);
+      drawNote(); draw();
+      var t = TASKS[taskIx];
+      talkPg('<p><b>' + t.t + '.</b> ' + t.b + '</p><p>Build it, then press Validate and I will say ' +
+             'what is missing.</p>', 'flag');
+    });
+    drawNote();
+
+    document.getElementById('pgCheck').onclick = validate;
+    document.getElementById('pgUndo').onclick = function(){
+      if (!tree.length) return;
+      var last = tree[tree.length - 1];
+      if (kids(last.id).length) return;
+      tree.pop(); sel = last.parent; selPort = null; checked = false; draw();
+      talkPg('<p>Taken off again.</p>', 'flag');
+    };
+    document.getElementById('pgClear').onclick = function(){
+      /* the canvas clears, the chosen task stays on the note. A task that hands
+         you a duplicate hands it back rather than leaving you empty. */
+      tree = []; sel = null; selPort = null; checked = false;
+      if (taskIx >= 0 && TASKS[taskIx].pre) preload(TASKS[taskIx].pre);
+      draw();
+      talkPg('<p>Blank canvas. Start with an input source.</p>', 'flag');
+    };
+    draw();
+  }
+
+  /* ── full screen captures ── */
+  var lb = document.getElementById('lb');
+  document.addEventListener('click', function(e){
+    var fig = e.target.closest('.shot');
+    if (fig && !lb.classList.contains('on')){
+      var inner = fig.querySelector('.shot-in');
+      if (!inner) return;
+      lb.innerHTML = '<div class="lb-in">' + inner.innerHTML +
+        '<button class="lb-x" type="button">close</button></div>';
+      lb.classList.add('on');
+      /* size it to the viewport in js, so the overlay tracks the image exactly
+         and the red marks stay where they belong */
+      var im = lb.querySelector('img');
+      var box = lb.querySelector('.lb-in');
+      var fitImg = function(){
+        var nw = im.naturalWidth || im.width, nh = im.naturalHeight || im.height;
+        if (!nw || !nh) return;
+        var k = Math.min((innerWidth - 52) / nw, (innerHeight - 96) / nh);
+        box.style.width = Math.round(nw * k) + 'px';
+        im.style.width = '100%';
+        im.style.height = 'auto';
+      };
+      if (im.complete) fitImg(); else im.addEventListener('load', fitImg);
+      addEventListener('resize', fitImg);
+      var x = lb.querySelector('.lb-x');
+      if (x) x.focus();
+      return;
+    }
+    if (lb.classList.contains('on')) lb.classList.remove('on');
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && lb.classList.contains('on')) lb.classList.remove('on');
+  });
+  /* ── the duplicate, performed: right click, Duplicate, three edits, save ── */
+  (function(){
+    var row = document.getElementById('dqRow');
+    if (!row) return;
+    var ctx = document.getElementById('dqCtx'), menu = document.getElementById('dqMenu'),
+        dup = document.getElementById('dqDup'), copy = document.getElementById('dqCopy'),
+        cid = document.getElementById('dqCopyId'), cst = document.getElementById('dqCopyState'),
+        hint = document.getElementById('dqHint'), ptr = document.getElementById('dqPtr'),
+        save = document.getElementById('dqSave'), count = document.getElementById('dqCount'),
+        msg = document.getElementById('dqMsg'), chip = document.getElementById('dqChip'),
+        nameI = document.getElementById('dqName'), fromI = document.getElementById('dqFrom'),
+        toI = document.getElementById('dqTo'), gameI = document.getElementById('dqGame');
+    var ins = [nameI, fromI, toI, gameI],
+        boxes = [].slice.call(document.querySelectorAll('#dqCtx, .dq-set.field')),
+        fields = [].slice.call(document.querySelectorAll('.dq-set.field'));
+    var START = ins.map(function(i){ return i.value; });
+    var made = false, saved = false;
+    var LAST = "last week's game";
+    var step = row.closest('.step'), bub = step.querySelector('[data-bubble]');
+    var POSE = ['wave','think','book','thumb','flag','party','glass'];
+    function flick(html, p){
+      if (!bub) return;
+      if (!bub.dataset.keep) bub.dataset.keep = bub.innerHTML;
+      bub.innerHTML = html;
+      bub.classList.remove('tip');
+      var f = step.querySelector('.fox');
+      if (f && p){ POSE.forEach(function(x){ f.classList.remove(x); }); f.classList.add(p); }
+    }
+
+    function okName(){
+      var v = nameI.value;
+      return v.indexOf('05-08-26') < 0 && v.indexOf('12-08-26') > -1;
+    }
+    function okWindow(){
+      return /^\s*12\.08\b/.test(fromI.value) && /^\s*18\.08\b/.test(toI.value);
+    }
+    function okGame(){
+      var v = gameI.value.trim();
+      return v.length > 2 && v.toLowerCase() !== LAST && v.toLowerCase().indexOf('last') < 0;
+    }
+    var CHECKS = [
+      { ok:okName,   box:0, say:"the name still carries last week's date" },
+      { ok:okWindow, box:1, say:'the window still opens on 05.08' },
+      { ok:okGame,   box:2, say:"the game is still last week's" }
+    ];
+
+    function paint(){
+      var n = 0;
+      CHECKS.forEach(function(c){
+        var good = c.ok();
+        if (good) n++;
+        var b = fields[c.box];
+        b.classList.toggle('good', made && good);
+        if (good) b.classList.remove('bad');
+      });
+      if (!made) count.textContent = 'duplicate it first';
+      else if (saved) count.textContent = 'saved';
+      else count.textContent = n + ' of 3 edits done';
+      if (chip) chip.textContent = okGame() ? gameI.value.trim().slice(0, 22) : 'new game';
+      return n;
+    }
+
+    function openMenu(x, y){
+      if (made) return;
+      var b = ctx.getBoundingClientRect();
+      var mx = x ? Math.max(10, Math.min(x - b.left, b.width - 172)) : 150;
+      var my = y ? Math.max(8, Math.min(y - b.top, 34)) : 30;
+      menu.style.left = mx + 'px'; menu.style.top = my + 'px';
+      ptr.style.left = (mx - 8) + 'px'; ptr.style.top = (my - 7) + 'px';
+      menu.hidden = false; hint.hidden = true;
+      dup.focus();
+    }
+    function closeMenu(){
+      if (menu.hidden) return;
+      menu.hidden = true;
+      if (!made) hint.hidden = false;
+    }
+    row.addEventListener('contextmenu', function(e){ e.preventDefault(); openMenu(e.clientX, e.clientY); });
+    row.addEventListener('click', function(e){ openMenu(e.clientX, e.clientY); });
+    document.addEventListener('click', function(e){
+      if (menu.hidden) return;
+      if (e.target.closest('#dqMenu') || e.target.closest('#dqRow')) return;
+      closeMenu();
+    });
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeMenu(); });
+
+    dup.addEventListener('click', function(){
+      made = true;
+      menu.hidden = true; hint.hidden = true; ptr.hidden = true;
+      ctx.classList.add('done');
+      copy.hidden = false;
+      ins.forEach(function(i){ i.disabled = false; });
+      fields.forEach(function(b){ b.classList.remove('locked'); });
+      save.disabled = false;
+      msg.className = 'dq-msg';
+      msg.textContent = 'The copy is yours now. It still says 05.08 everywhere.';
+      flick('<p>Copied. It is a draft, and it still says 05.08 everywhere.</p>' +
+            '<p>Change the name, the window and the game, then save.</p>', 'book');
+      nameI.focus();
+      var at = nameI.value.indexOf('05-08-26');
+      if (at > -1) nameI.setSelectionRange(at, at + 8);
+      paint();
+    });
+
+    ins.forEach(function(i){ i.addEventListener('input', paint); });
+
+    function reset(){
+      made = false; saved = false;
+      ins.forEach(function(i, k){ i.value = START[k]; i.disabled = true; });
+      fields.forEach(function(b){ b.classList.add('locked'); b.classList.remove('good', 'bad'); });
+      ctx.classList.remove('done');
+      copy.hidden = true; copy.classList.remove('done');
+      cid.textContent = 'no id yet'; cst.textContent = 'three edits to make';
+      ptr.hidden = false; hint.hidden = false; menu.hidden = true;
+      save.disabled = true; save.textContent = 'Save'; save.classList.remove('ghost');
+      msg.className = 'dq-msg'; msg.textContent = '';
+      if (bub && bub.dataset.keep) bub.innerHTML = bub.dataset.keep;
+      var f0 = step.querySelector('.fox');
+      if (f0){ POSE.forEach(function(x){ f0.classList.remove(x); }); f0.classList.add(step.dataset.pose); }
+      paint();
+    }
+
+    save.addEventListener('click', function(){
+      if (saved) { reset(); return; }
+      var bad = CHECKS.filter(function(c){ return !c.ok(); });
+      if (bad.length){
+        bad.forEach(function(c){ fields[c.box].classList.add('bad'); });
+        msg.className = 'dq-msg bad';
+        msg.textContent = 'Not saved: ' + bad.map(function(c){ return c.say; }).join(', ') + '.';
+        flick('<p>Not yet. ' + bad[0].say.charAt(0).toUpperCase() + bad[0].say.slice(1) +
+              '.</p><p>This is how last week reaches players.</p>', 'flag');
+        fields[bad[0].box].querySelector('.dq-in').focus();
+        return;
+      }
+      saved = true;
+      ins.forEach(function(i){ i.disabled = true; });
+      copy.classList.add('done');
+      cid.textContent = 'JRN-0-641903';
+      cst.textContent = 'draft, not live';
+      save.textContent = 'Start again'; save.classList.add('ghost');
+      msg.className = 'dq-msg good';
+      msg.innerHTML = 'Saved as a draft. New journey id <code>JRN-0-641903</code>, ' +
+        'and every activity in it got a new id.';
+      flick('<p>That is this week built, as a draft.</p>' +
+            '<p>Last job: point the promo page at this new journey.</p>', 'party');
+      paint();
+    });
+
+    paint();
+  })();
+
+  var h = /^#s(\d+)$/.exec(location.hash);
+  go(h ? Number(h[1]) - 1 : 0);
+})();
+</script>
+
+</body>
+</html>
