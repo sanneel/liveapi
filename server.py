@@ -184,7 +184,7 @@ async def _global_exception_handler(request: _FRequest, exc: Exception):
 # build step on every deploy and its bundle had once been a dependency-free
 # StaticFiles mount, so it answered 200 for anonymous callers where every other
 # /admin/* path 404s. Both are gone: one template, no build, login required, and
-# /admin/onboarding redirects to /onboarding so old links still land.
+# it is served at /admin/onboarding, the path the proxy already forwards.
 
 # Order matters: include these BEFORE legacy /admin so they take precedence.
 # Auth routes (login/logout/2fa) MUST be registered before admin_views_router
@@ -200,7 +200,7 @@ app.include_router(admin_cube_router)        # /admin/cube + /api/admin/cube/* o
 app.include_router(admin_slot_cards_router)  # /admin/slot-cards + generate (photo -> card GIF)
 app.include_router(admin_tutorials_router)   # /admin/tutorials + /api/tutorials (help library)
 app.include_router(admin_planner_router)     # /admin/planner + Gemini proxy (journey planner chat)
-app.include_router(onboarding_router)        # /onboarding + /admin/onboarding (operator tour)
+app.include_router(onboarding_router)        # /admin/onboarding + /onboarding (operator tour)
 app.include_router(admin_views_router)       # /admin (dashboard), /admin/matches
 app.include_router(admin_api_router)
 app.include_router(public_hot_router)        # /hot, /hot/{sport}, /hot/{sport}.png

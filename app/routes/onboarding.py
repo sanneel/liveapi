@@ -1,8 +1,8 @@
 """
 Operator onboarding — the guided tour a new joiner walks through on day one.
 
-  GET   /onboarding                        the tour itself (16 screens)  — any login
-  GET   /admin/onboarding                  redirect to /onboarding       — any login
+  GET   /admin/onboarding                  the tour itself (16 screens)  — any login
+  GET   /onboarding                        the same page, shorter path   — any login
   GET   /api/admin/onboarding/progress     which practice tasks are done — any login
   POST  /api/admin/onboarding/progress     tick or clear one task        — any login
 
@@ -27,7 +27,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import APIRouter, Body, Depends, Request, status
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from ..auth.dependencies import require_login
@@ -55,20 +55,26 @@ KNOWN_TASKS = frozenset(
 router = APIRouter()
 
 
-@router.get("/onboarding", response_class=HTMLResponse)
-def onboarding_page(request: Request, user: User = Depends(require_login)):
+def _render(request: Request, user: User) -> HTMLResponse:
     """Part 1 of onboarding: the standards, one live promotion end to end, how we
     track it, and the playground. Read-only, so viewers get it too."""
-    logger.info(f"onboarding tour opened by {user.username}")
+    logger.info(f"onboarding tour opened by {user.username} at {request.url.path}")
     return templates.TemplateResponse(request, "onboarding.html", {"user": user})
 
 
-@router.get("/admin/onboarding", include_in_schema=False)
-def onboarding_legacy(user: User = Depends(require_login)) -> RedirectResponse:
-    """The tour used to live under /admin/, and that is the link people have in
-    their bookmarks and in chat. Send them to the current one rather than to a
-    404. Login is still required, so the cloak in auth/dependencies.py holds."""
-    return RedirectResponse("/onboarding", status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+@router.get("/admin/onboarding", response_class=HTMLResponse, include_in_schema=False)
+def onboarding_admin_page(request: Request, user: User = Depends(require_login)):
+    """The canonical path. It stays under /admin/ because that prefix is what the
+    reverse proxy in front of the app already forwards, and because it is the
+    link people have in their bookmarks. Served, not redirected: a redirect to a
+    top-level path only 404s again wherever the proxy does not forward it."""
+    return _render(request, user)
+
+
+@router.get("/onboarding", response_class=HTMLResponse)
+def onboarding_page(request: Request, user: User = Depends(require_login)):
+    """The same page at the shorter path, for anyone who has it open already."""
+    return _render(request, user)
 
 
 @router.get("/api/admin/onboarding/progress")
