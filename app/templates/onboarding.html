@@ -334,7 +334,7 @@
   button.dq-jrn:hover{border-color:var(--line-2)}
   button.dq-jrn:focus-visible{outline:2px solid var(--key);outline-offset:2px}
   .dq-ctx.done{padding-bottom:0}
-  .dq-copy{margin-top:6px;border-style:dashed;
+  .dq-copy{border-style:dashed;
     border-color:color-mix(in srgb, var(--flag) 45%, transparent);
     background:color-mix(in srgb, var(--flag) 6%, var(--raise))}
   .dq-copy u{color:var(--flag)}
@@ -1033,7 +1033,8 @@
             <button class="dq-jrn" id="dqRow" type="button" aria-haspopup="menu">
               <i></i><b>Game of the Week</b><code>JRN-0-639700</code><u>opened 05.08</u></button>
             <div class="dq-jrn dq-copy" id="dqCopy" hidden><i></i><b>Game of the Week</b>
-              <code id="dqCopyId">no id yet</code><u id="dqCopyState">three edits to make</u></div>
+              <code id="dqCopyId">copy of JRN-0-639700, no id yet</code>
+              <u id="dqCopyState">three edits to make</u></div>
             <div class="dq-menu" id="dqMenu" role="menu" hidden>
               <button class="dq-mi on" id="dqDup" type="button" role="menuitem">Duplicate</button>
             </div>
@@ -2135,7 +2136,7 @@
       made = true;
       menu.hidden = true; hint.hidden = true; ptr.hidden = true;
       ctx.classList.add('done');
-      copy.hidden = false;
+      row.hidden = true; copy.hidden = false;
       ins.forEach(function(i){ i.disabled = false; });
       fields.forEach(function(b){ b.classList.remove('locked'); });
       save.disabled = false;
@@ -2156,8 +2157,9 @@
       ins.forEach(function(i, k){ i.value = START[k]; i.disabled = true; });
       fields.forEach(function(b){ b.classList.add('locked'); b.classList.remove('good', 'bad'); });
       ctx.classList.remove('done');
-      copy.hidden = true; copy.classList.remove('done');
-      cid.textContent = 'no id yet'; cst.textContent = 'three edits to make';
+      row.hidden = false; copy.hidden = true; copy.classList.remove('done');
+      cid.textContent = 'copy of JRN-0-639700, no id yet';
+      cst.textContent = 'three edits to make';
       ptr.hidden = false; hint.hidden = false; menu.hidden = true;
       save.disabled = true; save.textContent = 'Save'; save.classList.remove('ghost');
       msg.className = 'dq-msg'; msg.textContent = '';
