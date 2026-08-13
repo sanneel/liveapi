@@ -1,0 +1,8 @@
+# Runtime state: which journeys have already been announced. Machine-local -
+# committing it would mean one host's "already sent" list silently suppressing
+# notifications on another.
+state/sent_journeys.json
+state/sent_journeys.json.tmp
+
+# Keep the directory itself so a fresh clone can write into it.
+!state/.gitkeep
