@@ -590,7 +590,7 @@
     gap:9px;align-content:start;max-height:calc(100% - 150px);overflow:auto;scrollbar-width:thin;
     padding-right:2px}
   .step.pg-full .talk .note-pad{margin-top:0}
-  .step.pg-full .talk .mascot{height:132px}
+  .step.pg-full .talk .mascot{height:132px;justify-self:end;margin-right:4px}
 
   @media (max-width:1180px){
     body.pg-view{height:auto;overflow:auto;display:block}
@@ -632,6 +632,18 @@
   .ptile.off em svg{opacity:.5}
   .ptile:focus-visible{outline:2px solid var(--key);outline-offset:2px}
   .ptile em{transition:transform .12s}
+  /* the card carries a wash of its family colour, and its border agrees */
+  .nd.t-src{--wash:#CBE3C21F;border-color:#8FBF8455}
+  .nd.t-flow{--wash:#FBE6BE2E;border-color:#D6A94F55}
+  .nd.t-comm{--wash:#CDE2F42E;border-color:#7FB0DB55}
+  .nd.t-delay{--wash:#EEF3C62E;border-color:#AEBE5E55}
+  .nd.t-conn{--wash:#FBDCD12E;border-color:#E0906F55}
+  .nd.t-flows{--wash:#FAD8E42E;border-color:#E28BAE55}
+  .nd.t-promo{--wash:#D5E9DB2E;border-color:#77B58F55}
+  .nd.t-cond{--wash:#E8DBF62E;border-color:#A98BD855}
+  .nd.t-rew{--wash:#DBDDF42E;border-color:#8D93D855}
+  .nd.t-fin{--wash:#DFE3E62E;border-color:#9BAAB255}
+
   /* group tints, taken off the real palette */
   .t-src em{background:#CBE3C2;color:#4C7A44}
   .nd em svg{display:block}
@@ -658,6 +670,7 @@
   .cvsvg{position:absolute;top:0;left:0;overflow:visible;pointer-events:none}
   .nd{position:absolute;width:292px;min-height:62px;background:var(--panel);
     border:1px solid var(--line);border-radius:9px;padding:0;display:grid;
+    --wash:transparent;background-image:linear-gradient(var(--wash),var(--wash));
     grid-template-columns:62px minmax(0,1fr);text-align:left;
     box-shadow:0 1px 2px rgba(17,34,41,.10),0 6px 14px -10px rgba(17,34,41,.35)}
   button.nd:hover{border-color:var(--key)}
@@ -695,6 +708,12 @@
     border:1px solid var(--line);border-radius:5px;padding:2px 8px;color:var(--body);
     white-space:nowrap;transform:translate(-50%,-50%);z-index:2}
   .ev.unseen{border-color:color-mix(in srgb,var(--flag) 45%,transparent);color:var(--flag)}
+  /* a branch nothing hangs off yet: dashed, and a drop target */
+  .ev.ghost{border-style:dashed;background:var(--panel);color:var(--faint);cursor:pointer;
+    z-index:3}
+  .ev.ghost:hover,.ev.ghost.on{border-color:var(--key);color:var(--key);border-style:solid}
+  .ev.drop{border-color:var(--key);color:var(--key);border-style:solid;
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--key) 30%,transparent)}
   .flowchip{position:absolute;font-family:var(--sans);font-size:11px;font-weight:600;
     background:var(--key-soft);border:1px solid color-mix(in srgb,var(--key) 35%,transparent);
     border-radius:5px;padding:2px 8px;color:var(--key);transform:translate(-50%,-50%);
@@ -1530,7 +1549,7 @@
       ['Reference codes','ref','',1,0],
       ['CSV','csv','',0,0],
       ['API','api','external_system_source',1,0],
-      ['Predefined Segment','pre','',0,0],
+      ['Predefined Segment','pre','dwh_source',1,0],
       ['Events','evt','',0,0],
       ['Promotion','mon','',1,1]]],
     ['Flow control','t-flow',0,[
@@ -1556,7 +1575,7 @@
       ['Campaign Connector','plug','',1,0]]],
     ['Multiple flows','t-flows',0,[
       ['Parallel flows','par','',1,0],
-      ['Choosable flows','tree','',0,0]]],
+      ['Choosable flows','tree','multipurpose_promotion',1,0]]],
     ['Promotion type','t-promo',0,[
       ['Promotion','mon','promotion',1,0],
       ['Multipurpose Promotion','star','multipurpose_promotion',1,0]]],
@@ -1610,30 +1629,28 @@
     var parts = ev.replace(/([a-z0-9])([A-Z])/g, '$1 $2').split(' ');
     return parts.length > 1 ? parts.slice(-1)[0] : ev;
   }
+  /* a label can say more than the activity it maps to */
+  var SUBL = { 'Choosable flows':'4 flows', 'Predefined Segment':'Segment' };
   var SOURCES = ['dwh_source','external_system_source'];
   var TERMINALS = ['end_of_journey','end_of_path'];
   var CHANNELS = ['dextra_sms','dextra_email','notification_center#contract1','notification_center#contract5'];
 
   var TASKS = [
     { k:'chooser-two-prizes', t:'A chooser with two different prizes',
-      b:'Build a promotion where the player picks one of two. Both start with their own promotion and a deposit. The first one ends in free spins with wagering on top. The second one stops at the free spins, no wagering. Two flows, and they are not the same shape.',
-      need:[['external_system_source|dwh_source','an entry source'],
-            ['multipurpose_promotion','the multipurpose promotion that asks'],
-            ['fork2','two flows hanging off the chooser'],
-            ['promotion*2','a promotion inside each flow'],
-            ['deposit*2','a deposit inside each flow'],
-            ['freespin_bonus*2','free spins inside each flow'],
-            ['casino_bonus_v2*1','wagering on one flow only'],
-            ['!casino_bonus_v2*2','wagering on one flow only, not both']] },
+      b:'Players arrive by API and land on a page where they choose one of two promotions. One gives a deposit and free spins, the other gives free spins and a wagering bonus.',
+      need:[['external_system_source|dwh_source','an input source'],['fork2','a chooser with two flows'],
+            ['promotion*2','a promotion in each flow'],['deposit','a deposit in one flow'],
+            ['freespin_bonus*2','free spins in both flows'],
+            ['casino_bonus_v2','a wagering bonus in the other flow']] },
     { k:'gow-three-tiers', t:'Game of the Week, four tiers',
-      b:'The real Game of the Week shape. A promo page door, one chooser, and four tiers under it, the ones we call small dep, middle dep, big dep and bigger dep. Every tier runs its own promotion, deposit, free spins and wagering bonus.',
-      need:[['external_system_source','an API entry source'],['multipurpose_promotion','the chooser'],
-            ['fork4','four flows hanging off the chooser'],
+      b:'The real Game of the Week: a promo page door, one chooser, and four tiers under it. Every tier runs its own promotion, deposit, free spins and wagering bonus.',
+      need:[['external_system_source|dwh_source','an input source'],['fork4','a chooser with four flows'],
             ['promotion*4','a promotion per tier'],['deposit*4','a deposit per tier'],
             ['freespin_bonus*4','free spins per tier'],
-            ['casino_bonus_v2*4','a wagering bonus per tier']] },
+            ['casino_bonus_v2*4','a wagering bonus on every tier'],
+            ['allterm','an ending on every path']] },
     { k:'clone-gow', t:"Clone last week's Game of the Week",
-      b:'This is last week duplicated. It ran three tiers, this week runs four, one tier lost its wagering bonus and one path never ends. Fix all three, then validate.',
+      b:'Last week duplicated. It ran three tiers and this week runs four, one tier is missing its wagering bonus, and one path has no ending. Every tier needs promotion, deposit, free spins, wagering bonus. Fix all three, then validate.',
       pre:[['API',null],['Multipurpose Promotion',0],
            ['Promotion',1],['Deposit',2],['Casino FreeSpin',3],['Casino Bonus',4],['End of path',5],
            ['Promotion',1],['Deposit',7],['Casino FreeSpin',8],['End of path',9],
@@ -1728,6 +1745,17 @@
     }
     function isTerm(k){ return TERMINALS.indexOf(k) !== -1; }
 
+    /* two events can print the same word, and two identical buttons read as a bug */
+    function dedupeWords(list){
+      var seen = {}, out = [];
+      list.forEach(function(e){
+        var w = evWord(e);
+        if (seen[w]) return;
+        seen[w] = 1; out.push(e);
+      });
+      return out;
+    }
+
     function place(label){
       var it = byLabel[label];
       if (!tree.length) {
@@ -1766,12 +1794,8 @@
       tree.push(n);
       sel = n.id; selPort = null; checked = false;
       draw();
-      var line = it.cap
-        ? '<p>Added ' + it.label + '.</p>'
-        : '<p>Added ' + it.label + ', but we have never captured one from a real journey, so no ' +
-          'generator may build it yet. Validate and I will flag it.</p>';
-      talkPg(line + (tree.length === 1 ? '<p>Now hang the next node off it.</p>' : ''),
-             it.cap ? 'book' : 'think');
+      talkPg('<p>Added ' + it.label + '.</p>' +
+             (tree.length === 1 ? '<p>Now hang the next node off it.</p>' : ''), 'book');
     }
 
     /* is this edge one a captured journey actually shows? */
@@ -1839,28 +1863,44 @@
         return;
       }
       wrap.classList.remove('empty');
-      var L = layout(), paths = [], pills = [], cards = [];
+      var L = layout(), paths = [], pills = [], cards = [], midPad = 0;
+      var W = L.w + PAD * 2, H = L.h + PAD_T + PAD;
+      /* the zoom is settled first, because the centring depends on it. A journey
+         bigger than the sheet opens fitted, the way the back office opens one;
+         touch the zoom yourself and it stays where you put it. */
+      if (!userZoomed && wrap.clientWidth > 140){
+        var kx = (wrap.clientWidth - 14) / W, ky = (wrap.clientHeight - 14) / H;
+        zoom = Math.max(0.4, Math.min(1, kx, ky));
+      }
+      /* then centre it across the sheet while it is narrower than the sheet */
+      if (wrap.clientWidth > 140){
+        var room = (wrap.clientWidth - 4) / zoom;
+        if (room > W) { midPad = Math.round((room - W) / 2); W = Math.round(room); }
+      }
       tree.forEach(function(n){
         var p = L.pos[n.id];
         var h = isTerm(n.key) ? TERM : CARD_H;
         if (n.parent !== null){
           var pp = L.pos[n.parent], ph = isTerm(node(n.parent).key) ? TERM : CARD_H;
-          var x1 = pp.x + pp.w / 2 + PAD, y1 = pp.y * ROW_H + ph + PAD_T;
-          var x2 = p.x + p.w / 2 + PAD, y2 = p.y * ROW_H + PAD_T;
+          var x1 = pp.x + pp.w / 2 + PAD + midPad, y1 = pp.y * ROW_H + ph + PAD_T;
+          var x2 = p.x + p.w / 2 + PAD + midPad, y2 = p.y * ROW_H + PAD_T;
           var srcFoot = node(n.parent).tint === 't-src' ? 22 : 0;
           paths.push('<path d="' + elbow(x1, y1 + srcFoot, x2, y2) + '" fill="none" ' +
             'stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/>');
           if (n.via && !srcFoot)
             pills.push('<span class="ev' + (edgeSeen(n) ? '' : ' unseen') + '" title="' + n.via +
-              '" style="left:' + x2 + 'px;top:' + (y2 - 26) + 'px">' + evWord(n.via) + '</span>');
+              '" data-parent="' + n.parent + '" data-ev="' + n.via + '" style="left:' + x2 +
+              'px;top:' + (y2 - 26) + 'px">' + evWord(n.via) + '</span>');
           if (n.flow)
             pills.push('<span class="flowchip" style="left:' + x2 + 'px;top:' + (y2 - 50) + 'px">' +
               n.flow + '</span>');
         }
-        var sub = SUB[n.key] === undefined ? 'not captured' : SUB[n.key];
+        var sub = SUBL[n.label] !== undefined ? SUBL[n.label]
+          : (SUB[n.key] === undefined ? '' : SUB[n.key]);
         var isSrc = n.tint === 't-src';
-        cards.push('<button class="nd ' + (isTerm(n.key) ? 'term ' : '') + (sel === n.id ? 'sel' : '') +
-          '" data-id="' + n.id + '" type="button" style="left:' + (p.x + PAD) + 'px;top:' +
+        cards.push('<button class="nd ' + (isTerm(n.key) ? 'term ' : n.tint + ' ') +
+          (sel === n.id ? 'sel' : '') +
+          '" data-id="' + n.id + '" type="button" style="left:' + (p.x + PAD + midPad) + 'px;top:' +
           (p.y * ROW_H + PAD_T) + 'px">' +
           (isTerm(n.key)
             ? '<em aria-hidden="true">' + (IC.end || '') + '</em>'
@@ -1870,15 +1910,24 @@
               '<i class="nd-plus" aria-hidden="true">+</i>') +
           '</button>');
       });
-      /* real size, anchored top left, and the canvas pans. The back office does
-         not shrink a journey to fit either, and a moving origin made every new
-         node jump the whole shape sideways. */
-      var W = L.w + PAD * 2, H = L.h + PAD_T + PAD;
-      /* a journey wider than the canvas opens fitted, as it does in the back
-         office. Touch the zoom yourself and it stays where you put it. */
-      if (!userZoomed && wrap.clientWidth > 140){
-        var kx = (wrap.clientWidth - 14) / W, ky = (wrap.clientHeight - 14) / H;
-        zoom = Math.max(0.4, Math.min(1, kx, ky));
+
+      /* the free branches of the selected node, drawn under it as dashed labels.
+         Drop a node on one and it hangs off that branch: the operator went for
+         this first, and until now only an existing branch could be dropped on. */
+      if (sel !== null){
+        var sn = node(sel);
+        if (sn && !isTerm(sn.key)){
+          var sp = L.pos[sel];
+          var taken = kids(sn.id).map(function(k){ return k.via; });
+          var free = dedupeWords(ports(sn)).filter(function(e){ return taken.indexOf(e) === -1; });
+          free.slice(0, 3).forEach(function(e, i){
+            var gx = sp.x + sp.w / 2 + PAD + midPad;
+            var gy = sp.y * ROW_H + PAD_T + (isTerm(sn.key) ? TERM : CARD_H) + 20 + i * 22;
+            pills.push('<span class="ev ghost' + (selPort === e ? ' on' : '') + '" title="' + e +
+              '" data-parent="' + sel + '" data-ev="' + e + '" style="left:' + gx + 'px;top:' +
+              gy + 'px">' + evWord(e) + '</span>');
+          });
+        }
       }
       cv.style.transform = zoom === 1 ? 'none' : 'scale(' + zoom + ')';
       cv.style.width = W + 'px';
@@ -1895,7 +1944,7 @@
       if (W * zoom <= wrap.clientWidth + 2) wrap.scrollLeft = 0;
       var selp = sel === null ? null : L.pos[sel];
       if (selp){
-        var sy = (selp.y * ROW_H + PAD_T) * zoom, sx = (selp.x + PAD) * zoom;
+        var sy = (selp.y * ROW_H + PAD_T) * zoom, sx = (selp.x + PAD + midPad) * zoom;
         var ch = CARD_H * zoom, cw = CARD_W * zoom;
         if (sy + ch + 30 > wrap.scrollTop + wrap.clientHeight)
           wrap.scrollTop = sy + ch + 40 - wrap.clientHeight;
@@ -1911,12 +1960,12 @@
         var pl = ports(selN);
         attach.innerHTML = '<span class="lbl">attach after</span><b style="color:var(--ink);' +
           'font-size:11px">' + selN.label + '</b>' +
-          (pl.length ? '<span class="lbl">via</span>' + pl.slice(0, 3).map(function(e){
+          (pl.length ? '<span class="lbl">via</span>' + dedupeWords(pl).slice(0, 3).map(function(e){
             return '<button class="port' + ((selPort || pl[0]) === e ? ' on' : '') +
                    '" data-ev="' + e + '" title="' + e + '" type="button">' + evWord(e) + '</button>';
           }).join('') + (pl.length > 3 ? '<span class="port" style="border:0">+' + (pl.length - 3) +
           '</span>' : '')
-          : '<span class="lbl">no captured events for this node, so what follows is a guess</span>');
+          : '');
         if (kids(selN.id).length === 0 && tree.length > 1)
           attach.innerHTML += '<button class="btn g s" data-drop="1" type="button">remove</button>';
       } else {
@@ -1946,20 +1995,16 @@
       selPort = p.dataset.ev; draw();
     });
     cv.addEventListener('click', function(e){
+      var g = e.target.closest('.ev.ghost');
+      if (g){
+        sel = Number(g.dataset.parent); selPort = g.dataset.ev || null; draw();
+        return;
+      }
       var b = e.target.closest('.nd');
       if (!b) return;
+      /* selecting a node is not a cue for a lecture. The validator is where the
+         detail belongs, and it only speaks when you ask it to. */
       sel = Number(b.dataset.id); selPort = null; draw();
-      var n = node(sel), a = GRAM.acts[n.key];
-      var msg = '<p><b>' + n.label + '.</b> ';
-      if (!n.key) msg += 'We have no captured example of this one, so I cannot tell you what it emits.</p>';
-      else {
-        msg += 'It emits ' + (a ? a.ev.length : 0) + ' completion events, and the first one is what ' +
-               'the next node normally hangs off.</p>';
-        if (a && a.dep.length)
-          msg += '<p>It needs ' + a.dep.map(function(d){ return d[0]; }).join(', ') +
-                 ' from the nodes above it.</p>';
-      }
-      talkPg(msg, 'glass');
     });
 
     function validate(){
@@ -1985,6 +2030,17 @@
           (gone[d[1]] = gone[d[1]] || []).push(d[0]);
         });
         Object.keys(gone).forEach(function(from){
+          /* A deposit only feeds a reward when the flow has one. Our captures all
+             came from deposit journeys, so the catalog lists those fields as if
+             they were always required, and a free spin prize with no deposit is a
+             real shape. Say it, do not block it. Anything else missing is fatal:
+             a reward with no promotion above it cannot be built. */
+          if (from === 'deposit'){
+            rows.push(['warn', n.label + ' takes ' + gone[from].join(' and ') + ' from a Deposit in ' +
+                       'our captures. There is no Deposit in this flow, so those values are set by ' +
+                       'hand on the node itself']);
+            return;
+          }
           rows.push(['err', n.label + ' needs ' + gone[from].join(' and ') + ' from a ' + nice(from) +
                      ', and there is none above it']); errs++;
         });
@@ -2078,7 +2134,7 @@
     /* ── drag and drop ── */
     function clearDrop(){
       wrapEl.classList.remove('dragover');
-      var d = cv.querySelector('.nd.drop');
+      var d = cv.querySelector('.nd.drop, .ev.drop');
       if (d) d.classList.remove('drop');
     }
     var wrapEl = document.getElementById('cvwrap');
@@ -2087,22 +2143,32 @@
       e.preventDefault();
       e.dataTransfer.dropEffect = 'copy';
       var card = e.target.closest ? e.target.closest('.nd') : null;
-      var cur = cv.querySelector('.nd.drop');
-      if (cur && cur !== card) cur.classList.remove('drop');
+      var pill = e.target.closest ? e.target.closest('.ev') : null;
+      var cur = cv.querySelector('.nd.drop, .ev.drop');
+      if (cur && cur !== card && cur !== pill) cur.classList.remove('drop');
       if (card && !isTerm(node(Number(card.dataset.id)).key)) card.classList.add('drop');
+      else if (pill) pill.classList.add('drop');
       wrapEl.classList.add('dragover');
     });
     wrapEl.addEventListener('dragleave', function(e){
       if (e.target === wrapEl) clearDrop();
     });
     wrapEl.addEventListener('drop', function(e){
-      if (!drag) return;
       e.preventDefault();
-      var label = e.dataTransfer.getData('text/plain') || drag;
-      var card = e.target.closest ? e.target.closest('.nd') : null;
+      /* the payload, not the drag variable: dragend can land first and used to
+         null it, which is why a drop sometimes did nothing at all */
+      var label = (e.dataTransfer && e.dataTransfer.getData('text/plain')) || drag;
+      if (!label || !byLabel[label]) { clearDrop(); drag = null; return; }
+      var t = e.target.closest ? e.target : null;
+      var card = t && t.closest ? t.closest('.nd') : null;
+      var pill = t && t.closest ? t.closest('.ev') : null;
       if (card){
         var id = Number(card.dataset.id);
         if (id !== sel){ sel = id; selPort = null; }
+      } else if (pill && pill.dataset.parent){
+        /* dropped on a branch label: hang it off that node, through that event */
+        sel = Number(pill.dataset.parent);
+        selPort = pill.dataset.ev || null;
       }
       clearDrop();
       drag = null;
@@ -2206,11 +2272,14 @@
 
     document.getElementById('pgCheck').onclick = validate;
     document.getElementById('pgUndo').onclick = function(){
-      if (!tree.length) return;
-      var last = tree[tree.length - 1];
-      if (kids(last.id).length) return;
-      tree.pop(); sel = last.parent; selPort = null; checked = false; draw();
-      talkPg('<p>Taken off again.</p>', 'flag');
+      /* the newest leaf, not the last slot in the array: a task that preloads a
+         journey leaves the array in its own order, and undo did nothing at all. */
+      var leaves = tree.filter(function(n){ return kids(n.id).length === 0; });
+      if (!leaves.length) return;
+      var last = leaves.reduce(function(a, b){ return b.id > a.id ? b : a; });
+      tree = tree.filter(function(n){ return n.id !== last.id; });
+      sel = last.parent; selPort = null; checked = false; draw();
+      talkPg('<p>Took off the ' + last.label + '.</p>', 'flag');
     };
     document.getElementById('pgClear').onclick = function(){
       /* the canvas clears, the chosen task stays on the note. A task that hands
