@@ -39,25 +39,6 @@ else
   echo "= requirements.txt unchanged"
 fi
 
-# ── 3b. Rebuild the onboarding SPA if its source changed ──────────────
-# onboarding/dist is gitignored build output, so a clone has no bundle at all
-# and /admin/onboarding serves its "not built yet" page until this runs.
-if [ ! -d onboarding/dist ] \
-   || git diff --name-only HEAD@{1} HEAD 2>/dev/null | grep -q '^onboarding/'; then
-  echo ""
-  echo "▶ building onboarding SPA"
-  if command -v npm >/dev/null 2>&1; then
-    ( cd onboarding \
-      && { [ -d node_modules ] || npm ci --silent; } \
-      && npm run build ) \
-      || echo "! onboarding build FAILED — /admin/onboarding will serve the old bundle"
-  else
-    echo "! npm not found — skipping onboarding build"
-  fi
-else
-  echo "= onboarding unchanged"
-fi
-
 # ── 4. Run any new migrations ─────────────────────────────────────────
 echo ""
 echo "▶ alembic upgrade head"

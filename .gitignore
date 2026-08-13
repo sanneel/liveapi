@@ -6,8 +6,8 @@
 
 # Database
 # Anchored to the repo root on purpose: a bare `data/` matches any directory of
-# that name at any depth, which silently kept onboarding/src/data (the whole
-# course content) out of version control.
+# that name at any depth, which silently kept the retired SPA's own
+# archive/onboarding-spa/src/data out of version control.
 /data/
 *.db
 *.db-journal
