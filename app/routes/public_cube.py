@@ -444,6 +444,37 @@ def cube_static_png(theme: str, request: Request) -> Response:
     return _png_response(png, cache_status="STATIC", etag=etag)
 
 
+# Campaign promo photo — the 420×380 artwork that goes on the cube's STATIC
+# face. Same contract as /cube/{theme}/odds.png (PNG bytes, ETag + 304, and
+# the /cube prefix so SecurityHeadersMiddleware sets a cross-origin CORP and a
+# third-party creative can hotlink it), except the bytes are a file on disk,
+# not a render — nothing here depends on match data or a theme.
+_PROMO_PNG_PATH = BASE_DIR / "static" / "cube-promo-420x380-1.png"
+_promo_png: Optional[bytes] = None
+
+
+def _promo_photo() -> bytes:
+    global _promo_png
+    if _promo_png is None:
+        _promo_png = _PROMO_PNG_PATH.read_bytes()
+    return _promo_png
+
+
+@router.get("/cube/promo/420x380-1.png")
+@limiter.limit("600/minute")
+def cube_promo_png(request: Request) -> Response:
+    """The campaign's own 420×380 promo photo, served on a stable URL."""
+    try:
+        png = _promo_photo()
+    except OSError:
+        logger.exception("cube promo photo read failed path=%s", _PROMO_PNG_PATH)
+        return _png_response(_TRANSPARENT_PNG_1X1, cache_status="ERROR", status_code=500)
+    etag = _etag(png)
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers={"ETag": etag})
+    return _png_response(png, cache_status="STATIC", etag=etag)
+
+
 @router.get("/cube/{theme}", response_class=HTMLResponse)
 def cube_html(theme: str, request: Request) -> HTMLResponse:
     t = get_theme(theme)
