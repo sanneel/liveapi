@@ -274,6 +274,37 @@
   .route em.a{border-color:color-mix(in srgb,var(--ok) 45%,transparent);color:var(--ok);
     background:var(--ok-soft)}
 
+  /* ── a round of ten, one question at a time ── */
+  .quiz2{width:100%;max-width:580px;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--r);box-shadow:var(--lift);overflow:hidden}
+  .qz-h{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--line)}
+  .qz-h b{font-family:var(--disp);font-size:14px;font-weight:800;color:var(--ink)}
+  .qz-h .qz-n{margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.09em;
+    color:var(--faint);font-variant-numeric:tabular-nums}
+  .qz-h .qz-s{font-family:var(--mono);font-size:10px;letter-spacing:.09em;color:var(--ok)}
+  .qz-b{padding:14px 16px 6px;min-height:210px}
+  .qz-q{font-size:15px;font-weight:600;color:var(--ink);margin:0 0 11px;line-height:1.35}
+  .qz-o{display:flex;flex-direction:column;gap:6px}
+  .qz-o button{text-align:left;background:var(--raise);border:1px solid var(--line);border-radius:9px;
+    padding:9px 12px;font-size:13.5px;color:var(--body);transition:border-color .15s,background .15s}
+  .qz-o button:hover:not([disabled]){border-color:var(--key);color:var(--ink)}
+  .qz-o button.ok{border-color:var(--ok);background:var(--ok-soft);color:var(--ink);font-weight:600}
+  .qz-o button.no{border-color:var(--flag);background:color-mix(in srgb,var(--flag) 10%,transparent)}
+  .qz-o button[disabled]{cursor:default}
+  .qz-why{margin:10px 0 0;font-size:12.5px;color:var(--muted);min-height:34px;line-height:1.45}
+  .qz-why b{color:var(--ink);font-weight:600}
+  .qz-f{display:flex;align-items:center;gap:8px;padding:10px 16px 13px;border-top:1px solid var(--line)}
+  .qz-dots{display:flex;gap:4px;flex-wrap:wrap}
+  .qz-dots i{width:9px;height:9px;border-radius:50%;border:1px solid var(--line-2);font-style:normal}
+  .qz-dots i.ok{background:var(--ok);border-color:var(--ok)}
+  .qz-dots i.no{background:var(--flag);border-color:var(--flag)}
+  .qz-dots i.now{border-color:var(--key);border-width:2px}
+  .qz-f .btn{margin-left:auto}
+  .qz-done{text-align:center;padding:26px 16px 20px}
+  .qz-done b{display:block;font-family:var(--disp);font-size:30px;font-weight:800;color:var(--ink);
+    font-variant-numeric:tabular-nums}
+  .qz-done span{display:block;font-size:13px;color:var(--muted);margin-top:5px}
+
   /* ── check ── */
   .quiz{width:100%;max-width:560px;display:flex;flex-direction:column;gap:9px}
   .q{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 15px;
@@ -893,7 +924,7 @@
   </section>
 
   <section class="step" data-hue="indigo" data-t="Randomizer logs" data-pose="thumb"
-    data-tip="Added, activated and claimed are three different moments. A row with no claim means they opened the wheel and never spun.">
+    data-tip="If the player never spun, they are not in the logs at all. No spin, no row.">
     <div class="stage">
       <div class="duo">
         <figure class="shot" tabindex="0" style="--ar:1562/1100;--w:430px;margin:0">
@@ -939,8 +970,8 @@
     <div class="talk">
       <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox book"></i></button>
       <div class="bubble" data-bubble>
-        <p>The journey asks before it gives anything.</p>
-        <p>Three bonuses, one choice, and the chooser itself awards nothing.</p>
+        <p>The flow is choosable. The player decides which one they want before they claim.</p>
+        <p>The chooser only puts them into that flow. It awards nothing itself.</p>
       </div>
     </div>
   </section>
@@ -983,7 +1014,7 @@
   </section>
 
   <section class="step" data-hue="purple" data-t="His bonus" data-pose="thumb"
-    data-tip="Two clocks here, not one: one to accept the offer and a separate one to deposit after accepting.">
+    data-tip="Open the tier the player took, not the chooser. The terms live on the tier.">
     <div class="stage">
       <figure class="shot" tabindex="0" style="--ar:1478/1118;--w:430px;margin:0">
         <div class="shot-in">
@@ -1000,14 +1031,14 @@
     <div class="talk">
       <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox thumb"></i></button>
       <div class="bubble" data-bubble>
-        <p>The bonus he holds now, id <span class="id">672078</span>.</p>
-        <p>A different object from the chooser, and the deposit hangs off this one.</p>
+        <p>The promotion the player chose appears on its own, as we see here.</p>
+        <p>Its own id, <span class="id">672078</span>, and the deposit hangs off this one.</p>
       </div>
     </div>
   </section>
 
   <section class="step" data-hue="teal" data-t="Where it lives" data-pose="flag"
-    data-tip="Open the object itself before you trust any brief about it. The row is the truth, the brief is a description of it.">
+    data-tip="You can open and read these freely. Looking at an object damages nothing, so go and surf them.">
     <div class="stage">
       <div class="linkcard">
         <div class="lk-h">Casino Wheel of Fortune <span>randomizer</span></div>
@@ -1020,7 +1051,46 @@
       <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox flag"></i></button>
       <div class="bubble" data-bubble>
         <p>That was the Casino Wheel of Fortune, and this is where the object lives.</p>
-        <p>Now the Game of the Week, which runs every Wednesday.</p>
+        <p>Open it and read it. Nothing you look at can break.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="olive" data-t="Wheel check" data-pose="party"
+    data-tip="Nothing here touches a real object. Get one wrong and I will tell you why, then you carry on.">
+    <div class="stage">
+      <div class="quiz2" data-quiz="wheel">
+        <div class="qz-h"><b>Casino Wheel of Fortune</b><span class="qz-s" data-score></span>
+          <span class="qz-n" data-num></span></div>
+        <div class="qz-b" data-body></div>
+        <div class="qz-f"><span class="qz-dots" data-dots></span>
+          <button class="btn s" data-next hidden>Next</button></div>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox party"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Ten questions on the wheel.</p>
+        <p>Answer one and I tell you why, then Next.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="green" data-t="Game of the Week" data-pose="flag"
+    data-tip="The ladder is fixed. The one thing that changes on a Wednesday is which game the spins are on.">
+    <div class="stage">
+      <div class="linkcard">
+        <div class="lk-h">Game of the Week <span>our regular promotion</span></div>
+        <div class="lk-row"><b>runs</b><code>every Wednesday</code></div>
+        <div class="lk-row"><b>changes</b><code>the game, week to week</code></div>
+        <div class="lk-row"><b>stays</b><code>four tiers, by deposit and bet value</code></div>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox flag"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Now our regular promotion, the Game of the Week.</p>
+        <p>It runs every Wednesday, with a different game each week.</p>
       </div>
     </div>
   </section>
@@ -1037,8 +1107,8 @@
     <div class="talk">
       <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox book"></i></button>
       <div class="bubble" data-bubble>
-        <p>Players choose one of four deposit values, and the deposit decides what each spin is worth.</p>
-        <p>10 000, 20 000, 30 000 or 50 000 CLP.</p>
+        <p>This widget sits on the promo page.</p>
+        <p>Participa forwards the player to the promo page, where they read the short description first.</p>
       </div>
     </div>
   </section>
@@ -1105,15 +1175,16 @@
     <div class="talk">
       <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox glass"></i></button>
       <div class="bubble" data-bubble>
-        <p>Four bonuses to choose from, one per deposit value.</p>
-        <p>On the right the journey behind them, <span class="id">JRN-0-639700</span>, with its four
-          flows.</p>
+        <p>On the left the journey they have already been forwarded into, where they pick the flow
+          they want.</p>
+        <p>The flows differ by deposit and by the bet value of the spins. On the right, the same
+          journey on our side, <span class="id">JRN-0-639700</span>.</p>
       </div>
     </div>
   </section>
 
   <section class="step" data-hue="purple" data-t="Her bonus" data-pose="thumb"
-    data-tip="Rollover is the wagering. Until it is met the money is bonus money, not cash.">
+    data-tip="Every tier is the same four steps. Only the deposit and the spin value change.">
     <div class="stage">
       <figure class="shot" tabindex="0" style="--ar:936/808;--w:470px;margin:0">
         <div class="shot-in">
@@ -1127,198 +1198,34 @@
     <div class="talk">
       <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox thumb"></i></button>
       <div class="bubble" data-bubble>
-        <p>The tier they took, id <span class="id">711837</span>.</p>
-        <p>Spin value, minimum deposit, rollover. Nothing else differs between the flows.</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="step" data-hue="salmon" data-t="Cloning" data-pose="book"
-    data-tip="Never re-run the same paste twice. The second run reuses ids the first one already used, and the platform refuses the whole journey.">
-    <div class="stage">
-      <div class="clone">
-        <div class="cl-grp chg">
-          <div class="cl-h"><i></i>change before you save<span>comes across from last week</span></div>
-          <ul>
-            <li><b>name</b>, still last week's date</li>
-            <li><b>start and end dates</b></li>
-            <li>the <b>game</b></li>
-            <li>images and copy</li>
-            <li>the <b>journey link</b> on the promo page</li>
-            <li>comms links</li>
-          </ul>
-        </div>
-        <div class="cl-grp keep">
-          <div class="cl-h"><i></i>leave alone<span>points at real objects</span></div>
-          <ul>
-            <li>promotion links</li>
-            <li>content ids</li>
-            <li>node wiring and flow shapes</li>
-          </ul>
-        </div>
-        <div class="cl-grp mint">
-          <div class="cl-h"><i></i>the platform mints these<span>never reuse</span></div>
-          <ul>
-            <li>journey id</li>
-            <li>activity ids</li>
-            <li>display ids</li>
-          </ul>
-        </div>
-        <div class="cl-err">If you see <b>the journey with the same identifier already exists</b> or
-          <b>activities with the same identifier already exist</b>, something from last week travelled
-          with the copy.</div>
-      </div>
-    </div>
-    <div class="talk">
-      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox book"></i></button>
-      <div class="bubble" data-bubble>
-        <p>Most weeks you duplicate last week rather than build from scratch.</p>
-        <p>The copy arrives with last week's name, dates and game, so change those before you save.</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="step" data-hue="blue" data-t="Duplicating" data-pose="think"
-    data-tip="Save the copy before you touch the dates and it is live on last week&#39;s window. Change the dates first, then save.">
-    <div class="stage">
-      <div class="dqwrap">
-      <p class="dq-lead">Recurring promotions are not created from scratch every time, we duplicate.</p>
-      <div class="dq">
-        <div class="dq-band">
-          <h4 class="dq-h">Now duplicate the Game of the Week journey
-            <span>right click it, pick Duplicate</span></h4>
-          <div class="dq-ctx" id="dqCtx">
-            <button class="dq-jrn" id="dqRow" type="button" aria-haspopup="menu">
-              <i></i><b>Game of the Week</b><code>JRN-0-639700</code><u>opened 05.08</u></button>
-            <div class="dq-jrn dq-copy" id="dqCopy" hidden><i></i><b>Game of the Week</b>
-              <code id="dqCopyId">copy of JRN-0-639700, no id yet</code>
-              <u id="dqCopyState">three edits to make</u></div>
-            <div class="dq-menu" id="dqMenu" role="menu" hidden>
-              <button class="dq-mi on" id="dqDup" type="button" role="menuitem">Duplicate</button>
-            </div>
-            <span class="dq-ptr" id="dqPtr" aria-hidden="true"></span>
-            <span class="dq-rc" id="dqHint">right click</span>
-          </div>
-        </div>
-
-        <div class="dq-band">
-          <h4 class="dq-h">Then three edits, and save <span id="dqCount">duplicate it first</span>
-            <button class="dq-btn" id="dqSave" type="button" disabled>Save</button></h4>
-          <div class="dq-rows">
-            <div class="dq-row dq-cap" aria-hidden="true">
-              <span></span><span class="a">as the copy arrives</span><span></span><span class="b">this week, you type it</span>
-            </div>
-            <div class="dq-row">
-              <label class="dq-key" for="dqName">Name</label>
-              <span class="dq-was mono">JBCL|CS|GOW-<mark>05-08-26</mark></span>
-              <span class="dq-arw" aria-hidden="true"></span>
-              <span class="dq-set field locked">
-                <input class="dq-in mono" id="dqName" value="JBCL|CS|GOW-05-08-26"
-                  spellcheck="false" autocomplete="off" disabled></span>
-            </div>
-            <div class="dq-row">
-              <label class="dq-key" for="dqFrom">Window</label>
-              <span class="dq-was"><mark>05.08</mark> 09:00 to <mark>11.08</mark> 23:59</span>
-              <span class="dq-arw" aria-hidden="true"></span>
-              <span class="dq-set field locked">
-                <input class="dq-in" id="dqFrom" value="05.08 09:00" autocomplete="off" disabled>
-                <em>to</em>
-                <input class="dq-in" id="dqTo" value="11.08 23:59" autocomplete="off" disabled></span>
-            </div>
-            <div class="dq-row">
-              <label class="dq-key" for="dqGame">Game</label>
-              <span class="dq-was">last Wednesday's game, on <mark>all four tiers</mark></span>
-              <span class="dq-arw" aria-hidden="true"></span>
-              <span class="dq-set field locked">
-                <input class="dq-in" id="dqGame" value="last week's game" autocomplete="off"
-                  disabled></span>
-            </div>
-          </div>
-          <p class="dq-msg" id="dqMsg"></p>
-        </div>
-
-        <div class="dq-band tight">
-          <h4 class="dq-h">Carried across <span>leave it</span></h4>
-          <p class="dq-keep">
-            <span>campaign <b>JBCL</b></span><span>promo page entry</span>
-            <span><b>America/Santiago</b></span><span>promotion links</span><span>content ids</span>
-          </p>
-        </div>
-
-        <div class="dq-band">
-          <h4 class="dq-h">The flow comes with it <span>every activity gets a new id on save</span></h4>
-          <div class="dq-flow">
-            <div class="dq-line">
-              <span class="dq-node lead">Promo page entry <u>who joins</u></span>
-              <span class="dq-arw" aria-hidden="true"></span>
-              <span class="dq-node lead">The chooser <u>awards nothing itself</u></span>
-            </div>
-            <div class="dq-fan"><span>four identical tiers behind it</span></div>
-            <div class="dq-line">
-              <span class="dq-node">Promotion</span>
-              <span class="dq-arw" aria-hidden="true"></span>
-              <span class="dq-node">Deposit</span>
-              <span class="dq-arw" aria-hidden="true"></span>
-              <span class="dq-node flagged" id="dqSpin">Free spins <em id="dqChip">new game</em></span>
-              <span class="dq-arw" aria-hidden="true"></span>
-              <span class="dq-node">Wagering bonus</span>
-              <span class="dq-arw" aria-hidden="true"></span>
-              <span class="dq-node">End of path</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      </div>
-    </div>
-    <div class="talk">
-      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox think"></i></button>
-      <div class="bubble" data-bubble>
-        <p>Every Wednesday is last Wednesday, duplicated.</p>
-        <p>Right click the journey, Duplicate, then change the name, the window and the game.</p>
-      </div>
-    </div>
-  </section>
-
-<section class="step" data-hue="olive" data-t="Check" data-pose="party"
-    data-tip="The playground works like this check. Nothing you build there is published, and nothing reaches a player.">
-    <div class="stage">
-      <div class="quiz" id="quiz">
-        <div class="q" data-a="1">
-          <b><i>01</i>A player says they won a bonus on the wheel. Which screen proves it and names the JRN?</b>
-          <div class="qo">
-            <button>The journey canvas</button>
-            <button>The randomizer player list</button>
-            <button>The player promotions page</button>
-          </div>
-        </div>
-        <div class="q" data-a="1">
-          <b><i>02</i>What is a wheel prize here?</b>
-          <div class="qo">
-            <button>A freespin or money reward</button>
-            <button>A JRN that starts with an API entry source</button>
-            <button>A promo page with its own link</button>
-          </div>
-        </div>
-        <div class="q" data-a="1">
-          <b><i>03</i>Where does the deposit condition hang?</b>
-          <div class="qo">
-            <button>On the multipurpose chooser</button>
-            <button>On the promotion inside the chosen flow</button>
-            <button>On the API entry source</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="talk">
-      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox party"></i></button>
-      <div class="bubble" data-bubble>
-        <p>Three questions to close part one.</p>
-        <p>Nothing here touches a real object.</p>
+        <p>Once they pick a flow, the terms are written out for them by number.</p>
+        <p>Spin value, minimum deposit and rollover, for the tier they took,
+          id <span class="id">711837</span>.</p>
       </div>
     </div>
   </section>
 
   <!-- 14 · PLAYGROUND -->
+  <section class="step" data-hue="olive" data-t="Week check" data-pose="party"
+    data-tip="Same rules as the first round. Nothing here reaches a player.">
+    <div class="stage">
+      <div class="quiz2" data-quiz="gow">
+        <div class="qz-h"><b>Game of the Week</b><span class="qz-s" data-score></span>
+          <span class="qz-n" data-num></span></div>
+        <div class="qz-b" data-body></div>
+        <div class="qz-f"><span class="qz-dots" data-dots></span>
+          <button class="btn s" data-next hidden>Next</button></div>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox party"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Ten on the Game of the Week.</p>
+        <p>Last stop before the playground.</p>
+      </div>
+    </div>
+  </section>
+
   <section class="step wide pg-full" data-hue="teal" data-t="Playground" data-pose="flag"
     data-tip="Drag onto a node and it hangs off that node. Drop on empty canvas and it starts the journey. A question mark on a tile means we have never captured that node from a real journey, so no generator may build it yet.">
     <div class="stage">
@@ -1464,34 +1371,6 @@
   });
 
   /* check */
-  var quiz = document.getElementById('quiz');
-  if (quiz){
-    var done = 0, right = 0;
-    quiz.addEventListener('click', function(e){
-      var b = e.target.closest('.qo button');
-      if (!b) return;
-      var q = b.closest('.q');
-      if (q.dataset.done) return;
-      q.dataset.done = '1';
-      var list = [].slice.call(q.querySelectorAll('.qo button'));
-      var ok = list.indexOf(b) === Number(q.dataset.a);
-      list.forEach(function(x, i){
-        x.disabled = true;
-        if (i === Number(q.dataset.a)) x.classList.add('ok');
-      });
-      if (!ok) b.classList.add('no');
-      done++; if (ok) right++;
-      var st = quiz.closest('.step');
-      pose(st.querySelector('[data-buddy]'), ok ? (done === 3 && right === 3 ? 'party' : 'thumb') : 'think');
-      var msg;
-      if (done < 3) msg = ok ? '<p>Right. Keep going.</p>' : '<p>Not that one. The green answer is the one to remember.</p>';
-      else if (right === 3) msg = '<p>All three. That is part 1 done.</p><p>See you in the nodes.</p>';
-      else msg = '<p>You have ' + right + ' of 3.</p><p>Go back over the ones you missed, they are the three that catch people.</p>';
-      say(st, msg, false);
-    });
-  }
-
-
   /* ── playground ───────────────────────────────────────────
      Grammar is the real one: activities, the events each emits, the
      transitions seen in captured journeys, and the data each node needs
@@ -2581,6 +2460,156 @@
     addEventListener('resize', set);
     if (window.ResizeObserver) new ResizeObserver(set).observe(rail);
   })();
+
+  /* ── a round of ten: one question, then why, then Next ── */
+  var QUIZ = {
+    wheel: [
+      ['A player cannot see the wheel promotion in their list. What does that tell you?',
+       ['Their account is blocked', 'It is not live for them, whatever the back office says',
+        'The wheel has run out of prizes'], 1,
+       'If it is not in their list, it is not live for that player.'],
+      ['What is a prize on the wheel?',
+       ['Free spins or money, paid straight away', 'A journey the player is added to',
+        'A promo page with its own link'], 1,
+       'Every prize is a journey, and it starts with an API entry source.'],
+      ['Twelve wedges and four prizes. How often does each prize appear on the rim?',
+       ['Once', 'Twice', 'Three times'], 2,
+       'Four prizes, painted three times each. How the rim is arranged never changes the odds.'],
+      ['What decides how often a prize is drawn?',
+       ['How many wedges it has', 'The percentage we set on it', 'The order of the wedges'], 1,
+       'We set a percentage per prize, and the four have to total 100.'],
+      ['A player opened the wheel but never spun. Do they appear in the randomizer logs?',
+       ['Yes, opening it is enough', 'No, without a spin there is no row',
+        'Only if they had deposited'], 1,
+       'No spin, no row. Check that before you go hunting for a bug.'],
+      ['Where do you see what a player won and which journey they joined?',
+       ['Journey logs', 'Randomizer logs', 'The promo page'], 1,
+       'One row per spin, with the JRN they won on it.'],
+      ['How do you read journey logs?',
+       ['Top to bottom', 'Bottom to top', 'In order of activity id'], 1,
+       'The bottom is where they joined, the top is where they stand right now.'],
+      ['The same activity id appears twice in the log. What is it?',
+       ['Two nodes with the same name', 'One node reporting twice', 'A duplicated journey'], 1,
+       'One node, two events. Not two nodes.'],
+      ['What does the chooser award by itself?',
+       ['The spins', 'Nothing', 'The deposit'], 1,
+       'Everything a player can spend comes from the promotion inside the flow they pick.'],
+      ['A player argues about the terms of their bonus. What do you open?',
+       ['The chooser', 'The promotion of the flow they chose', 'The randomizer'], 1,
+       'The terms live on the tier they took, not on the chooser.']
+    ],
+    gow: [
+      ['When does the Game of the Week run?',
+       ['Every day', 'Every Wednesday', 'Once a month'], 1,
+       'Every Wednesday, without exception.'],
+      ['What changes from one week to the next?',
+       ['The game', 'The number of tiers', 'The wagering'], 0,
+       'The ladder is fixed. The game is the part that changes.'],
+      ['How many flows does the journey hold?',
+       ['Two', 'Three', 'Four'], 2,
+       'Four tiers, four identical shapes behind one chooser.'],
+      ['What differs between the four tiers?',
+       ['The game', 'The deposit and the bet value of the spins', 'The wagering only'], 1,
+       'Same game, same shape. Only the deposit and what each spin is worth.'],
+      ['The player presses Participa. What happens?',
+       ['They join the journey', 'They open the promo page', 'They get the spins'], 1,
+       'Participa is the door. It only opens the page.'],
+      ['Which button puts them into the journey?',
+       ['Participa', 'Activar', 'Seleccionar'], 1,
+       'Activar joins them. Seleccionar then picks the tier.'],
+      ['Where do the real terms of a tier live?',
+       ['On the chooser', 'On the promotion of the tier they took', 'On the promo page'], 1,
+       'Open the tier, not the chooser.'],
+      ['Which four steps does every tier run?',
+       ['Promotion, deposit, free spins, wagering bonus', 'Deposit, free spins, end',
+        'Promotion, free spins, end'], 0,
+       'The same four, four times over.'],
+      ['The promo page is live but Activar does nothing. What do you check first?',
+       ['The player balance', 'The journey the page points at, and its dates',
+        'The game provider'], 1,
+       'A promo page carries no prizes. One field points it at a journey.'],
+      ['One tier is missing its wagering bonus. What is the effect?',
+       ['Nothing, it is optional', 'That tier pays out with no wagering, which is not the offer',
+        'The journey will not save'], 1,
+       'It saves happily. That is what makes it dangerous.']
+    ]
+  };
+
+  [].slice.call(document.querySelectorAll('.quiz2')).forEach(function(box){
+    var set = QUIZ[box.dataset.quiz];
+    if (!set) return;
+    var body = box.querySelector('[data-body]'), dots = box.querySelector('[data-dots]'),
+        next = box.querySelector('[data-next]'), num = box.querySelector('[data-num]'),
+        score = box.querySelector('[data-score]'), step = box.closest('.step');
+    var at = 0, right = 0, marks = [];
+
+    function paintDots(){
+      dots.innerHTML = set.map(function(_, i){
+        return '<i class="' + (marks[i] || '') + (i === at && marks[i] === undefined ? ' now' : '') +
+               '"></i>';
+      }).join('');
+      num.textContent = Math.min(at + 1, set.length) + ' / ' + set.length;
+      score.textContent = right ? right + ' right' : '';
+    }
+
+    function ask(){
+      var q = set[at];
+      body.innerHTML = '<p class="qz-q">' + q[0] + '</p><div class="qz-o">' +
+        q[1].map(function(o){ return '<button type="button">' + o + '</button>'; }).join('') +
+        '</div><p class="qz-why"></p>';
+      next.hidden = true;
+      paintDots();
+    }
+
+    function finish(){
+      body.innerHTML = '<div class="qz-done"><b>' + right + ' / ' + set.length + '</b><span>' +
+        (right === set.length ? 'Every one of them.'
+         : right >= 7 ? 'Good enough to work with. Read back the ones you missed.'
+         : 'Worth another pass through the screens before the playground.') +
+        '</span></div>';
+      next.hidden = false;
+      next.textContent = 'Start again';
+      next.dataset.again = '1';
+      paintDots();
+      pose(step.querySelector('[data-buddy]'), right >= 7 ? 'party' : 'think');
+      say(step, '<p>' + right + ' out of ' + set.length + '.</p>' +
+        (right === set.length ? '<p>Nothing left to correct.</p>'
+         : '<p>The ones you missed are the ones that catch people. Have another go whenever.</p>'), false);
+    }
+
+    body.addEventListener('click', function(e){
+      var b = e.target.closest('.qz-o button');
+      if (!b || b.disabled) return;
+      var q = set[at], list = [].slice.call(body.querySelectorAll('.qz-o button'));
+      var ok = list.indexOf(b) === q[2];
+      list.forEach(function(x, i){
+        x.disabled = true;
+        if (i === q[2]) x.classList.add('ok');
+      });
+      if (!ok) b.classList.add('no');
+      marks[at] = ok ? 'ok' : 'no';
+      if (ok) right++;
+      body.querySelector('.qz-why').innerHTML = (ok ? '<b>Right.</b> ' : '<b>Not that one.</b> ') + q[3];
+      next.hidden = false;
+      next.textContent = at === set.length - 1 ? 'See the score' : 'Next';
+      pose(step.querySelector('[data-buddy]'), ok ? 'thumb' : 'think');
+      paintDots();
+    });
+
+    next.addEventListener('click', function(){
+      if (next.dataset.again){
+        at = 0; right = 0; marks = [];
+        delete next.dataset.again;
+        next.textContent = 'Next';
+        ask();
+        return;
+      }
+      if (at === set.length - 1) { finish(); return; }
+      at++; ask();
+    });
+
+    ask();
+  });
 
   var h = /^#s(\d+)$/.exec(location.hash);
   go(h ? Number(h[1]) - 1 : 0);
