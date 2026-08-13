@@ -504,53 +504,102 @@
   .tiers tfoot td{font-family:var(--mono);font-size:10.5px;color:var(--faint);background:var(--raise);
     border-top:1px solid var(--line)}
 
-  /* ── the builder takes the whole screen ──
-     Three columns, each scrolling on its own, so nothing is cut off at the top
-     and the canvas gets every pixel that is left. --rail is measured in JS. */
-  /* the column owns the viewport: a flex chain rather than viewport arithmetic,
-     which the rail's own progress bar was throwing off by a few pixels */
+  /* ── the builder, as the back office lays it out ──
+     The page becomes a flex column that owns the viewport, the palette is a
+     plain column and the canvas runs to the edges. Everything else floats over
+     the canvas rather than stealing height from it. */
   body.pg-view{height:100dvh;overflow:hidden;display:flex;flex-direction:column}
   body.pg-view .rail{flex:none}
   body.pg-view .deck{flex:1;min-height:0;max-width:none;margin:0;padding:0}
-  .step.pg-full.on{grid-template-columns:minmax(0,1fr) 336px;gap:14px;padding:12px 14px;
-    height:100%;min-height:0;align-items:stretch;align-content:stretch}
-  .step.pg-full.on .stage{display:block;min-height:0}
-  .step.pg-full.on .pg{grid-template-columns:272px minmax(0,1fr);height:100%;
+  .step.pg-full.on{display:block;position:relative;height:100%;min-height:0;padding:0;gap:0}
+  .step.pg-full.on .stage{display:block;height:100%;min-height:0}
+  .step.pg-full.on .pg{display:grid;grid-template-columns:272px minmax(0,1fr);height:100%;gap:0;
     align-items:stretch}
-  .step.pg-full .pgcol{height:100%}
-  .step.pg-full .talk{align-content:start;min-height:0;overflow:auto;padding-right:2px;
-    scrollbar-width:thin}
-  @media (max-width:1180px){
-    body.pg-view{overflow:auto}
-    body.pg-view{height:auto;display:block}
-    .step.pg-full.on{height:auto;min-height:0;grid-template-columns:minmax(0,1fr)}
-    .step.pg-full.on .pg{height:auto}
-  }
 
-  /* the two builder columns stretch, and each panel scrolls inside itself */
-  .step.pg-full .pgp{display:flex;flex-direction:column;min-height:0}
-  .step.pg-full .plist{max-height:none;flex:1;min-height:0}
-  .step.pg-full .pgrp{position:sticky;top:0;z-index:2;background:var(--panel);margin:0 -10px;
-    padding:9px 12px 6px}
-  .step.pg-full .pgcol{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:12px;min-height:0}
-  .step.pg-full .pgcol > .pgp:first-child > .pgp-b{display:flex;flex-direction:column;flex:1;
-    min-height:0}
-  .step.pg-full .cvwrap{height:auto;flex:1;min-height:220px}
-  .step.pg-full .vr{max-height:132px}
-
-  /* the attach strip reads as a toolbar rather than loose words */
-  .step.pg-full .attach{margin-top:10px;padding:8px 10px;border:1px solid var(--line);
-    border-radius:9px;background:var(--raise);min-height:38px}
-
-  /* a scroll edge you can see, and panels that say what they are waiting for */
-  .step.pg-full .plist{-webkit-mask-image:linear-gradient(#000 calc(100% - 26px), transparent);
+  .pg-pal{display:flex;flex-direction:column;min-height:0;background:var(--panel);
+    border-right:1px solid var(--line)}
+  .pg-pal-h{display:flex;align-items:center;gap:8px;padding:11px 14px;
+    border-bottom:1px solid var(--line);font-family:var(--mono);font-size:9.5px;font-weight:700;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+  .pg-pal-h b{color:var(--ink);letter-spacing:.06em}
+  .pg-pal .plist{max-height:none;flex:1;min-height:0;padding:4px 12px 16px;
+    -webkit-mask-image:linear-gradient(#000 calc(100% - 26px), transparent);
     mask-image:linear-gradient(#000 calc(100% - 26px), transparent)}
+  .pg-pal .pgrp{position:sticky;top:0;z-index:2;background:var(--panel);margin:0 -12px;
+    padding:10px 14px 6px}
+  .step.pg-full.folded .pg{grid-template-columns:0 minmax(0,1fr)}
+  .step.pg-full.folded .pg-pal{overflow:hidden;border-right:0}
+
+  /* the sheet: the canvas fills it, everything else floats on top */
+  .pg-sheet{position:relative;min-width:0;min-height:0;overflow:hidden}
+  .step.pg-full .cvwrap{position:absolute;inset:0;height:auto;border:0;border-radius:0}
+  .ovl{position:absolute;z-index:4}
+  .ovl-tl{top:12px;left:52px;display:flex;align-items:center;gap:8px}
+  .cvcount:empty{display:none}
+  .ovl-bl{bottom:12px;left:12px;display:grid;gap:8px;justify-items:start;max-width:min(560px,60%)}
+  .ovl-br{bottom:12px;right:12px}
+  .cvcount{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--muted);background:var(--panel);
+    border:1px solid var(--line);border-radius:99px;padding:4px 10px;box-shadow:var(--lift)}
+  .ovl-btn{position:absolute;z-index:5;background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;width:30px;height:30px;display:grid;place-items:center;color:var(--muted);
+    font-size:13px;padding:0;line-height:1;box-shadow:var(--lift)}
+  .ovl-btn:hover{border-color:var(--key);color:var(--ink)}
+  .ovl-btn.fold{top:12px;left:12px}
+
+  /* zoom, stacked at the bottom right corner, as in the back office */
+  .zoomstack{display:grid;gap:1px;background:var(--panel);border:1px solid var(--line);
+    border-radius:9px;overflow:hidden;box-shadow:var(--lift);justify-items:stretch}
+  .zoomstack button{background:none;border:0;width:34px;height:30px;display:grid;place-items:center;
+    color:var(--muted);font-size:15px;padding:0;line-height:1;font-family:var(--sans)}
+  .zoomstack button:hover{background:var(--raise);color:var(--ink)}
+  .zoomstack b{font-family:var(--mono);font-size:9px;color:var(--faint);text-align:center;
+    padding:2px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+    letter-spacing:.04em}
+
+  /* the strip that says what the next node hangs off, and the buttons */
+  .step.pg-full .attach{margin:0;padding:7px 11px;border:1px solid var(--line);border-radius:9px;
+    background:var(--panel);box-shadow:var(--lift);min-height:36px;display:flex;align-items:center}
+  .step.pg-full .pgbar{padding:0;border:0;background:none;gap:7px}
+  .step.pg-full .btn{box-shadow:var(--lift)}
   .attach:empty::before{content:"pick a node on the canvas to hang the next one off it";
     font-family:var(--sans);font-size:11.5px;color:var(--faint)}
-  .step.pg-full .attach:empty{display:flex;align-items:center}
-  .vr:empty::before{content:"press Validate and every step is checked against the catalog";
-    font-family:var(--sans);font-size:11.5px;color:var(--faint)}
-  .step.pg-full .pgbar{margin-top:auto}
+
+  /* the validator floats in when it has something to report */
+  .vsheet{bottom:104px;left:12px;width:min(560px,54%);background:var(--panel);
+    border:1px solid var(--line);border-radius:11px;box-shadow:var(--lift);overflow:hidden;
+    display:flex;flex-direction:column;max-height:min(34%,236px)}
+  .vsheet.mini .vr{display:none}
+  .vsheet.mini .vsheet-h{border-bottom:0}
+  .vsheet.quiet{display:none}
+  .vsheet-h{display:flex;align-items:center;gap:8px;padding:9px 12px;
+    border-bottom:1px solid var(--line);font-family:var(--mono);font-size:9.5px;font-weight:700;
+    letter-spacing:.11em;text-transform:uppercase;color:var(--faint)}
+  .vsheet-h b{color:var(--ink);letter-spacing:.05em}
+  .vfold{background:none;border:0;padding:0;font:inherit;color:inherit;display:flex;
+    align-items:center;gap:6px;letter-spacing:inherit;text-transform:inherit}
+  .vfold::before{content:"\25BE";font-size:8px;opacity:.7}
+  .vsheet.mini .vfold::before{content:"\25B8"}
+  .ovl-x{margin-left:auto;background:none;border:0;color:var(--faint);font-size:15px;padding:0 2px;
+    line-height:1}
+  .ovl-x:hover{color:var(--ink)}
+  .step.pg-full .vr{max-height:none;flex:1;min-height:0;overflow-y:auto;padding:9px 12px 11px}
+
+  /* the note and Flick sit on the sheet, so the canvas keeps the whole width */
+  .step.pg-full .talk{position:absolute;top:12px;right:12px;width:320px;z-index:6;display:grid;
+    gap:9px;align-content:start;max-height:calc(100% - 150px);overflow:auto;scrollbar-width:thin;
+    padding-right:2px}
+  .step.pg-full .talk .note-pad{margin-top:0}
+  .step.pg-full .talk .mascot{height:132px}
+
+  @media (max-width:1180px){
+    body.pg-view{height:auto;overflow:auto;display:block}
+    .step.pg-full.on{height:auto}
+    .step.pg-full.on .pg{grid-template-columns:minmax(0,1fr);height:auto}
+    .pg-sheet{height:62vh}
+    .step.pg-full .talk{position:static;width:auto;max-height:none;margin-top:12px}
+    .step.pg-full .talk .note-pad{margin-top:0}
+  }
 
   /* ── playground: the palette, canvas and validator ── */
   .pg{display:grid;grid-template-columns:264px minmax(0,1fr);gap:14px;width:100%;align-items:start}
@@ -599,43 +648,57 @@
   .cap-no span::after{content:" ?";color:var(--flag);font-weight:700}
 
   /* canvas: node cards and connectors, laid out like the real one */
-  /* the plotted grid the real builder has */
+  /* a plain sheet you pan, like the real one */
   .cvwrap{position:relative;height:272px;overflow:auto;border:1px solid var(--line);
-    border-radius:10px;background-color:var(--sink);
-    background-image:radial-gradient(var(--line-2) 1.3px, transparent 1.3px);
-    background-size:17px 17px;background-position:-1px -1px}
+    border-radius:10px;background:var(--sink)}
   .cvwrap.empty{display:grid;place-items:center}
   .cv-empty{font-family:var(--mono);font-size:11.5px;color:var(--faint);text-align:center;line-height:1.8}
-  .cvin{position:relative;padding:0;transform-origin:0 0}
+  .cvin{position:relative;padding:0;transform-origin:0 0;min-width:100%;min-height:100%}
+  .cvwrap.empty .cvin{display:grid;place-items:center}
   .cvsvg{position:absolute;top:0;left:0;overflow:visible;pointer-events:none}
-  .nd{position:absolute;width:154px;background:var(--panel);border:1px solid var(--line-2);
-    border-radius:7px;padding:5px 7px 6px;display:grid;grid-template-columns:22px minmax(0,1fr);
-    gap:6px;align-items:start;text-align:left;box-shadow:0 1px 2px rgba(0,0,0,.14)}
+  .nd{position:absolute;width:292px;min-height:62px;background:var(--panel);
+    border:1px solid var(--line);border-radius:9px;padding:0;display:grid;
+    grid-template-columns:62px minmax(0,1fr);text-align:left;
+    box-shadow:0 1px 2px rgba(17,34,41,.10),0 6px 14px -10px rgba(17,34,41,.35)}
   button.nd:hover{border-color:var(--key)}
   span.nd{cursor:default}
-  .nd.sel{border-color:var(--key);box-shadow:0 0 0 2px color-mix(in srgb,var(--key) 35%,transparent)}
-  .nd em{width:22px;height:22px;border-radius:5px;display:grid;place-items:center;font-style:normal;
-    align-self:start}
-  .nd em svg{width:13px;height:13px}
-  .nd b{font-size:10.5px;font-weight:700;color:var(--ink);line-height:1.2;
-    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-  .nd s{font-size:9.5px;color:var(--muted);text-decoration:none;display:flex;line-height:1.3;
-    gap:6px;align-items:baseline;white-space:nowrap;overflow:hidden}
-  .nd s u{margin-left:auto;font-family:var(--mono);font-size:7.5px;color:var(--faint);
-    text-decoration:none;flex:none}
+  .nd.sel{border-color:var(--key);box-shadow:0 0 0 2px color-mix(in srgb,var(--key) 32%,transparent),
+    0 6px 14px -10px rgba(17,34,41,.35)}
+  .nd em{width:62px;border-radius:8px 0 0 8px;display:grid;place-items:center;font-style:normal;
+    align-self:stretch}
+  .nd em svg{width:24px;height:24px}
+  .nd span{display:block;padding:9px 12px 10px;min-width:0;position:relative}
+  .nd b{display:block;font-size:13px;font-weight:700;color:var(--ink);line-height:1.25;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:44px}
+  .nd s{display:block;font-size:11.5px;color:var(--muted);text-decoration:none;line-height:1.3;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+  .nd u{position:absolute;top:8px;right:12px;font-family:var(--mono);font-size:9.5px;
+    color:var(--faint);text-decoration:none}
+  /* an entry source prints its own outgoing label inside the card */
+  .nd-foot{grid-column:1/-1;font-style:normal;font-size:11.5px;color:var(--muted);
+    border-top:1px solid var(--line);background:var(--raise);padding:5px 12px;
+    border-radius:0 0 8px 8px}
+  .nd-plus{position:absolute;right:-11px;top:50%;transform:translateY(-50%);width:22px;height:22px;
+    border-radius:50%;background:var(--ink);color:var(--panel);font-style:normal;font-size:14px;
+    font-weight:600;display:grid;place-items:center;line-height:1;opacity:0;transition:opacity .12s}
+  .nd:hover .nd-plus,.nd.sel .nd-plus{opacity:1}
 
-  .nd.term{width:30px;height:30px;border-radius:50%;padding:0;place-items:center;
-    grid-template-columns:1fr;background:var(--raise)}
-  .nd.term em{background:none!important;color:var(--faint)!important}
-  .nd.term b,.nd.term s,.nd.term u{display:none}
-  .ev{position:absolute;font-family:var(--mono);font-size:8px;background:var(--panel);
-    border:1px solid var(--line);border-radius:99px;padding:1px 6px;color:var(--muted);
-    white-space:nowrap;transform:translate(-50%,-50%);max-width:150px;overflow:hidden;
-    text-overflow:ellipsis;z-index:2}
+  .nd.term{width:44px;min-height:44px;height:44px;border:0;border-radius:50%;padding:0;
+    grid-template-columns:1fr;place-items:center;background:var(--ink);
+    box-shadow:0 2px 6px -2px rgba(0,0,0,.5)}
+  .nd.term em{width:44px;height:44px;border-radius:50%;background:none!important;
+    color:var(--panel)!important}
+  .nd.term em svg{width:20px;height:20px}
+  .nd.term.sel{box-shadow:0 0 0 3px color-mix(in srgb,var(--key) 40%,transparent)}
+  /* the branch label sits on the line, the way the back office prints it */
+  .ev{position:absolute;font-family:var(--sans);font-size:11.5px;background:var(--raise);
+    border:1px solid var(--line);border-radius:5px;padding:2px 8px;color:var(--body);
+    white-space:nowrap;transform:translate(-50%,-50%);z-index:2}
   .ev.unseen{border-color:color-mix(in srgb,var(--flag) 45%,transparent);color:var(--flag)}
-  .flowchip{position:absolute;font-family:var(--mono);font-size:8px;background:var(--raise);
-    border:1px solid var(--line-2);border-radius:4px;padding:1px 6px;color:var(--muted);
-    transform:translate(-50%,-100%);white-space:nowrap}
+  .flowchip{position:absolute;font-family:var(--sans);font-size:11px;font-weight:600;
+    background:var(--key-soft);border:1px solid color-mix(in srgb,var(--key) 35%,transparent);
+    border-radius:5px;padding:2px 8px;color:var(--key);transform:translate(-50%,-50%);
+    white-space:nowrap;z-index:2}
   .ptile[draggable="true"]{cursor:grab}
   .ptile[draggable="true"]:active{cursor:grabbing}
   .ptile.dragging{opacity:.4}
@@ -665,6 +728,12 @@
   .note-pad li.now button{font-weight:700}
   .note-pad li.now i{border-color:#4A3C10;border-width:2px}
   .note-pad p{margin:9px 0 0;font-size:11.5px;line-height:1.4;opacity:.75}
+  .note-fold{background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;
+    display:flex;align-items:center;gap:6px}
+  .note-fold::before{content:"\25BE";font-size:9px;opacity:.6}
+  .note-pad.mini .note-fold::before{content:"\25B8"}
+  .note-pad.mini #noteBody{display:none}
+  .note-pad.mini h4{margin:0}
 
   .attach{display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:7px 0 0;font-size:11px;
     color:var(--faint)}
@@ -1235,36 +1304,55 @@
     data-tip="Drag onto a node and it hangs off that node. Drop on empty canvas and it starts the journey. A question mark on a tile means we have never captured that node from a real journey, so no generator may build it yet.">
     <div class="stage">
       <div class="pg">
-        <div class="pgp">
-          <div class="pgp-h">Nodes <b>drag onto the canvas</b></div>
+        <aside class="pg-pal" id="palette">
+          <div class="pg-pal-h">Nodes <b>drag onto the canvas</b></div>
           <div class="plist" id="plist"></div>
-        </div>
-        <div class="pgcol">
-          <div class="pgp">
-            <div class="pgp-h">Your journey <b id="cvCount"></b>
-              <span class="verdict no" id="verdict" hidden>not approvable</span></div>
-            <div class="pgp-b">
-              <div class="cvwrap empty" id="cvwrap"><div class="cvin" id="cv"></div></div>
-              <div class="attach" id="attach"></div>
-            </div>
+        </aside>
+        <div class="pg-sheet">
+          <div class="cvwrap empty" id="cvwrap"><div class="cvin" id="cv"></div></div>
+
+          <button class="ovl-btn fold" id="pgFold" type="button" aria-label="Hide the node list"
+            title="Hide the node list">&#8676;</button>
+
+          <div class="ovl ovl-tl">
+            <span class="cvcount" id="cvCount"></span>
+            <span class="verdict no" id="verdict" hidden>not approvable</span>
+          </div>
+
+          <div class="ovl ovl-br zoomstack">
+            <button id="zIn" type="button" aria-label="Zoom in">+</button>
+            <b id="zLbl">100%</b>
+            <button id="zOut" type="button" aria-label="Zoom out">&#8722;</button>
+            <button id="zFit" type="button" aria-label="Fit the journey">&#9974;</button>
+          </div>
+
+          <div class="ovl ovl-bl">
+            <div class="attach" id="attach"></div>
             <div class="pgbar">
               <button class="btn s" id="pgCheck">Validate</button>
               <button class="btn g s" id="pgUndo">Undo</button>
               <button class="btn g s" id="pgClear">Clear</button>
             </div>
           </div>
-          <div class="pgp">
-            <div class="pgp-h">Validator <b>catalog grammar + capture status</b></div>
-            <div class="pgp-b"><div class="vr" id="vr"></div></div>
+
+          <div class="ovl vsheet quiet" id="vsheet">
+            <div class="vsheet-h"><button class="vfold" id="vFold" type="button">Validator</button>
+              <b>catalog grammar + capture status</b>
+              <button class="ovl-x" id="vClose" type="button" aria-label="Hide the validator">&#215;</button>
+            </div>
+            <div class="vr" id="vr"></div>
           </div>
         </div>
       </div>
     </div>
     <div class="talk">
       <div class="note-pad" id="note">
-        <h4>Practice tasks<span id="noteCount"></span></h4>
-        <ol id="noteList"></ol>
-        <p id="noteHint">Pick one and I will read it out. Ticks are saved on this machine.</p>
+        <h4><button class="note-fold" id="noteFold" type="button" aria-expanded="true"
+          aria-controls="noteBody">Practice tasks</button><span id="noteCount"></span></h4>
+        <div id="noteBody">
+          <ol id="noteList"></ol>
+          <p id="noteHint">Pick one and I will read it out. Ticks are saved on this machine.</p>
+        </div>
       </div>
       <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox flag"></i></button>
       <div class="bubble" data-bubble>
@@ -1468,7 +1556,7 @@
       ['Campaign Connector','plug','',1,0]]],
     ['Multiple flows','t-flows',0,[
       ['Parallel flows','par','',1,0],
-      ['Choosable flows','tree','',0,1]]],
+      ['Choosable flows','tree','',0,0]]],
     ['Promotion type','t-promo',0,[
       ['Promotion','mon','promotion',1,0],
       ['Multipurpose Promotion','star','multipurpose_promotion',1,0]]],
@@ -1502,6 +1590,26 @@
     dextra_email:'Email content', dextra_sms:'SMS text',
     end_of_journey:'', end_of_path:''
   };
+  /* the branch words the back office prints on a connector, not the wire name */
+  var EVW = {
+    PlayerAdded:'Players added to journey', PromotionAccepted:'Accepted',
+    PromotionExpired:'Expired', PromotionCanceled:'Canceled',
+    DepositConditionSatisfied:'Deposited', DepositConditionCanceled:'Canceled',
+    DepositConditionExpired:'Expired',
+    FreespinBonusCollectingFinished:'Collected', FreespinBonusExpired:'Expired',
+    FreespinBonusCanceled:'Canceled', FreespinBonusLost:'Lost',
+    WageringBonusFinished:'Wagered', WageringBonusLost:'Lost',
+    WageringBonusForfeited:'Forfeited', WageringBonusExpired:'Expired',
+    WageringBonusCanceled:'Canceled', IntervalFinished:'Waited',
+    EventDetected:'Event seen', MessageSent:'Sent', MessageDelivered:'Delivered'
+  };
+  function evWord(ev){
+    if (!ev) return '';
+    if (EVW[ev]) return EVW[ev];
+    /* fall back to the tail of the name, spaced out: FooBarBaz -> Baz */
+    var parts = ev.replace(/([a-z0-9])([A-Z])/g, '$1 $2').split(' ');
+    return parts.length > 1 ? parts.slice(-1)[0] : ev;
+  }
   var SOURCES = ['dwh_source','external_system_source'];
   var TERMINALS = ['end_of_journey','end_of_path'];
   var CHANNELS = ['dextra_sms','dextra_email','notification_center#contract1','notification_center#contract5'];
@@ -1678,7 +1786,10 @@
       return false;
     }
 
-    var CARD_W = 154, CARD_H = 48, TERM = 28, GAP_X = 16, ROW_H = 70;
+    /* the back office's own proportions, so what you build here looks like
+       what you will see there. Nothing is scaled down to fit. */
+    var CARD_W = 292, CARD_H = 62, TERM = 44, GAP_X = 34, ROW_H = 148, PAD = 30, PAD_T = 58;
+    var zoom = 1, userZoomed = false;
 
     /* tidy tree: leaves take the next free column, parents centre over kids */
     function layout(){
@@ -1734,40 +1845,64 @@
         var h = isTerm(n.key) ? TERM : CARD_H;
         if (n.parent !== null){
           var pp = L.pos[n.parent], ph = isTerm(node(n.parent).key) ? TERM : CARD_H;
-          var x1 = pp.x + pp.w / 2, y1 = pp.y * ROW_H + ph, x2 = p.x + p.w / 2, y2 = p.y * ROW_H;
-          paths.push('<path d="' + elbow(x1, y1, x2, y2) + '" fill="none" stroke="var(--line-2)" ' +
-            'stroke-width="1.2" stroke-dasharray="2 3"/>');
-          if (n.via)
+          var x1 = pp.x + pp.w / 2 + PAD, y1 = pp.y * ROW_H + ph + PAD_T;
+          var x2 = p.x + p.w / 2 + PAD, y2 = p.y * ROW_H + PAD_T;
+          var srcFoot = node(n.parent).tint === 't-src' ? 22 : 0;
+          paths.push('<path d="' + elbow(x1, y1 + srcFoot, x2, y2) + '" fill="none" ' +
+            'stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/>');
+          if (n.via && !srcFoot)
             pills.push('<span class="ev' + (edgeSeen(n) ? '' : ' unseen') + '" title="' + n.via +
-              '" style="left:' + x2 + 'px;top:' + (y2 - 9) + 'px">' + n.via + '</span>');
+              '" style="left:' + x2 + 'px;top:' + (y2 - 26) + 'px">' + evWord(n.via) + '</span>');
           if (n.flow)
-            pills.push('<span class="flowchip" style="left:' + x2 + 'px;top:' + (y2 - 27) + 'px">' +
+            pills.push('<span class="flowchip" style="left:' + x2 + 'px;top:' + (y2 - 50) + 'px">' +
               n.flow + '</span>');
         }
         var sub = SUB[n.key] === undefined ? 'not captured' : SUB[n.key];
+        var isSrc = n.tint === 't-src';
         cards.push('<button class="nd ' + (isTerm(n.key) ? 'term ' : '') + (sel === n.id ? 'sel' : '') +
-          '" data-id="' + n.id + '" type="button" style="left:' + p.x + 'px;top:' + (p.y * ROW_H) +
-          'px"><em class="' + n.tint + '" aria-hidden="true">' + (IC[n.ic] || '') + '</em>' +
-          (isTerm(n.key) ? '' : '<span><b>' + n.label + '</b><s>' + (sub || '') +
-           '<u>' + n.uid + '</u></s></span>') + '</button>');
+          '" data-id="' + n.id + '" type="button" style="left:' + (p.x + PAD) + 'px;top:' +
+          (p.y * ROW_H + PAD_T) + 'px">' +
+          (isTerm(n.key)
+            ? '<em aria-hidden="true">' + (IC.end || '') + '</em>'
+            : '<em class="' + n.tint + '" aria-hidden="true">' + (IC[n.ic] || '') + '</em>' +
+              '<span><u>' + n.uid + '</u><b>' + n.label + '</b><s>' + (sub || '') + '</s></span>' +
+              (isSrc ? '<i class="nd-foot">Players added to journey</i>' : '') +
+              '<i class="nd-plus" aria-hidden="true">+</i>') +
+          '</button>');
       });
-      var W = L.w + 8, H = L.h + 30;
+      /* real size, anchored top left, and the canvas pans. The back office does
+         not shrink a journey to fit either, and a moving origin made every new
+         node jump the whole shape sideways. */
+      var W = L.w + PAD * 2, H = L.h + PAD_T + PAD;
+      /* a journey wider than the canvas opens fitted, as it does in the back
+         office. Touch the zoom yourself and it stays where you put it. */
+      if (!userZoomed && wrap.clientWidth > 140){
+        var kx = (wrap.clientWidth - 14) / W, ky = (wrap.clientHeight - 14) / H;
+        zoom = Math.max(0.4, Math.min(1, kx, ky));
+      }
+      cv.style.transform = zoom === 1 ? 'none' : 'scale(' + zoom + ')';
       cv.style.width = W + 'px';
       cv.style.height = H + 'px';
       cv.innerHTML = '<svg class="cvsvg" width="' + W + '" height="' + H + '">' +
         paths.join('') + '</svg>' + pills.join('') + cards.join('');
-      /* fit sideways so every flow is visible, then pan to follow the selection */
-      var box = wrap.clientWidth - 26;
-      var k = box < 120 ? 0.62 : Math.max(Math.min(1, box / W), 0.62);
-      cv.style.transform = 'translate(12px,20px) scale(' + k.toFixed(3) + ')';
-      cv.style.width = (W * k + 24) + 'px';
-      cv.style.height = (H * k + 28) + 'px';
+      if (zoom !== 1){
+        cv.style.width = Math.round(W * zoom) + 'px';
+        cv.style.height = Math.round(H * zoom) + 'px';
+      }
+      var zl = document.getElementById('zLbl');
+      if (zl) zl.textContent = Math.round(zoom * 100) + '%';
+      if (H * zoom <= wrap.clientHeight + 2) wrap.scrollTop = 0;
+      if (W * zoom <= wrap.clientWidth + 2) wrap.scrollLeft = 0;
       var selp = sel === null ? null : L.pos[sel];
       if (selp){
-        var sy = selp.y * ROW_H * k, sh = 60 * k;
-        if (sy + sh + 20 > wrap.scrollTop + wrap.clientHeight)
-          wrap.scrollTop = sy + sh + 40 - wrap.clientHeight;
-        else if (sy < wrap.scrollTop) wrap.scrollTop = Math.max(0, sy - 20);
+        var sy = (selp.y * ROW_H + PAD_T) * zoom, sx = (selp.x + PAD) * zoom;
+        var ch = CARD_H * zoom, cw = CARD_W * zoom;
+        if (sy + ch + 30 > wrap.scrollTop + wrap.clientHeight)
+          wrap.scrollTop = sy + ch + 40 - wrap.clientHeight;
+        else if (sy < wrap.scrollTop) wrap.scrollTop = Math.max(0, sy - 24);
+        if (sx + cw + 30 > wrap.scrollLeft + wrap.clientWidth)
+          wrap.scrollLeft = sx + cw + 40 - wrap.clientWidth;
+        else if (sx < wrap.scrollLeft) wrap.scrollLeft = Math.max(0, sx - 24);
       }
       cvCount.textContent = tree.length + (tree.length === 1 ? ' node' : ' nodes');
 
@@ -1778,9 +1913,10 @@
           'font-size:11px">' + selN.label + '</b>' +
           (pl.length ? '<span class="lbl">via</span>' + pl.slice(0, 3).map(function(e){
             return '<button class="port' + ((selPort || pl[0]) === e ? ' on' : '') +
-                   '" data-ev="' + e + '" type="button">' + e + '</button>';
+                   '" data-ev="' + e + '" title="' + e + '" type="button">' + evWord(e) + '</button>';
           }).join('') + (pl.length > 3 ? '<span class="port" style="border:0">+' + (pl.length - 3) +
-          '</span>' : '') : '');
+          '</span>' : '')
+          : '<span class="lbl">no captured events for this node, so what follows is a guess</span>');
         if (kids(selN.id).length === 0 && tree.length > 1)
           attach.innerHTML += '<button class="btn g s" data-drop="1" type="button">remove</button>';
       } else {
@@ -1791,6 +1927,8 @@
           : '';
       }
       if (!checked){ verdict.hidden = true; vr.innerHTML = ''; }
+      var vsheet = document.getElementById('vsheet');
+      if (vsheet) vsheet.classList.toggle('quiet', !vr.innerHTML);
     }
 
     document.getElementById('attach').addEventListener('click', function(e){
@@ -2082,19 +2220,69 @@
       draw();
       talkPg('<p>Blank canvas. Start with an input source.</p>', 'flag');
     };
-    draw();
 
-    /* The fit is measured off the canvas box. On first paint this screen is
-       still hidden, so the box is narrow and the fit sticks at its floor.
-       Re-measure whenever the box really changes width. */
+    var nFold = document.getElementById('noteFold');
+    if (nFold) nFold.onclick = function(){
+      var mini = document.getElementById('note').classList.toggle('mini');
+      nFold.setAttribute('aria-expanded', mini ? 'false' : 'true');
+    };
+
+    var vFold = document.getElementById('vFold');
+    if (vFold) vFold.onclick = function(){
+      document.getElementById('vsheet').classList.toggle('mini');
+    };
+    var vClose = document.getElementById('vClose');
+    if (vClose) vClose.onclick = function(){
+      document.getElementById('vsheet').classList.add('quiet');
+    };
+
+    /* zoom: 1:1 is the default, fit is there for a four tier journey */
+    var STEPS = [0.4, 0.5, 0.6, 0.75, 0.9, 1];
+    function setZoom(z){ zoom = Math.min(1, Math.max(0.4, z)); draw(); }
+    document.getElementById('zIn').onclick = function(){
+      userZoomed = true;
+      var up = STEPS.filter(function(v){ return v > zoom + 0.001; })[0];
+      setZoom(up || 1);
+    };
+    document.getElementById('zOut').onclick = function(){
+      userZoomed = true;
+      var down = STEPS.filter(function(v){ return v < zoom - 0.001; });
+      setZoom(down.length ? down[down.length - 1] : 0.4);
+    };
+    document.getElementById('zFit').onclick = function(){
+      userZoomed = false;
+      if (!tree.length) return setZoom(1);
+      var L2 = layout();
+      var kx = (wrapEl.clientWidth - 14) / (L2.w + PAD * 2);
+      var ky = (wrapEl.clientHeight - 14) / (L2.h + PAD_T + PAD);
+      wrapEl.scrollTop = 0; wrapEl.scrollLeft = 0;
+      setZoom(Math.min(1, kx, ky));
+    };
+
+    /* the fit is measured off the canvas box, and on first paint this screen is
+       still hidden, so there is nothing to measure yet. Redraw once the box has
+       a real size, and again whenever the window or the palette changes it. */
     if (window.ResizeObserver){
-      var lastW = 0;
+      var lastBox = '';
       new ResizeObserver(function(){
-        var w = wrapEl.clientWidth;
-        if (Math.abs(w - lastW) < 5) return;
-        lastW = w; draw();
+        var box = wrapEl.clientWidth + 'x' + wrapEl.clientHeight;
+        if (box === lastBox || wrapEl.clientWidth < 40) return;
+        lastBox = box; draw();
       }).observe(wrapEl);
     }
+
+    /* the node list folds away, and the canvas takes the room */
+    var fold = document.getElementById('pgFold');
+    if (fold) fold.addEventListener('click', function(){
+      var on = fold.closest('.step').classList.toggle('folded');
+      draw();
+      fold.innerHTML = on ? '&#8677;' : '&#8676;';
+      fold.title = on ? 'Show the node list' : 'Hide the node list';
+      fold.setAttribute('aria-label', fold.title);
+    });
+
+    draw();
+
   }
 
   /* ── full screen captures ── */
