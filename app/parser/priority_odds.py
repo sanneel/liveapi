@@ -109,6 +109,25 @@ def collect_priority_tids() -> Dict[str, Set[str]]:
                 out[sport].update(_tournament_ids_from_url(str(feed.get("url") or "")))
     except Exception:
         logger.exception("priority_odds: extra-feed tids failed")
+
+    # A dedicated single-tournament feed declared in code deserves the same fast
+    # lane as one added through the admin page, otherwise adding a link in code
+    # is quietly worse than adding it in the UI. Only the dedicated ones count:
+    # the bundled prematch_leagues_* pages carry three UUIDs each and are not
+    # what this lane is for.
+    try:
+        import server as _server  # type: ignore
+
+        for (sport, mode), url in dict(getattr(_server, "FEEDS", {})).items():
+            if sport not in _KNOWN_SPORTS or "_extra_" in mode:
+                continue
+            if not mode.startswith("prematch_") or mode.startswith("prematch_leagues"):
+                continue
+            tids = _tournament_ids_from_url(str(url))
+            if len(tids) == 1:
+                out[sport].update(tids)
+    except Exception:
+        logger.exception("priority_odds: code-declared feed tids failed")
     return out
 
 

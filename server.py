@@ -269,6 +269,15 @@ FEEDS: Dict[Tuple[str, str], str] = {
     # match list, which keeps the WC cube's auto-rank pool deep enough
     # to fill all 3 slots even after pins are applied.
     ("football", "prematch_worldcup_2026"): "https://jugabet.cl/football/all/1?tournaments=c19cb5ffb4404c31b869b53dd90161de",
+    # England FA Community Shield, added in code rather than through
+    # /admin/parser-feeds because the admin path was not taking. Same dedicated
+    # single-tournament shape as the World Cup feed above: one UUID on its own
+    # returns the tournament's whole list instead of the handful Jugabet renders
+    # when several UUIDs share one page. The mode keeps the `prematch_` prefix so
+    # persistence writes it as plain prematch, and it deliberately has no
+    # `_extra_` in the key: sync_extra_parser_feeds() deletes any `_extra_` key
+    # that is not in data/parser_extra_feeds.json, which would drop this one.
+    ("football", "prematch_community_shield"): "https://jugabet.cl/football/all/1?tournaments=190543621b1c4ee48bdd6bdc79e8967c",
 }
 FEEDS.update(build_extra_feed_map())
 
