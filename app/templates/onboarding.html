@@ -219,6 +219,10 @@
     .mascot{animation:bob 4.2s ease-in-out infinite}
     @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
     .mascot:hover{animation:none}
+    /* a tap earns a little hop, then the idle bob resumes */
+    .mascot.poked{animation:poke .5s cubic-bezier(.3,.7,.4,1.2)}
+    @keyframes poke{0%{transform:translateY(0) rotate(0)}30%{transform:translateY(-11px) rotate(-4deg)}
+      62%{transform:translateY(1px) rotate(2.5deg)}100%{transform:translateY(0) rotate(0)}}
   }
   .mascot::after{content:"tap me";position:absolute;bottom:-13px;left:50%;transform:translateX(-50%);
     font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;
@@ -309,6 +313,8 @@
   .qz-o button.ok{border-color:var(--ok);background:var(--ok-soft);color:var(--ink);font-weight:600}
   .qz-o button.no{border-color:var(--flag);background:color-mix(in srgb,var(--flag) 10%,transparent)}
   .qz-o button[disabled]{cursor:default}
+  /* the option Flick struck out for you */
+  .qz-o button.cut{opacity:.42;text-decoration:line-through}
   .qz-why{margin:10px 0 0;font-size:12.5px;color:var(--muted);min-height:34px;line-height:1.45}
   .qz-why b{color:var(--ink);font-weight:600}
   .qz-f{display:flex;align-items:center;gap:8px;padding:10px 16px 13px;border-top:1px solid var(--line)}
@@ -688,7 +694,8 @@
       <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox wave"></i></button>
       <div class="bubble" data-bubble>
         <p>Hi, I'm Flick, and I will be with you the whole way.</p>
-        <p>Tap me on any screen for the thing people get wrong there.</p>
+        <p>Tap me on any screen for the thing people get wrong there. In a check round, a tap
+          strikes out one wrong answer for you.</p>
       </div>
     </div>
   </section>
@@ -786,7 +793,7 @@
     </div>
   </section>
 
-  <section class="step" data-hue="pink" data-t="His choice" data-part="Casino Wheel of Fortune" data-tab="His choice" data-pose="book"
+  <section class="step" data-hue="pink" data-t="Their choice" data-part="Casino Wheel of Fortune" data-tab="Their choice" data-pose="book"
     data-tip="The Multipurpose Promotion gives nothing by itself. Everything a player can spend comes from the promotion inside the flow they picked.">
     <div class="stage">
       <figure class="shot" tabindex="0" style="--ar:1454/1404;--w:370px;margin:0">
@@ -842,12 +849,13 @@
       <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox think"></i></button>
       <div class="bubble" data-bubble>
         <p>What is happening inside journey logs? Read it from the bottom up.</p>
-        <p>He is added into the journey and he can see it. On the right, the journey he is in.</p>
+        <p>The player is added into the journey and can see it. On the right, the journey they
+          are in.</p>
       </div>
     </div>
   </section>
 
-  <section class="step" data-hue="purple" data-t="His bonus" data-part="Casino Wheel of Fortune" data-tab="His bonus" data-pose="thumb"
+  <section class="step" data-hue="purple" data-t="Their bonus" data-part="Casino Wheel of Fortune" data-tab="Their bonus" data-pose="thumb"
     data-tip="Open the promotion the player took, not the one that offered the list. The terms live on the one they picked.">
     <div class="stage">
       <figure class="shot" tabindex="0" style="--ar:1478/1118;--w:430px;margin:0">
@@ -904,8 +912,8 @@
     <div class="talk">
       <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox party"></i></button>
       <div class="bubble" data-bubble>
-        <p>Ten questions on the wheel.</p>
-        <p>Answer one and I tell you why, then Next.</p>
+        <p>Ten questions on the wheel. Answer one and I tell you why, then Next.</p>
+        <p>Stuck? Tap me and I strike out a wrong answer, once per question.</p>
       </div>
     </div>
   </section>
@@ -930,7 +938,7 @@
   </section>
 
   <section class="step" data-hue="green" data-t="Week game" data-part="Game of the Week" data-tab="The card" data-pose="book"
-    data-tip="The ladder is fixed. The only thing that changes on a Wednesday is which game the spins are on.">
+    data-tip="Participa only opens the promo page. It is Activar, on the page itself, that joins the player to the journey.">
     <div class="stage">
       <figure class="shot" tabindex="0" style="--ar:734/472;--w:470px;margin:0">
         <div class="shot-in">
@@ -941,8 +949,9 @@
     <div class="talk">
       <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox book"></i></button>
       <div class="bubble" data-bubble>
-        <p>This widget sits on the promo page.</p>
-        <p>Participa forwards the player to the promo page, where they read the short description first.</p>
+        <p>This card sits in the player's promotions list.</p>
+        <p>Participa only forwards them to the promo page, where they read the short description
+          first. Nothing is activated yet.</p>
       </div>
     </div>
   </section>
@@ -1017,7 +1026,7 @@
     </div>
   </section>
 
-  <section class="step" data-hue="purple" data-t="Her bonus" data-part="Game of the Week" data-tab="Her bonus" data-pose="thumb"
+  <section class="step" data-hue="purple" data-t="Their bonus" data-part="Game of the Week" data-tab="Their bonus" data-pose="thumb"
     data-tip="Every tier is the same four steps. Only the deposit and the spin value change.">
     <div class="stage">
       <figure class="shot" tabindex="0" style="--ar:936/808;--w:470px;margin:0">
@@ -1207,8 +1216,8 @@
     <div class="talk">
       <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox party"></i></button>
       <div class="bubble" data-bubble>
-        <p>Ten on the Game of the Week.</p>
-        <p>Last stop before the playground.</p>
+        <p>Ten on the Game of the Week, the last stop before the playground.</p>
+        <p>The strike-out still works: tap me once per question.</p>
       </div>
     </div>
   </section>
@@ -1270,7 +1279,8 @@
       <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox flag"></i></button>
       <div class="bubble" data-bubble>
         <p>Your turn. Drag nodes onto the canvas, or onto the node they follow.</p>
-        <p>Press Validate and I will tell you if it would build.</p>
+        <p>Press Validate and I will tell you if it would build. Once a task is picked, tap me
+          any time and I read back what is still missing.</p>
       </div>
     </div>
   </section>
@@ -1346,12 +1356,21 @@
   function say(step, html, isTip){
     var b = step.querySelector('[data-bubble]');
     if (!b.dataset.keep) b.dataset.keep = b.innerHTML;
+    /* a tip is an aside; anything else becomes the line a tap returns you to,
+       so on a busy screen Flick picks up where he left off, not at the start */
+    if (!isTip) b.dataset.keep = html;
     b.innerHTML = html;
     b.classList.toggle('tip', !!isTip);
+  }
+  function poke(m){
+    m.classList.remove('poked');
+    void m.offsetWidth;
+    m.classList.add('poked');
   }
   document.addEventListener('click', function(e){
     var m = e.target.closest('[data-buddy]');
     if (!m) return;
+    poke(m);
     var step = m.closest('.step');
     var b = step.querySelector('[data-bubble]');
     if (b.classList.contains('tip')){
@@ -1359,8 +1378,16 @@
       b.classList.remove('tip');
       pose(m, step.dataset.pose);
     } else {
-      say(step, '<p><b>Careful here.</b> ' + step.dataset.tip + '</p>', true);
-      pose(m, 'think');
+      /* a screen can put its own answer in Flick's mouth; the canned tip is
+         what he says everywhere else */
+      var custom = typeof step._ask === 'function' ? step._ask() : null;
+      if (custom){
+        say(step, custom.html, true);
+        pose(m, custom.pose || 'think');
+      } else {
+        say(step, '<p><b>Careful here.</b> ' + step.dataset.tip + '</p>', true);
+        pose(m, 'think');
+      }
     }
   });
 
@@ -1616,6 +1643,16 @@
     });
 
     function talkPg(html, p){ say(pgStep, html, false); if (p) pose(pgStep.querySelector('[data-buddy]'), p); }
+    /* tap Flick with a task on the note and he reads the canvas against it,
+       live, without the ceremony of a full Validate */
+    pgStep._ask = function(){
+      if (taskIx < 0) return null;
+      var miss = taskCheck(TASKS[taskIx]);
+      if (!miss.length)
+        return { html:'<p><b>The shape is there.</b> Press Validate and let the checks have ' +
+                 'their say.</p>', pose:'thumb' };
+      return { html:'<p><b>Still missing:</b> ' + miss.join(', ') + '.</p>', pose:'think' };
+    };
     function node(id){ for (var i=0;i<tree.length;i++) if (tree[i].id===id) return tree[i]; return null; }
     function kids(id){ return tree.filter(function(n){ return n.parent===id; }); }
     function ancestors(n){ var out=[], c=n; while (c && c.parent!==null){ c=node(c.parent); if(c) out.push(c); } return out; }
@@ -2004,6 +2041,12 @@
       else
         talkPg('<p>Not approvable yet. ' + errs + (errs === 1 ? ' problem' : ' problems') +
                ' in the list, and the red ones are the ones that stop a build.</p>', 'think');
+      if (allJustDone){
+        allJustDone = false;
+        talkPg('<p><b>That is all seven.</b> Every shape we actually ship, built by your own ' +
+               'hand. The playground stays here whenever you want to try one before drawing it ' +
+               'for real.</p>', 'party');
+      }
       draw();
       verdict.hidden = false;
     }
@@ -2098,6 +2141,7 @@
     var LOCAL_KEY = 'flick.playground.done.v1';
     var done = [];
     var serverBacked = false;
+    var allJustDone = false;
     var noteList = document.getElementById('noteList');
     var noteCount = document.getElementById('noteCount');
     var noteHint = document.getElementById('noteHint');
@@ -2126,6 +2170,7 @@
     function markDone(key){
       if (done.indexOf(key) !== -1) return;
       done.push(key);
+      if (done.length === TASKS.length) allJustDone = true;
       drawNote();
       if (!serverBacked){ localSave(); return; }
       fetch(PROGRESS_URL, {
@@ -2426,7 +2471,7 @@
     var body = box.querySelector('[data-body]'), dots = box.querySelector('[data-dots]'),
         next = box.querySelector('[data-next]'), num = box.querySelector('[data-num]'),
         score = box.querySelector('[data-score]'), step = box.closest('.step');
-    var at = 0, right = 0, marks = [], ansAt = 0;
+    var at = 0, right = 0, marks = [], ansAt = 0, hinted = false;
 
     function paintDots(){
       dots.innerHTML = set.map(function(_, i){
@@ -2451,8 +2496,28 @@
         ord.map(function(k){ return '<button type="button">' + q[1][k] + '</button>'; }).join('') +
         '</div><p class="qz-why"></p>';
       next.hidden = true;
+      hinted = false;
       paintDots();
     }
+
+    /* tap Flick before answering and he strikes out one wrong option — once
+       per question, and never down to a single answer left */
+    var buddy = step.querySelector('[data-buddy]');
+    if (buddy) buddy.addEventListener('click', function(e){
+      if (hinted) return;
+      if (body.querySelector('.qz-o button.ok')) return;
+      var btns = [].slice.call(body.querySelectorAll('.qz-o button'));
+      var wrong = btns.filter(function(x, i){ return i !== ansAt && !x.disabled; });
+      if (btns.length < 3 || wrong.length < 2) return;
+      var cut = wrong[Math.floor(Math.random() * wrong.length)];
+      cut.disabled = true;
+      cut.classList.add('cut');
+      hinted = true;
+      e.stopPropagation();
+      poke(buddy);
+      say(step, '<p><b>Not the crossed-out one.</b> The rest is yours to call.</p>', true);
+      pose(buddy, 'glass');
+    });
 
     function finish(){
       body.innerHTML = '<div class="qz-done"><b>' + right + ' / ' + set.length + '</b><span>' +
