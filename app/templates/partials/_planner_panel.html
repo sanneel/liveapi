@@ -166,7 +166,10 @@
   .jp-send{flex:none;display:inline-flex;align-items:center;gap:8px;height:42px;
     border-radius:12px;box-shadow:0 2px 8px -3px color-mix(in srgb, var(--ac) 55%, transparent)}
   .jp-send svg{width:15px;height:15px}
-  .jp-hint{font-size:11px;color:var(--t-faint);min-height:14px;padding:6px 26px 0;
+  /* 12px muted, not 11px faint: this line carries real instructions ("paste
+     the reason back", "the design data was cut off") and was the least
+     readable text on the page. */
+  .jp-hint{font-size:12px;color:var(--t-muted);min-height:14px;padding:6px 26px 0;
     font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace}
 
   /* ── results ─────────────────────────────────────────────────────────── */
@@ -232,9 +235,18 @@
   .jp-banner.bad{background:var(--live-bg);color:var(--live-t);
     border-color:color-mix(in srgb, var(--live-t) 34%, transparent)}
   .jp-banner code{font-family:'JetBrains Mono','SFMono-Regular',Consolas,Menlo,monospace;
-    font-size:11.5px}@media (prefers-reduced-motion:reduce){
-    .jp-msg,
-    .jp-iconbtn,.jp-board{transition:none}
+    font-size:11.5px}
+  /* ── keyboard ────────────────────────────────────────────────────────────
+     The panel is mouse-first in shape but must never be mouse-only. One rule
+     for every control, in the accent, so focus reads the same wherever it
+     lands — the tabs, the folded JSON strips and the download buttons had no
+     visible focus at all before this. */
+  .jp-wrap :is(button,a,summary,[tabindex="0"]):focus-visible{
+    outline:2px solid var(--ac);outline-offset:2px;border-radius:6px}
+  @media (prefers-reduced-motion:reduce){
+    .jp-msg{animation:none}
+    .jp-dots::before{animation:none;opacity:1}
+    .jp-msg,.jp-iconbtn,.jp-board,.jp-board:hover,.jp-iconbtn:hover{transition:none;transform:none}
   }@media (max-width:1180px){
     .jp-wrap{height:auto;min-height:0}
     .jp-wrap.jp-full{height:100vh;overflow:auto}
@@ -302,7 +314,11 @@
     <div class="jp-main">
 
       <div class="jp-surface">
-        <div class="jp-log" id="jpLog">
+        {# role=log + aria-live: a reply arrives seconds after the operator has
+           moved focus back to the textarea, so without this a screen reader
+           hears nothing at all when the planner answers. #}
+        <div class="jp-log" id="jpLog" role="log" aria-live="polite"
+             aria-label="Conversation with the planner">
           <div class="jp-empty" id="jpEmpty">
             <p class="jp-hint">Paste a campaign brief and read the answer. Ask follow-ups in the
             same thread; <b>Render design</b> and <b>Full script</b> act on what is above.</p>
@@ -310,26 +326,38 @@
         </div>
 
         <div class="jp-composer">
-          <textarea id="jpInput" rows="1"
+          {# aria-label, because the placeholder is the field's only text and a
+             placeholder is not a name — it vanishes the moment you type. #}
+          <textarea id="jpInput" rows="1" aria-label="Campaign brief or follow-up"
             placeholder="Paste a campaign brief, or ask a follow-up…   Enter to send · Shift+Enter for a newline"></textarea>
           <button class="btn primary jp-send" id="jpSend" type="button">{{ i_send }} Send</button>
         </div>
       </div>
 
+      {# These look like tabs but behave as toggles — pressing the open one
+         closes the strip — so they carry aria-expanded/aria-controls, the
+         semantics of what they do, not role=tab, the semantics of how they
+         look. The JS keeps aria-expanded honest in showPane(). #}
       <div class="jp-results" id="jpResults" hidden>
         <div class="jp-rtabs">
-          <button type="button" class="jp-rtab" data-rtab="boards">Boards <span id="jpBoardCount">(0)</span></button>
-          <button type="button" class="jp-rtab" data-rtab="script">Script <span id="jpScriptCount">(0)</span></button>
+          <button type="button" class="jp-rtab" data-rtab="boards"
+            aria-expanded="false" aria-controls="jpPaneBoards">Boards <span id="jpBoardCount">(0)</span></button>
+          <button type="button" class="jp-rtab" data-rtab="script"
+            aria-expanded="false" aria-controls="jpPaneScript">Script <span id="jpScriptCount">(0)</span></button>
         </div>
-        <div class="jp-rbody" data-rpane="boards" hidden>
+        <div class="jp-rbody" data-rpane="boards" id="jpPaneBoards" role="region"
+             aria-label="Design boards" hidden>
           <div class="jp-boards" id="jpBoards"></div>
         </div>
-        <div class="jp-rbody" data-rpane="script" hidden>
+        <div class="jp-rbody" data-rpane="script" id="jpPaneScript" role="region"
+             aria-label="Console scripts" hidden>
           <div id="jpScripts"></div>
         </div>
       </div>
 
-      <div class="jp-hint" id="jpHint"></div>
+      {# role=status so "Composing…", "Built." and every refusal hint are
+         announced without stealing focus. #}
+      <div class="jp-hint" id="jpHint" role="status"></div>
     </div>
 
     {# The inspector rail is gone at the operator's request: the conversation
@@ -507,14 +535,29 @@ NOTES
     const open = document.querySelector(".jp-rtab.on");
     const same = open && open.dataset.rtab === which;
     results.hidden = false;
-    document.querySelectorAll(".jp-rtab").forEach(t =>
-      t.classList.toggle("on", !same && t.dataset.rtab === which));
+    document.querySelectorAll(".jp-rtab").forEach(t => {
+      const on = !same && t.dataset.rtab === which;
+      t.classList.toggle("on", on);
+      t.setAttribute("aria-expanded", on ? "true" : "false");
+    });
     document.querySelectorAll("[data-rpane]").forEach(p =>
       p.hidden = same || p.dataset.rpane !== which);
     toBottom();
   }
   document.querySelectorAll(".jp-rtab").forEach(t =>
     t.onclick = () => showPane(t.dataset.rtab));
+
+  // A picture you can only click is a picture a keyboard never opens. Every
+  // zoomable board goes through here: focusable, named, Enter or Space works.
+  function zoomable(img, im){
+    img.tabIndex = 0;
+    img.setAttribute("role", "button");
+    img.setAttribute("aria-label", "Open " + im.name + " full size");
+    img.onclick = () => openFull(im);
+    img.addEventListener("keydown", e => {
+      if(e.key === "Enter" || e.key === " "){ e.preventDefault(); openFull(im); }
+    });
+  }
 
   function openFull(im){
     const w = window.open();
@@ -643,6 +686,9 @@ NOTES
     document.body.style.overflow = on ? "hidden" : "";
     expandBtn.innerHTML = on ? ICON_CLOSE : ICON_EXPAND;
     expandBtn.title = on ? "Exit full screen (Esc)" : "Full screen (Esc to exit)";
+    // The name must flip with the icon, or a screen reader hears "full
+    // screen" on the button that leaves it.
+    expandBtn.setAttribute("aria-label", expandBtn.title);
     toBottom();
   }
   expandBtn.onclick = () => setFull(!wrap.classList.contains("jp-full"));
@@ -692,7 +738,7 @@ NOTES
           const box = document.createElement("div"); box.className = "jp-board"; box.id = `jpBoard${i}`;
           const img = document.createElement("img");
           img.src = im.data; img.alt = im.name; img.loading = "lazy"; img.title = "Open full size";
-          img.onclick = () => openFull(im);
+          zoomable(img, im);
           const bar = document.createElement("div"); bar.className = "jp-board-bar";
           const label = document.createElement("div"); label.style.minWidth = "0";
           const nm = document.createElement("div"); nm.className = "n";
@@ -739,7 +785,7 @@ NOTES
           const fig = document.createElement("figure"); fig.className = "jp-inline-board";
           const img = document.createElement("img");
           img.src = im.data; img.alt = im.name; img.loading = "lazy"; img.title = "Open full size";
-          img.onclick = () => openFull(im);
+          zoomable(img, im);
           const cap = document.createElement("figcaption");
           const nm = document.createElement("span");
           nm.textContent = `${i + 1}. ${im.journeys.join("  ·  ") || im.name}`;
