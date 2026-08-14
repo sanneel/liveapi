@@ -118,18 +118,23 @@
   .brand span{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.13em;
     text-transform:uppercase;color:var(--faint);line-height:1.35}
   .brand b{display:block;color:var(--ink)}
-  .pills{display:flex;gap:4px;margin:0 auto;flex-wrap:nowrap;overflow:hidden}
-  .pill{width:22px;height:7px;border-radius:99px;border:1px solid var(--line-2);background:none;
-    padding:0;transition:background .15s,width .18s,border-color .15s}
-  .pill:hover{border-color:var(--key)}
-  .pill.done{background:var(--line-2)}
-  .pill.now{background:var(--key);border-color:var(--key);width:34px}
-  .pill.done{background:color-mix(in srgb, var(--key) 45%, var(--line-2))}
-  .pill:focus-visible{outline:2px solid var(--key);outline-offset:3px}
+  /* the part you are in, and its pages by name */
+  .nav{display:flex;align-items:center;gap:12px;margin:0 auto;min-width:0}
+  .nav-part{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.13em;
+    text-transform:uppercase;color:var(--key);white-space:nowrap;flex:none}
+  .nav-tabs{display:flex;gap:2px;min-width:0;overflow:hidden}
+  .tab{border:0;background:none;padding:4px 9px;border-radius:99px;font-size:11.5px;
+    color:var(--muted);white-space:nowrap;font-family:var(--sans);
+    transition:background .15s,color .15s}
+  .tab:hover{color:var(--ink);background:var(--raise)}
+  .tab.done{color:var(--faint)}
+  .tab.now{background:var(--key-soft);color:var(--key);font-weight:700}
+  .tab:focus-visible{outline:2px solid var(--key);outline-offset:2px}
+  @media (max-width:980px){.nav-part{display:none}}
   .ctrl{display:flex;align-items:center;gap:8px;flex:none}
   .n{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--faint);
     font-variant-numeric:tabular-nums;flex:none}
-  @media (max-width:820px){.pills{display:none}.brand span{display:none}}
+  @media (max-width:820px){.nav-tabs{display:none}.brand span{display:none}}
 
   .btn{border:1px solid transparent;border-radius:99px;padding:8px 17px;font-size:14px;font-weight:600;
     background:var(--key);color:var(--key-ink);white-space:nowrap;
@@ -246,6 +251,13 @@
     .bubble{font-size:15px;padding:13px 15px}
   }
   @media (max-width:560px){.mascot::after{display:none}}
+
+  /* ── the welcome ── */
+  .welcome{width:100%;max-width:560px}
+  .welcome h1{margin:0 0 12px;font-family:var(--disp);font-size:31px;line-height:1.15;
+    font-weight:800;color:var(--ink);letter-spacing:-.02em;text-wrap:balance}
+  .welcome p{margin:0 0 10px;font-size:15px;line-height:1.55;color:var(--body)}
+  .welcome .w-go{font-size:13.5px;color:var(--muted)}
 
   /* ── route card (step 1) ── */
   .route{width:100%;max-width:520px;background:var(--panel);border:1px solid var(--line);
@@ -852,7 +864,10 @@
   <div class="rail-in">
     <a class="brand" href="/admin" title="Back to the admin portal">
       <i></i><span>Flick<b>CRM 01</b></span></a>
-    <span class="pills" id="pills" role="tablist" aria-label="Steps"></span>
+    <span class="nav" id="nav">
+      <b class="nav-part" id="navPart"></b>
+      <span class="nav-tabs" id="navTabs" role="tablist" aria-label="Pages in this part"></span>
+    </span>
     <span class="ctrl">
       <button class="theme" id="theme" type="button" aria-label="Switch between light and dark">
         <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -870,27 +885,28 @@
 </nav>
 
 <main class="deck" id="deck">
-<section class="step" data-hue="green" data-t="Start" data-pose="wave"
-    data-tip="You can move with the arrow keys as well as the buttons, and jump around with the little bars up top.">
+<section class="step" data-hue="green" data-t="Start" data-part="Welcome" data-tab="Welcome" data-pose="wave"
+    data-tip="Arrow keys move you as well as the buttons, and the names up top jump you around inside a part.">
     <div class="stage">
-      <div class="route">
-        <div><i>1</i><b>Standards of the CRM</b><em class="a">this tour</em></div>
-        <div><i>2</i><b>A promotion, and how we track it</b><em class="a">this tour</em></div>
-        <div><i>3</i><b>Nodes and their rules</b><em>next</em></div>
-        <div><i>4</i><b>Playground</b><em class="a">this tour</em></div>
+      <div class="welcome">
+        <h1>Hello, and welcome aboard.</h1>
+        <p>Here you will see how our promotions actually work, from the card a player taps to the
+          journey behind it. Two of the real ones, the nodes they are built from, and a place to
+          build one yourself.</p>
+        <p class="w-go">Press Continue and we start with the Casino Wheel of Fortune.</p>
       </div>
     </div>
     <div class="talk">
       <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox wave"></i></button>
       <div class="bubble" data-bubble>
-        <p>Hi, I'm Flick. Two real promotions, then you build one yourself.</p>
+        <p>Hi, I'm Flick, and I will be with you the whole way.</p>
         <p>Tap me on any screen for the thing people get wrong there.</p>
       </div>
     </div>
   </section>
 
   <!-- 2 -->
-    <section class="step" data-hue="green" data-t="Promotions" data-pose="glass"
+    <section class="step" data-hue="green" data-t="Promotions" data-part="Casino Wheel of Fortune" data-tab="Promotions" data-pose="glass"
     data-tip="A promotion the player cannot see in this list is not live for them, whatever the back office says.">
     <div class="stage">
       <div class="duo">
@@ -927,7 +943,7 @@
     </div>
   </section>
 
-  <section class="step" data-hue="amber" data-t="The wheel" data-pose="flag"
+  <section class="step" data-hue="amber" data-t="The wheel" data-part="Casino Wheel of Fortune" data-tab="The wheel" data-pose="flag"
     data-tip="The four percentages have to total 100. How the rim is arranged never changes the odds.">
     <div class="stage">
       <div class="duo">
@@ -953,7 +969,7 @@
     </div>
   </section>
 
-  <section class="step" data-hue="indigo" data-t="Randomizer logs" data-pose="thumb"
+  <section class="step" data-hue="indigo" data-t="Randomizer logs" data-part="Casino Wheel of Fortune" data-tab="Randomizer logs" data-pose="thumb"
     data-tip="If the player never spun, they are not in the logs at all. No spin, no row.">
     <div class="stage">
       <div class="duo">
@@ -982,7 +998,7 @@
     </div>
   </section>
 
-  <section class="step" data-hue="pink" data-t="His choice" data-pose="book"
+  <section class="step" data-hue="pink" data-t="His choice" data-part="Casino Wheel of Fortune" data-tab="His choice" data-pose="book"
     data-tip="The Multipurpose Promotion gives nothing by itself. Everything a player can spend comes from the promotion inside the flow they picked.">
     <div class="stage">
       <figure class="shot" tabindex="0" style="--ar:1454/1404;--w:370px;margin:0">
@@ -1006,7 +1022,7 @@
     </div>
   </section>
 
-  <section class="step" data-hue="blue" data-t="Journey logs" data-pose="think"
+  <section class="step" data-hue="blue" data-t="Journey logs" data-part="Casino Wheel of Fortune" data-tab="Journey logs" data-pose="think"
     data-tip="The top row is where the player stands right now, not the first thing that happened to them.">
     <div class="stage">
       <div class="duo">
@@ -1043,7 +1059,7 @@
     </div>
   </section>
 
-  <section class="step" data-hue="purple" data-t="His bonus" data-pose="thumb"
+  <section class="step" data-hue="purple" data-t="His bonus" data-part="Casino Wheel of Fortune" data-tab="His bonus" data-pose="thumb"
     data-tip="Open the promotion the player took, not the one that offered the list. The terms live on the one they picked.">
     <div class="stage">
       <figure class="shot" tabindex="0" style="--ar:1478/1118;--w:430px;margin:0">
@@ -1067,7 +1083,7 @@
     </div>
   </section>
 
-  <section class="step" data-hue="teal" data-t="Where it lives" data-pose="flag"
+  <section class="step" data-hue="teal" data-t="Where it lives" data-part="Casino Wheel of Fortune" data-tab="Where it lives" data-pose="flag"
     data-tip="You can open and read these freely. Looking at an object damages nothing, so go and surf them.">
     <div class="stage">
       <div class="linkcard">
@@ -1086,7 +1102,7 @@
     </div>
   </section>
 
-  <section class="step" data-hue="olive" data-t="Wheel check" data-pose="party"
+  <section class="step" data-hue="olive" data-t="Wheel check" data-part="Casino Wheel of Fortune" data-tab="Check" data-pose="party"
     data-tip="Nothing here touches a real object. Get one wrong and I will tell you why, then you carry on.">
     <div class="stage">
       <div class="quiz2" data-quiz="wheel">
@@ -1106,7 +1122,7 @@
     </div>
   </section>
 
-  <section class="step" data-hue="green" data-t="Game of the Week" data-pose="flag"
+  <section class="step" data-hue="green" data-t="Game of the Week" data-part="Game of the Week" data-tab="What it is" data-pose="flag"
     data-tip="The ladder is fixed. The one thing that changes on a Wednesday is which game the spins are on.">
     <div class="stage">
       <div class="linkcard">
@@ -1125,7 +1141,7 @@
     </div>
   </section>
 
-  <section class="step" data-hue="green" data-t="Week game" data-pose="book"
+  <section class="step" data-hue="green" data-t="Week game" data-part="Game of the Week" data-tab="The card" data-pose="book"
     data-tip="The ladder is fixed. The only thing that changes on a Wednesday is which game the spins are on.">
     <div class="stage">
       <figure class="shot" tabindex="0" style="--ar:734/472;--w:470px;margin:0">
@@ -1143,7 +1159,7 @@
     </div>
   </section>
 
-  <section class="step" data-hue="green" data-t="Promo page" data-pose="glass"
+  <section class="step" data-hue="green" data-t="Promo page" data-part="Game of the Week" data-tab="Promo page" data-pose="glass"
     data-tip="A promo page carries no prizes of its own. One field points it at a journey, so check that journey dates cover the page.">
     <div class="stage">
       <div class="duo">
@@ -1175,7 +1191,7 @@
     </div>
   </section>
 
-  <section class="step" data-hue="pink" data-t="Four flows" data-pose="glass"
+  <section class="step" data-hue="pink" data-t="Four flows" data-part="Game of the Week" data-tab="Four flows" data-pose="glass"
     data-tip="Every flow is the same shape. Only the deposit and the spin value differ, which is why one journey can serve four tiers.">
     <div class="stage">
       <div class="duo">
@@ -1213,7 +1229,7 @@
     </div>
   </section>
 
-  <section class="step" data-hue="purple" data-t="Her bonus" data-pose="thumb"
+  <section class="step" data-hue="purple" data-t="Her bonus" data-part="Game of the Week" data-tab="Her bonus" data-pose="thumb"
     data-tip="Every tier is the same four steps. Only the deposit and the spin value change.">
     <div class="stage">
       <figure class="shot" tabindex="0" style="--ar:936/808;--w:470px;margin:0">
@@ -1236,7 +1252,7 @@
   </section>
 
   <!-- 14 · PLAYGROUND -->
-  <section class="step" data-hue="indigo" data-t="Nodes" data-pose="book"
+  <section class="step" data-hue="indigo" data-t="Nodes" data-part="Nodes and their rules" data-tab="The rules" data-pose="book"
     data-tip="Nothing travels sideways. A node can only use what a node above it in the same path produced.">
     <div class="stage">
       <div class="ndoc">
@@ -1272,7 +1288,7 @@
     </div>
   </section>
 
-  <section class="step" data-hue="green" data-t="The offer" data-pose="glass"
+  <section class="step" data-hue="green" data-t="The offer" data-part="Nodes and their rules" data-tab="The offer" data-pose="glass"
     data-tip="Hang free spins straight off a Multipurpose Promotion and there is no promotion above them, so there is nothing to attach the bonus to.">
     <div class="stage">
       <div class="ndoc">
@@ -1281,7 +1297,6 @@
         <ul>
         <li><b>does</b><span>offers the bonus to the player and waits. When they accept it, the rest
           of the path runs</span></li>
-        <li><b>needs</b><span>an input source above it</span></li>
         <li class="w"><b>watch</b><span>the terms of the bonus are set here, so this is the object to
           open when a player argues about them</span></li>
         </ul>
@@ -1291,7 +1306,6 @@
         <ul>
         <li><b>does</b><span>shows the player several promotions so they can look at them and pick
           one. Whichever they pick, they carry on down that flow</span></li>
-        <li><b>needs</b><span>an input source above it</span></li>
         <li class="w"><b>watch</b><span>it gives the player nothing by itself. Every option under it
           needs its own promotion</span></li>
         </ul>
@@ -1307,7 +1321,7 @@
     </div>
   </section>
 
-  <section class="step" data-hue="purple" data-t="What pays out" data-pose="think"
+  <section class="step" data-hue="purple" data-t="What pays out" data-part="Nodes and their rules" data-tab="What pays out" data-pose="think"
     data-tip="A free spin with no deposit above it is a real shape. The deposit values are then set on the node itself.">
     <div class="stage">
       <div class="ndoc">
@@ -1316,7 +1330,6 @@
         <ul>
         <li><b>does</b><span>holds the player until they deposit the minimum, then lets the path
           carry on. It gives nothing itself</span></li>
-        <li><b>needs</b><span>a promotion above it</span></li>
         <li class="w"><b>watch</b><span>it has to come after a promotion. Anywhere else and it has
           nothing to attach the deposit to</span></li>
         </ul>
@@ -1326,8 +1339,6 @@
         <ul>
         <li><b>does</b><span>hands the player their free spins, and carries on once they have played
           them</span></li>
-        <li><b>needs</b><span>a promotion above it. A deposit above it too, when the offer asks for
-          one</span></li>
         <li class="w"><b>watch</b><span>the game and the value of each spin are set on this node</span></li>
         </ul>
       </article>
@@ -1335,8 +1346,8 @@
         <span class="ndx t-rew"><em data-ic="chip"></em><span><b>Casino Bonus</b><s>the wagering on what they won</s></span></span>
         <ul>
         <li><b>does</b><span>takes what the spins won and holds it as bonus money. The player has to
-          bet it through a set number of times before it becomes real money they can take out</span></li>
-        <li><b>needs</b><span>a promotion above it, and the spins that produced the winnings</span></li>
+          bet it through a set number of times, the wagering, before it becomes real money they can
+          take out</span></li>
         <li class="w"><b>watch</b><span>without it the winnings are paid straight out with no wagering
           at all, which is almost never the offer we agreed</span></li>
         </ul>
@@ -1344,9 +1355,8 @@
       <article class="ndoc-i">
         <span class="ndx t-delay"><em data-ic="hrg"></em><span><b>Wait</b><s>holds the player for a while</s></span></span>
         <ul>
-        <li><b>does</b><span>stops the player at this point for as long as you set, then lets them
-          carry on</span></li>
-        <li><b>needs</b><span>nothing above it</span></li>
+        <li><b>does</b><span>stops the player here until the wait time is up, then carries on with
+          the next node</span></li>
         <li class="w"><b>watch</b><span>the clock starts when the player arrives at it, not when the
           journey starts</span></li>
         </ul>
@@ -1362,7 +1372,7 @@
     </div>
   </section>
 
-  <section class="step" data-hue="amber" data-t="Splitting and telling" data-pose="flag"
+  <section class="step" data-hue="amber" data-t="Splitting and telling" data-part="Nodes and their rules" data-tab="Splitting and telling" data-pose="flag"
     data-tip="A message node reports sent or not sent. Sent means we handed it over, not that anybody read it.">
     <div class="stage">
       <div class="ndoc">
@@ -1371,7 +1381,6 @@
         <ul>
         <li><b>does</b><span>checks each player against your rule and sends them down the matching
           path. Everyone who matches nothing goes down the last one</span></li>
-        <li><b>needs</b><span>an input source above it</span></li>
         <li class="w"><b>watch</b><span>that last path counts as a path, so it needs an ending like
           every other one</span></li>
         </ul>
@@ -1379,11 +1388,7 @@
       <article class="ndoc-i">
         <span class="ndx t-comm"><em data-ic="mon"></em><span><b>On-site messaging, email, SMS</b><s>tells the player something</s></span></span>
         <ul>
-        <li><b>does</b><span>sends the message you wrote, then carries on. It reports whether the
-          message went out, which is not the same as the player reading it</span></li>
-        <li><b>needs</b><span>its own content, written before the journey is built</span></li>
-        <li class="w"><b>watch</b><span>it gives the player nothing, so it never stands in for a
-          promotion</span></li>
+        <li><b>does</b><span>sends the content you wrote to the player</span></li>
         </ul>
       </article>
       </div>
@@ -1397,7 +1402,7 @@
     </div>
   </section>
 
-  <section class="step" data-hue="olive" data-t="Week check" data-pose="party"
+  <section class="step" data-hue="olive" data-t="Week check" data-part="Nodes and their rules" data-tab="Check" data-pose="party"
     data-tip="Same rules as the first round. Nothing here reaches a player.">
     <div class="stage">
       <div class="quiz2" data-quiz="gow">
@@ -1417,7 +1422,7 @@
     </div>
   </section>
 
-  <section class="step wide pg-full" data-hue="teal" data-t="Playground" data-pose="flag"
+  <section class="step wide pg-full" data-hue="teal" data-t="Playground" data-part="Playground" data-tab="Playground" data-pose="flag"
     data-tip="Drag onto a node and it hangs off that node. Drop on empty canvas and it starts the journey. A question mark on a tile means we have never captured that node from a real journey, so no generator may build it yet.">
     <div class="stage">
       <div class="pg">
@@ -1487,28 +1492,35 @@
 'use strict';
 (function(){
   var steps = [].slice.call(document.querySelectorAll('.step'));
-  var pills = document.getElementById('pills');
+  var navPart = document.getElementById('navPart'), navTabs = document.getElementById('navTabs');
   var back = document.getElementById('back'), fwd = document.getElementById('fwd');
   var num = document.getElementById('num');
   var cur = 0;
 
-  var dots = steps.map(function(s, i){
-    var b = document.createElement('button');
-    b.className = 'pill'; b.type = 'button';
-    b.title = (i + 1) + '. ' + s.dataset.t;
-    b.setAttribute('aria-label', 'Step ' + (i + 1) + ', ' + s.dataset.t);
-    b.onclick = function(){ go(i); };
-    pills.appendChild(b);
-    return b;
-  });
+  /* the top of the page shows the part you are in and its own pages, so a
+     new joiner sees where they are rather than twenty anonymous dots */
+  function drawNav(){
+    var part = steps[cur].dataset.part || '';
+    navPart.textContent = part;
+    navTabs.innerHTML = '';
+    if (part === 'Welcome') return;
+    steps.forEach(function(s, i){
+      if ((s.dataset.part || '') !== part) return;
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tab' + (i === cur ? ' now' : i < cur ? ' done' : '');
+      b.textContent = s.dataset.tab || s.dataset.t;
+      b.title = s.dataset.t;
+      if (i === cur) b.setAttribute('aria-current', 'page');
+      b.onclick = function(){ go(i); };
+      navTabs.appendChild(b);
+    });
+  }
 
   function go(i){
     cur = Math.max(0, Math.min(steps.length - 1, i));
     steps.forEach(function(s, n){ s.classList.toggle('on', n === cur); });
-    dots.forEach(function(d, n){
-      d.classList.toggle('now', n === cur);
-      d.classList.toggle('done', n < cur);
-    });
+    drawNav();
     back.disabled = cur === 0;
     fwd.disabled = cur === steps.length - 1;
     num.textContent = String(cur + 1).padStart(2, '0') + ' / ' + steps.length;
