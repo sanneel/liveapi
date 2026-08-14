@@ -266,6 +266,33 @@
   .welcome p{margin:0 0 10px;font-size:15px;line-height:1.55;color:var(--body)}
   .welcome .w-go{font-size:13.5px;color:var(--muted)}
 
+  /* ── the whole journey, drawn as the playground draws it ── */
+  .pgs{position:relative;width:100%;max-width:900px;display:grid;gap:10px}
+  .pgs-cv{position:relative;overflow:auto;height:474px;background:var(--sink);
+    border:1px solid var(--line);border-radius:11px;scrollbar-width:thin}
+  .pgs-in{position:relative}
+  .pgs-cv .nd{cursor:default}
+  .pgs-chip{position:absolute;top:11px;z-index:3;font-family:var(--mono);font-size:9px;
+    font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:var(--panel);
+    border:1px solid var(--line);border-radius:99px;padding:3px 9px;color:var(--muted);
+    box-shadow:var(--lift)}
+  .pgs-chip{left:11px}
+  .pgs-chip.ok{left:97px;color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent)}
+  .pgs-cfg{position:absolute;top:1px;right:1px;height:472px;width:250px;z-index:4;
+    background:var(--panel);border-left:1px solid var(--line);border-radius:0 10px 10px 0;
+    box-shadow:-20px 0 34px -26px rgba(0,0,0,.5);display:flex;flex-direction:column}
+  .pgs-cfg-h{display:flex;align-items:baseline;gap:8px;padding:9px 12px;
+    border-bottom:1px solid var(--line);font-family:var(--disp);font-size:12.5px;font-weight:800;
+    color:var(--ink)}
+  .pgs-cfg-h span{margin-left:auto;font-family:var(--mono);font-size:8.5px;letter-spacing:.09em;
+    text-transform:uppercase;color:var(--faint)}
+  .pgs-cfg-b{padding:10px 12px;display:grid;gap:7px;align-content:start;overflow-y:auto}
+  .pgs-hint{position:absolute;right:262px;bottom:11px;z-index:3;font-family:var(--mono);
+    font-size:8.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);
+    background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:3px 9px}
+  .pgs-note{margin:0;font-size:12.5px;color:var(--muted);line-height:1.5}
+  @media (max-width:900px){.pgs-cfg,.pgs-hint{display:none}}
+
   /* ── the playground, shown before they get there ── */
   .pgd{width:100%;max-width:900px;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px;
     align-items:start}
@@ -1100,42 +1127,83 @@
 
   <!-- 14 · PLAYGROUND -->
   <section class="step" data-hue="teal" data-t="In the builder" data-part="Game of the Week" data-tab="In the builder" data-pose="flag"
-    data-tip="Nothing you build in the playground is published, and nothing reaches a player. It is a sandbox with the real rules in it.">
+    data-tip="Nothing you build in the playground is published and nothing reaches a player. It is a sandbox with the real rules in it.">
     <div class="stage">
-      <div class="pgd">
-        <div class="pgd-cv">
-        <span class="ndx t-src"><em data-ic="api"></em><span><b>API</b><s>Promo page</s></span></span>
-        <i class="pgd-w">Players added to journey</i>
-        <span class="ndx t-flows"><em data-ic="star"></em><span><b>Multipurpose Promotion</b><s>4 to choose from</s></span></span>
-        <i class="pgd-w">Accepted</i>
-        <span class="ndx t-promo"><em data-ic="mon"></em><span><b>Promotion</b><s>50 GG | Juego de la Semana</s></span></span>
-        <i class="pgd-w">Accepted</i>
-        <span class="ndx t-cond"><em data-ic="dol"></em><span><b>Deposit</b><s>min 10000 CLP</s></span></span>
-        <i class="pgd-w">Deposited</i>
-        <span class="ndx t-rew"><em data-ic="slot"></em><span><b>Casino FreeSpin</b><s>50 spins at 100, Super Hotfire Diamonds</s></span></span>
-          <span class="pgd-more">and the same three more times, one per tier</span>
+      <div class="pgs">
+        <div class="pgs-cv">
+        <div class="pgs-in" style="width:1330px;height:1094px">
+          <svg class="cvsvg" width="1330" height="1094"><path d="M665 142V206" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M665 268V304 Q665 311 658 311 H183 Q176 311 176 318V354" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M176 416V502" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M176 564V650" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M176 712V798" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M176 860V946" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M665 268V304 Q665 311 658 311 H509 Q502 311 502 318V354" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M502 416V502" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M502 564V650" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M502 712V798" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M502 860V946" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M665 268V304 Q665 311 672 311 H821 Q828 311 828 318V354" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M828 416V502" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M828 564V650" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M828 712V798" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M828 860V946" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M665 268V304 Q665 311 672 311 H1147 Q1154 311 1154 318V354" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M1154 416V502" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M1154 564V650" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M1154 712V798" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M1154 860V946" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/></svg>
+          <span class="ev" style="left:176px;top:328px">Accepted</span>
+          <span class="flowchip" style="left:176px;top:304px">Flow 1</span>
+          <span class="ev" style="left:176px;top:476px">Accepted</span>
+          <span class="ev" style="left:176px;top:624px">Deposited</span>
+          <span class="ev" style="left:176px;top:772px">Collected</span>
+          <span class="ev" style="left:176px;top:920px">Wagered</span>
+          <span class="ev" style="left:502px;top:328px">Accepted</span>
+          <span class="flowchip" style="left:502px;top:304px">Flow 2</span>
+          <span class="ev" style="left:502px;top:476px">Accepted</span>
+          <span class="ev" style="left:502px;top:624px">Deposited</span>
+          <span class="ev" style="left:502px;top:772px">Collected</span>
+          <span class="ev" style="left:502px;top:920px">Wagered</span>
+          <span class="ev" style="left:828px;top:328px">Accepted</span>
+          <span class="flowchip" style="left:828px;top:304px">Flow 3</span>
+          <span class="ev" style="left:828px;top:476px">Accepted</span>
+          <span class="ev" style="left:828px;top:624px">Deposited</span>
+          <span class="ev" style="left:828px;top:772px">Collected</span>
+          <span class="ev" style="left:828px;top:920px">Wagered</span>
+          <span class="ev" style="left:1154px;top:328px">Accepted</span>
+          <span class="flowchip" style="left:1154px;top:304px">Flow 4</span>
+          <span class="ev" style="left:1154px;top:476px">Accepted</span>
+          <span class="ev" style="left:1154px;top:624px">Deposited</span>
+          <span class="ev" style="left:1154px;top:772px">Collected</span>
+          <span class="ev" style="left:1154px;top:920px">Wagered</span>
+          <span class="nd t-src" style="left:519px;top:58px"><em class="t-src" data-ic="api"></em><span><u>…1000</u><b>API</b><s>Promo page</s></span><i class="nd-foot">Players added to journey</i></span>
+          <span class="nd t-flows" style="left:519px;top:206px"><em class="t-flows" data-ic="star"></em><span><u>…19ad</u><b>Multipurpose Promotion</b><s>4 to choose from</s></span></span>
+          <span class="nd t-promo" style="left:30px;top:354px"><em class="t-promo" data-ic="mon"></em><span><u>…235a</u><b>Promotion</b><s>50 GG | Juego de la Semana</s></span></span>
+          <span class="nd t-cond" style="left:30px;top:502px"><em class="t-cond" data-ic="dol"></em><span><u>…2d07</u><b>Deposit</b><s>min 10000 CLP</s></span></span>
+          <span class="nd t-rew" style="left:30px;top:650px"><em class="t-rew" data-ic="slot"></em><span><u>…36b4</u><b>Casino FreeSpin</b><s>50 spins at 100, Super Hotfire Diamonds</s></span></span>
+          <span class="nd t-rew" style="left:30px;top:798px"><em class="t-rew" data-ic="chip"></em><span><u>…4061</u><b>Casino Bonus</b><s>rollover x20, 7 days</s></span></span>
+          <span class="nd term" style="left:154px;top:946px"><em data-ic="end"></em></span>
+          <span class="nd t-promo" style="left:356px;top:354px"><em class="t-promo" data-ic="mon"></em><span><u>…53bb</u><b>Promotion</b><s>50 GG | Juego de la Semana</s></span></span>
+          <span class="nd t-cond" style="left:356px;top:502px"><em class="t-cond" data-ic="dol"></em><span><u>…5d68</u><b>Deposit</b><s>min 20000 CLP</s></span></span>
+          <span class="nd t-rew" style="left:356px;top:650px"><em class="t-rew" data-ic="slot"></em><span><u>…6715</u><b>Casino FreeSpin</b><s>50 spins at 200, Super Hotfire Diamonds</s></span></span>
+          <span class="nd t-rew" style="left:356px;top:798px"><em class="t-rew" data-ic="chip"></em><span><u>…70c2</u><b>Casino Bonus</b><s>rollover x20, 7 days</s></span></span>
+          <span class="nd term" style="left:480px;top:946px"><em data-ic="end"></em></span>
+          <span class="nd t-promo" style="left:682px;top:354px"><em class="t-promo" data-ic="mon"></em><span><u>…841c</u><b>Promotion</b><s>50 GG | Juego de la Semana</s></span></span>
+          <span class="nd t-cond" style="left:682px;top:502px"><em class="t-cond" data-ic="dol"></em><span><u>…8dc9</u><b>Deposit</b><s>min 30000 CLP</s></span></span>
+          <span class="nd t-rew" style="left:682px;top:650px"><em class="t-rew" data-ic="slot"></em><span><u>…9776</u><b>Casino FreeSpin</b><s>50 spins at 400, Super Hotfire Diamonds</s></span></span>
+          <span class="nd t-rew" style="left:682px;top:798px"><em class="t-rew" data-ic="chip"></em><span><u>…a123</u><b>Casino Bonus</b><s>rollover x20, 7 days</s></span></span>
+          <span class="nd term" style="left:806px;top:946px"><em data-ic="end"></em></span>
+          <span class="nd t-promo" style="left:1008px;top:354px"><em class="t-promo" data-ic="mon"></em><span><u>…b47d</u><b>Promotion</b><s>50 GG | Juego de la Semana</s></span></span>
+          <span class="nd t-cond" style="left:1008px;top:502px"><em class="t-cond" data-ic="dol"></em><span><u>…be2a</u><b>Deposit</b><s>min 50000 CLP</s></span></span>
+          <span class="nd t-rew" style="left:1008px;top:650px"><em class="t-rew" data-ic="slot"></em><span><u>…c7d7</u><b>Casino FreeSpin</b><s>50 spins at 750, Super Hotfire Diamonds</s></span></span>
+          <span class="nd t-rew" style="left:1008px;top:798px"><em class="t-rew" data-ic="chip"></em><span><u>…d184</u><b>Casino Bonus</b><s>rollover x20, 7 days</s></span></span>
+          <span class="nd term" style="left:1132px;top:946px"><em data-ic="end"></em></span>
         </div>
-        <aside class="pgd-cfg">
-          <div class="pgd-cfg-h">Casino FreeSpin <span>settings</span></div>
-          <div class="pgd-cfg-b">
-            <div class="pgd-r"><b>Provider</b><span>3 Oaks</span></div>
-            <div class="pgd-r"><b>Game</b><span>Super Hotfire Diamonds</span></div>
-            <div class="pgd-r"><b>How many spins</b><span>50</span></div>
-            <div class="pgd-r"><b>Bet per spin</b><span>100 CLP</span></div>
-            <div class="pgd-r"><b>Valid for</b><span>7 days</span></div>
-            <div class="pgd-r"><b>Name ES</b><span>50 giros gratis</span></div>
-          </div>
-        </aside>
-        <p class="pgd-note">Click any node in the playground and this panel opens on the right. The
-          line under the node's name is whatever you set here, so the card tells you how the tier is
-          configured without opening it.</p>
+        </div>
+        <span class="pgs-chip">22 nodes</span>
+        <span class="pgs-chip ok">approvable</span>
+        <span class="pgs-hint">scroll to see all four flows</span>
+        <aside class="pgs-cfg">
+            <div class="pgs-cfg-h">Casino FreeSpin <span>settings</span></div>
+            <div class="pgs-cfg-b">
+              <div class="pgd-r"><b>Provider</b><span>3 Oaks</span></div>
+              <div class="pgd-r"><b>Game</b><span>Super Hotfire Diamonds</span></div>
+              <div class="pgd-r"><b>How many spins</b><span>50</span></div>
+              <div class="pgd-r"><b>Bet per spin</b><span>100 CLP</span></div>
+              <div class="pgd-r"><b>Valid for</b><span>7 days</span></div>
+            </div>
+          </aside>
+        <p class="pgs-note">The whole Game of the Week, four flows, as the playground draws it. Click
+          any node there and its settings open on the right, and the line under the node's name is
+          whatever you set in them.</p>
       </div>
     </div>
     <div class="talk">
       <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox flag"></i></button>
       <div class="bubble" data-bubble>
-        <p>This is the journey you just saw, built in the playground at the end of the tour.</p>
-        <p>Drag a node in, click it, and fill in what the back office asks for.</p>
+        <p>This is the journey you have just been read through, built.</p>
+        <p>You will build one yourself at the end, and the validator will tell you if it would work.</p>
       </div>
     </div>
   </section>
@@ -2819,6 +2887,17 @@
   [].slice.call(document.querySelectorAll('[data-ic]')).forEach(function(el){
     el.innerHTML = IC[el.dataset.ic] || '';
   });
+
+  /* the worked example opens on the middle of the journey, not its left edge */
+  (function(){
+    var box = document.querySelector('.pgs-cv');
+    if (!box) return;
+    var centre = function(){
+      box.scrollLeft = Math.max(0, Math.round((box.scrollWidth - box.clientWidth) / 2));
+    };
+    centre();
+    if (window.ResizeObserver) new ResizeObserver(centre).observe(box);
+  })();
 
   var h = /^#s(\d+)$/.exec(location.hash);
   go(h ? Number(h[1]) - 1 : 0);
