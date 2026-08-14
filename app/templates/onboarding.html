@@ -266,6 +266,35 @@
   .welcome p{margin:0 0 10px;font-size:15px;line-height:1.55;color:var(--body)}
   .welcome .w-go{font-size:13.5px;color:var(--muted)}
 
+  /* ── the playground, shown before they get there ── */
+  .pgd{width:100%;max-width:900px;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px;
+    align-items:start}
+  .pgd-cv{background:var(--sink);border:1px solid var(--line);border-radius:11px;padding:14px 12px;
+    display:grid;justify-items:center;gap:0}
+  .pgd-cv .ndx{width:min(100%,268px)}
+  .pgd-w{font-style:normal;font-size:10.5px;color:var(--body);background:var(--raise);
+    border:1px solid var(--line);border-radius:5px;padding:1px 7px;margin:6px 0;position:relative}
+  .pgd-w::before,.pgd-w::after{content:"";position:absolute;left:50%;width:0;height:7px;
+    border-left:1px dashed var(--line-2)}
+  .pgd-w::before{top:-8px} .pgd-w::after{bottom:-8px}
+  .pgd-more{font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--faint);border:1px dashed var(--line-2);border-radius:99px;padding:3px 10px;
+    margin-top:9px}
+  .pgd-cfg{background:var(--panel);border:1px solid var(--line);border-radius:11px;
+    box-shadow:var(--lift);overflow:hidden}
+  .pgd-cfg-h{display:flex;align-items:baseline;gap:8px;padding:9px 12px;
+    border-bottom:1px solid var(--line);font-family:var(--disp);font-size:12.5px;font-weight:800;
+    color:var(--ink)}
+  .pgd-cfg-h span{margin-left:auto;font-family:var(--mono);font-size:9px;letter-spacing:.09em;
+    text-transform:uppercase;color:var(--faint)}
+  .pgd-cfg-b{padding:10px 12px 12px;display:grid;gap:7px}
+  .pgd-r{display:grid;gap:3px}
+  .pgd-r b{font-size:10px;color:var(--faint);font-weight:600}
+  .pgd-r span{font-size:12px;color:var(--ink);background:var(--raise);border:1px solid var(--line);
+    border-radius:7px;padding:5px 8px}
+  .pgd-note{grid-column:1/-1;margin:0;font-size:12px;color:var(--muted)}
+  @media (max-width:900px){.pgd{grid-template-columns:1fr}}
+
   /* ── a node and its rules ── */
   .ndoc{width:100%;max-width:900px;display:grid;grid-template-columns:1fr 1fr;gap:11px}
   .ndoc.one{grid-template-columns:1fr;max-width:560px}
@@ -1070,6 +1099,47 @@
   </section>
 
   <!-- 14 · PLAYGROUND -->
+  <section class="step" data-hue="teal" data-t="In the builder" data-part="Game of the Week" data-tab="In the builder" data-pose="flag"
+    data-tip="Nothing you build in the playground is published, and nothing reaches a player. It is a sandbox with the real rules in it.">
+    <div class="stage">
+      <div class="pgd">
+        <div class="pgd-cv">
+        <span class="ndx t-src"><em data-ic="api"></em><span><b>API</b><s>Promo page</s></span></span>
+        <i class="pgd-w">Players added to journey</i>
+        <span class="ndx t-flows"><em data-ic="star"></em><span><b>Multipurpose Promotion</b><s>4 to choose from</s></span></span>
+        <i class="pgd-w">Accepted</i>
+        <span class="ndx t-promo"><em data-ic="mon"></em><span><b>Promotion</b><s>50 GG | Juego de la Semana</s></span></span>
+        <i class="pgd-w">Accepted</i>
+        <span class="ndx t-cond"><em data-ic="dol"></em><span><b>Deposit</b><s>min 10000 CLP</s></span></span>
+        <i class="pgd-w">Deposited</i>
+        <span class="ndx t-rew"><em data-ic="slot"></em><span><b>Casino FreeSpin</b><s>50 spins at 100, Super Hotfire Diamonds</s></span></span>
+          <span class="pgd-more">and the same three more times, one per tier</span>
+        </div>
+        <aside class="pgd-cfg">
+          <div class="pgd-cfg-h">Casino FreeSpin <span>settings</span></div>
+          <div class="pgd-cfg-b">
+            <div class="pgd-r"><b>Provider</b><span>3 Oaks</span></div>
+            <div class="pgd-r"><b>Game</b><span>Super Hotfire Diamonds</span></div>
+            <div class="pgd-r"><b>How many spins</b><span>50</span></div>
+            <div class="pgd-r"><b>Bet per spin</b><span>100 CLP</span></div>
+            <div class="pgd-r"><b>Valid for</b><span>7 days</span></div>
+            <div class="pgd-r"><b>Name ES</b><span>50 giros gratis</span></div>
+          </div>
+        </aside>
+        <p class="pgd-note">Click any node in the playground and this panel opens on the right. The
+          line under the node's name is whatever you set here, so the card tells you how the tier is
+          configured without opening it.</p>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox flag"></i></button>
+      <div class="bubble" data-bubble>
+        <p>This is the journey you just saw, built in the playground at the end of the tour.</p>
+        <p>Drag a node in, click it, and fill in what the back office asks for.</p>
+      </div>
+    </div>
+  </section>
+
   <section class="step" data-hue="indigo" data-t="Nodes" data-part="Nodes and their rules" data-tab="The rules" data-pose="book"
     data-tip="Nothing travels sideways. A node can only use what a node above it in the same path produced.">
     <div class="stage">
