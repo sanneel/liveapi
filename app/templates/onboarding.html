@@ -274,6 +274,36 @@
   .route em.a{border-color:color-mix(in srgb,var(--ok) 45%,transparent);color:var(--ok);
     background:var(--ok-soft)}
 
+  /* ── a node and its rules ── */
+  .ndoc{width:100%;max-width:900px;display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .ndoc.one{grid-template-columns:1fr;max-width:560px}
+  .ndoc-i{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+    box-shadow:var(--lift);padding:11px 13px 12px;display:grid;gap:8px;align-content:start}
+  .ndx{display:grid;grid-template-columns:50px minmax(0,1fr);border:1px solid var(--line);
+    border-radius:9px;overflow:hidden;--wash:transparent;
+    background-color:var(--raise);background-image:linear-gradient(var(--wash),var(--wash))}
+  .ndx em{width:50px;display:grid;place-items:center;font-style:normal;align-self:stretch}
+  .ndx em svg{width:20px;height:20px}
+  .ndx > span{padding:7px 11px;min-width:0}
+  .ndx b{display:block;font-family:var(--disp);font-size:12.5px;font-weight:700;color:var(--ink)}
+  .ndx s{display:block;text-decoration:none;font-size:11px;color:var(--muted);margin-top:1px}
+  .ndx.t-src{--wash:#CBE3C21F} .ndx.t-flow{--wash:#FBE6BE2E} .ndx.t-comm{--wash:#CDE2F42E}
+  .ndx.t-delay{--wash:#EEF3C62E} .ndx.t-conn{--wash:#FBDCD12E} .ndx.t-flows{--wash:#FAD8E42E}
+  .ndx.t-promo{--wash:#D5E9DB2E} .ndx.t-cond{--wash:#E8DBF62E} .ndx.t-rew{--wash:#DBDDF42E}
+  .ndx.t-fin{--wash:#DFE3E62E}
+  .ndoc ul{margin:0;padding:0;list-style:none;display:grid;gap:4px}
+  .ndoc li{display:grid;grid-template-columns:54px minmax(0,1fr);gap:9px;align-items:baseline;
+    font-size:12.5px;color:var(--body);line-height:1.4}
+  .ndoc li b{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);font-weight:700}
+  .ndoc li.w{color:var(--ink)}
+  .ndoc li.w b{color:var(--flag)}
+  .ndoc code{font-family:var(--mono);font-size:11px;color:var(--ink);background:var(--raise);
+    border-radius:4px;padding:1px 5px}
+  .ndoc-h{grid-column:1/-1;margin:0;font-size:13px;color:var(--muted)}
+  .ndoc-h b{color:var(--ink);font-weight:600}
+  @media (max-width:900px){.ndoc{grid-template-columns:1fr}}
+
   /* ── a round of ten, one question at a time ── */
   .quiz2{width:100%;max-width:580px;background:var(--panel);border:1px solid var(--line);
     border-radius:var(--r);box-shadow:var(--lift);overflow:hidden}
@@ -1206,6 +1236,148 @@
   </section>
 
   <!-- 14 · PLAYGROUND -->
+  <section class="step" data-hue="indigo" data-t="Nodes" data-pose="book"
+    data-tip="Nothing travels sideways. A node can only use what a node above it in the same path produced.">
+    <div class="stage">
+      <div class="ndoc">
+      <p class="ndoc-h">Two rules cover most of it. <b>Everything a node needs comes from a node
+        above it</b>, in its own path. And <b>every path finishes with an ending</b>.</p>
+      <article class="ndoc-i">
+        <span class="ndx t-src"><em data-ic="api"></em><span><b>Input source</b><s>how players get in</s></span></span>
+        <ul>
+        <li><b>gives</b><span>the player, and the currency everything else reads</span></li>
+        <li><b>rule</b><span>one per journey, and it has to be first</span></li>
+        <li class="w"><b>watch</b><span>a journey with no entry source never runs</span></li>
+        </ul>
+      </article>
+      <article class="ndoc-i">
+        <span class="ndx t-fin"><em data-ic="end"></em><span><b>End of path, end of journey</b><s>how a path finishes</s></span></span>
+        <ul>
+        <li><b>gives</b><span>nothing, they are the last node</span></li>
+        <li><b>rule</b><span>end of path finishes that branch, end of journey finishes the lot</span></li>
+        <li class="w"><b>watch</b><span>a branch with no ending is the most common thing left behind</span></li>
+        </ul>
+      </article>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox book"></i></button>
+      <div class="bubble" data-bubble>
+        <p>A journey is nodes in a line, and each one reads what the one above it left.</p>
+        <p>Two screens on the ones you will actually place.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="green" data-t="The offer" data-pose="glass"
+    data-tip="The chooser supplies nothing to what follows. Hang a reward straight off it and it has no promotion to read.">
+    <div class="stage">
+      <div class="ndoc">
+      <article class="ndoc-i">
+        <span class="ndx t-promo"><em data-ic="mon"></em><span><b>Promotion</b><s>the offer itself</s></span></span>
+        <ul>
+        <li><b>gives</b><span><code>Accepted</code>, and its own id to everything below</span></li>
+        <li><b>needs</b><span>the currency and the promotion link from the entry</span></li>
+        <li class="w"><b>watch</b><span>the terms live here, not on the chooser</span></li>
+        </ul>
+      </article>
+      <article class="ndoc-i">
+        <span class="ndx t-flows"><em data-ic="star"></em><span><b>Multipurpose Promotion</b><s>the chooser, one flow per option</s></span></span>
+        <ul>
+        <li><b>gives</b><span><code>Accepted</code> once, per flow</span></li>
+        <li><b>needs</b><span>the currency and the promotion link from the entry</span></li>
+        <li class="w"><b>watch</b><span>it awards nothing, so each flow needs its own promotion</span></li>
+        </ul>
+      </article>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox glass"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Two nodes that look alike and are not.</p>
+        <p>The plain one is the offer. The chooser only sorts players into flows.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="purple" data-t="What pays out" data-pose="think"
+    data-tip="A free spin with no deposit above it is a real shape. The deposit values are then set on the node itself.">
+    <div class="stage">
+      <div class="ndoc">
+      <article class="ndoc-i">
+        <span class="ndx t-cond"><em data-ic="dol"></em><span><b>Deposit</b><s>a condition, not a reward</s></span></span>
+        <ul>
+        <li><b>gives</b><span><code>Satisfied</code>, and the amount paid</span></li>
+        <li><b>needs</b><span>the id and accepted time of the promotion above it</span></li>
+        <li class="w"><b>watch</b><span>no promotion above it and it has nothing to attach to</span></li>
+        </ul>
+      </article>
+      <article class="ndoc-i">
+        <span class="ndx t-rew"><em data-ic="slot"></em><span><b>Casino FreeSpin</b><s>the spins</s></span></span>
+        <ul>
+        <li><b>gives</b><span><code>Collected</code> when the spins are done</span></li>
+        <li><b>needs</b><span>the promotion id, and the deposit amounts when there is a deposit</span></li>
+        <li class="w"><b>watch</b><span>the game and the spin value live here, and they change every week</span></li>
+        </ul>
+      </article>
+      <article class="ndoc-i">
+        <span class="ndx t-rew"><em data-ic="chip"></em><span><b>Casino Bonus</b><s>the wagering</s></span></span>
+        <ul>
+        <li><b>gives</b><span><code>Wagered</code>, <code>Lost</code>, <code>Forfeited</code> and the rest</span></li>
+        <li><b>needs</b><span>the promotion id, and what the spins collected</span></li>
+        <li class="w"><b>watch</b><span>leave it out and the tier pays with no wagering at all</span></li>
+        </ul>
+      </article>
+      <article class="ndoc-i">
+        <span class="ndx t-delay"><em data-ic="hrg"></em><span><b>Wait</b><s>a pause in the path</s></span></span>
+        <ul>
+        <li><b>gives</b><span><code>Waited</code>, once the time is up</span></li>
+        <li><b>needs</b><span>nothing</span></li>
+        <li class="w"><b>watch</b><span>the clock starts when the player reaches it, not when the journey starts</span></li>
+        </ul>
+      </article>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox think"></i></button>
+      <div class="bubble" data-bubble>
+        <p>The chain that actually pays: a condition, then the spins, then the wagering.</p>
+        <p>Each one reads the promotion above it.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="amber" data-t="Splitting and telling" data-pose="flag"
+    data-tip="A message node reports sent or not sent. Sent means we handed it over, not that anybody read it.">
+    <div class="stage">
+      <div class="ndoc">
+      <article class="ndoc-i">
+        <span class="ndx t-flow"><em data-ic="dsp"></em><span><b>Decision split</b><s>sends players down different paths</s></span></span>
+        <ul>
+        <li><b>gives</b><span>one path per rule, plus the remainder</span></li>
+        <li><b>needs</b><span>the currency from the entry</span></li>
+        <li class="w"><b>watch</b><span>the remainder path is the one people forget to finish</span></li>
+        </ul>
+      </article>
+      <article class="ndoc-i">
+        <span class="ndx t-comm"><em data-ic="mon"></em><span><b>On-site messaging, email, SMS</b><s>how we tell them</s></span></span>
+        <ul>
+        <li><b>gives</b><span><code>Sent</code> or <code>Not sent</code></span></li>
+        <li><b>needs</b><span>its own content, written before the journey is built</span></li>
+        <li class="w"><b>watch</b><span>a comms node awards nothing, so it never replaces a promotion</span></li>
+        </ul>
+      </article>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox flag"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Splits choose a path. Message nodes only talk.</p>
+        <p>Neither of them gives a player anything.</p>
+      </div>
+    </div>
+  </section>
+
   <section class="step" data-hue="olive" data-t="Week check" data-pose="party"
     data-tip="Same rules as the first round. Nothing here reaches a player.">
     <div class="stage">
@@ -2471,67 +2643,70 @@
       ['What is a prize on the wheel?',
        ['Free spins or money, paid straight away', 'A journey the player is added to',
         'A promo page with its own link'], 1,
-       'Every prize is a journey, and it starts with an API entry source.'],
-      ['Twelve wedges and four prizes. How often does each prize appear on the rim?',
-       ['Once', 'Twice', 'Three times'], 2,
-       'Four prizes, painted three times each. How the rim is arranged never changes the odds.'],
+       'Every prize is a journey, and it starts with an entry source.'],
       ['What decides how often a prize is drawn?',
-       ['How many wedges it has', 'The percentage we set on it', 'The order of the wedges'], 1,
-       'We set a percentage per prize, and the four have to total 100.'],
-      ['A player opened the wheel but never spun. Do they appear in the randomizer logs?',
+       ['How many wedges it has', 'The percentage we set on it', 'Where it sits on the rim'], 1,
+       'A percentage per prize, and the four have to total 100.'],
+      ['A player opened the wheel but never spun. Are they in the randomizer logs?',
        ['Yes, opening it is enough', 'No, without a spin there is no row',
         'Only if they had deposited'], 1,
-       'No spin, no row. Check that before you go hunting for a bug.'],
+       'No spin, no row. Check that before you go looking for a bug.'],
       ['Where do you see what a player won and which journey they joined?',
        ['Journey logs', 'Randomizer logs', 'The promo page'], 1,
-       'One row per spin, with the JRN they won on it.'],
+       'One row per spin, with the JRN on it.'],
       ['How do you read journey logs?',
        ['Top to bottom', 'Bottom to top', 'In order of activity id'], 1,
-       'The bottom is where they joined, the top is where they stand right now.'],
+       'The bottom is where they joined, the top is where they stand now.'],
       ['The same activity id appears twice in the log. What is it?',
        ['Two nodes with the same name', 'One node reporting twice', 'A duplicated journey'], 1,
-       'One node, two events. Not two nodes.'],
+       'One node, two events.'],
       ['What does the chooser award by itself?',
        ['The spins', 'Nothing', 'The deposit'], 1,
-       'Everything a player can spend comes from the promotion inside the flow they pick.'],
-      ['A player argues about the terms of their bonus. What do you open?',
+       'Everything a player can spend comes from the promotion inside the flow they picked.'],
+      ['A player argues about their terms. Which object do you open?',
        ['The chooser', 'The promotion of the flow they chose', 'The randomizer'], 1,
-       'The terms live on the tier they took, not on the chooser.']
+       'The terms live on the tier they took.'],
+      ['The wheel has been spun. What carries on from there?',
+       ['The wheel keeps the player', 'The journey the prize pointed at',
+        'The promo page'], 1,
+       'The wheel is finished at the spin. The journey takes over.']
     ],
     gow: [
       ['When does the Game of the Week run?',
        ['Every day', 'Every Wednesday', 'Once a month'], 1,
-       'Every Wednesday, without exception.'],
+       'Every Wednesday.'],
       ['What changes from one week to the next?',
        ['The game', 'The number of tiers', 'The wagering'], 0,
-       'The ladder is fixed. The game is the part that changes.'],
-      ['How many flows does the journey hold?',
-       ['Two', 'Three', 'Four'], 2,
-       'Four tiers, four identical shapes behind one chooser.'],
+       'The ladder is fixed. The game is what changes.'],
       ['What differs between the four tiers?',
        ['The game', 'The deposit and the bet value of the spins', 'The wagering only'], 1,
-       'Same game, same shape. Only the deposit and what each spin is worth.'],
-      ['The player presses Participa. What happens?',
-       ['They join the journey', 'They open the promo page', 'They get the spins'], 1,
-       'Participa is the door. It only opens the page.'],
-      ['Which button puts them into the journey?',
+       'Same game, same shape, different deposit and spin value.'],
+      ['Which button puts the player into the journey?',
        ['Participa', 'Activar', 'Seleccionar'], 1,
-       'Activar joins them. Seleccionar then picks the tier.'],
-      ['Where do the real terms of a tier live?',
-       ['On the chooser', 'On the promotion of the tier they took', 'On the promo page'], 1,
-       'Open the tier, not the chooser.'],
-      ['Which four steps does every tier run?',
-       ['Promotion, deposit, free spins, wagering bonus', 'Deposit, free spins, end',
-        'Promotion, free spins, end'], 0,
-       'The same four, four times over.'],
+       'Participa only opens the promo page. Activar joins them.'],
       ['The promo page is live but Activar does nothing. What do you check first?',
        ['The player balance', 'The journey the page points at, and its dates',
         'The game provider'], 1,
        'A promo page carries no prizes. One field points it at a journey.'],
-      ['One tier is missing its wagering bonus. What is the effect?',
-       ['Nothing, it is optional', 'That tier pays out with no wagering, which is not the offer',
-        'The journey will not save'], 1,
-       'It saves happily. That is what makes it dangerous.']
+      ['Where does a Deposit node get what it needs?',
+       ['From the entry source', 'From the promotion above it in the same path',
+        'From the journey settings'], 1,
+       'It reads the id and the accepted time of the promotion above it.'],
+      ['You hang a Casino FreeSpin straight off the chooser. What is wrong with it?',
+       ['Nothing', 'There is no promotion above it for it to read',
+        'The chooser cannot have children'], 1,
+       'The chooser awards nothing and supplies nothing. Each flow needs its own promotion first.'],
+      ['A tier is missing its Casino Bonus. What happens?',
+       ['The journey will not save', 'That tier pays out with no wagering at all',
+        'The spins are never awarded'], 1,
+       'It saves happily, which is what makes it dangerous.'],
+      ['What finishes a branch without ending the whole journey for that player?',
+       ['End of journey', 'End of path', 'A wait with no time'], 1,
+       'End of path closes that branch. End of journey closes the lot.'],
+      ['A message node reports Sent. What does that mean?',
+       ['The player read it', 'We handed it over to be delivered',
+        'The player accepted the offer'], 1,
+       'Sent is not read, and a message node awards nothing either way.']
     ]
   };
 
@@ -2609,6 +2784,11 @@
     });
 
     ask();
+  });
+
+  /* the documented nodes borrow the builder's icons */
+  [].slice.call(document.querySelectorAll('[data-ic]')).forEach(function(el){
+    el.innerHTML = IC[el.dataset.ic] || '';
   });
 
   var h = /^#s(\d+)$/.exec(location.hash);
