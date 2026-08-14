@@ -983,7 +983,7 @@
   </section>
 
   <section class="step" data-hue="pink" data-t="His choice" data-pose="book"
-    data-tip="The chooser awards nothing. Everything a player can spend comes from the plain promotion inside the flow they pick.">
+    data-tip="The Multipurpose Promotion gives nothing by itself. Everything a player can spend comes from the promotion inside the flow they picked.">
     <div class="stage">
       <figure class="shot" tabindex="0" style="--ar:1454/1404;--w:370px;margin:0">
         <div class="shot-in">
@@ -1001,7 +1001,7 @@
       <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox book"></i></button>
       <div class="bubble" data-bubble>
         <p>The flow is choosable. The player decides which one they want before they claim.</p>
-        <p>The chooser only puts them into that flow. It awards nothing itself.</p>
+        <p>The Multipurpose Promotion only puts them into that flow. It gives nothing itself.</p>
       </div>
     </div>
   </section>
@@ -1044,7 +1044,7 @@
   </section>
 
   <section class="step" data-hue="purple" data-t="His bonus" data-pose="thumb"
-    data-tip="Open the tier the player took, not the chooser. The terms live on the tier.">
+    data-tip="Open the promotion the player took, not the one that offered the list. The terms live on the one they picked.">
     <div class="stage">
       <figure class="shot" tabindex="0" style="--ar:1478/1118;--w:430px;margin:0">
         <div class="shot-in">
@@ -1190,7 +1190,7 @@
       </figure>
         <figure class="shot" tabindex="0" style="--ar:2000/716;margin:0">
         <div class="shot-in">
-          <img src="/static/onboarding/g5_canvas.jpg" alt="The Game of the Week journey canvas with one chooser and four tier flows">
+          <img src="/static/onboarding/g5_canvas.jpg" alt="The Game of the Week journey canvas with one multipurpose promotion and four flows">
           <svg class="anno" viewBox="0 0 2000 716" preserveAspectRatio="none" aria-hidden="true">
             <rect x="1312" y="142" width="106" height="30" rx="7" stroke-width="4"/>
             <rect x="126" y="303" width="106" height="28" rx="7" stroke-width="4"/>
@@ -1243,19 +1243,22 @@
       <p class="ndoc-h">Two rules cover most of it. <b>Everything a node needs comes from a node
         above it</b>, in its own path. And <b>every path finishes with an ending</b>.</p>
       <article class="ndoc-i">
-        <span class="ndx t-src"><em data-ic="api"></em><span><b>Input source</b><s>how players get in</s></span></span>
+        <span class="ndx t-src"><em data-ic="api"></em><span><b>Input source</b><s>how players get into the journey</s></span></span>
         <ul>
-        <li><b>gives</b><span>the player, and the currency everything else reads</span></li>
-        <li><b>rule</b><span>one per journey, and it has to be first</span></li>
-        <li class="w"><b>watch</b><span>a journey with no entry source never runs</span></li>
+        <li><b>does</b><span>puts the player into the journey, and tells everything below it which
+          currency the player is in</span></li>
+        <li><b>rule</b><span>one per journey</span></li>
+        <li class="w"><b>watch</b><span>a journey has to start with an input source, always, with no
+          exceptions</span></li>
         </ul>
       </article>
       <article class="ndoc-i">
-        <span class="ndx t-fin"><em data-ic="end"></em><span><b>End of path, end of journey</b><s>how a path finishes</s></span></span>
+        <span class="ndx t-fin"><em data-ic="end"></em><span><b>End of journey</b><s>how a path finishes</s></span></span>
         <ul>
-        <li><b>gives</b><span>nothing, they are the last node</span></li>
-        <li><b>rule</b><span>end of path finishes that branch, end of journey finishes the lot</span></li>
-        <li class="w"><b>watch</b><span>a branch with no ending is the most common thing left behind</span></li>
+        <li><b>does</b><span>finishes the journey for that player. Nothing runs after it</span></li>
+        <li><b>rule</b><span>every path in the journey needs one at the bottom</span></li>
+        <li class="w"><b>watch</b><span>a path left without an ending is the most common thing
+          forgotten in a build</span></li>
         </ul>
       </article>
       </div>
@@ -1270,23 +1273,27 @@
   </section>
 
   <section class="step" data-hue="green" data-t="The offer" data-pose="glass"
-    data-tip="The chooser supplies nothing to what follows. Hang a reward straight off it and it has no promotion to read.">
+    data-tip="Hang free spins straight off a Multipurpose Promotion and there is no promotion above them, so there is nothing to attach the bonus to.">
     <div class="stage">
       <div class="ndoc">
       <article class="ndoc-i">
-        <span class="ndx t-promo"><em data-ic="mon"></em><span><b>Promotion</b><s>the offer itself</s></span></span>
+        <span class="ndx t-promo"><em data-ic="mon"></em><span><b>Promotion</b><s>one offer, made to the player</s></span></span>
         <ul>
-        <li><b>gives</b><span><code>Accepted</code>, and its own id to everything below</span></li>
-        <li><b>needs</b><span>the currency and the promotion link from the entry</span></li>
-        <li class="w"><b>watch</b><span>the terms live here, not on the chooser</span></li>
+        <li><b>does</b><span>offers the bonus to the player and waits. When they accept it, the rest
+          of the path runs</span></li>
+        <li><b>needs</b><span>an input source above it</span></li>
+        <li class="w"><b>watch</b><span>the terms of the bonus are set here, so this is the object to
+          open when a player argues about them</span></li>
         </ul>
       </article>
       <article class="ndoc-i">
-        <span class="ndx t-flows"><em data-ic="star"></em><span><b>Multipurpose Promotion</b><s>the chooser, one flow per option</s></span></span>
+        <span class="ndx t-flows"><em data-ic="star"></em><span><b>Multipurpose Promotion</b><s>offers more than one promotion at once</s></span></span>
         <ul>
-        <li><b>gives</b><span><code>Accepted</code> once, per flow</span></li>
-        <li><b>needs</b><span>the currency and the promotion link from the entry</span></li>
-        <li class="w"><b>watch</b><span>it awards nothing, so each flow needs its own promotion</span></li>
+        <li><b>does</b><span>shows the player several promotions so they can look at them and pick
+          one. Whichever they pick, they carry on down that flow</span></li>
+        <li><b>needs</b><span>an input source above it</span></li>
+        <li class="w"><b>watch</b><span>it gives the player nothing by itself. Every option under it
+          needs its own promotion</span></li>
         </ul>
       </article>
       </div>
@@ -1295,7 +1302,7 @@
       <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox glass"></i></button>
       <div class="bubble" data-bubble>
         <p>Two nodes that look alike and are not.</p>
-        <p>The plain one is the offer. The chooser only sorts players into flows.</p>
+        <p>A plain Promotion is one offer. A Multipurpose Promotion is several, and the player picks.</p>
       </div>
     </div>
   </section>
@@ -1305,35 +1312,43 @@
     <div class="stage">
       <div class="ndoc">
       <article class="ndoc-i">
-        <span class="ndx t-cond"><em data-ic="dol"></em><span><b>Deposit</b><s>a condition, not a reward</s></span></span>
+        <span class="ndx t-cond"><em data-ic="dol"></em><span><b>Deposit</b><s>waits for the player to pay in</s></span></span>
         <ul>
-        <li><b>gives</b><span><code>Satisfied</code>, and the amount paid</span></li>
-        <li><b>needs</b><span>the id and accepted time of the promotion above it</span></li>
-        <li class="w"><b>watch</b><span>no promotion above it and it has nothing to attach to</span></li>
+        <li><b>does</b><span>holds the player until they deposit the minimum, then lets the path
+          carry on. It gives nothing itself</span></li>
+        <li><b>needs</b><span>a promotion above it</span></li>
+        <li class="w"><b>watch</b><span>it has to come after a promotion. Anywhere else and it has
+          nothing to attach the deposit to</span></li>
         </ul>
       </article>
       <article class="ndoc-i">
-        <span class="ndx t-rew"><em data-ic="slot"></em><span><b>Casino FreeSpin</b><s>the spins</s></span></span>
+        <span class="ndx t-rew"><em data-ic="slot"></em><span><b>Casino FreeSpin</b><s>gives the free spins</s></span></span>
         <ul>
-        <li><b>gives</b><span><code>Collected</code> when the spins are done</span></li>
-        <li><b>needs</b><span>the promotion id, and the deposit amounts when there is a deposit</span></li>
-        <li class="w"><b>watch</b><span>the game and the spin value live here, and they change every week</span></li>
+        <li><b>does</b><span>hands the player their free spins, and carries on once they have played
+          them</span></li>
+        <li><b>needs</b><span>a promotion above it. A deposit above it too, when the offer asks for
+          one</span></li>
+        <li class="w"><b>watch</b><span>the game and the value of each spin are set on this node</span></li>
         </ul>
       </article>
       <article class="ndoc-i">
-        <span class="ndx t-rew"><em data-ic="chip"></em><span><b>Casino Bonus</b><s>the wagering</s></span></span>
+        <span class="ndx t-rew"><em data-ic="chip"></em><span><b>Casino Bonus</b><s>the wagering on what they won</s></span></span>
         <ul>
-        <li><b>gives</b><span><code>Wagered</code>, <code>Lost</code>, <code>Forfeited</code> and the rest</span></li>
-        <li><b>needs</b><span>the promotion id, and what the spins collected</span></li>
-        <li class="w"><b>watch</b><span>leave it out and the tier pays with no wagering at all</span></li>
+        <li><b>does</b><span>takes what the spins won and holds it as bonus money. The player has to
+          bet it through a set number of times before it becomes real money they can take out</span></li>
+        <li><b>needs</b><span>a promotion above it, and the spins that produced the winnings</span></li>
+        <li class="w"><b>watch</b><span>without it the winnings are paid straight out with no wagering
+          at all, which is almost never the offer we agreed</span></li>
         </ul>
       </article>
       <article class="ndoc-i">
-        <span class="ndx t-delay"><em data-ic="hrg"></em><span><b>Wait</b><s>a pause in the path</s></span></span>
+        <span class="ndx t-delay"><em data-ic="hrg"></em><span><b>Wait</b><s>holds the player for a while</s></span></span>
         <ul>
-        <li><b>gives</b><span><code>Waited</code>, once the time is up</span></li>
-        <li><b>needs</b><span>nothing</span></li>
-        <li class="w"><b>watch</b><span>the clock starts when the player reaches it, not when the journey starts</span></li>
+        <li><b>does</b><span>stops the player at this point for as long as you set, then lets them
+          carry on</span></li>
+        <li><b>needs</b><span>nothing above it</span></li>
+        <li class="w"><b>watch</b><span>the clock starts when the player arrives at it, not when the
+          journey starts</span></li>
         </ul>
       </article>
       </div>
@@ -1352,19 +1367,23 @@
     <div class="stage">
       <div class="ndoc">
       <article class="ndoc-i">
-        <span class="ndx t-flow"><em data-ic="dsp"></em><span><b>Decision split</b><s>sends players down different paths</s></span></span>
+        <span class="ndx t-flow"><em data-ic="dsp"></em><span><b>Decision split</b><s>sorts players by a rule you set</s></span></span>
         <ul>
-        <li><b>gives</b><span>one path per rule, plus the remainder</span></li>
-        <li><b>needs</b><span>the currency from the entry</span></li>
-        <li class="w"><b>watch</b><span>the remainder path is the one people forget to finish</span></li>
+        <li><b>does</b><span>checks each player against your rule and sends them down the matching
+          path. Everyone who matches nothing goes down the last one</span></li>
+        <li><b>needs</b><span>an input source above it</span></li>
+        <li class="w"><b>watch</b><span>that last path counts as a path, so it needs an ending like
+          every other one</span></li>
         </ul>
       </article>
       <article class="ndoc-i">
-        <span class="ndx t-comm"><em data-ic="mon"></em><span><b>On-site messaging, email, SMS</b><s>how we tell them</s></span></span>
+        <span class="ndx t-comm"><em data-ic="mon"></em><span><b>On-site messaging, email, SMS</b><s>tells the player something</s></span></span>
         <ul>
-        <li><b>gives</b><span><code>Sent</code> or <code>Not sent</code></span></li>
+        <li><b>does</b><span>sends the message you wrote, then carries on. It reports whether the
+          message went out, which is not the same as the player reading it</span></li>
         <li><b>needs</b><span>its own content, written before the journey is built</span></li>
-        <li class="w"><b>watch</b><span>a comms node awards nothing, so it never replaces a promotion</span></li>
+        <li class="w"><b>watch</b><span>it gives the player nothing, so it never stands in for a
+          promotion</span></li>
         </ul>
       </article>
       </div>
@@ -1645,8 +1664,7 @@
       ['Money Bonus','wal','',0,0],
       ['Coins Bonus','coin','',0,0]]],
     ['Finish','t-fin',0,[
-      ['End of journey','end','end_of_journey',1,0],
-      ['End of path','end','end_of_path',1,0]]]
+      ['End of journey','end','end_of_journey',1,0]]]
   ];
 
   /* what the real canvas prints under each node title */
@@ -1687,15 +1705,15 @@
   var CHANNELS = ['dextra_sms','dextra_email','notification_center#contract1','notification_center#contract5'];
 
   var TASKS = [
-    { k:'chooser-two-prizes', t:'A chooser with two different prizes',
+    { k:'chooser-two-prizes', t:'Two promotions to choose from',
       b:'Players arrive by API and land on a page where they choose one of two promotions. One gives a deposit and free spins, the other gives free spins and a wagering bonus.',
-      need:[['external_system_source|dwh_source','an input source'],['fork2','a chooser with two flows'],
+      need:[['external_system_source|dwh_source','an input source'],['fork2','a multipurpose promotion with two flows'],
             ['promotion*2','a promotion in each flow'],['deposit','a deposit in one flow'],
             ['freespin_bonus*2','free spins in both flows'],
             ['casino_bonus_v2','a wagering bonus in the other flow']] },
     { k:'gow-three-tiers', t:'Game of the Week, four tiers',
-      b:'The real Game of the Week: a promo page door, one chooser, and four tiers under it. Every tier runs its own promotion, deposit, free spins and wagering bonus.',
-      need:[['external_system_source|dwh_source','an input source'],['fork4','a chooser with four flows'],
+      b:'The real Game of the Week: a promo page door, one multipurpose promotion, and four tiers under it. Every tier runs its own promotion, deposit, free spins and wagering bonus.',
+      need:[['external_system_source|dwh_source','an input source'],['fork4','a multipurpose promotion with four flows'],
             ['promotion*4','a promotion per tier'],['deposit*4','a deposit per tier'],
             ['freespin_bonus*4','free spins per tier'],
             ['casino_bonus_v2*4','a wagering bonus on every tier'],
@@ -1703,10 +1721,10 @@
     { k:'clone-gow', t:"Clone last week's Game of the Week",
       b:'Last week duplicated. It ran three tiers and this week runs four, one tier is missing its wagering bonus, and one path has no ending. Every tier needs promotion, deposit, free spins, wagering bonus. Fix all three, then validate.',
       pre:[['API',null],['Multipurpose Promotion',0],
-           ['Promotion',1],['Deposit',2],['Casino FreeSpin',3],['Casino Bonus',4],['End of path',5],
-           ['Promotion',1],['Deposit',7],['Casino FreeSpin',8],['End of path',9],
+           ['Promotion',1],['Deposit',2],['Casino FreeSpin',3],['Casino Bonus',4],['End of journey',5],
+           ['Promotion',1],['Deposit',7],['Casino FreeSpin',8],['End of journey',9],
            ['Promotion',1],['Deposit',11],['Casino FreeSpin',12],['Casino Bonus',13]],
-      need:[['multipurpose_promotion','the chooser'],['fork4','a fourth tier on the chooser'],
+      need:[['multipurpose_promotion','a multipurpose promotion'],['fork4','a fourth flow'],
             ['promotion*4','a promotion per tier'],['deposit*4','a deposit per tier'],
             ['freespin_bonus*4','free spins per tier'],
             ['casino_bonus_v2*4','the wagering bonus on every tier'],
@@ -2660,11 +2678,11 @@
       ['The same activity id appears twice in the log. What is it?',
        ['Two nodes with the same name', 'One node reporting twice', 'A duplicated journey'], 1,
        'One node, two events.'],
-      ['What does the chooser award by itself?',
+      ['What does a Multipurpose Promotion give the player by itself?',
        ['The spins', 'Nothing', 'The deposit'], 1,
-       'Everything a player can spend comes from the promotion inside the flow they picked.'],
+       'It only offers the list. Everything a player can spend comes from the promotion they picked.'],
       ['A player argues about their terms. Which object do you open?',
-       ['The chooser', 'The promotion of the flow they chose', 'The randomizer'], 1,
+       ['The one that offered the list', 'The promotion they picked', 'The randomizer'], 1,
        'The terms live on the tier they took.'],
       ['The wheel has been spun. What carries on from there?',
        ['The wheel keeps the player', 'The journey the prize pointed at',
@@ -2692,17 +2710,16 @@
        ['From the entry source', 'From the promotion above it in the same path',
         'From the journey settings'], 1,
        'It reads the id and the accepted time of the promotion above it.'],
-      ['You hang a Casino FreeSpin straight off the chooser. What is wrong with it?',
-       ['Nothing', 'There is no promotion above it for it to read',
-        'The chooser cannot have children'], 1,
-       'The chooser awards nothing and supplies nothing. Each flow needs its own promotion first.'],
+      ['You put a Casino FreeSpin straight under a Multipurpose Promotion. What is wrong?',
+       ['Nothing', 'There is no promotion above it', 'It cannot have anything under it'], 1,
+       'A Multipurpose Promotion only offers the list. Each flow needs its own promotion first.'],
       ['A tier is missing its Casino Bonus. What happens?',
        ['The journey will not save', 'That tier pays out with no wagering at all',
         'The spins are never awarded'], 1,
        'It saves happily, which is what makes it dangerous.'],
-      ['What finishes a branch without ending the whole journey for that player?',
-       ['End of journey', 'End of path', 'A wait with no time'], 1,
-       'End of path closes that branch. End of journey closes the lot.'],
+      ['Where does every journey have to start?',
+       ['With a promotion', 'With an input source', 'With a wait'], 1,
+       'Always an input source, with no exceptions. It is what puts the player in.'],
       ['A message node reports Sent. What does that mean?',
        ['The player read it', 'We handed it over to be delivered',
         'The player accepted the offer'], 1,
