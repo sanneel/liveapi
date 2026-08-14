@@ -432,6 +432,26 @@
   .attach:empty::before{content:"pick a node on the canvas to hang the next one off it";
     font-family:var(--sans);font-size:11.5px;color:var(--faint)}
 
+  /* the settings of the node you picked, as the back office asks for them */
+  .cfg{position:absolute;top:0;right:0;bottom:0;width:334px;z-index:7;background:var(--panel);
+    border-left:1px solid var(--line);display:flex;flex-direction:column;
+    box-shadow:-18px 0 34px -28px rgba(0,0,0,.5)}
+  .cfg.quiet{display:none}
+  .cfg-h{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid var(--line)}
+  .cfg-h b{font-family:var(--disp);font-size:13.5px;font-weight:800;color:var(--ink)}
+  .cfg-b{flex:1;min-height:0;overflow-y:auto;padding:12px 14px 18px;display:grid;gap:10px;
+    align-content:start;scrollbar-width:thin}
+  .cfg-f{display:grid;gap:4px}
+  .cfg-f label{font-size:11px;color:var(--faint);font-weight:600}
+  .cfg-f input,.cfg-f select,.cfg-f textarea{font:inherit;font-family:var(--sans);font-size:12.5px;
+    color:var(--ink);background:var(--raise);border:1px solid var(--line);border-radius:8px;
+    padding:6px 9px;width:100%}
+  .cfg-f textarea{min-height:52px;resize:vertical;line-height:1.4}
+  .cfg-f input:focus,.cfg-f select:focus,.cfg-f textarea:focus{outline:none;border-color:var(--key);
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--key) 20%,transparent)}
+  .cfg-none{font-size:12.5px;color:var(--muted);line-height:1.5}
+  @media (max-width:1180px){.cfg{position:static;width:auto;border-left:0;border-top:1px solid var(--line)}}
+
   /* the validator floats in when it has something to report */
   .vsheet{bottom:104px;left:12px;width:min(560px,54%);background:var(--panel);
     border:1px solid var(--line);border-radius:11px;box-shadow:var(--lift);overflow:hidden;
@@ -1249,6 +1269,13 @@
             </div>
           </div>
 
+          <aside class="cfg quiet" id="cfg">
+            <div class="cfg-h"><b id="cfgTitle"></b>
+              <button class="ovl-x" id="cfgClose" type="button" aria-label="Close the settings">&#215;</button>
+            </div>
+            <div class="cfg-b" id="cfgBody"></div>
+          </aside>
+
           <div class="ovl vsheet quiet" id="vsheet">
             <div class="vsheet-h"><button class="vfold" id="vFold" type="button">Validator</button>
               <b>catalog grammar + capture status</b>
@@ -1440,53 +1467,53 @@
   var PAL = [
     ['Input Source','t-src',0,[
       ['Custom Segment','seg','dwh_source',1,1],
-      ['Reference codes','ref','registration',1,0],
-      ['CSV','csv','',0,0],
+      ['Reference codes','ref','registration',1,1],
+      ['CSV','csv','',0,1],
       ['API','api','external_system_source',1,0],
       ['Predefined Segment','pre','dwh_source',1,0],
-      ['Events','evt','',0,0],
+      ['Events','evt','',0,1],
       ['Promotion','mon','',1,1]]],
     ['Flow control','t-flow',0,[
       ['Decision split','dsp','ams_decision_split',1,0],
-      ['Random split','rsp','random_split',1,0],
+      ['Random split','rsp','random_split',1,1],
       ['Sms engagement split','smss','',0,1],
       ['Email engagement split','envs','email_engagement_split',0,1],
       ['Native push engagement split','phns','',0,1],
       ['On-site messaging engagement split','chs','notification_center_engagement_split',1,1]]],
     ['Communication','t-comm',0,[
-      ['Native push','phn','',0,0],
-      ['Web push','web','',0,0],
+      ['Native push','phn','',0,1],
+      ['Web push','web','',0,1],
       ['SMS','sms','dextra_sms',1,0],
       ['Email','env','dextra_email',1,0],
       ['On-site messaging','mon','notification_center#contract1',1,0],
-      ['WhatsApp','wap','',0,0]]],
+      ['WhatsApp','wap','',0,1]]],
     ['Delays','t-delay',1,[
-      ['Event Detector','det','event_detector',1,0],
-      ['Date','cal','',1,0],
+      ['Event Detector','det','event_detector',1,1],
+      ['Date','cal','',1,1],
       ['Wait','hrg','wait_interval',1,0]]],
     ['Connectors','t-conn',0,[
-      ['Outgoing API request','hook','',0,0],
-      ['Campaign Connector','plug','campaign_connector',1,0]]],
+      ['Outgoing API request','hook','',0,1],
+      ['Campaign Connector','plug','campaign_connector',1,1]]],
     ['Multiple flows','t-flows',0,[
-      ['Parallel flows','par','',1,0],
+      ['Parallel flows','par','',1,1],
       ['Choosable flows','tree','multipurpose_promotion',1,0]]],
     ['Promotion type','t-promo',0,[
       ['Promotion','mon','promotion',1,0],
       ['Multipurpose Promotion','star','multipurpose_promotion',1,0]]],
     ['Conditions','t-cond',0,[
       ['Deposit','dol','deposit',1,0],
-      ['Deposit Collection','undol','',0,0],
-      ['Bet Insurance','shld','',0,0],
-      ['Bet','tkt','',1,0],
-      ['Bet Collection','tktu','',0,0],
-      ['Casino Bet Collection','chipu','',0,0]]],
+      ['Deposit Collection','undol','',0,1],
+      ['Bet Insurance','shld','',0,1],
+      ['Bet','tkt','',1,1],
+      ['Bet Collection','tktu','',0,1],
+      ['Casino Bet Collection','chipu','',0,1]]],
     ['Reward type','t-rew',0,[
-      ['Sport Bonus','ball','sport_bonus',1,0],
+      ['Sport Bonus','ball','sport_bonus',1,1],
       ['Casino Bonus','chip','casino_bonus_v2',1,0],
       ['Casino FreeSpin','slot','freespin_bonus',1,0],
       ['Sport FreeBet','free','freebet',1,0],
-      ['Money Bonus','wal','',0,0],
-      ['Coins Bonus','coin','',0,0]]],
+      ['Money Bonus','wal','',0,1],
+      ['Coins Bonus','coin','',0,1]]],
     ['Finish','t-fin',0,[
       ['End of journey','end','end_of_journey',1,0]]]
   ];
@@ -1536,6 +1563,103 @@
   }
   /* a label can say more than the activity it maps to */
   var SUBL = { 'Choosable flows':'4 flows', 'Predefined Segment':'Segment' };
+  /* What the back office asks for on each node. Fields are grouped so the panel
+     reads in the order an operator fills them, and the summary line is what the
+     card shows once the node is configured. */
+  var CFG = {
+    external_system_source: { sum:['entry'], f:[
+      ['Activity name','name','text','Players added'],
+      ['Where they come from','entry','sel','Promo page|Randomizer prize|API call'],
+      ['Currency','ccy','sel','CLP|PEN|USD']] },
+    dwh_source: { sum:['segment'], f:[
+      ['Activity name','name','text','Segment'],
+      ['Segment','segment','text','VIP casino, last 30 days'],
+      ['Currency','ccy','sel','CLP|PEN|USD']] },
+    promotion: { sum:['nameEs','window'], f:[
+      ['Activity name','name','text','Promotion'],
+      ['Promotion link','link','text','PRM-0-…'],
+      ['Name ES','nameEs','text','50 GG con depósito'],
+      ['Name EN','nameEn','text','50 free spins with deposit'],
+      ['Offered within','window','text','1d 0h 0m'],
+      ['Accepted by default','auto','sel','yes|no'],
+      ['Terms link','terms','text','/promociones/terminos']] },
+    multipurpose_promotion: { sum:['options','window'], f:[
+      ['Activity name','name','text','Multipurpose Promotion'],
+      ['Promotion link','link','text','PRM-0-…'],
+      ['Name ES','nameEs','text','Elige tu bono'],
+      ['Name EN','nameEn','text','Choose your bonus'],
+      ['How many to offer','options','sel','2|3|4'],
+      ['Offered within','window','text','1d 0h 0m']] },
+    deposit: { sum:['min','ccy'], f:[
+      ['Activity name','name','text','Deposit'],
+      ['Minimum amount','min','num','10000'],
+      ['Currency','ccy','sel','CLP|PEN|USD'],
+      ['Wait for the deposit','window','text','1 day'],
+      ['Which deposit counts','which','sel','first after accepting|any in the window']] },
+    freespin_bonus: { sum:['spins','bet','game'], f:[
+      ['Activity name','name','text','Casino FreeSpin'],
+      ['Provider','provider','sel','3 Oaks|Pragmatic Play|Relax Gaming|Evolution'],
+      ['Game','game','text','Super Hotfire Diamonds'],
+      ['How many spins','spins','num','50'],
+      ['Bet per spin','bet','num','100'],
+      ['Currency','ccy','sel','CLP|PEN|USD'],
+      ['Valid for','valid','text','7 days'],
+      ['Maximum win','maxwin','num','500000'],
+      ['Name ES','nameEs','text','50 giros gratis'],
+      ['Name EN','nameEn','text','50 free spins']] },
+    casino_bonus_v2: { sum:['rollover','valid'], f:[
+      ['Activity name','name','text','Casino Bonus'],
+      ['What it wagers','source','sel','the free spin winnings|a fixed amount'],
+      ['Rollover','rollover','num','20'],
+      ['Valid for','valid','text','7 days'],
+      ['Maximum bet','maxbet','num','5000'],
+      ['Games that count','games','sel','all casino|selected games'],
+      ['Name ES','nameEs','text','Bono con rollover'],
+      ['Name EN','nameEn','text','Wagering bonus']] },
+    freebet: { sum:['amount','odds'], f:[
+      ['Activity name','name','text','Sport FreeBet'],
+      ['Amount','amount','num','5000'],
+      ['Currency','ccy','sel','CLP|PEN|USD'],
+      ['Minimum odds','odds','num','1.5'],
+      ['Valid for','valid','text','7 days'],
+      ['Sport','sport','sel','all|football|tennis|basketball'],
+      ['Name ES','nameEs','text','Apuesta gratis'],
+      ['Name EN','nameEn','text','Free bet']] },
+    'notification_center#contract1': { sum:['titleEs'], f:[
+      ['Activity name','name','text','On-site messaging'],
+      ['Title ES','titleEs','text','¡Tu bono está listo!'],
+      ['Title EN','titleEn','text','Your bonus is ready'],
+      ['Content ES','bodyEs','area','Entra y activa tus giros gratis del Juego de la Semana.'],
+      ['Content EN','bodyEn','area','Come in and activate your Game of the Week free spins.'],
+      ['Button ES','ctaEs','text','Activar'],
+      ['Button EN','ctaEn','text','Activate'],
+      ['Link','link','text','/promociones/juego-de-la-semana']] },
+    dextra_email: { sum:['subjEs'], f:[
+      ['Activity name','name','text','Email'],
+      ['Subject ES','subjEs','text','Tus giros gratis te esperan'],
+      ['Subject EN','subjEn','text','Your free spins are waiting'],
+      ['Content ES','bodyEs','area','Hola, tienes 50 giros gratis en el Juego de la Semana.'],
+      ['Content EN','bodyEn','area','Hi, you have 50 free spins on the Game of the Week.'],
+      ['Sender','from','sel','Jugabet promos|Jugabet support'],
+      ['Link','link','text','/promociones/juego-de-la-semana']] },
+    dextra_sms: { sum:['bodyEs'], f:[
+      ['Activity name','name','text','SMS'],
+      ['Content ES','bodyEs','area','Jugabet: tienes 50 giros gratis, actívalos hoy.'],
+      ['Content EN','bodyEn','area','Jugabet: you have 50 free spins, activate them today.'],
+      ['Sender ID','sender','text','JUGABET'],
+      ['Link','link','text','/promociones']] },
+    wait_interval: { sum:['wait'], f:[
+      ['Activity name','name','text','Wait'],
+      ['Wait for','wait','text','2 days'],
+      ['Then carry on','then','sel','at once|at 09:00 local time']] },
+    ams_decision_split: { sum:['paths'], f:[
+      ['Activity name','name','text','Decision split'],
+      ['How many paths','paths','sel','2|3|4|5'],
+      ['Path 1 takes','rule1','text','deposited in the last 7 days'],
+      ['Path 2 takes','rule2','text','everyone else']] },
+    end_of_journey: { sum:[], f:[] }
+  };
+
   var SOURCES = ['dwh_source','external_system_source','registration'];
   var TERMINALS = ['end_of_journey','end_of_path'];
   var CHANNELS = ['dextra_sms','dextra_email','notification_center#contract1','notification_center#contract5'];
@@ -1625,6 +1749,33 @@
     /* rule 7 of the composer rules: wire the PRIMARY completion event, not a
        failure one. The primary is the event a capture uses to reach a node that
        is not a terminal; otherwise the friendliest-named completion event. */
+    /* the values an operator would type, prefilled with what our own captures
+       show, so a new joiner sees a realistic node rather than empty boxes */
+    function cfgFor(key){
+      var def = CFG[key];
+      if (!def) return null;
+      var v = {};
+      def.f.forEach(function(f){
+        v[f[1]] = f[2] === 'sel' ? String(f[3]).split('|')[0] : f[3];
+      });
+      return v;
+    }
+    function cfgLine(n){
+      var def = CFG[n.key];
+      if (!def || !n.cfg || !def.sum.length) return null;
+      var bits = def.sum.map(function(k){ return n.cfg[k]; }).filter(Boolean);
+      if (!bits.length) return null;
+      if (n.key === 'freespin_bonus')
+        return n.cfg.spins + ' spins at ' + n.cfg.bet + ', ' + n.cfg.game;
+      if (n.key === 'casino_bonus_v2') return 'rollover x' + n.cfg.rollover + ', ' + n.cfg.valid;
+      if (n.key === 'deposit') return 'min ' + n.cfg.min + ' ' + n.cfg.ccy;
+      if (n.key === 'freebet') return n.cfg.amount + ' ' + n.cfg.ccy + ', min odds ' + n.cfg.odds;
+      if (n.key === 'multipurpose_promotion') return n.cfg.options + ' to choose from';
+      if (n.key === 'wait_interval') return n.cfg.wait;
+      if (n.key === 'ams_decision_split') return n.cfg.paths + ' paths';
+      return bits[0];
+    }
+
     function primaryEv(key){
       var a = GRAM.acts[key];
       if (!a || !a.ev.length) return '';
@@ -1685,7 +1836,7 @@
       }
       var n = { id:++nid, key:it.key, label:it.label, tint:it.tint, cap:it.cap, ic:it.ic,
                 uid:'\u2026' + (0x1000 + (nid * 2477 % 0xefff)).toString(16),
-                parent: tree.length ? sel : null, via: ev, flow:'' };
+                parent: tree.length ? sel : null, via: ev, flow:'', cfg: cfgFor(it.key) };
       if (n.parent !== null){
         var par = node(n.parent);
         if (par.key === 'multipurpose_promotion' || par.key === 'ams_decision_split' ||
@@ -1796,8 +1947,10 @@
             pills.push('<span class="flowchip" style="left:' + x2 + 'px;top:' + (y2 - 50) + 'px">' +
               n.flow + '</span>');
         }
-        var sub = SUBL[n.label] !== undefined ? SUBL[n.label]
-          : (SUB[n.key] === undefined ? '' : SUB[n.key]);
+        var sub = cfgLine(n);
+        if (sub === null)
+          sub = SUBL[n.label] !== undefined ? SUBL[n.label]
+              : (SUB[n.key] === undefined ? '' : SUB[n.key]);
         var isSrc = n.tint === 't-src';
         cards.push('<button class="nd ' + (isTerm(n.key) ? 'term ' : n.tint + ' ') +
           (sel === n.id ? 'sel' : '') +
@@ -1903,6 +2056,7 @@
       }
       var b = e.target.closest('.nd');
       if (!b) return;
+      cfgOpen(Number(b.dataset.id));
       /* selecting a node is not a cue for a lecture. The validator is where the
          detail belongs, and it only speaks when you ask it to. */
       sel = Number(b.dataset.id); selPort = null; draw();
@@ -2170,7 +2324,8 @@
         var par = parent === null ? null : node(parent);
         var n = { id:++nid, key:it.key, label:it.label, tint:it.tint, cap:it.cap, ic:it.ic,
                   uid:'\u2026' + (0x1000 + (nid * 2477 % 0xefff)).toString(16),
-                  parent:parent, via: par ? primaryEv(par.key) : '', flow:'' };
+                  parent:parent, via: par ? primaryEv(par.key) : '', flow:'',
+                  cfg: cfgFor(it.key) };
         if (par && (par.key === 'multipurpose_promotion' || par.key === 'ams_decision_split'))
           n.flow = 'Flow ' + (kids(par.id).length + 1);
         tree.push(n);
@@ -2207,6 +2362,7 @@
       /* the canvas clears, the chosen task stays on the note. A task that hands
          you a duplicate hands it back rather than leaving you empty. */
       tree = []; sel = null; selPort = null; checked = false;
+      cfgBox.classList.add('quiet');
       if (taskIx >= 0 && TASKS[taskIx].pre) preload(TASKS[taskIx].pre);
       draw();
       talkPg('<p>Blank canvas. Start with an input source.</p>', 'flag');
@@ -2226,6 +2382,63 @@
     if (vClose) vClose.onclick = function(){
       document.getElementById('vsheet').classList.add('quiet');
     };
+
+    /* the settings panel: click a node, fill in what the back office asks for */
+    var cfgBox = document.getElementById('cfg'), cfgTitle = document.getElementById('cfgTitle'),
+        cfgBody = document.getElementById('cfgBody');
+    document.getElementById('cfgClose').onclick = function(){ cfgBox.classList.add('quiet'); };
+
+    function cfgOpen(id){
+      var n = node(id);
+      if (!n) return;
+      var def = CFG[n.key];
+      cfgTitle.textContent = n.label;
+      cfgBody.innerHTML = '';
+      if (!def || !def.f.length){
+        cfgBody.innerHTML = '<p class="cfg-none">Nothing to set on this one. ' +
+          (isTerm(n.key) ? 'It finishes the path and that is all it does.'
+                         : 'We have no captured example of it, so the fields are unknown.') + '</p>';
+        cfgBox.classList.remove('quiet');
+        return;
+      }
+      if (!n.cfg) n.cfg = cfgFor(n.key) || {};
+      def.f.forEach(function(f){
+        var lbl = f[0], key = f[1], type = f[2], val = n.cfg[key];
+        var wrap = document.createElement('div');
+        wrap.className = 'cfg-f';
+        var id2 = 'cf_' + n.id + '_' + key;
+        var el;
+        if (type === 'sel'){
+          el = document.createElement('select');
+          String(f[3]).split('|').forEach(function(o){
+            var op = document.createElement('option');
+            op.value = o; op.textContent = o;
+            if (o === val) op.selected = true;
+            el.appendChild(op);
+          });
+        } else if (type === 'area'){
+          el = document.createElement('textarea');
+          el.value = val === undefined ? '' : val;
+        } else {
+          el = document.createElement('input');
+          el.type = type === 'num' ? 'number' : 'text';
+          el.value = val === undefined ? '' : val;
+        }
+        el.id = id2;
+        var l = document.createElement('label');
+        l.setAttribute('for', id2);
+        l.textContent = lbl;
+        el.addEventListener('change', function(){
+          n.cfg[key] = el.value;
+          var card = cv.querySelector('.nd[data-id="' + n.id + '"] s');
+          var line = cfgLine(n);
+          if (card && line) card.textContent = line;
+        });
+        wrap.appendChild(l); wrap.appendChild(el);
+        cfgBody.appendChild(wrap);
+      });
+      cfgBox.classList.remove('quiet');
+    }
 
     /* zoom: 1:1 is the default, fit is there for a four tier journey */
     var STEPS = [0.4, 0.5, 0.6, 0.75, 0.9, 1];
