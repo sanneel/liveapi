@@ -1,7 +1,7 @@
 """
 Operator onboarding — the guided tour a new joiner walks through on day one.
 
-  GET   /admin/onboarding                  the tour itself (16 screens)  — any login
+  GET   /admin/onboarding                  the tour itself (20 screens)  — any login
   GET   /onboarding                        the same page, shorter path   — any login
   GET   /api/admin/onboarding/progress     which practice tasks are done — any login
   POST  /api/admin/onboarding/progress     tick or clear one task        — any login
@@ -47,6 +47,8 @@ KNOWN_TASKS = frozenset(
         "chooser-two-prizes",
         "gow-three-tiers",
         "clone-gow",
+        "sport-freebet",
+        "empty-prize",
         "comms-only",
         "winback-split",
     }

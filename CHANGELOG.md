@@ -11,6 +11,21 @@ with the DB snapshot + `git reset` commands printed by that script.
 ## [Unreleased]
 
 ### Added
+- **The onboarding playground caught up with the capture library.** Five
+  activities the fragment library has captured since the tour was written —
+  Reference codes (`registration`), Random split, Sport FreeBet (`freebet`),
+  Sport Bonus and Campaign Connector — are now buildable in the `/onboarding`
+  playground, with their real events, upstream data needs and the transitions
+  mined from captured journeys (`library/mined_catalog.json`). The validator
+  now also enforces the composer's delivered-message rule: a send that lands is
+  followed by a wait, a split or an ending, never another send — only a failed
+  send goes straight to the fallback channel. Two practice tasks joined the
+  note: the sport freebet-for-a-deposit chain, and the wheel's empty-prize
+  journey (the brief-invisible rule every wheel build trips over). Quiz options
+  are shuffled per showing so the answer's slot cannot be memorised, and a
+  primary-port bug was fixed where `Sent$` matched `NotificationNotSent` and
+  hung new nodes off the failure port by default. The screens removed in the
+  tour rewrite left ~380 lines of dead CSS and script behind; they came out.
 - **Journey design boards** in the Optimization → AI tab. MODE 1 now answers a
   brief with the short outline *plus* a `diagram` JSON block, and the boards are
   drawn **automatically** with that reply — one card per activity with its own
