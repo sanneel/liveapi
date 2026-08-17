@@ -707,6 +707,23 @@
 
   /* validator */
   .vr{max-height:116px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+  .vsum{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:9px}
+  .vs{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.09em;
+    text-transform:uppercase;border:1px solid var(--line);border-radius:99px;padding:3px 9px;
+    background:var(--raise);color:var(--muted)}
+  .vs.fine{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent)}
+  .vs.bad{color:var(--flag);border-color:color-mix(in srgb,var(--flag) 45%,transparent)}
+  button.vs.warn{color:var(--body);cursor:pointer;font-family:var(--mono)}
+  button.vs.warn:hover{border-color:var(--key);color:var(--ink)}
+  .vwarns{display:grid;gap:4px;margin-top:5px;padding-top:7px;border-top:1px solid var(--line)}
+  .vrow i{width:6px;height:6px;border-radius:50%;margin-top:5px;font-style:normal;flex:none;
+    background:var(--line-2)}
+  .vrow.err i,.vrow.blocked i{background:var(--flag)}
+  .vrow.warn i{background:var(--h-amber)}
+  .vrow.task i{background:var(--flag)}
+  .vrow.done i{background:var(--ok)}
+  .vrow.done span,.vrow.task span{font-weight:600;color:var(--ink)}
+  .vrow u{font-family:var(--mono);font-size:10px;color:var(--faint);text-decoration:none}
   .vrow{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:start;font-size:12px;
     color:var(--muted);line-height:1.45}
   .vrow b{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.06em;padding:2px 6px;
@@ -2229,27 +2246,22 @@
              real shape. Say it, do not block it. Anything else missing is fatal:
              a reward with no promotion above it cannot be built. */
           if (from === 'deposit'){
-            rows.push(['warn', n.label + ' takes ' + gone[from].join(' and ') + ' from a Deposit in ' +
-                       'our captures. There is no Deposit in this flow, so those values are set by ' +
-                       'hand on the node itself']);
+            rows.push(['warn', n.label + ': no Deposit above it, so set its amounts on the node']);
             return;
           }
-          rows.push(['err', n.label + ' needs ' + gone[from].join(' and ') + ' from a ' + nice(from) +
-                     ', and there is none above it']); errs++;
+          rows.push(['err', n.label + ' needs a ' + nice(from) + ' above it']); errs++;
         });
       });
       tree.forEach(function(n){
         if (n.parent === null || !n.key) return;
         var p = node(n.parent);
         if (!p.key) return;
-        if (edgeSeen(n)) rows.push(['ok', nice(p.key) + ' --' + n.via + '--> ' + nice(n.key)]);
-        else {
-          var note = ' never seen in a captured journey, verify it is legal';
-          if (p.key === 'multipurpose_promotion' && n.key === 'promotion')
-            note = ' is not in our captures, though the live wheel and Game of the Week journeys both' +
-                   ' do exactly this. Our capture set is behind, the shape is fine';
-          rows.push(['warn','transition ' + nice(p.key) + ' --' + n.via + '--> ' + nice(n.key) + note]);
-        }
+        if (edgeSeen(n)) { rows.push(['ok', '']); return; }
+        var step = nice(p.key) + ' to ' + nice(n.key);
+        if (p.key === 'multipurpose_promotion' && n.key === 'promotion')
+          rows.push(['warn', step + ': not in our captures, but the live journeys do it']);
+        else
+          rows.push(['warn', step + ': never seen in a capture, check it is legal']);
       });
       /* the composer's own rule: a DELIVERED message is never wired straight to
          another send. Success goes to a wait, a split or an ending; a FAILED
@@ -2259,23 +2271,25 @@
         if (n.parent === null || CHANNELS.indexOf(n.key) === -1) return;
         var pc = node(n.parent);
         if (CHANNELS.indexOf(pc.key) !== -1 && SENT_OK.indexOf(n.via) !== -1){
-          rows.push(['err', pc.label + ' delivered and then goes straight to ' + n.label +
-                     '. After a send lands the next node is a wait, a split or an ending. ' +
-                     'Only a failed send goes straight to the next channel']); errs++;
+          rows.push(['err', pc.label + ' sent, then straight to ' + n.label +
+                     '. After a send comes a wait, a split or an ending']); errs++;
         }
       });
       tree.forEach(function(n){
         if (kids(n.id).length === 0 && !isTerm(n.key))
-          rows.push(['warn','the path ending at ' + n.label + ' has no terminal']);
-        if (CHANNELS.indexOf(n.key) !== -1)
-          rows.push(['warn', n.label + ' has no copy set in this plan']);
+          rows.push(['warn', n.label + ' has no ending under it']);
+        if (CHANNELS.indexOf(n.key) !== -1 && !(n.cfg && (n.cfg.bodyEs || n.cfg.titleEs || n.cfg.subjEs)))
+          rows.push(['warn', n.label + ' has no copy set']);
       });
       if (taskIx >= 0) {
         var miss = taskCheck(TASKS[taskIx]);
-        if (miss.length) { miss.forEach(function(m){ rows.push(['err','task: still missing ' + m]); errs++; }); }
-        else if (errs) rows.push(['warn','task: the shape is right, but fix the problems above first']);
+        if (miss.length) {
+          rows.push(['task', 'still missing: ' + miss.join(', ')]);
+          errs += miss.length;
+        }
+        else if (errs) rows.push(['task','the shape is right, fix the problems first']);
         else {
-          rows.push(['ok','task complete: ' + TASKS[taskIx].t]);
+          rows.push(['done','task complete: ' + TASKS[taskIx].t]);
           markDone(TASKS[taskIx].k);
         }
       }
@@ -2283,10 +2297,8 @@
       verdict.hidden = false;
       verdict.className = 'verdict ' + (errs ? 'no' : 'yes');
       verdict.textContent = errs ? 'not approvable' : 'approvable';
-      vr.innerHTML = rows.map(function(r){
-        return '<div class="vrow ' + r[0] + '"><b>' + r[0].toUpperCase() + '</b><span>' + r[1] + '</span></div>';
-      }).join('') || '<div class="vrow ok"><b>OK</b><span>nothing to flag</span></div>';
       var nWarn = rows.filter(function(r){ return r[0] === 'warn'; }).length;
+      vr.innerHTML = vrHtml(rows, errs, tree.filter(function(n){ return n.parent !== null; }).length);
       if (!errs && !nWarn)
         talkPg('<p>Clean. That would build.</p><p>Every edge here matches one we have seen in a real ' +
                'journey, and every node has what it needs from above.</p>', 'party');
@@ -2305,6 +2317,51 @@
       draw();
       verdict.hidden = false;
     }
+
+    /* One line of counts, the task, then the problems. Everything the operator
+       cannot act on is folded behind a button: twelve rows of prose was worse
+       than none, because the two that mattered were buried in it. */
+    function vrHtml(rows, errs, edges){
+      var seen = {}, order = [];
+      rows.forEach(function(r){
+        if (r[0] === 'ok') return;
+        var k = r[0] + '|' + r[1];
+        if (seen[k]) { seen[k].n++; return; }
+        seen[k] = { kind:r[0], text:r[1], n:1 };
+        order.push(k);
+      });
+      var list = order.map(function(k){ return seen[k]; });
+      var bad = list.filter(function(r){ return r.kind === 'err' || r.kind === 'blocked'; });
+      var warn = list.filter(function(r){ return r.kind === 'warn'; });
+      var task = list.filter(function(r){ return r.kind === 'task' || r.kind === 'done'; });
+
+      var row = function(r){
+        return '<div class="vrow ' + r.kind + '"><i></i><span>' + r.text +
+               (r.n > 1 ? ' <u>&#215;' + r.n + '</u>' : '') + '</span></div>';
+      };
+      var out = '<div class="vsum">' +
+        '<span class="vs ok">' + edges + (edges === 1 ? ' step' : ' steps') + ' checked</span>' +
+        (errs ? '<span class="vs bad">' + errs +
+          (errs === 1 ? ' problem' : ' problems') + '</span>' : '<span class="vs fine">no problems</span>') +
+        (warn.length ? '<button class="vs warn" type="button" data-vtoggle aria-expanded="false">' +
+          warn.length + ' worth a look</button>' : '') +
+        '</div>';
+      out += task.map(row).join('');
+      out += bad.map(row).join('');
+      if (warn.length) out += '<div class="vwarns" hidden>' + warn.map(row).join('') + '</div>';
+      return out;
+    }
+
+    vr.addEventListener('click', function(e){
+      var b = e.target.closest('[data-vtoggle]');
+      if (!b) return;
+      var box = vr.querySelector('.vwarns');
+      if (!box) return;
+      var open = box.hidden;
+      box.hidden = !open;
+      b.setAttribute('aria-expanded', open ? 'true' : 'false');
+      b.textContent = open ? 'hide the list' : box.children.length + ' worth a look';
+    });
 
     function taskCheck(task){
       var keys = tree.map(function(n){ return n.key || n.label; });
