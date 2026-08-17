@@ -182,6 +182,54 @@ RANDOMIZER_SCRIPT_PATH = CLONER_DIR / "randomizer_campaign.py"
 NC_DISCOUNT_SCRIPT_PATH = CLONER_DIR / "nc_discount_campaign.py"
 NC_DISCOUNT_PMCL_SCRIPT_PATH = CLONER_DIR / "nc_discount_pmcl_campaign.py"
 PREDICTION_SCRIPT_PATH = CLONER_DIR / "prediction_campaign.py"
+
+
+def nc_discount_calendar(pmcl: bool = False) -> List[Dict[str, str]]:
+    """The baked CALENDAR of the Discount NC generator, for display in the UI.
+
+    Read out of the generator's source with `ast` rather than imported: the
+    generator pulls in requests/dotenv via create_journeys, and the admin page
+    must not fail to render because a CLI dependency moved. Parsing also keeps
+    this a display-only read — the generator stays the single source of truth.
+
+    The panel used to hard-code this list, which silently went stale the first
+    time the calendar changed (it advertised July after August shipped). Never
+    hard-code it again: return [] and the template omits the list.
+    """
+    import ast
+
+    path = NC_DISCOUNT_PMCL_SCRIPT_PATH if pmcl else NC_DISCOUNT_SCRIPT_PATH
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError):
+        return []
+
+    rows: List[Dict[str, str]] = []
+    for node in tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(isinstance(t, ast.Name) and t.id == "CALENDAR" for t in node.targets):
+            continue
+        try:
+            entries = ast.literal_eval(node.value)
+        except ValueError:
+            return []
+        for entry in entries:
+            try:
+                date_str, slug, name = entry[0], entry[1], entry[2]
+                day = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+            except (TypeError, IndexError, ValueError):
+                continue
+            rows.append({
+                "date": day.strftime("%d.%m"),
+                # Derived from the date, never transcribed — a hand-typed weekday
+                # is how "14.08 Monday" (a Friday) got into a brief.
+                "weekday": day.strftime("%a"),
+                "slug": slug,
+                "name": name,
+            })
+        break
+    return rows
 TOURNAMENT_PMCL_SCRIPT_PATH = CLONER_DIR / "tournament_pmcl_campaign.py"
 COMPOSE_SCRIPT_PATH = CLONER_DIR / "compose.py"
 CHAIN_COMPOSER_SCRIPT_PATH = CLONER_DIR / "journey_composer.py"

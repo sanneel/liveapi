@@ -703,11 +703,16 @@ def _rnd_ns(*, kind="sport_wof", date="", days="", weights="", journeys="",
 def _nc_ns(*, error="", result=None, console_script=None,
            pmcl_error="", pmcl_result=None, pmcl_console_script=None,
            git_result=None) -> dict:
+    # Both calendars are read from the generators' own CALENDAR at render time,
+    # so the panel cannot advertise a month the script no longer builds.
+    from ..services.journey_cloner_runner import nc_discount_calendar
     return {
         "error": error, "result": result, "console_script": console_script,
         "pmcl_error": pmcl_error, "pmcl_result": pmcl_result,
         "pmcl_console_script": pmcl_console_script,
         "git_result": git_result,
+        "calendar": nc_discount_calendar(),
+        "pmcl_calendar": nc_discount_calendar(pmcl=True),
     }
 
 

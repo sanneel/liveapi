@@ -509,17 +509,18 @@
       <form method="post" action="/admin/promotions/nc-discount" class="card card-pad" style="display:flex; flex-direction:column; gap:14px">
         <div>
           <h2 class="card-title">NC For Discount — JBCL</h2>
-          <p class="card-sub">jugabet.cl · Mon 20:00 / Fri 21:00 Chile. August calendar baked in.</p>
+          <p class="card-sub">jugabet.cl · Mon 20:00 / Fri 21:00 Chile. Calendar baked into the script.</p>
         </div>
-        <ul class="help" style="margin:0; padding-left:18px; line-height:1.7">
-          <li>10.07 Fri — The Racaroon</li>
-          <li>13.07 Mon — Gold Trio</li>
-          <li>17.07 Fri — Tornado</li>
-          <li>20.07 Mon — 1000 Olympus Rivals</li>
-          <li>24.07 Fri — Sweet Bonanza 1000</li>
-          <li>27.07 Mon — Egypt Fire</li>
-          <li>31.07 Fri — Coin Win 2</li>
-        </ul>
+        {# Read from nc_discount_campaign.py's CALENDAR at render time — do not
+           hard-code these rows again, they went stale the first time the
+           calendar changed. #}
+        {% if nc.calendar %}
+          <ul class="help" style="margin:0; padding-left:18px; line-height:1.7">
+            {% for g in nc.calendar %}
+              <li>{{ g.date }} {{ g.weekday }} — {{ g.name }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
         <button class="btn primary" style="justify-content:center">Generate console script</button>
         <p class="help">Reserves an id, pops a file picker per game image, uploads it, then creates + saves each draft (unpublished for review).</p>
       </form>
@@ -528,14 +529,15 @@
       <form method="post" action="/admin/promotions/nc-discount-pmcl" class="card card-pad" style="display:flex; flex-direction:column; gap:14px">
         <div>
           <h2 class="card-title">NC For Discount — PMCL</h2>
-          <p class="card-sub">fortunazo.cl · Sat 12:00 / Sun 13:00 Chile. July calendar baked in.</p>
+          <p class="card-sub">fortunazo.cl · Sat 12:00 / Sun 13:00 Chile. Calendar baked into the script.</p>
         </div>
-        <ul class="help" style="margin:0; padding-left:18px; line-height:1.7">
-          <li>18.07 Sat — Jackpot Joker</li>
-          <li>19.07 Sun — 3 Coin Golden Ox</li>
-          <li>25.07 Sat — Fortune Garuda 500</li>
-          <li>26.07 Sun — Fortune Gems 500</li>
-        </ul>
+        {% if nc.pmcl_calendar %}
+          <ul class="help" style="margin:0; padding-left:18px; line-height:1.7">
+            {% for g in nc.pmcl_calendar %}
+              <li>{{ g.date }} {{ g.weekday }} — {{ g.name }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
         <div>
           <label class="lbl" for="pmcl-folder-id">Media Library Folder ID</label>
           <input id="pmcl-folder-id" name="folder_id" class="input" type="text"
