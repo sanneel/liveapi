@@ -22,8 +22,8 @@ draft (POST /journey-drafts) and saves it (PUT /journey-drafts/<id>). Drafts are
 left unpublished for review. Heavy logging; one bad game doesn't stop the rest.
 
 Usage:
-  python nc_discount_campaign.py                 # the July calendar from the brief
-  python nc_discount_campaign.py --name nc_july  # custom output basename
+  python nc_discount_campaign.py                 # the August calendar from the brief
+  python nc_discount_campaign.py --name nc_aug   # custom output basename
   python nc_discount_campaign.py --dry-run       # write the prepared bodies to out/
 """
 from __future__ import annotations
@@ -80,16 +80,43 @@ FRI = {
     "time": (21, 0),   # 21:00 Chile
 }
 
-# ── the July "games on discount" calendar (date, url-slug, display name) ─
+# ── the August "games on discount" calendar (date, url-slug, display name) ─
+# Display names are trimmed for the notification title (the July calendar did
+# the same: "playson-tornado-power-hold-and-win" shipped as "Tornado").
 CALENDAR = [
-    ("2026-07-10", "playtech-the-racaroon",              "The Racaroon"),
-    ("2026-07-13", "playtech-gold-trio-tres-amigos",     "Gold Trio"),
-    ("2026-07-17", "playson-tornado-power-hold-and-win", "Tornado"),
-    ("2026-07-20", "amigo-1000-olympus-rivals",          "1000 Olympus Rivals"),
-    ("2026-07-24", "pragmatic-sweet-bonanza-1000",       "Sweet Bonanza 1000"),
-    ("2026-07-27", "3oaks-egypt-fire",                   "Egypt Fire"),
-    ("2026-07-31", "gamzix-coin-win-2-hold-the-spin",    "Coin Win 2: Hold The Spin"),
+    ("2026-08-17", "3oaks-3-hot-chillies",       "3 Hot Chillies"),
+    ("2026-08-21", "enjoy-gaming-3-mariachi",    "3 Mariachi"),
+    ("2026-08-28", "amigo-1000-olympus-rivals",  "1000 Olympus Rivals"),
+    ("2026-08-31", "3oaks-egypt-fire",           "Egypt Fire"),
 ]
+
+# Held back from the August brief — do NOT re-add without fixing both problems:
+#   ("2026-08-14", "fazi-winning-clover-5", "Winning Clover 5")
+# 1. The brief labels 14.08 as a Monday; 14.08.2026 is a Friday, and it is
+#    already in the past, so there is no send window left to schedule.
+# 2. `fazi-winning-clover-5` is not in library/games.json — the whole `fazi`
+#    provider is absent from the 2026-07-27 capture. Either the slug is wrong
+#    or the registry is stale (rebuild: build_games_registry.py). Never swap in
+#    a near match: there are 39 "clover" games and none of them is this one.
+
+
+GAMES_REGISTRY = HERE / "library" / "games.json"
+
+
+def _registered(slug: str) -> bool:
+    """True if the slug is a real game in the backoffice catalog capture.
+
+    A slug that is not in the registry produces a notification whose CTA lands
+    on a 404 game page — the notification still looks perfect in the draft, so
+    nothing catches it before it reaches players. Refuse instead. If the game is
+    genuinely new, rebuild the registry with build_games_registry.py; never
+    substitute a near match.
+    """
+    try:
+        games = json.loads(GAMES_REGISTRY.read_text(encoding="utf-8"))["games"]
+    except (OSError, ValueError, KeyError):
+        return True   # no registry to check against — don't block on our own tooling
+    return slug in games
 
 
 def _copy_for(day: datetime) -> dict:
@@ -167,6 +194,7 @@ def verify(body: dict, slug: str) -> list[tuple[bool, str]]:
     stale = [lit for lit in (TPL_TITLE, TPL_ICON, TPL_STARTAT, TPL_STOPAT, TPL_RESERVED,
                              TPL_COPY_JOURNEY, "2026-06-30", "JRN-0-571678") if lit in s]
     return [
+        (_registered(slug), f"game {slug!r} is in library/games.json"),
         (RESERVED_TOKEN in s, "reservedJourneyId placeholder present (filled at paste)"),
         (ICON_TOKEN in s, "icon placeholder present (uploaded at paste)"),
         (game_url(slug) in s, f"link points at public game URL {game_url(slug)}"),
