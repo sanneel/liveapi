@@ -3,8 +3,11 @@ REA Journey Planner — in-backoffice chat.
 
   GET  /admin/ai              the planner's own page (partials/_planner_panel.html)
   GET  /admin/planner         redirects to /admin/ai (old bookmarks)
-  POST /admin/planner/api     Gemini proxy — assembles the system prompt from the
-                              journey-planner docs and forwards the conversation
+  POST /admin/planner/stream  the same proxy, as Server-Sent Events — what the
+                              panel actually calls, so the answer appears as it
+                              is written instead of after a minute of nothing
+  POST /admin/planner/api     the buffered version of that, kept as the panel's
+                              fallback and for callers that want one JSON blob
 
 The Gemini key lives in Settings (server-side) and is never sent to the browser.
 The system prompt is assembled from journey-planner/system_prompt.txt plus the
@@ -14,9 +17,9 @@ CLI and the backoffice chat always agree — edit the docs, not this file.
 
 from __future__ import annotations
 
-import base64
 import contextvars
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -26,8 +29,9 @@ import uuid
 from pathlib import Path
 
 import requests
-from fastapi import APIRouter, Body, Depends, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi import APIRouter, Body, Depends, Request, Response
+from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
+                               RedirectResponse, StreamingResponse)
 
 from ..auth.dependencies import require_role
 from ..config import get_settings
@@ -41,6 +45,8 @@ REPO_ROOT = BASE_DIR.parent                                # repo root
 PLANNER_DIR = REPO_ROOT / "journey-planner"
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+GEMINI_STREAM_URL = ("https://generativelanguage.googleapis.com/v1beta/models/"
+                     "{model}:streamGenerateContent")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 MAX_MESSAGES = 40          # cap conversation length forwarded upstream
 # Composer refusals are precise and single-edit, so one or two automatic repair
@@ -77,16 +83,27 @@ def _usage_start() -> dict:
     return totals
 
 
-def _usage_add(meta: dict) -> None:
-    try:
-        totals = _USAGE.get()
-    except LookupError:
-        return
+def _usage_apply(totals: dict, meta: dict) -> None:
+    """Fold one call's Gemini usageMetadata into a totals dict.
+
+    Split out from `_usage_add` because the streaming path cannot use the
+    contextvar: its generator is stepped in a threadpool, one `run_sync` per
+    item, so a `.set()` made inside it does not survive to the next iteration.
+    That path threads an explicit dict through instead.
+    """
     totals["calls"] += 1
     totals["input"] += int(meta.get("promptTokenCount") or 0)
     totals["cached"] += int(meta.get("cachedContentTokenCount") or 0)
     totals["thought"] += int(meta.get("thoughtsTokenCount") or 0)
     totals["answer"] += int(meta.get("candidatesTokenCount") or 0)
+
+
+def _usage_add(meta: dict) -> None:
+    try:
+        totals = _USAGE.get()
+    except LookupError:
+        return
+    _usage_apply(totals, meta)
 
 
 def _with_retry(call, *args):
@@ -311,6 +328,248 @@ def _call_gemini(settings, system_prompt: str, messages: list, temperature: floa
     return text, None
 
 
+# ── streaming ──────────────────────────────────────────────────────────────────
+# The buffered path above answers in one blob. A campaign plan is thousands of
+# tokens of deliberation, so that blob lands 30–90s after the operator presses
+# Send, with a dead panel in between — the single worst thing about this tool to
+# sit in front of. The functions below are the same calls with `stream=True`, so
+# the reply is rendered as it is written.
+#
+# Shape: a low-level streamer yields ("delta", text) as tokens arrive and then
+# exactly one ("end", info) with {"text", "error", "truncated"}. `_stream_complete`
+# layers the retry and continuation policy on top, and adds ("note", text) for
+# the things the operator should see happening (a retry, a continuation round).
+
+
+def _sse_payloads(response):
+    """Yield the decoded JSON of each `data:` line of an SSE response.
+
+    `response.encoding` is forced to UTF-8: requests defaults a `text/*` body
+    with no charset to ISO-8859-1, which would mangle every accented character
+    in the Spanish copy these plans are full of.
+    """
+    response.encoding = "utf-8"
+    for raw in response.iter_lines(decode_unicode=True):
+        if not raw:
+            continue
+        line = raw.strip()
+        if not line.startswith("data:"):
+            continue
+        payload = line[5:].strip()
+        if payload == "[DONE]":
+            return
+        try:
+            yield json.loads(payload)
+        except ValueError:
+            continue
+
+
+def _http_detail(response) -> str:
+    try:
+        return response.json().get("error", {}).get("message", "")
+    except Exception:
+        return response.text[:300]
+
+
+def _stream_gemini(settings, system_prompt: str, messages: list, temperature: float,
+                   thinking: int | None = None, model: str | None = None,
+                   totals: dict | None = None):
+    """Gemini `streamGenerateContent`. Same body as `_call_gemini`, chunked."""
+    contents = []
+    for m in messages:
+        role = "model" if m.get("role") == "model" else "user"
+        text = str(m.get("text", ""))[:MAX_CHARS]
+        if text:
+            contents.append({"role": role, "parts": [{"text": text}]})
+    gen_config = {"temperature": temperature,
+                  "maxOutputTokens": settings.planner_max_tokens}
+    budget = settings.gemini_thinking_budget if thinking is None else thinking
+    if budget and budget > 0:
+        gen_config["thinkingConfig"] = {"thinkingBudget": budget}
+    body = {
+        "system_instruction": {"parts": [{"text": system_prompt}]},
+        "contents": contents,
+        "generationConfig": gen_config,
+    }
+    url = GEMINI_STREAM_URL.format(model=model or settings.gemini_model)
+    try:
+        r = requests.post(url, params={"key": settings.gemini_api_key.strip(), "alt": "sse"},
+                          json=body, timeout=(15, 120), stream=True)
+    except requests.RequestException as exc:
+        logger.warning("gemini stream request failed: %s", exc)
+        yield "end", {"text": "", "error": f"Upstream request failed: {exc}"}
+        return
+    with r:
+        if r.status_code != 200:
+            detail = _http_detail(r)
+            logger.warning("gemini stream %s: %s", r.status_code, detail)
+            yield "end", {"text": "", "error": f"Gemini error {r.status_code}: {detail}"}
+            return
+        chunks: list[str] = []
+        finish = blocked = None
+        # usageMetadata repeats on every chunk and is CUMULATIVE, so it is
+        # recorded once at the end — folding each one in would multiply the bill
+        # by the number of chunks.
+        last_usage: dict = {}
+        for chunk in _sse_payloads(r):
+            if chunk.get("usageMetadata"):
+                last_usage = chunk["usageMetadata"]
+            blocked = blocked or (chunk.get("promptFeedback") or {}).get("blockReason")
+            for cand in chunk.get("candidates") or []:
+                for part in (cand.get("content") or {}).get("parts") or []:
+                    piece = part.get("text")
+                    if piece:
+                        chunks.append(piece)
+                        yield "delta", piece
+                finish = cand.get("finishReason") or finish
+        if last_usage and totals is not None:
+            _usage_apply(totals, last_usage)
+        text = "".join(chunks).strip()
+        if blocked:
+            yield "end", {"text": text, "error": f"Response blocked: {blocked}"}
+        elif not text:
+            yield "end", {"text": "", "error": f"Empty response (finishReason: {finish})."}
+        else:
+            yield "end", {"text": text, "truncated": bool(finish and finish != "STOP")}
+
+
+def _stream_groq(settings, system_prompt: str, messages: list, temperature: float,
+                 totals: dict | None = None):
+    """Groq (OpenAI-compatible SSE)."""
+    chat = [{"role": "system", "content": system_prompt}]
+    for m in messages:
+        role = "assistant" if m.get("role") == "model" else "user"
+        text = str(m.get("text", ""))[:MAX_CHARS]
+        if text:
+            chat.append({"role": role, "content": text})
+    body = {
+        "model": settings.groq_model,
+        "messages": chat,
+        "temperature": temperature,
+        "max_tokens": settings.planner_max_tokens,
+        "stream": True,
+        "stream_options": {"include_usage": True},
+    }
+    try:
+        r = requests.post(GROQ_URL, json=body, timeout=(15, 120), stream=True,
+                          headers={"Authorization": f"Bearer {settings.groq_api_key.strip()}"})
+    except requests.RequestException as exc:
+        logger.warning("groq stream request failed: %s", exc)
+        yield "end", {"text": "", "error": f"Upstream request failed: {exc}"}
+        return
+    with r:
+        if r.status_code != 200:
+            detail = _http_detail(r)
+            logger.warning("groq stream %s: %s", r.status_code, detail)
+            yield "end", {"text": "", "error": f"Groq error {r.status_code}: {detail}"}
+            return
+        chunks: list[str] = []
+        finish = None
+        for chunk in _sse_payloads(r):
+            usage = chunk.get("usage")
+            if usage and totals is not None:
+                # Groq names them differently; map onto the same five counters so
+                # the meter reads the same whichever provider answered.
+                _usage_apply(totals, {
+                    "promptTokenCount": usage.get("prompt_tokens"),
+                    "candidatesTokenCount": usage.get("completion_tokens"),
+                })
+            for choice in chunk.get("choices") or []:
+                piece = (choice.get("delta") or {}).get("content")
+                if piece:
+                    chunks.append(piece)
+                    yield "delta", piece
+                finish = choice.get("finish_reason") or finish
+        text = "".join(chunks).strip()
+        if not text:
+            yield "end", {"text": "", "error": f"Empty response (finish_reason: {finish})."}
+        else:
+            yield "end", {"text": text,
+                          "truncated": bool(finish and finish not in ("stop", "end_turn"))}
+
+
+def _stream_complete(settings, messages: list, temperature: float, *,
+                     lean: bool | None = None, thinking: int | None = None,
+                     totals: dict | None = None):
+    """One whole planner answer, streamed — the `_complete` policy, incremental.
+
+    Retries are only possible BEFORE the first token: once text is on the
+    operator's screen, re-running the call would duplicate it, so a mid-stream
+    failure keeps what arrived and reports the rest. Truncation is continued
+    exactly as `_complete` does it, with a note so a long answer visibly carries
+    on instead of appearing to stall between parts.
+    """
+    provider = _resolve_provider(settings)
+    if lean is None:
+        lean = provider == "groq"
+    system_prompt = _build_system_prompt(lean=lean)
+    model = None if lean else (settings.gemini_planning_model or None)
+
+    def once(msgs):
+        if provider == "groq":
+            return _stream_groq(settings, system_prompt, msgs, temperature, totals)
+        return _stream_gemini(settings, system_prompt, msgs, temperature,
+                              thinking, model, totals)
+
+    def attempt(msgs):
+        """`once`, retried on a transient error that produced no text at all."""
+        for i in range(RETRY_ATTEMPTS):
+            emitted, info = False, {}
+            for kind, value in once(msgs):
+                if kind == "delta":
+                    emitted = True
+                    yield "delta", value
+                else:
+                    info = value
+            error = info.get("error")
+            if not error or emitted:
+                yield "end", info
+                return
+            retryable = any(f" {code}:" in error for code in RETRY_STATUSES)
+            if not retryable or i == RETRY_ATTEMPTS - 1:
+                yield "end", info
+                return
+            delay = RETRY_BACKOFF_SECONDS[min(i, len(RETRY_BACKOFF_SECONDS) - 1)]
+            logger.info("upstream transient error (%s) — retrying in %.1fs", error[:80], delay)
+            yield "note", f"Upstream busy — retrying in {delay:.0f}s…"
+            time.sleep(delay)
+
+    full, rounds, msgs = "", 0, messages
+    while True:
+        info = {}
+        for kind, value in attempt(msgs):
+            if kind == "end":
+                info = value
+            else:
+                if kind == "delta":
+                    full += value
+                yield kind, value
+        error = info.get("error")
+        if error:
+            if not full:
+                yield "error", error
+                return
+            # Text already on screen: the answer stands, the failure is a note.
+            logger.warning("planner stream ended early: %s", error)
+            yield "note", f"Answer ended early — {error}"
+            break
+        if not info.get("truncated") or rounds >= MAX_CONTINUATIONS:
+            break
+        rounds += 1
+        logger.info("planner reply truncated — continuing (round %d)", rounds)
+        yield "note", f"Long answer — continuing (part {rounds + 1})…"
+        msgs = messages + [
+            {"role": "model", "text": full[-8000:]},
+            {"role": "user", "text":
+                "Your reply was cut off by the output limit. Continue it from the "
+                "EXACT character where it stopped — do not repeat anything already "
+                "written, do not restate the outline, do not add a preamble or "
+                "explanation, and if you were mid-way through a ```json block, "
+                "carry on inside that block and close it properly."},
+        ]
+    yield "done", full
+
+
 # Lean-prompt stand-ins for the two big reference docs. Groq's free tier caps
 # tokens/minute (12K on 70b), and the full KB (~7.7K tok) + backlog (~2.2K)
 # blow past it. The operational essentials the planner actually needs to emit
@@ -323,25 +582,85 @@ _LEAN_KB = (
     "listed there; if the brief needs something absent, output the ⛔ UNCAPTURED "
     "line.)"
 )
+# The comms playbook is house convention, not build capability — a mechanical
+# repair call ("fix the field this refusal names") never needs it, and neither
+# does a token-capped provider that is already dropping the knowledge base.
+_LEAN_COMMS = (
+    "(CRM communications playbook omitted to fit this model's token budget. Do "
+    "NOT invent template ids, tracking domains or Smartico link types from "
+    "memory — if a comms brief needs one and does not supply it, output ❓.)"
+)
 _LEAN_BACKLOG = (
     "(Capture backlog omitted. Only build recipes in the RECIPES CATALOG below; "
     "anything else is ⛔ UNCAPTURED.)"
 )
 
 
+def _prompt_sources(lean: bool) -> list[Path]:
+    """Every file `_assemble_system_prompt` reads, for the cache stamp below."""
+    files = [
+        PLANNER_DIR / "system_prompt.txt",
+        PLANNER_DIR / "corrections.md",
+        PLANNER_DIR / "REA_COMMS_PLAYBOOK.md",
+        REPO_ROOT / "journey-cloner" / "recipes_catalog.json",
+        REPO_ROOT / "journey-cloner" / "library" / "games_index.md",
+        REPO_ROOT / "journey-cloner" / "library" / "games.json",
+    ]
+    if not lean:
+        files += [PLANNER_DIR / "REA_KNOWLEDGE_BASE.md",
+                  PLANNER_DIR / "REA_CAPTURE_BACKLOG_CHECKLIST.md"]
+    return files
+
+
+def _prompt_stamp(lean: bool) -> tuple:
+    """(name, mtime, size) for each source — changes exactly when a doc does."""
+    stamp = []
+    for path in _prompt_sources(lean):
+        try:
+            st = path.stat()
+            stamp.append((path.name, st.st_mtime_ns, st.st_size))
+        except OSError:
+            stamp.append((path.name, None, None))
+    return tuple(stamp)
+
+
+# The assembled prompt is ~17K tokens spliced out of six files, and it is rebuilt
+# for EVERY upstream call — each retry, each continuation round, each repair. On
+# a campaign that is dozens of rebuilds of the same string, all of it on the
+# operator's critical path. Memoised against the sources' own mtimes, so the
+# "edit a doc, no restart" property the docstring promises still holds: touch a
+# file and the next call reassembles.
+_PROMPT_CACHE: dict[bool, tuple[tuple, str]] = {}
+
+
 def _build_system_prompt(lean: bool = False) -> str:
     """Assemble system_prompt.txt with the KB docs inlined — identical to
-    journey-planner/planner.py. Read fresh each call so doc edits take effect
-    without a restart. When lean=True, the two big reference docs are replaced
-    with short pointers (for token-capped providers like Groq free tier); the
-    recipes/games/corrections — what specs are actually built from — stay full.
-    Raises FileNotFoundError if the docs are missing."""
+    journey-planner/planner.py. Rebuilt whenever any source doc changes, so doc
+    edits take effect without a restart. When lean=True, the two big reference
+    docs are replaced with short pointers (for token-capped providers like Groq
+    free tier); the recipes/games/corrections — what specs are actually built
+    from — stay full. Raises FileNotFoundError if the docs are missing."""
+    stamp = _prompt_stamp(lean)
+    cached = _PROMPT_CACHE.get(lean)
+    if cached and cached[0] == stamp:
+        return cached[1]
+    prompt = _assemble_system_prompt(lean)
+    _PROMPT_CACHE[lean] = (stamp, prompt)
+    return prompt
+
+
+def _assemble_system_prompt(lean: bool = False) -> str:
+    """The actual splice. Only ever called through the cache above."""
     tpl = (PLANNER_DIR / "system_prompt.txt").read_text(encoding="utf-8")
+    comms_file = PLANNER_DIR / "REA_COMMS_PLAYBOOK.md"
     if lean:
         kb, backlog = _LEAN_KB, _LEAN_BACKLOG
+        comms = _LEAN_COMMS
     else:
         kb = (PLANNER_DIR / "REA_KNOWLEDGE_BASE.md").read_text(encoding="utf-8")
         backlog = (PLANNER_DIR / "REA_CAPTURE_BACKLOG_CHECKLIST.md").read_text(encoding="utf-8")
+        # Optional: an install without the playbook still builds a valid prompt.
+        comms = comms_file.read_text(encoding="utf-8") if comms_file.exists() else ""
     corr_file = PLANNER_DIR / "corrections.md"
     corrections = corr_file.read_text(encoding="utf-8") if corr_file.exists() else ""
     cat_file = REPO_ROOT / "journey-cloner" / "recipes_catalog.json"
@@ -360,6 +679,7 @@ def _build_system_prompt(lean: bool = False) -> str:
         tpl
         .replace("<KNOWLEDGE_BASE>\n</KNOWLEDGE_BASE>", kb)
         .replace("<CAPTURE_BACKLOG>\n</CAPTURE_BACKLOG>", backlog)
+        .replace("<COMMS_PLAYBOOK>\n</COMMS_PLAYBOOK>", comms)
         .replace("<RECIPES_CATALOG>\n</RECIPES_CATALOG>", catalog)
         .replace("<GAMES_REGISTRY>\n</GAMES_REGISTRY>", games)
         .replace("<CORRECTIONS>\n</CORRECTIONS>", corrections)
@@ -1024,6 +1344,33 @@ def _design_block_for(settings, plan_text: str) -> str | None:
     return text
 
 
+@router.get("/admin/planner/design/{run}/{name}")
+def planner_design_image(
+    run: str,
+    name: str,
+    user: User = Depends(require_role("editor")),
+):
+    """Serve one rendered board PNG out of its run directory.
+
+    Both names are generated by us (`<date>_<hex8>` and the renderer's own file
+    names), so anything that is not a plain path segment is a probe. Guarded
+    twice: the pattern rules out separators, and the resolved path is checked to
+    still sit inside the render root — which is what actually stops `run=".."`,
+    the one probe the pattern alone lets through.
+    """
+    if not re.fullmatch(r"[A-Za-z0-9_.-]{1,80}", run) \
+            or not re.fullmatch(r"[A-Za-z0-9_.-]{1,120}\.png", name):
+        return Response(status_code=404)
+    root = DESIGN_OUT_DIR.resolve()
+    path = (root / run / name).resolve()
+    if not str(path).startswith(str(root) + os.sep) or not path.is_file():
+        return Response(status_code=404)
+    # A run directory is immutable once written, so this is safely cacheable —
+    # which is what keeps re-opening the Boards tab from re-fetching megabytes.
+    return FileResponse(path, media_type="image/png",
+                        headers={"Cache-Control": "private, max-age=86400"})
+
+
 @router.post("/admin/planner/design")
 def planner_design(
     payload: dict = Body(...),
@@ -1107,12 +1454,17 @@ def planner_design(
         path = Path(item.get("path") or "")
         if not path.is_file():
             continue
+        # A URL, not a base64 data: URL. A board is a 2400×700 PNG; a 20-board
+        # campaign inlined ~30 MB of base64 into one JSON body, which the browser
+        # then had to receive and `JSON.parse` in a single main-thread block
+        # before a pixel could appear — seconds of frozen tab at the exact moment
+        # the answer was supposed to land. By URL the JSON is a few KB and the
+        # images decode lazily, in parallel, off the main thread.
         images.append({
             "name": path.name,
             "journeys": item.get("journeys") or [],
             "w": item.get("w"), "h": item.get("h"),
-            "data": "data:image/png;base64,"
-                    + base64.b64encode(path.read_bytes()).decode("ascii"),
+            "url": f"/admin/planner/design/{run_dir.name}/{path.name}",
         })
     if not images:
         shutil.rmtree(run_dir, ignore_errors=True)
@@ -1131,33 +1483,30 @@ def planner_design(
                          "dir": str(run_dir)})
 
 
-@router.post("/admin/planner/api")
-async def planner_api(
-    request: Request,
-    user: User = Depends(require_role("editor")),
-) -> JSONResponse:
+async def _chat_request(request: Request):
+    """Validate a chat call. Returns (messages, temperature, error-or-None).
+
+    Shared by the buffered and streaming endpoints so the two cannot drift on
+    what they accept — the panel falls back from one to the other.
+    """
     settings = get_settings()
     provider = _resolve_provider(settings)
     key = (settings.groq_api_key if provider == "groq" else settings.gemini_api_key).strip()
     if not key:
         env = "GROQ_API_KEY" if provider == "groq" else "GEMINI_API_KEY"
-        return JSONResponse(
-            {"error": f"{provider.title()} key not configured. Set {env} in the .env "
-                      "(or the jugabet service environment) and restart."},
-            status_code=200,
-        )
-
+        return None, 0.2, (f"{provider.title()} key not configured. Set {env} in the "
+                           ".env (or the jugabet service environment) and restart.")
     try:
         payload = await request.json()
     except Exception:
-        return JSONResponse({"error": "Invalid request body."}, status_code=200)
+        return None, 0.2, "Invalid request body."
 
     messages = payload.get("messages") or []
     if not isinstance(messages, list) or not messages:
-        return JSONResponse({"error": "No messages."}, status_code=200)
+        return None, 0.2, "No messages."
     messages = messages[-MAX_MESSAGES:]
     if not any(str(m.get("text", "")).strip() for m in messages):
-        return JSONResponse({"error": "Empty conversation."}, status_code=200)
+        return None, 0.2, "Empty conversation."
 
     try:
         temperature = float(payload.get("temperature", 0.2))
@@ -1168,13 +1517,92 @@ async def planner_api(
     # Groq's free tier is token-capped → send it the lean prompt (drops the big
     # reference docs, keeps recipes/games/corrections). Gemini gets the full one.
     try:
-        system_prompt = _build_system_prompt(lean=(provider == "groq"))
+        _build_system_prompt(lean=(provider == "groq"))
     except FileNotFoundError:
-        return JSONResponse(
-            {"error": f"Planner docs not found under {PLANNER_DIR}. "
-                      "Make sure the journey-planner/ folder is deployed."},
-            status_code=200,
-        )
+        return None, temperature, (f"Planner docs not found under {PLANNER_DIR}. "
+                                   "Make sure the journey-planner/ folder is deployed.")
+    return messages, temperature, None
+
+
+def _sse(event: dict) -> str:
+    return f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+
+@router.post("/admin/planner/stream")
+async def planner_stream(
+    request: Request,
+    user: User = Depends(require_role("editor")),
+):
+    """The planner answer as Server-Sent Events.
+
+    Identical work to `/admin/planner/api` — same prompt, same retry and
+    continuation policy — delivered a token at a time so the panel can render
+    the plan as it is written. Events are one JSON object per `data:` line:
+
+        {"t":"delta","d":"…"}   text to append
+        {"t":"note","d":"…"}    something worth showing (a retry, a continuation)
+        {"t":"error","error":…} fatal; nothing usable arrived
+        {"t":"done","usage":{…}} end of answer, with the token bill
+
+    An error is an EVENT, not an HTTP status: by the time one is known the 200
+    and its headers are long since flushed. The buffered endpoint reports errors
+    at status 200 for the same reason, so the panel handles one shape.
+
+    The generator is sync on purpose — Starlette steps it in the threadpool, so
+    the blocking `requests` stream cannot stall the event loop (the service runs
+    a single uvicorn worker). That is the same reasoning as the sync `def` on
+    the compose and design routes.
+    """
+    settings = get_settings()
+    messages, temperature, error = await _chat_request(request)
+
+    def events():
+        if error:
+            yield _sse({"t": "error", "error": error})
+            return
+        totals = {"calls": 0, "input": 0, "cached": 0, "thought": 0, "answer": 0}
+        try:
+            for kind, value in _stream_complete(settings, messages, temperature,
+                                                totals=totals):
+                if kind == "delta":
+                    yield _sse({"t": "delta", "d": value})
+                elif kind == "note":
+                    yield _sse({"t": "note", "d": value})
+                elif kind == "error":
+                    yield _sse({"t": "error", "error": value})
+                    return
+                elif kind == "done":
+                    logger.info("planner usage (stream): %d call(s), input %d "
+                                "(cached %d), thought %d, answer %d",
+                                totals["calls"], totals["input"], totals["cached"],
+                                totals["thought"], totals["answer"])
+                    yield _sse({"t": "done", "usage": totals})
+        except Exception as exc:                    # never leave the panel hanging
+            logger.warning("planner stream failed: %s", exc)
+            yield _sse({"t": "error", "error": f"Stream failed: {exc}"})
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        # Without these the answer is buffered somewhere in the middle and lands
+        # in one lump anyway — which is the whole problem this endpoint exists
+        # to solve. `X-Accel-Buffering` is the one nginx reads.
+        headers={"Cache-Control": "no-cache, no-transform",
+                 "Connection": "keep-alive",
+                 "X-Accel-Buffering": "no"},
+    )
+
+
+@router.post("/admin/planner/api")
+async def planner_api(
+    request: Request,
+    user: User = Depends(require_role("editor")),
+) -> JSONResponse:
+    """The buffered answer — the panel's fallback when SSE is unavailable."""
+    settings = get_settings()
+    messages, temperature, error = await _chat_request(request)
+    if error:
+        return JSONResponse({"error": error}, status_code=200)
 
     totals = _usage_start()
     text, error = _complete(settings, messages, temperature)

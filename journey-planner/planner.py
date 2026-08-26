@@ -27,6 +27,12 @@ SYSTEM_PROMPT_TEMPLATE = (SCRIPT_DIR / "system_prompt.txt").read_text(encoding="
 KNOWLEDGE_BASE = (SCRIPT_DIR / "REA_KNOWLEDGE_BASE.md").read_text(encoding="utf-8")
 CAPTURE_BACKLOG = (SCRIPT_DIR / "REA_CAPTURE_BACKLOG_CHECKLIST.md").read_text(encoding="utf-8")
 
+# CRM house rules for comms journeys. Optional: missing file = no playbook.
+_COMMS_FILE = SCRIPT_DIR / "REA_COMMS_PLAYBOOK.md"
+COMMS_PLAYBOOK = (
+    _COMMS_FILE.read_text(encoding="utf-8") if _COMMS_FILE.exists() else ""
+)
+
 # Optional running list of operator-taught fixes. Missing file = no corrections.
 _CORRECTIONS_FILE = SCRIPT_DIR / "corrections.md"
 CORRECTIONS = (
@@ -54,6 +60,7 @@ SYSTEM_PROMPT = (
     SYSTEM_PROMPT_TEMPLATE
     .replace("<KNOWLEDGE_BASE>\n</KNOWLEDGE_BASE>", KNOWLEDGE_BASE)
     .replace("<CAPTURE_BACKLOG>\n</CAPTURE_BACKLOG>", CAPTURE_BACKLOG)
+    .replace("<COMMS_PLAYBOOK>\n</COMMS_PLAYBOOK>", COMMS_PLAYBOOK)
     .replace("<RECIPES_CATALOG>\n</RECIPES_CATALOG>", RECIPES_CATALOG)
     .replace("<GAMES_REGISTRY>\n</GAMES_REGISTRY>", GAMES_REGISTRY)
     .replace("<CORRECTIONS>\n</CORRECTIONS>", CORRECTIONS)
@@ -101,8 +108,9 @@ def plan_gemini(brief: str) -> str:
 
     genai.configure(api_key=key)
     model = genai.GenerativeModel(
-        # Keep aligned with app/config.py gemini_model (cheapest 2.5 tier).
-        "gemini-2.5-flash-lite",
+        # Keep aligned with app/config.py gemini_model. The 2.5 family is
+        # retired for new keys (404 "no longer available to new users").
+        "gemini-3.6-flash",
         system_instruction=SYSTEM_PROMPT,
     )
     r = model.generate_content(brief)

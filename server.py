@@ -74,6 +74,7 @@ from app.routes.admin_hot import router as admin_hot_router
 from app.routes.admin_hot_override import router as admin_hot_override_router
 from app.routes.admin_logs import router as admin_logs_router
 from app.routes.admin_planner import router as admin_planner_router
+from app.routes.admin_users import router as admin_users_router
 from app.routes.admin_tutorials import router as admin_tutorials_router
 from app.routes.admin_weights import router as admin_weights_router
 from app.routes.public_club import router as public_club_router
@@ -185,6 +186,7 @@ app.include_router(auth_router)
 app.include_router(admin_hot_override_router)  # /api/hot/override/* (Phase A JSON API)
 app.include_router(admin_clubs_router)       # /api/admin/clubs/*  (Phase A JSON API)
 app.include_router(admin_logs_router)
+app.include_router(admin_users_router)   # /admin/users (account management, admin-only)
 app.include_router(admin_campaigns_router)   # /admin/campaigns/* + campaign builder APIs
 app.include_router(admin_hot_router)         # /admin/hot + legacy hot override UI APIs
 app.include_router(admin_weights_router)     # /admin/weights + weights CRUD + leaderboard APIs
