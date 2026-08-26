@@ -1,15 +1,21 @@
 # Staging Deployment Runbook
 
+> The production path below is the checkout the live unit actually uses
+> (`systemctl cat jugabet` → `WorkingDirectory=/home/admin/staging_html`). The
+> `/var/www/jugabet` layout in older revisions of this file was never deployed;
+> `scripts/auto_deploy.sh` and every `scripts/probe_*.py` docstring use the real
+> path. Confirm against the installed unit, not against this table.
+
 End-to-end instructions for deploying the staging instance to a VPS that
 already hosts (or will host) the production `jugabet` service. **Production
 is never modified by this runbook.** Staging gets its own:
 
 | Resource | Production | Staging |
 |---|---|---|
-| Path | `/var/www/jugabet` | `/var/www/jugabet-staging` |
+| Path | `/home/admin/staging_html` | `/var/www/jugabet-staging` |
 | Service | `jugabet` | `jugabet-staging` |
 | Port | 8000 | 8001 |
-| DB file | `/var/www/jugabet/data/jugabet.db` | `/var/www/jugabet-staging/data/jugabet.db` |
+| DB file | `/home/admin/staging_html/data/jugabet.db` | `/var/www/jugabet-staging/data/jugabet.db` |
 | Logs | `/var/log/jugabet/` | `/var/log/jugabet-staging/` |
 | Domain | `yourdomain.tld` (Caddy) | `staging.yourdomain.tld` (Caddy) |
 

@@ -1,5 +1,10 @@
 # systemd unit for the Jugabet odds CRM.
 #
+# Paths here MUST match the checkout the box actually serves. This file said
+# /var/www/jugabet for a long time while the running unit used
+# /home/admin/staging_html — verify with `systemctl cat jugabet` before trusting
+# it, and update this template when the two drift apart.
+#
 # Install: sudo cp deploy/jugabet.service /etc/systemd/system/
 #          sudo systemctl daemon-reload
 #          sudo systemctl enable --now jugabet
@@ -18,11 +23,11 @@ StartLimitBurst=5
 Type=simple
 User=jugabet
 Group=jugabet
-WorkingDirectory=/var/www/jugabet
+WorkingDirectory=/home/admin/staging_html
 Environment=APP_ENV=production
 
 # Path to the venv-provided uvicorn. Change if your venv is elsewhere.
-ExecStart=/var/www/jugabet/.venv/bin/uvicorn server:app --host 127.0.0.1 --port 8000 --workers 1 --proxy-headers --forwarded-allow-ips 127.0.0.1
+ExecStart=/home/admin/staging_html/.venv/bin/uvicorn server:app --host 127.0.0.1 --port 8000 --workers 1 --proxy-headers --forwarded-allow-ips 127.0.0.1
 
 # Restart policy: always restart on any crash, but back off if it keeps failing.
 Restart=always
