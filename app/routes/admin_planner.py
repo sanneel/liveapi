@@ -1358,9 +1358,17 @@ def planner_design_image(
     still sit inside the render root — which is what actually stops `run=".."`,
     the one probe the pattern alone lets through.
     """
+    # The name arrives WITHOUT the .png (see the URL built in planner_design):
+    # nginx serves any /admin/* path that looks like a file straight from the
+    # docroot and never proxies it, so a board URL ending in .png reaches the
+    # web server, not us, and 404s as a missing static file. Extension-less it
+    # is proxied normally; the Content-Type below is what makes it an image.
+    # A name that still carries .png is accepted so older chat logs keep working.
     if not re.fullmatch(r"[A-Za-z0-9_.-]{1,80}", run) \
-            or not re.fullmatch(r"[A-Za-z0-9_.-]{1,120}\.png", name):
+            or not re.fullmatch(r"[A-Za-z0-9_-]{1,120}(\.png)?", name):
         return Response(status_code=404)
+    if not name.endswith(".png"):
+        name += ".png"
     root = DESIGN_OUT_DIR.resolve()
     path = (root / run / name).resolve()
     if not str(path).startswith(str(root) + os.sep) or not path.is_file():
@@ -1464,7 +1472,10 @@ def planner_design(
             "name": path.name,
             "journeys": item.get("journeys") or [],
             "w": item.get("w"), "h": item.get("h"),
-            "url": f"/admin/planner/design/{run_dir.name}/{path.name}",
+            # Extension-less on purpose — see planner_design_image. The download
+            # anchor uses `name` for the saved filename, so the .png survives
+            # where it matters.
+            "url": f"/admin/planner/design/{run_dir.name}/{path.stem}",
         })
     if not images:
         shutil.rmtree(run_dir, ignore_errors=True)
