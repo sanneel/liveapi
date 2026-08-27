@@ -118,8 +118,17 @@ _GAME_FIELDS = ("lobbyGameId", "walletGameId", "externalGameId", "provider",
 
 
 def _norm(s: str) -> str:
-    """Loose key for name matching: 'La Gran Copa Jugabet' -> 'lagrancopajugabet'."""
-    return "".join(ch for ch in str(s).lower() if ch.isalnum())
+    """Loose key for name matching: 'La Gran Copa Jugabet' -> 'lagrancopajugabet'.
+
+    "&" becomes "and" before the strip, because the two spellings of the same
+    title are a coin toss: the registry has 92 titles written with "&" and 108
+    with the word, and a brief writes whichever the sheet used. Dropping the
+    symbol made "Spin & Score Megaways" and "Spin and Score Megaways" two
+    different keys, so the game resolved under one spelling and was REFUSED
+    under the other. Both index build and lookup go through here, so the two
+    forms now collapse to one key on both sides.
+    """
+    return "".join(ch for ch in str(s).lower().replace("&", "and") if ch.isalnum())
 
 
 def _game_index() -> dict[str, dict[str, str]]:
@@ -128,7 +137,15 @@ def _game_index() -> dict[str, dict[str, str]]:
     if not hasattr(_game_index, "_cache"):
         idx: dict[str, dict[str, str]] = {}
         for slug, entry in GAMES.items():          # legacy shorthands win ties
-            idx[_norm(slug)] = dict(entry)
+            tup = dict(entry)
+            # Index the shorthand AND the name the game actually goes by. Only
+            # the slug used to be a key, so `--game spinandscoremegaways` worked
+            # for the shipping generator while a brief naming the same game
+            # "Spin & Score Megaways" — the spelling this very entry carries —
+            # was refused as unknown. Same entry, same ids, one more way to say it.
+            for k in (slug, entry.get("gameTranslationKey"), *(entry.get("aliases") or [])):
+                if k:
+                    idx[_norm(k)] = tup
         try:
             registry = json.loads(GAMES_FILE.read_text(encoding="utf-8")).get("games") or {}
         except (OSError, ValueError):

@@ -170,15 +170,15 @@ def write_compact_index(games: dict) -> None:
         for alias in g.get("aliases") or []:
             if _n(alias) not in own:
                 labels[alias] = g.get("gameTranslationKey") or g.get("lobbyGameId") or "?"
-    lines.append("#")
+    # Listed only when some exist. Advertising the mechanism while it is unused
+    # told the planner to expect a label where the answer is simply the game's
+    # title: a rotation like Game of the Week changes weekly and the brief names
+    # the actual game, which resolves like any other title.
     if labels:
+        lines.append("#")
         lines.append("# House labels you MAY write in the game field — they resolve like a title:")
         for label, game in sorted(labels.items()):
             lines.append(f"#   \"{label}\" -> {game}")
-    else:
-        lines.append("# House labels: none set. If a brief names a rotation rather than a")
-        lines.append("# title (\"Game of the Week\"), it will be REFUSED until an operator runs")
-        lines.append("#   python journey-cloner/set_game_label.py \"game of the week\" \"<title>\"")
     INDEX.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
