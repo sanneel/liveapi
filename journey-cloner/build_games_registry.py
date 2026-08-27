@@ -153,6 +153,32 @@ def write_compact_index(games: dict) -> None:
     ]
     for prov, count in sorted(by_provider.items(), key=lambda kv: (-kv[1], kv[0])):
         lines.append(f"#   {prov} ({count})")
+
+    # House labels. A brief often names a rotation rather than a title — "Game of
+    # the Week" — and the composer used to refuse the whole journey for it. An
+    # operator points the label at a registered game with set_game_label.py; it
+    # is stored as an alias, so resolution is the same code path as any title.
+    # They are listed HERE because they are the one part of the registry the
+    # planner cannot infer: a title it can copy from the brief, a house label it
+    # can only know if told.
+    def _n(x: str) -> str:
+        return "".join(c for c in str(x).lower() if c.isalnum())
+    labels: dict[str, str] = {}
+    for g in games.values():
+        own = {_n(g.get("gameTranslationKey") or ""), _n(g.get("lobbyGameId") or ""),
+               _n(g.get("walletGameId") or "")} - {""}
+        for alias in g.get("aliases") or []:
+            if _n(alias) not in own:
+                labels[alias] = g.get("gameTranslationKey") or g.get("lobbyGameId") or "?"
+    lines.append("#")
+    if labels:
+        lines.append("# House labels you MAY write in the game field — they resolve like a title:")
+        for label, game in sorted(labels.items()):
+            lines.append(f"#   \"{label}\" -> {game}")
+    else:
+        lines.append("# House labels: none set. If a brief names a rotation rather than a")
+        lines.append("# title (\"Game of the Week\"), it will be REFUSED until an operator runs")
+        lines.append("#   python journey-cloner/set_game_label.py \"game of the week\" \"<title>\"")
     INDEX.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 

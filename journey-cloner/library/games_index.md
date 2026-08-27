@@ -57,3 +57,6 @@
 #   inout (6)
 #   amigo (1)
 #   rtg (1)
+#
+# House labels you MAY write in the game field — they resolve like a title:
+#   "olympus rivals" -> 1000 Olympus Rivals

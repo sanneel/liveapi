@@ -239,6 +239,9 @@ _NOT_GENERATORS = {
     "generate_console_script.py", "ai_campaign_builder.py", "casino_journey.py",
     "gow_campaign.py", "comms_campaign.py", "build_catalog.py",
     "build_games_registry.py", "build_generators_catalog.py",
+    # Registry maintenance, not a campaign: points a house label ("game of the
+    # week") at a game already in games.json.
+    "set_game_label.py",
     "nc_discount_campaign.py",
     "nc_discount_pmcl_campaign.py",
     "comms_engine.py", "tournament_comms_base.py", "har_analyse.py",

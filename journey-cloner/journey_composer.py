@@ -1246,6 +1246,16 @@ def compose(spec: dict) -> dict:
     for ev in src["activity"].get("events", []):
         if ev.get("eventType") == "Activation":
             ev["nextActivityId"] = head_id
+            # The capture's own fan-out goes with it. dwh_source was extracted
+            # from a journey whose activation split into two flows, so the event
+            # arrives carrying split.paths pointing at THAT journey's activities.
+            # Those ids are never rewritten — the console script's regen() only
+            # rewrites values it also sees under an "activityId"/"id" key, and a
+            # path target appears nowhere else — so they shipped verbatim and the
+            # draft opened with two flows leading nowhere. This composer starts
+            # ONE chain from the source; the split is never ours to keep. Same
+            # reasoning as the per-node pop in build_level.
+            ev.pop("split", None)
 
     # ── dependency rewiring by role (upstream-aware, branch-aware) ──
     def rewire_deps(entry: dict) -> None:
@@ -1601,6 +1611,16 @@ def verify(body: dict) -> list[str]:
             nid = ev.get("nextActivityId")
             if nid and nid not in idset:
                 errs.append(f"{a['activityName']}.{ev.get('eventName')} -> dangling nextActivityId")
+            # A fan-out routes through split.paths, NOT nextActivityId, so the
+            # check above never saw those targets and a captured split's own
+            # path ids passed verification untouched.
+            for _p in ((ev.get("split") or {}).get("paths") or []):
+                _t = _p.get("nextActivityId")
+                if _t and _t not in idset:
+                    errs.append(
+                        f"{a['activityName']}.{ev.get('eventName')} path "
+                        f"{_p.get('pathName') or _p.get('pathId')} -> dangling "
+                        f"nextActivityId (a captured fan-out that was not rewired)")
         for dl in ("dependencies", "dataDependencies"):
             for d in a.get(dl) or []:
                 if isinstance(d, dict) and d.get("journeyActivityId") and d["journeyActivityId"] not in idset:
