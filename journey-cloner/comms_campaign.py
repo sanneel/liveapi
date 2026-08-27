@@ -71,12 +71,9 @@ from email_content import (
 
 TEMPLATE_PATH = Path(__file__).resolve().parent / "templates" / "casino" / "gow_comms.json"
 
-# The media-library folder the backoffice's own photo picker uploads into
-# (see REA_BACKOFFICE_AND_JOURNEYS.md for how this was captured).
-DEFAULT_FOLDER_ID = "c5c7c614-5169-4346-b90b-8225836a1c63"
-# The public site domain SMS links resolve to (the {{BrandDomain}} dwh
-# variable in the SMS template, flattened here since SMS text is static).
-DEFAULT_PUBLIC_DOMAIN = "win.jugabet.cl"
+# Re-exported so existing callers keep working; the values live in
+# media_library.py now, which is what new code should import.
+from media_library import DEFAULT_FOLDER_ID, DEFAULT_PUBLIC_DOMAIN  # noqa: E402,F401
 
 # Paste-time placeholders, swapped for the real upload's absolute_link once
 # the console script has uploaded the chosen photo for that slot.

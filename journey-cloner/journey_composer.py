@@ -58,6 +58,7 @@ import json
 import re
 import sys
 import uuid
+from collections import OrderedDict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -188,6 +189,11 @@ ALIASES = {
     "notification_center": "notification_center#contract1",
     "onsite": "notification_center#contract1",
     "popup": "notification_center#contract5",
+    # The contract-suffixed wire names must round-trip too: plan_lint.py
+    # normalises every plan to these before the composer sees it, so a plan that
+    # linted clean was then refused as an unknown chain type.
+    "notification_center#contract1": "notification_center#contract1",
+    "notification_center#contract5": "notification_center#contract5",
     # Sport activities, available since the udch captures joined SOURCES.
     "freebet": "freebet", "free_bet": "freebet", "sport_freebet": "freebet",
     "sport_bonus": "sport_bonus", "sportbonus": "sport_bonus",
@@ -234,11 +240,285 @@ HAPPY = {
     "ams_decision_split": "DecisionSplitPassedPath01",
 }
 
+# Artwork the operator will choose at paste time instead of naming a URL.
+# A brief almost never carries a media-library URL — the images are files on the
+# operator's desktop — so demanding a URL up front made every comms build stall
+# on "artwork missing". Setting icon/image to PICK writes a sentinel that the
+# emitted console script resolves by opening a file picker and uploading, then
+# substitutes the real URL. It is not a way to skip the artwork: the script
+# refuses to POST while any sentinel survives, so the captured campaign's
+# picture can still never ship.
+PICK_VALUES = {"pick", "@pick", "PICK", "upload", "@upload"}
+PICK_PREFIX = "@@PICK:"
+PICK_SUFFIX = "@@"
+# What the picker calls each slot in the console prompt.
+PICK_LABELS = {
+    ("notification_center#contract1", "icon"): "NC ICON (the bell card artwork)",
+    ("notification_center#contract1", "image"): "NC IMAGE",
+    ("notification_center#contract5", "icon"): "POP-UP ICON",
+    ("notification_center#contract5", "image"): "POP-UP BACKGROUND",
+}
+_pick_counter = [0]
+
+
+# Authoring an email means creating a NEW content-studio content rather than
+# pointing at an existing one — the flow comms_campaign.py proved: substitute the
+# captured creative, create -> save -> publish at paste time, then repoint the
+# journey's email activity at the id that comes back. The email's copy is not
+# inline on the activity, which is why setting `template` alone can only ever
+# reuse someone else's creative.
+EMAIL_AUTHORING_KEYS = {"subject_es", "preheader_es", "heading", "hero", "desc_es",
+                        "cta", "creative", "promo_page_id", "hero_link", "email_name"}
+# The GOW creative's call to action is the hero image, wrapped in a link to a
+# promo page. A campaign whose CTA is not a promo page (a game launch URL, say)
+# sets hero_link instead and the whole href is replaced.
+EMAIL_PROMO_HREF = "https://jugabet.cl/services/promo/offers/promoPage/@@PROMO_PAGE_ID@@"
+# Filled by the console script once the content exists, exactly like the
+# reserved journey id. Shared with email_content.py so both spell it the same.
+EMAIL_CONTENT_ID_TOKEN = "@@EMAIL_CONTENT_ID@@"
+EMAIL_HERO_TOKEN = "@@EMAIL_HERO_URL@@"
+EMAIL_DESC_TOKEN = "@@EMAIL_DESC@@"
+EMAIL_CTA_TOKEN = "@@EMAIL_CTA_URL@@"
+EMAIL_LINK_TOKEN = "@@EMAIL_LINK@@"
+# The captured creatives, and which slots each actually has. They are real
+# captures, not a layout invented per campaign, so a setting the chosen creative
+# has nowhere to put is a refusal — silently dropping it is how a brief's body
+# copy "shipped" while the email showed only a picture.
+EMAIL_CREATIVES = {
+    # One uppercase heading line above a hero image that is itself the CTA.
+    "hero_only": {"file": "gow_email.json",
+                  "slots": {"heading", "hero"},
+                  "what": "heading line + hero image (the copy lives in the image)"},
+    # A text body, a hero image and a separate CTA button image.
+    "text_body": {"file": "jbcl_tournament_email.json",
+                  "slots": {"desc_es", "hero", "cta"},
+                  "what": "text body + hero image + CTA button image"},
+}
+# Image slots a creative can leave for paste time, and what the picker calls them.
+EMAIL_IMAGE_LABELS = {
+    "@@EMAIL_HERO_URL@@": "the EMAIL HERO image",
+    EMAIL_CTA_TOKEN: "the EMAIL CTA BUTTON image",
+}
+
+
+# Content Studio rejects these in a content name outright:
+#   422 CONTENT_ERROR / RESTRICTED_SYMBOLS_IN_CONTENT_NAME
+# Journey names here are pipe-separated ("JBCL | Torneo … | Comms"), and the
+# default content name is derived from one, so every authored email 422'd at
+# paste time — after the operator had already picked and uploaded four images.
+EMAIL_NAME_FORBIDDEN = '*@#?|&<>"\'/'
+
+
+def clean_email_name(raw: str) -> str:
+    """A content name Content Studio will accept, as close to `raw` as possible."""
+    # Mark the removals first: collapsing on "-" afterwards would also chew
+    # through hyphens that were always there, turning 2026-08-01 into
+    # "2026 - 08 - 01".
+    sep = "\x00"
+    out = "".join(sep if ch in EMAIL_NAME_FORBIDDEN else ch for ch in str(raw))
+    out = re.sub(rf"\s*{sep}+\s*", " - ", out)
+    return re.sub(r"[ \t]+", " ", out).strip(" -")
+
+
+def _desc_to_html(text: str) -> str:
+    """Blank-line-separated paragraphs -> the <br><br> form the creative uses.
+
+    The operator's text is escaped: it comes from a spreadsheet cell, and a stray
+    '<' or '&' would otherwise break the email body rather than show up in it.
+    """
+    escaped = (str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+    paras = [p.strip() for p in re.split(r"\n\s*\n", escaped.strip()) if p.strip()]
+    return "\n<br><br>\n".join(p.replace("\n", " ") for p in paras)
+
+
+def pick_email_creative(s: dict) -> str:
+    """Which captured creative this email needs. Explicit wins; otherwise the one
+    whose slots cover the settings given."""
+    named = s.get("creative")
+    if named:
+        if named not in EMAIL_CREATIVES:
+            raise SystemExit(f"dextra_email: unknown creative {named!r}. Known: "
+                             + ", ".join(f"{k} ({v['what']})"
+                                         for k, v in EMAIL_CREATIVES.items()))
+        return named
+    asked = {k for k in ("desc_es", "cta", "heading") if s.get(k)}
+    fits = [k for k, v in EMAIL_CREATIVES.items() if asked <= v["slots"]]
+    if not fits:
+        raise SystemExit(
+            f"dextra_email: no captured creative has slots for {sorted(asked)}. "
+            + "; ".join(f"{k} has {sorted(v['slots'])}" for k, v in EMAIL_CREATIVES.items()))
+    # Prefer the creative that uses the most of what was asked for, so a spec
+    # giving desc_es does not land on the creative with no body.
+    return max(fits, key=lambda k: len(asked & EMAIL_CREATIVES[k]["slots"]))
+
+
+EMAIL_TEMPLATE_DIR = HERE / "templates" / "casino"
+EMAIL_HEADING_TOKEN = "@@EMAIL_HEADING@@"
+EMAIL_PROMO_PAGE_TOKEN = "@@PROMO_PAGE_ID@@"
+# Authoring settings collected while the chain is applied; the content itself is
+# built in compose(), which is where the journey name and date are known.
+_email_authoring: list[dict] = []
+# Set when a promotion node asks for its page tree to be cloned at paste time.
+_placement_clone_requested: list = []
+
+
+def build_email_content(s: dict, journey_name: str, date_str: str,
+                        report: list | None = None) -> dict:
+    """The payload for POST .../content-studio/.../email/contents.
+
+    Substitutes a captured creative rather than inventing HTML. Which slots exist
+    depends on which creative: `hero_only` is a heading line above a hero image
+    that is itself the CTA; `text_body` has a text body, a hero image and a
+    separate CTA button image. Everything not substituted stays as captured.
+    """
+    from create_journeys import BRAND      # lazy, like every other cross-import here
+
+    creative = pick_email_creative(s)
+    spec_slots = EMAIL_CREATIVES[creative]
+    content = json.loads((EMAIL_TEMPLATE_DIR / spec_slots["file"]).read_text(encoding="utf-8"))
+    tpl_brand = str(content.get("brand") or "")
+    if tpl_brand and BRAND and tpl_brand.upper() != str(BRAND).upper():
+        raise SystemExit(
+            f"dextra_email: the {creative} creative is {tpl_brand}'s and this run is "
+            f"{BRAND}. Emailing {BRAND} players a {tpl_brand} creative is a brand swap, "
+            f"not a substitution — capture a {BRAND} email and add it as a template, or "
+            f"set `template` to an existing {BRAND} CSE id instead.")
+
+    # A setting this creative cannot place would otherwise be dropped in silence,
+    # which is how a brief's body copy "shipped" while the email showed a picture.
+    unusable = sorted({k for k in ("heading", "desc_es", "cta") if s.get(k)}
+                      - spec_slots["slots"])
+    if unusable:
+        raise SystemExit(
+            f"dextra_email: the {creative} creative ({spec_slots['what']}) has nowhere to "
+            f"put {unusable}. Pick a creative that does — "
+            + "; ".join(f"{k}: {sorted(v['slots'])}" for k, v in EMAIL_CREATIVES.items()))
+
+    if s.get("promo_page_id") and s.get("hero_link"):
+        raise SystemExit("dextra_email: give either `promo_page_id` or `hero_link`, not "
+                         "both — they set the same href.")
+    if not s.get("promo_page_id") and not s.get("hero_link"):
+        raise SystemExit(
+            "dextra_email: authoring needs `promo_page_id` or `hero_link` — in these "
+            "creatives the images ARE the call to action. Left unset that link ships "
+            "dead. Use `promo_page_id` for a promo page, `hero_link` for any other "
+            "destination (a game launch URL), or set `template` to point at an email "
+            "content that already has what you want.")
+
+    raw_name = s.get("email_name") or f"{journey_name} — {date_str}"
+    content["name"] = clean_email_name(raw_name)
+    if not content["name"]:
+        raise SystemExit(f"dextra_email: {raw_name!r} leaves nothing usable as a content "
+                         f"name once Content Studio's restricted symbols "
+                         f"({EMAIL_NAME_FORBIDDEN}) are removed — set `email_name`.")
+    if content["name"] != raw_name and report is not None:
+        report.append(f"dextra_email: content name {raw_name!r} -> {content['name']!r} "
+                      f"(Content Studio rejects {EMAIL_NAME_FORBIDDEN})")
+    comp = content["translations"]["es"]["composition"]
+    if s.get("subject_es"):
+        comp["subject"] = s["subject_es"]
+    if s.get("preheader_es"):
+        comp["preHeader"] = s["preheader_es"]
+    src = comp["body"]["source"]
+
+    if "heading" in spec_slots["slots"]:
+        src = src.replace(EMAIL_HEADING_TOKEN, str(s.get("heading") or "").strip())
+    if "desc_es" in spec_slots["slots"]:
+        if not s.get("desc_es"):
+            raise SystemExit(
+                f"dextra_email: the {creative} creative has a text body and no copy was "
+                f"given for it. Set `desc_es`, or use the hero_only creative whose copy "
+                f"lives in the image — an empty body would ship as a blank panel.")
+        src = src.replace(EMAIL_DESC_TOKEN, _desc_to_html(s["desc_es"]))
+
+    # The destination. hero_only bakes the promo path around a token; text_body
+    # holds the whole href, so a promo page id has to be expanded into one.
+    link = str(s.get("hero_link") or "")
+    if EMAIL_LINK_TOKEN in src:
+        if not link:
+            link = f"https://jugabet.cl/services/promo/offers/promoPage/{s['promo_page_id']}"
+        src = src.replace(EMAIL_LINK_TOKEN, link)
+    elif link:
+        if EMAIL_PROMO_HREF not in src:
+            raise SystemExit("dextra_email: the captured creative's promo-page href has "
+                             "changed shape — `hero_link` matched nothing, so the email "
+                             "would keep the captured destination")
+        src = src.replace(EMAIL_PROMO_HREF, link)
+    else:
+        src = src.replace(EMAIL_PROMO_PAGE_TOKEN, str(s["promo_page_id"]))
+
+    # Images: a URL is substituted now, PICK is left for the script's file picker.
+    for skey, token in (("hero", EMAIL_HERO_TOKEN), ("cta", EMAIL_CTA_TOKEN)):
+        if token not in src:
+            continue
+        val = s.get(skey)
+        if val and not is_pick_request(val):
+            src = src.replace(token, str(val))
+    comp["body"]["source"] = src
+
+    bad = sorted({ch for ch in str(content.get("name") or "") if ch in EMAIL_NAME_FORBIDDEN})
+    if bad:
+        raise SystemExit(f"dextra_email: content name {content['name']!r} still contains "
+                         f"{bad} — Content Studio rejects it with 422 at paste time, "
+                         f"which is after the operator has uploaded the images.")
+    left = sorted(set(re.findall(r"@@[A-Z_]+@@", json.dumps(content))))
+    # The image tokens are filled at paste time after the upload; anything else
+    # unresolved would ship as literal text in a real email.
+    stray = [t for t in left if t not in EMAIL_IMAGE_LABELS]
+    if stray:
+        raise SystemExit(f"dextra_email: unresolved placeholders in the authored "
+                         f"content: {stray}")
+    return content
+
+
+def _lang_suffix(name: str, lang: str) -> bool:
+    """Does this captured variable name carry `lang` as its language suffix?
+
+    A plain `lang in name` test silently mismatched: "des-en" contains "es"
+    (the tail of "des"), so the Spanish pass overwrote every English
+    description — the EN notification shipped the ES copy under a green build.
+    The language is a suffix behind a delimiter, so match it as one.
+    """
+    return re.search(rf"(?:^|[^a-z]){lang}$", name) is not None
+
+
+def is_pick_request(value) -> bool:
+    return isinstance(value, str) and value.strip().lower() in {
+        v.lower() for v in PICK_VALUES}
+
+
+def pick_sentinel(label: str) -> str:
+    """A unique token per slot: two nodes asking for artwork must not collide."""
+    _pick_counter[0] += 1
+    return f"{PICK_PREFIX}{_pick_counter[0]}|{label}{PICK_SUFFIX}"
+
+
+def pick_slots(body: dict) -> list[dict]:
+    """The artwork slots left for paste time, in the order they appear."""
+    text = json.dumps(body, ensure_ascii=False)
+    found: "OrderedDict[str, str]" = OrderedDict()
+    for m in re.finditer(re.escape(PICK_PREFIX) + r"(\d+)\|(.*?)" + re.escape(PICK_SUFFIX),
+                         text):
+        found.setdefault(m.group(0), m.group(2))
+    return [{"token": t, "label": lbl} for t, lbl in found.items()]
+
+
 # Per-node settings the composer knows how to apply (documented for `options`).
 SETTINGS_DOC = {
     "dwh_source": {"segment_file": "path to a captured dwh initializationData fragment (default segment_cs_301.json)"},
     "external_system_source": {"description": "free-text label shown on the API entry node"},
-    "promotion": {"(none)": "external promotion refs are kept from the capture; promotionDisplayId is stripped"},
+    "promotion": {"content_id": "ContentId of a promo page YOU built (gow_campaign.py / the GOW tab). "
+                                "Without it the composer mints a fresh id, which owns no content tree, "
+                                "so the offer card renders EMPTY",
+                  "front_id": "FrontId of that same promo page — set it whenever you set content_id",
+                  "placement_content": "\"clone\" copies the captured campaign's PLACEMENT CARD "
+                                "bundles (the offer/tier visuals the journey itself carries) onto "
+                                "this draft's freshly-minted ids, so those cards render instead of "
+                                "being empty. NOT the promo page: that is a separate object with "
+                                "its own ids, its own S3 copy and a promo-drafts POST that needs "
+                                "the regenerated offer activityId — build it in GOW and pass "
+                                "content_id/front_id. The cards carry the captured campaign's "
+                                "words and artwork."},
     "deposit": {"min_deposit": "minimum deposit amount, platform minor units (all tiers set to this)",
                 "timeout": "ISO-8601 window, e.g. P0Y0M1DT0H0M0S"},
     "freespin_bonus": {"spins": "free-spin count",
@@ -256,18 +536,44 @@ SETTINGS_DOC = {
     "casino_bonus_v2": {"bonus_percent": "deposit-match %", "wagering": "wagering requirement (x)",
                         "release_multiplier": "releaseLimitMultiplier", "expiration_ms": "bonusExpirationTime in ms"},
     "notification_center#contract1": {"title_en/es, desc_en/es, caption_en/es": "on-site notification copy",
-                                      "icon": "notification artwork URL — set it, or the card shows "
-                                              "the captured campaign's image",
+                                      "icon": "notification artwork: a URL, or PICK to choose the "
+                                              "file when the script is pasted — set one, or the "
+                                              "card shows the captured campaign's image",
                                       "link_en/es": "where the card sends the player",
-                                      "deeplink": "app deeplink, when there is one"},
+                                      "deeplink": "app deeplink (defaults to link_es/link_en, so it "
+                                                  "cannot keep the captured campaign's)"},
     "notification_center#contract5": {"title_en/es, desc_en/es, caption_en/es": "pop-up (Cat-fish) copy",
-                                      "image": "pop-up background artwork URL — set it, or the "
-                                               "journey shows the captured campaign's picture"},
+                                      "image": "pop-up background artwork: a URL, or PICK to choose "
+                                               "the file when the script is pasted — set one, or the "
+                                               "journey shows the captured campaign's picture",
+                                      "link_en/es": "where the button sends the player. This template "
+                                                    "holds ONE language-independent link, so en and es "
+                                                    "write the same slot",
+                                      "deeplink": "app deeplink (defaults to the link)"},
     "dextra_sms": {"text_en/es": "SMS body"},
-    "dextra_email": {"template": "content-studio email id (e.g. CSE-0-14458). Set it, or the "
-                                 "journey emails the CAPTURED campaign's template — which the "
-                                 "inherited-content check refuses to build",
-                     "from_name": "from-line text (default: the reference's)"},
+    "dextra_email": {"template": "content-studio email id (e.g. CSE-0-14458) to point at as-is. "
+                                 "Set this or the authoring settings below, or the journey emails "
+                                 "the CAPTURED campaign's template — which the inherited-content "
+                                 "check refuses to build",
+                     "from_name": "from-line text (default: the reference's)",
+                     "subject_es": "AUTHOR a new email content instead of reusing one: the "
+                                   "subject line. Implies the create -> save -> publish flow, "
+                                   "and the journey is repointed at the id it returns",
+                     "preheader_es": "the pre-header line of the authored content",
+                     "creative": "which captured creative: hero_only (heading + hero image, "
+                                 "copy lives in the image) or text_body (text body + hero + "
+                                 "CTA button image). Default: whichever fits the settings given",
+                     "heading": "hero_only: the one uppercase heading line above the image",
+                     "desc_es": "text_body: the email body. Blank lines separate paragraphs; "
+                                "the text is escaped, so it cannot carry markup",
+                     "cta": "text_body: the CTA button image — a URL, or PICK",
+                     "hero": "hero image: a URL, or PICK to choose the file at paste time",
+                     "promo_page_id": "the promo page the hero image links to — the captured "
+                                      "creative's own CTA shape",
+                     "hero_link": "use instead of promo_page_id when the CTA is not a promo "
+                                  "page (a game launch URL): replaces the hero's href outright",
+                     "email_name": "the content's name in Content Studio (default: derived from "
+                                   "the journey name and date)"},
     "wait_interval": {"wait": "ISO-8601 duration, e.g. P0Y0M0DT1H0M0S"},
     "event_detector": {"(none)": "captured deposit-band watcher kept as-is"},
     "multipurpose_promotion": {"(none)": "captured choosable-flow drip kept as-is (see warning on compose)"},
@@ -366,6 +672,18 @@ def clone_with_fresh_id(entry: dict) -> dict:
         "paths": entry["paths"],
     }, ensure_ascii=False).replace(old, new)
     out = json.loads(blob)
+    # De-nest the lift (COMPOSER_RULES rule 3). load_library takes each element
+    # straight out of its captured journey, and in gow_comms the comms nodes live
+    # inside a parallelFlow container — so every cloned nc / pop-up / wait / split
+    # arrived still pointing at a container this journey does not have. The editor
+    # reads the missing parent's position and throws, which is a draft that saves
+    # and then will not open. _wrap_parallel re-adds these when it really wraps.
+    el = out.get("element")
+    if isinstance(el, dict):
+        el.pop("parentNode", None)
+        el.pop("extent", None)
+        if isinstance(el.get("data"), dict):
+            el["data"].pop("parentNode", None)
     out["new_id"] = new
     out["captured_id"] = old
     return out
@@ -380,6 +698,42 @@ def make_end_of_journey(lib: dict) -> dict:
 
 
 # ── settings appliers (edit activity init + mirror config) ───────────────────
+_ISO_DUR_RE = re.compile(
+    r"^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?"
+    r"(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$", re.IGNORECASE)
+
+
+def _iso_duration_label(iso: str) -> str:
+    """"P0Y0M1DT0H0M0S" -> "1 Days", matching the captured label style.
+
+    The wait node stores its duration twice: waitPeriod (the value) and
+    displayData (the caption the canvas prints). They have to agree.
+    """
+    m = _ISO_DUR_RE.match(str(iso or "").strip())
+    if not m:
+        return ""
+    parts = [(int(g or 0), unit) for g, unit in
+             zip(m.groups(), ("Years", "Months", "Days", "Hours", "Minutes", "Seconds"))]
+    said = [f"{n} {unit}" for n, unit in parts if n]
+    return " ".join(said) if said else "0 Minutes"
+
+
+def _placements_of(holder: dict) -> list:
+    """A promotion's placement list, from either storage.
+
+    The compiled activity keeps it at initializationData.placements; the editor
+    mirror keeps it one level deeper, under properties.placements. Both have to
+    be written or the two storages disagree and the builder blanks the canvas.
+    """
+    if not isinstance(holder, dict):
+        return []
+    direct = holder.get("placements")
+    if isinstance(direct, list):
+        return direct
+    nested = (holder.get("properties") or {}).get("placements")
+    return nested if isinstance(nested, list) else []
+
+
 def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list) -> None:
     act = node["activity"]
     init = act.get("initializationData") or {}
@@ -467,17 +821,47 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
                 hit = False
                 for v in vars_:
                     n = (v.get("name") or "").lower()
-                    if stem in n and lang in n:
+                    if stem in n and _lang_suffix(n, lang):
                         note(v["name"], v.get("value"), val); v["value"] = val; hit = True
                 for tab in tabs.values():
                     if not isinstance(tab, dict):
                         continue
                     for tk in tab:
                         tn = tk.lower()
-                        if stem in tn and lang in tn:
+                        if stem in tn and _lang_suffix(tn, lang):
                             tab[tk] = val; hit = True
+                if not hit and skey == "link":
+                    # The pop-up holds ONE language-independent `link` in the
+                    # common tab (its buttons_1_link is the `%link%` indirection),
+                    # so a per-language link matched nothing and the captured
+                    # campaign's promo URL survived under a green build — the
+                    # pop-up button sent players to the previous promotion.
+                    for v in vars_:
+                        if (v.get("name") or "").lower() == "link":
+                            note(v["name"], v.get("value"), val); v["value"] = val; hit = True
+                    for tab in tabs.values():
+                        if isinstance(tab, dict) and "link" in tab:
+                            tab["link"] = val; hit = True
+                    if hit:
+                        other = s.get(f"{skey}_{'es' if lang == 'en' else 'en'}")
+                        if other is not None and other != val:
+                            warnings.append(
+                                f"{kind}: this template has a single language-independent "
+                                f"`link`; link_en and link_es differ, so the last one "
+                                f"written ({lang}) is what ships")
                 if not hit:
                     warnings.append(f"{kind}: no captured variable matched {skey}_{lang}")
+        # An unset deeplink is not a neutral omission: it is the captured
+        # campaign's own in-app URL, so a player tapping the card in the app
+        # landed on the previous promotion while the web link was correct.
+        # Brief give one destination, so fall back to the link rather than keep
+        # the reference's — and report it, since it was not asked for explicitly.
+        if "deeplink" not in s:
+            fallback = s.get("link_es") or s.get("link_en")
+            if fallback:
+                s = dict(s, deeplink=fallback)
+                report.append(f"{kind}: deeplink not given — using the link "
+                              f"({fallback}) so it cannot keep the captured campaign's")
         # Language-independent fields, held once in the `common` tab.
         for skey, stems in (("icon", ("icon",)),
                             # the pop-up's artwork is a background image, not an
@@ -488,6 +872,8 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
             val = s.get(skey)
             if val is None:
                 continue
+            if is_pick_request(val):
+                val = pick_sentinel(PICK_LABELS.get((kind, skey), f"{kind} {skey}"))
             for v in vars_:
                 if (v.get("name") or "").lower() in stems:
                     note(v["name"], v.get("value"), val); v["value"] = val
@@ -501,7 +887,25 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
         # campaign's template — and the inherited-content guard (rightly) refuses
         # to build a comms journey that would email players the old promotion.
         es = init.get("emailSettings") or {}
-        if "template" in s and es:
+        authoring = sorted(EMAIL_AUTHORING_KEYS & set(s))
+        if authoring and "template" in s:
+            raise SystemExit(
+                f"dextra_email: `template` points at an existing content while "
+                f"{authoring} author a new one — pick one. Reusing CSE "
+                f"{s['template']} means the copy in this spec is ignored; "
+                f"authoring means that content is left untouched.")
+        if authoring:
+            # The real id only exists once the script has created the content, so
+            # leave the token here and let it be swapped in — the same handling
+            # the journey's own reserved id gets.
+            _email_authoring.append({k: s[k] for k in EMAIL_AUTHORING_KEYS if k in s})
+            tpl = es.get("template") or {}
+            note("emailSettings.template.id", tpl.get("id"), EMAIL_CONTENT_ID_TOKEN)
+            tpl["id"] = EMAIL_CONTENT_ID_TOKEN
+            es["template"] = tpl
+            es["emailSource"] = "Template"
+            init["displayData"] = [EMAIL_CONTENT_ID_TOKEN]
+        elif "template" in s and es:
             tpl = es.get("template") or {}
             note("emailSettings.template.id", tpl.get("id"), s["template"])
             tpl["id"] = s["template"]
@@ -541,9 +945,70 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
                         if isinstance(item, dict) and str(item.get("languageCode", "")).lower() == lang:
                             note(f"localizedMessageTexts[{lang}].messageText", item.get("messageText"), val)
                             item["messageText"] = val
+        # displayData is the label the builder prints on the card. Same reason as
+        # the email node: left alone, a reviewer opening the draft reads the
+        # PREVIOUS campaign's SMS next to this campaign's correct messageText.
+        body_text = s.get("text_es") or s.get("text_en")
+        if body_text and isinstance(init.get("displayData"), list):
+            note("displayData", init["displayData"], [body_text])
+            init["displayData"] = [body_text]
+    elif kind == "promotion":
+        if str(s.get("placement_content") or "").strip().lower() == "clone":
+            _placement_clone_requested.append(True)
+        # Point the offer card at a promo page the operator actually built.
+        # Every promotion-bearing capture carries a promo-page placement
+        # (ContentId + FrontId). Left as captured, the draft shares the captured
+        # campaign's content tree and editing it rewrites that live page; minted
+        # fresh, it owns a tree that does not exist yet and the card renders
+        # empty. Building that tree needs the promo-page flow in
+        # gow_campaign.py (per-target folder copies with role-specific
+        # fileFilters, an S3 copy and manifest rewrites) which the composer does
+        # not have — so the correct path is: build the page there, then pass its
+        # two ids here.
+        full_cfg = node.get("config") or {}
+        for src_key, dest_key, meta_key in (("content_id", "ContentId", "contentId"),
+                                            ("front_id", "FrontId", "frontId")):
+            if src_key not in s:
+                continue
+            val = str(s[src_key])
+            n = 0
+            # THREE places hold this id and all three must agree, or the two
+            # storages disagree and the builder shows a blank canvas:
+            #   1. activity.initializationData.placements[].data.<PascalCase>
+            #   2. config.properties.placements[].data.<PascalCase>  (a SIBLING
+            #      of config.data, not inside it — the trap that made an earlier
+            #      pass write only the compiled copy)
+            #   3. config.metadata.<camelCase>
+            for holder in (init, full_cfg):
+                for placement in _placements_of(holder):
+                    data = placement.get("data")
+                    if isinstance(data, dict) and dest_key in data:
+                        note(f"placements[].{dest_key}", data.get(dest_key), val)
+                        data[dest_key] = val
+                        n += 1
+            meta = full_cfg.get("metadata")
+            if isinstance(meta, dict) and meta_key in meta:
+                note(f"metadata.{meta_key}", meta.get(meta_key), val)
+                meta[meta_key] = val
+                n += 1
+            if not n:
+                warnings.append(f"promotion: {src_key} given but no placement or "
+                                f"metadata carries {dest_key} — nothing was set")
+
     elif kind == "wait_interval":
         if "wait" in s:
             note("waitPeriod", init.get("waitPeriod"), s["wait"]); init["waitPeriod"] = s["wait"]
+            # displayData is the label the BUILDER PRINTS ON THE NODE, and it is
+            # a separate copy of the value — writing only waitPeriod left every
+            # composed wait captioned with the capture's own "2 Hours", so a
+            # 1-day wait read as 2 hours on the canvas and the operator had no
+            # way to see the real duration without opening the node.
+            label = _iso_duration_label(s["wait"])
+            if label:
+                note("displayData", init.get("displayData"), [label])
+                init["displayData"] = [label]
+                if cfg is not None and "displayData" in cfg:
+                    cfg["displayData"] = [label]
     elif kind == "external_system_source":
         if "description" in s:
             note("description", init.get("description"), s["description"])
@@ -595,8 +1060,10 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
         "casino_bonus_v2": {"bonus_percent", "wagering", "release_multiplier", "expiration_ms"},
         "notification_center#contract1": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "image", "deeplink"},
         "notification_center#contract5": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "image", "deeplink"},
+        "promotion": {"content_id", "front_id"},
+        "promotion": {"content_id", "front_id", "placement_content"},
         "dextra_sms": {"text_en", "text_es"},
-        "dextra_email": {"template", "from_name"},
+        "dextra_email": {"template", "from_name"} | EMAIL_AUTHORING_KEYS,
         "wait_interval": {"wait"},
         "external_system_source": {"description"},
         "dwh_source": {"segment_file"},
@@ -621,6 +1088,9 @@ def compose(spec: dict) -> dict:
     types = lib["types"]
     report: list[str] = []
     warnings: list[str] = []
+    _pick_counter[0] = 0     # per-build, so the same spec yields the same tokens
+    _email_authoring.clear()
+    _placement_clone_requested.clear()
 
     # resolve source
     src_spec = spec.get("source") or {}
@@ -671,6 +1141,13 @@ def compose(spec: dict) -> dict:
 
     def build_level(specs: list[dict], upstream: list[tuple], row: int) -> str:
         """Clone+wire one chain level; returns the head node's new id."""
+        # A branch that is only a terminal — "branches": {"...Path01":
+        # [{"type": "end_of_path"}]} — is how both the planner and the operator
+        # say "this path just ends", and the composer already ends every level
+        # with its own terminal. Strip them here as well as on the top-level
+        # chain, or that spelling is refused as an unknown chain type.
+        specs = [c for c in specs
+                 if str((c or {}).get("type", "")).lower() not in _TERMINALS]
         level: list[dict] = []
         for c in specs:
             k = resolve_kind(c)
@@ -760,7 +1237,8 @@ def compose(spec: dict) -> dict:
                 else:
                     ev["nextActivityId"] = fresh_end()  # undrawn end, like the capture
         exits_drawn.append((term, col0 + len(level), row))
-        return level[0]["node"]["new_id"]
+        # Nothing but terminals: the branch routes straight to its end node.
+        return level[0]["node"]["new_id"] if level else term
 
     head_id = build_level(chain_specs, [(src_kind, src["new_id"])], 0)
 
@@ -814,6 +1292,17 @@ def compose(spec: dict) -> dict:
         pos = {"x": X0 + col * XSTEP, "y": Y0 + row * YSTEP}
         el["position"] = dict(pos)
         el["positionAbsolute"] = dict(pos)
+        # Drop the capture's own grouping. 13 of the 24 fragments were extracted
+        # from inside a parallelFlow container, so their node carries that
+        # container's id in parentNode (+ extent "parent"). The container is not
+        # a fragment and is never emitted, so keeping the reference leaves the
+        # node parented to a node that does not exist and the builder renders a
+        # grey/blank canvas. No valid capture has a dangling parentNode.
+        # This composer lays out a FLAT canvas here; the parallel-block code
+        # below is the only legitimate re-parenting and it sets both keys itself,
+        # after this call.
+        el.pop("parentNode", None)
+        el.pop("extent", None)
         elements.append(el)
 
     put(src.get("element"), 0, 0, src_kind)
@@ -883,6 +1372,43 @@ def compose(spec: dict) -> dict:
     elements.append(make_edge(src["new_id"], src_kind, act_ev, head_id))
     for entry, ev_name, tgt in edges_wanted:
         elements.append(make_edge(entry["node"]["new_id"], entry["kind"], ev_name, tgt))
+
+    # ── split handles ────────────────────────────────────────────────────────
+    # A split node names its canvas handles `path1..pathN` / `other`, NOT after
+    # the event (`NCEngagementSplitPassedPath02`, `Path2`, …) the way every other
+    # node does. On top of that the captured fragment only kept the ports it
+    # happened to have wired — `input`, `path1`, `other` — so an edge off any
+    # path but the first pointed at a handle the node did not expose and the
+    # canvas dropped it.
+    #
+    # Rewrite the handle to the platform's own naming and mint the port when it
+    # is missing. Without this a comms chain can only ever branch on path 1,
+    # which is not the branch the captures actually take.
+    def _split_path_no(ev: str) -> str | None:
+        """`NCEngagementSplitPassedPath02` -> 'path2'; a remainder -> 'other'."""
+        if not ev:
+            return None
+        if re.search(r"remainder", ev, re.I):
+            return "other"
+        m = re.search(r"(?:path)0*(\d+)$", ev, re.I)
+        return f"path{int(m.group(1))}" if m else None
+
+    node_by_id = {e["id"]: e for e in elements if "source" not in e}
+    for e in elements:
+        if "source" not in e:
+            continue
+        node = node_by_id.get(e["source"])
+        if not node:
+            continue
+        if "split" not in str((node.get("data") or {}).get("name") or ""):
+            continue
+        handle = _split_path_no((e.get("data") or {}).get("eventName"))
+        if not handle:
+            continue
+        e["sourceHandle"] = f"{handle}-{e['source']}"
+        ports = (node.setdefault("data", {})).setdefault("ports", [])
+        if not any(p.get("id") == e["sourceHandle"] for p in ports):
+            ports.append({"id": e["sourceHandle"]})
 
     # ── wrap parallel blocks: container element + flowEntry headers ──
     # Done AFTER layout so each flow is laid out as an ordinary chain first and
@@ -1024,8 +1550,19 @@ def compose(spec: dict) -> dict:
 
     _strip_key_everywhere(body, "promotionDisplayId")
 
+    email_content = None
+    if _email_authoring:
+        if len(_email_authoring) > 1:
+            raise SystemExit("more than one email node authors a content; the script "
+                             "creates one, so give the others an existing `template` id")
+        email_content = build_email_content(_email_authoring[0], name,
+                                           str(spec.get("date") or ""), report)
+        report.append(f"dextra_email: authoring content {email_content['name']!r} "
+                      f"(created + published at paste time, journey repointed at it)")
+
     return {"body": body, "report": report, "warnings": warnings,
-            "chain": [src_kind] + kinds, "name": name}
+            "chain": [src_kind] + kinds, "name": name,
+            "email_content": email_content}
 
 
 def _walk_dicts(obj):
@@ -1074,9 +1611,166 @@ def verify(body: dict) -> list[str]:
         if "source" in e:
             if e["source"] not in el_ids or e["target"] not in el_ids:
                 errs.append(f"edge {e.get('data', {}).get('eventName')} references undrawn node")
+    # A node parented to a node that is not on the canvas is the grey/blank
+    # canvas: React Flow cannot place it, and it takes the whole draft down with
+    # it. This shipped for a long time because 13 of the 24 fragments were cut
+    # out of a parallelFlow container and kept its id in parentNode. No valid
+    # capture has one — all nine checked templates have zero — so any dangling
+    # parentNode is a defect, never a style.
+    for e in raw["elements"]:
+        if "source" in e:
+            continue
+        parent = e.get("parentNode")
+        if parent and parent not in el_ids:
+            errs.append(
+                f"node {e.get('data', {}).get('name') or e['id']} has parentNode "
+                f"{parent} which is not on the canvas (grey/blank canvas)")
+        if e.get("extent") == "parent" and not e.get("parentNode"):
+            errs.append(
+                f"node {e.get('data', {}).get('name') or e['id']} has extent "
+                "'parent' but no parentNode")
+    # Every activity node the builder draws needs a position, or the canvas
+    # collapses (COMPOSER_RULES rule 1). Exits and scaffolding are positioned by
+    # the code above; this catches a fragment whose capture carried a null.
+    for e in raw["elements"]:
+        if "source" in e:
+            continue
+        if e.get("positionAbsolute") is None or e.get("position") is None:
+            errs.append(
+                f"node {e.get('data', {}).get('name') or e['id']} has no "
+                "position/positionAbsolute")
     for k in raw.get("activitiesConfiguration", {}):
         if k not in idset:
             errs.append("activitiesConfiguration key not an activity id")
+    # RULE #1: promotion is NEVER downstream of the deposit that gates it.
+    # The player must ACCEPT the offer before a condition can gate its reward; a
+    # deposit gate placed first has nothing to gate and the platform rejects or
+    # misbehaves. Across the five captures carrying both nodes there are 13
+    # promotion -> deposit edges (all on PromotionAccepted) and zero of the
+    # reverse, so a deposit -> promotion edge is always a wiring bug — it is not
+    # a variant. This is a refusal rather than a warning because the draft looks
+    # completely normal in the builder and only misbehaves once a player enters.
+    by_id = {a["activityId"]: a for a in acts}
+
+    def _targets(activity: dict):
+        for ev in activity.get("events", []) or []:
+            nid = ev.get("nextActivityId")
+            if nid:
+                yield ev.get("eventName"), nid
+            for path in ((ev.get("split") or {}).get("paths") or []):
+                if path.get("nextActivityId"):
+                    yield ev.get("eventName"), path["nextActivityId"]
+
+    for a in acts:
+        if a.get("activityName") != "deposit":
+            continue
+        for ev_name, nid in _targets(a):
+            nxt = by_id.get(nid)
+            if nxt is not None and nxt.get("activityName") == "promotion":
+                errs.append(
+                    f"deposit.{ev_name} -> promotion: the deposit gate is ahead of "
+                    "the offer it gates. Order is ALWAYS promotion -> deposit "
+                    "(on PromotionAccepted)")
+
+    # A DELIVERED message is never followed straight by another send. Measured
+    # over all 18 captures: a success event (NotificationSent / SuccessEmailSend
+    # / SuccessSmsSend) leads to a wait, a split or an end — to another send
+    # ZERO times. Chaining sends on success fires the whole set at once at
+    # everybody and measures nobody, which is the "comms with no waits and no
+    # engagement split" complaint. The FAILURE branch is the opposite and is
+    # left alone: NotificationNotSent -> next channel is the correct immediate
+    # fallback and occurs 7 times.
+    SENDS = {"notification_center", "dextra_sms", "dextra_email"}
+    SUCCESS = {"NotificationSent", "SuccessEmailSend", "SuccessSmsSend"}
+    for a in acts:
+        if a.get("activityName") not in SENDS:
+            continue
+        for ev in a.get("events", []) or []:
+            if ev.get("eventName") not in SUCCESS:
+                continue
+            for nid in ([ev["nextActivityId"]] if ev.get("nextActivityId") else []) + [
+                    p_["nextActivityId"] for p_ in ((ev.get("split") or {}).get("paths") or [])
+                    if p_.get("nextActivityId")]:
+                nxt = by_id.get(nid)
+                if nxt is not None and nxt.get("activityName") in SENDS:
+                    errs.append(
+                        f"{a['activityName']}.{ev['eventName']} -> "
+                        f"{nxt['activityName']}: a delivered message goes to a wait "
+                        "or an engagement split, never straight to another send "
+                        "(0 occurrences in 18 captures). Insert a wait, then a "
+                        "split, and send the next channel off the branch that "
+                        "still needs chasing")
+
+    # Spins make the winnings, the wagering bonus wagers them — never the other
+    # way round. `freespin_bonus -> casino_bonus_v2` occurs 4x in the captures on
+    # FreespinBonusCollectingFinished; the reverse occurs 0 times. Reversed, the
+    # bonus has nothing to wager.
+    for a in acts:
+        if a.get("activityName") != "casino_bonus_v2":
+            continue
+        for ev_name, nid in _targets(a):
+            nxt = by_id.get(nid)
+            if nxt is not None and nxt.get("activityName") == "freespin_bonus":
+                errs.append(
+                    f"casino_bonus_v2.{ev_name} -> freespin_bonus: the wagering "
+                    "bonus is ahead of the spins that produce the winnings it "
+                    "wagers. Order is ALWAYS freespin_bonus -> casino_bonus_v2 "
+                    "(on FreespinBonusCollectingFinished)")
+
+    # withWagering and the wagering node must AGREE, in both directions. The
+    # captures correlate 1:1 with no exception: gow.json's four freespin nodes
+    # are withWagering:true and every one leads to a casino_bonus_v2;
+    # instfs.json's is withWagering:false and leads to none.
+    #
+    #   false + a wagering node  = an "instant" bonus that grinds. The flag is
+    #                              what makes it instant; the node contradicts it.
+    #   true  + no wagering node = spins marked as requiring wagering with
+    #                              nothing downstream to wager. The requirement
+    #                              silently does nothing.
+    #
+    # Both ship a reward that is not the one the brief describes, and both look
+    # completely normal in the builder.
+    for a in acts:
+        if a.get("activityName") != "freespin_bonus":
+            continue
+        fa = ((a.get("initializationData") or {}).get("freespinActivity") or {})
+        with_wagering = fa.get("withWagering")
+        if with_wagering is None:
+            continue
+        leads_to_wagering = any(
+            (by_id.get(nid) or {}).get("activityName") == "casino_bonus_v2"
+            for _ev, nid in _targets(a))
+        if with_wagering is False and leads_to_wagering:
+            errs.append(
+                "freespin_bonus -> casino_bonus_v2 with withWagering:false: an "
+                "instant bonus is a TERMINAL reward and cannot carry a wagering "
+                "requirement. Drop the wagering node, or set withWagering:true "
+                "if the brief really wants the player to grind it")
+        elif with_wagering is True and not leads_to_wagering:
+            errs.append(
+                "freespin_bonus has withWagering:true but no casino_bonus_v2 "
+                "after it: the spins are marked as requiring wagering with "
+                "nothing to wager, so the requirement does nothing. Add the "
+                "wagering node, or set withWagering:false for an instant bonus")
+
+    # COMPOSER_RULES rule 3. A node kept inside a container it was lifted out of
+    # saves fine and then will not open: the editor reads the absent parent's
+    # position and throws. Nothing checked it, so it shipped.
+    all_el_ids = {e.get("id") for e in raw["elements"]}
+    for e in raw["elements"]:
+        parent = e.get("parentNode") or (e.get("data") or {}).get("parentNode")
+        if parent and parent not in all_el_ids:
+            errs.append(f"element {str(e.get('id'))[:8]} is nested in parent "
+                        f"{str(parent)[:8]}, which is not in this journey — "
+                        f"the editor cannot lay it out (blank canvas)")
+    # Rule 1: the synthesized terminal is the easy one to forget.
+    for e in raw["elements"]:
+        if "source" in e:               # an edge, not a node
+            continue
+        for key in ("position", "positionAbsolute"):
+            pos = e.get(key)
+            if not isinstance(pos, dict) or "x" not in pos or "y" not in pos:
+                errs.append(f"element {str(e.get('id'))[:8]} has no usable {key}")
     if not body.get("journeyName"):
         errs.append("journeyName missing")
     if body.get("duplicatedFromId"):
@@ -1185,7 +1879,8 @@ def cmd_describe(spec: dict) -> int:
     return 0
 
 
-def emit_console_script(body: dict, out_path: Path) -> str:
+def emit_console_script(body: dict, out_path: Path, email_content: dict | None = None,
+                        promo_clones: list[dict] | None = None) -> str:
     """Render the paste-ready browser console script using the PROVEN scaffold
     from casino_journey.py (token auto-capture -> reserve JRN id -> regenerate
     activity uuids at paste time -> POST /journey-drafts -> aggregatedError log).
@@ -1193,8 +1888,275 @@ def emit_console_script(body: dict, out_path: Path) -> str:
     from casino_journey import build_js  # the battle-tested JS template
     # body already carries the DRY-RUN-CASINO placeholder the script swaps
     js = build_js(body)
+    js = _inject_pickers(js, pick_slots(body), email_content, promo_clones)
     out_path.write_text(js, encoding="utf-8")
     return str(out_path)
+
+
+# Injected only when a build left artwork for paste time. Mirrors the upload
+# mechanic proven in comms_campaign.py / sport_comms_campaign.py: pick the file,
+# read its real dimensions (the media library wants them in the URL), PUT it to
+# the folder, then use the absolute_link it answers with.
+_PICKER_JS = """
+  // --- paste-time artwork ---------------------------------------------------
+  const PICK_SLOTS = @PICK_SLOTS@;
+  const FOLDER_ID = @FOLDER_ID@;
+  const CRM_BASE = BASE.replace(/\\/journey-builder\\/v0$/, '');
+  function pickFile(label) {
+    return new Promise((resolve, reject) => {
+      const input = document.createElement('input');
+      input.type = 'file'; input.accept = 'image/*';
+      Object.assign(input.style, { position: 'fixed', top: '12px', left: '12px', zIndex: 999999, background: '#fff', padding: '8px', border: '3px solid #22c55e', borderRadius: '6px' });
+      document.body.appendChild(input);
+      console.log('%cSelect the image for ' + label + ' (picker is at the top-left of the page).', 'color:#eab308;font-weight:bold');
+      input.addEventListener('change', () => { const f = input.files && input.files[0]; input.remove(); if (!f) { reject(new Error('No file selected for ' + label)); return; } resolve(f); });
+    });
+  }
+  function imageDims(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file); const img = new Image();
+      img.onload = () => { URL.revokeObjectURL(url); resolve({ width: img.naturalWidth, height: img.naturalHeight }); };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read image dimensions for ' + file.name)); };
+      img.src = url;
+    });
+  }
+  // No content-type: the media library wants the multipart boundary the browser
+  // sets itself.
+  const upHeaders = () => ({ accept: 'application/json, text/plain, */*', authorization: auth, 'x-brand': BRAND });
+  async function uploadAsset(file, label) {
+    const dims = await imageDims(file);
+    const base = (file.name || 'image').replace(/\\.[^./]+$/, '');
+    const url = CRM_BASE + '/media-library/v0/folder/' + FOLDER_ID + '/upload/' + encodeURIComponent(base) + '.png?height=' + dims.height + '&width=' + dims.width;
+    const fd = new FormData(); fd.append('file', file, file.name);
+    const r = await fetch(url, { method: 'PUT', headers: upHeaders(), credentials: 'include', body: fd });
+    const t = await r.text();
+    if (!r.ok) throw new Error(label + ' upload failed HTTP ' + r.status + ' ' + t);
+    const asset = JSON.parse(t);
+    const tfd = new FormData(); tfd.append('file', file, file.name);
+    await fetch(CRM_BASE + '/media-library/v0/asset/thumb/' + asset.id + '.png', { method: 'PUT', headers: upHeaders(), credentials: 'include', body: tfd }).catch(() => {});
+    if (!asset.absolute_link || !asset.relative_link) throw new Error(label + ' upload returned no link: ' + t);
+    console.log('    ' + label + ' -> ' + asset.absolute_link);
+    return asset;
+  }
+  for (const slot of PICK_SLOTS) {
+    if (!text.includes(slot.token)) throw new Error('artwork placeholder for ' + slot.label + ' is not in the payload — regenerate the script.');
+    const asset = await uploadAsset(await pickFile(slot.label), slot.label);
+    text = text.split(slot.token).join(asset.absolute_link);
+  }
+  // A surviving placeholder means a node would ship the captured campaign's
+  // picture. Refuse, the same way the composer refuses unset artwork.
+  if (text.indexOf('@@PICK:') !== -1) throw new Error('unresolved artwork placeholder — refusing to create the draft.');
+"""
+
+
+_EMAIL_JS = """
+  // --- author the email content ---------------------------------------------
+  // The email's copy is not inline on the activity: it lives in a content-studio
+  // content the activity references. So create one, publish it, and repoint the
+  // journey at the id — the flow comms_campaign.py proved. The captured content
+  // is never edited; this always makes a new one.
+  const EMAIL_CONTENT = @EMAIL_CONTENT@;
+  const EMAIL_IMAGE_SLOTS = @EMAIL_IMAGE_SLOTS@;
+  const EMAIL_CONTENT_ID_TOKEN = @EMAIL_CONTENT_ID_TOKEN@;
+  const CONTENT_BASE = CRM_BASE + '/content-studio/v0/eb-backoffice/email/contents';
+  async function authorEmail() {
+    let cText = JSON.stringify(EMAIL_CONTENT);
+    for (const slot of EMAIL_IMAGE_SLOTS) {
+      if (cText.indexOf(slot.token) === -1) continue;
+      const asset = await uploadAsset(await pickFile(slot.label), slot.label);
+      // The body references images as https://{{cdn_hostname}}<relative>, not the
+      // absolute URL — the absolute one does not resolve for every recipient.
+      cText = cText.split(slot.token).join('https://{{cdn_hostname}}' + asset.relative_link);
+    }
+    if (/@@EMAIL_[A-Z_]+@@/.test(cText)) throw new Error('an email image placeholder was left unfilled — refusing to create the content.');
+    const content = JSON.parse(cText);
+    let r = await fetch(CONTENT_BASE, { method: 'POST', headers: { ...upHeaders(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(content) });
+    let t = await r.text();
+    if (!r.ok) throw new Error('Email content create failed HTTP ' + r.status + ' ' + t);
+    const cseId = JSON.parse(t).id;
+    if (!cseId) throw new Error('email create returned no id: ' + t);
+    console.log('    created email content', cseId);
+    r = await fetch(CONTENT_BASE + '/' + cseId, { method: 'POST', headers: { ...upHeaders(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(content) });
+    if (!r.ok) throw new Error('Email content save failed HTTP ' + r.status + ' ' + await r.text());
+    r = await fetch(CONTENT_BASE + '/' + cseId + '/publish', { method: 'PATCH', headers: { ...upHeaders(), 'content-type': 'application/json' }, credentials: 'include', body: '{}' });
+    if (!r.ok) throw new Error('Email content publish failed HTTP ' + r.status + ' ' + await r.text());
+    console.log('    published email content', cseId);
+    return cseId;
+  }
+  const cseId = await authorEmail();
+  if (!text.includes(EMAIL_CONTENT_ID_TOKEN)) throw new Error('the journey has no email repoint token — regenerate the script.');
+  text = text.split(EMAIL_CONTENT_ID_TOKEN).join(cseId);
+  // An unswapped token would leave the email activity pointing at a literal
+  // placeholder, which the builder shows as a valid-looking card.
+  if (text.indexOf('@@EMAIL_CONTENT_ID@@') !== -1) throw new Error('email repoint incomplete — refusing to create the draft.');
+"""
+
+
+_PLACEMENT_CONTENT_JS = """
+  // --- clone the placement card bundles ---------------------------------------------------
+  // A minted ContentId/FrontId owns no content tree, so the offer/tier CARD the
+  // journey carries renders empty. These are the journey's own placement bundles,
+  // NOT the promo page — that is a separate object (its own ids, an S3 tree copy,
+  // and a /promo/v2/promo-drafts/promo-page POST needing the regenerated offer
+  // activityId). Building it belongs to gow_campaign.py; this only stops the cards
+  // pointing at the captured campaign's trees.
+  // These are gow_campaign.py's own calls, unchanged: a per-target
+  // /contents/v1/copy from the captured id to the fresh one. The copy is always
+  // scoped by fileFilters, because an unfiltered copy of a years-old bundle
+  // folder stalls recursively enumerating ancient assets — the backoffice's own
+  // duplicate action scopes it the same way.
+  //
+  // What this does NOT do: rewrite the marketing text baked into the content, or
+  // upload new artwork. The page comes out as the captured campaign's page under
+  // ids this draft owns. That is the template being the source of truth for
+  // shape; change the words in the backoffice, or build the page in GOW where
+  // those rewrites live.
+  const PLACEMENT_CLONES = @PLACEMENT_CLONES@;
+  async function copyContentsTarget(srcPath, destPath, fileFilters) {
+    const body = { sourcePath: srcPath, destinationPath: destPath };
+    if (fileFilters) body.fileFilters = fileFilters;
+    const r = await fetch(CRM_BASE + '/contents/v1/copy', { method: 'POST', headers: headers('application/json'), credentials: 'include', body: JSON.stringify(body) });
+    if (!r.ok) throw new Error('promo page copy failed ' + srcPath + ' -> ' + destPath + ': HTTP ' + r.status + ' ' + await r.text());
+  }
+  const JSON_FILTERS = ['manifest.json', 'content/content-es.json', 'content/content-en.json'];
+  function contentFileFilters(target, role, itemContentIds) {
+    if (target === 'widgetModulor' || target === 'cashier') return JSON_FILTERS;
+    if (target === 'widget') return JSON_FILTERS.concat(['media/box.png', 'media/widgetImgKey.png']);
+    if (target === 'spa') {
+      if (role === 'offer') {
+        return JSON_FILTERS.concat(
+          ['media/HeaderImageKey.png', 'media/prizeImageKey.png'],
+          (itemContentIds || []).map((id) => `media/${id}.itemImageKey.png`)
+        );
+      }
+      return JSON_FILTERS.concat(['media/box.png', 'media/bonusHeaderImage.png']);
+    }
+    return undefined;
+  }
+  async function cloneBundle(oldId, newId, targets, role, itemContentIds) {
+    await Promise.all(targets.map((t) =>
+      copyContentsTarget(`mf/v1/${oldId}/${t}`, `mf/v1/${newId}/${t}`,
+                         role ? contentFileFilters(t, role, itemContentIds) : undefined)));
+  }
+  // content-<lang>.json embeds absolute self-paths carrying the bundle's OWN id.
+  // /contents/v1/copy copies bytes, so after the copy those paths still address
+  // the captured campaign's bundle — the new page would render its media out of
+  // the old tree, which is the sharing this whole minting step exists to stop.
+  // Fetch, rewrite the id, re-upload. gow_campaign.py does exactly this and only
+  // for the content bundle; the front bundle carries no such self-paths.
+  const AWS_BASE = new URL(BASE).origin + '/api/aws-get';
+  async function awsGet(path) {
+    const r = await fetch(AWS_BASE + '/' + path, { credentials: 'include' });
+    if (!r.ok) throw new Error('GET ' + path + ' failed: HTTP ' + r.status);
+    return r.text();
+  }
+  async function s3Upload(path, dataObj) {
+    const r = await fetch(CRM_BASE + '/promo/v2/s3/upload', { method: 'POST', headers: headers('application/json'), credentials: 'include', body: JSON.stringify({ path, data: dataObj }) });
+    if (!r.ok) throw new Error('upload failed ' + path + ': HTTP ' + r.status + ' ' + await r.text());
+  }
+  async function fixSelfPaths(newId, oldId) {
+    const jobs = [];
+    for (const t of ['spa', 'widget', 'widgetModulor', 'cashier'])
+      for (const l of ['en', 'es']) jobs.push([t, l]);
+    let fixed = 0;
+    await Promise.all(jobs.map(async ([t, l]) => {
+      const path = `mf/v1/${newId}/${t}/content/content-${l}.json`;
+      let txt;
+      try { txt = await awsGet(path); }
+      catch (e) { return; }          // that target/lang has no content — fine
+      if (txt.indexOf(oldId) === -1) return;
+      await s3Upload(path, JSON.parse(txt.split(oldId).join(newId)));
+      fixed++;
+    }));
+    return fixed;
+  }
+  if (PLACEMENT_CLONES.length) {
+    console.log('Cloning the placement card bundle(s)...');
+    for (const c of PLACEMENT_CLONES) {
+      console.log('  [' + c.role + '] content ' + c.old_content + ' -> ' + c.new_content);
+      await Promise.all([
+        cloneBundle(c.old_content, c.new_content,
+                    ['spa', 'widget', 'widgetModulor', 'cashier'], c.role, c.item_content_ids),
+        cloneBundle(c.old_front, c.new_front, ['spa', 'widget']),
+      ]);
+      // Sequential per placement, and only after its copy finished: the rewrite
+      // reads the files the copy just wrote.
+      const n = await fixSelfPaths(c.new_content, c.old_content);
+      console.log('    self-paths rewritten in ' + n + ' content file(s)');
+      if (!n) console.warn('    no content-*.json carried the old id — check the page renders its own media');
+    }
+    console.log('%c  placement cards cloned. They carry the captured campaign\\'s words and '
+                + 'artwork. This is NOT the promo page — build that in GOW.', 'color:#eab308');
+  }
+"""
+
+
+def placement_content_clones(id_map: dict) -> tuple[list[dict], list[str]]:
+    """Pair each minted ContentId with its FrontId and the role that names its
+    fileFilters. Returns (clones, problems).
+
+    The role comes from gow_campaign.PLACEMENTS, which records the captured
+    content ids — so it is looked up, not guessed. An id that is not in there has
+    no known filter set, and an unfiltered copy of an old bundle can stall, so it
+    is reported rather than attempted.
+    """
+    try:
+        from gow_campaign import PLACEMENTS
+    except Exception:
+        return [], ["cannot import gow_campaign.PLACEMENTS — promo-page roles unknown"]
+    by_content = {p["contentId"]: p for p in PLACEMENTS}
+    by_front = {p["frontId"]: p for p in PLACEMENTS}
+    clones, problems = [], []
+    for old, info in id_map.items():
+        if info.get("key") not in ("ContentId", "contentId"):
+            continue
+        placement = by_content.get(old)
+        if placement is None:
+            problems.append(
+                f"ContentId {old} is not one of the captured GOW placements, so its "
+                f"fileFilters are unknown — refusing to copy it unfiltered (that "
+                f"stalls on old bundles). Build the page in GOW and pass content_id "
+                f"/ front_id instead.")
+            continue
+        front_old = placement["frontId"]
+        front_new = (id_map.get(front_old) or {}).get("new")
+        if not front_new:
+            problems.append(f"ContentId {old} was minted but its FrontId {front_old} "
+                            f"was not — the pair must move together")
+            continue
+        clones.append({"role": placement["role"],
+                       "old_content": old, "new_content": info["new"],
+                       "old_front": front_old, "new_front": front_new,
+                       "item_content_ids": placement.get("itemContentIds") or []})
+    return clones, problems
+
+
+def _inject_pickers(js: str, slots: list[dict], email_content: dict | None = None,
+                    promo_clones: list[dict] | None = None) -> str:
+    if not slots and not email_content and not promo_clones:
+        return js
+    from media_library import DEFAULT_FOLDER_ID
+    block = (_PICKER_JS
+             .replace("@PICK_SLOTS@", json.dumps(slots, ensure_ascii=False))
+             .replace("@FOLDER_ID@", json.dumps(DEFAULT_FOLDER_ID)))
+    if email_content is not None:
+        ctext = json.dumps(email_content, ensure_ascii=False)
+        slots = [{"token": t, "label": lbl} for t, lbl in EMAIL_IMAGE_LABELS.items()
+                 if t in ctext]
+        block += (_EMAIL_JS
+                  .replace("@EMAIL_CONTENT@", ctext)
+                  .replace("@EMAIL_IMAGE_SLOTS@", json.dumps(slots, ensure_ascii=False))
+                  .replace("@EMAIL_CONTENT_ID_TOKEN@", json.dumps(EMAIL_CONTENT_ID_TOKEN)))
+    if promo_clones:
+        block += _PLACEMENT_CONTENT_JS.replace("@PLACEMENT_CLONES@",
+                                        json.dumps(promo_clones, ensure_ascii=False))
+    # After the ids are regenerated and before the body is parsed and POSTed:
+    # substituting on the serialised text hits the compiled activities and the
+    # rawJourneyData mirror in one pass, which is what keeps them byte-identical.
+    anchor = "  const body = JSON.parse(text);"
+    if anchor not in js:
+        raise SystemExit("console scaffold changed — cannot inject artwork pickers")
+    return js.replace(anchor, block + "\n" + anchor, 1)
 
 
 def _inherited_content_errors(body: dict) -> list[str]:
@@ -1203,7 +2165,7 @@ def _inherited_content_errors(body: dict) -> list[str]:
     whole — so an SMS node the spec gave no text to still carries the captured
     campaign's message, links and email template."""
     try:
-        from compose import audit_inherited_content
+        from compose import audit_inherited_content, audit_shared_promotion_identity
     except Exception:
         return []
     leaks: dict[str, None] = {}
@@ -1214,20 +2176,94 @@ def _inherited_content_errors(body: dict) -> list[str]:
             continue
         for line in audit_inherited_content(body, ref):
             leaks.setdefault(line, None)
+        # A chain clones its promotion node whole, so it arrives carrying the
+        # captured campaign's promotionId / campaignId and its promo-page
+        # ContentId+FrontId. Those are not copies — they are the SAME
+        # server-side objects, so the draft hangs off the captured campaign and
+        # editing its page content rewrites that live campaign's page. MODE 5 is
+        # the default path, so this is where it mattered most and it was the one
+        # place not checked.
+        for line in audit_shared_promotion_identity(body, ref):
+            leaks.setdefault(f"SHARED PROMOTION IDENTITY — {line}", None)
     return list(leaks)
 
 
 def cmd_compose(spec: dict, as_json: bool, script: bool, basename: str | None = None) -> int:
     res = compose(spec)
-    errs = verify(res["body"])
+    _id_map: dict = {}
+    promo_clones: list[dict] = []
+    errs_extra: list[str] = []
+    # A chain clones its promotion node whole, so the draft arrives owning the
+    # CAPTURED campaign's promotionId / campaignId and promo-page ContentId. Mint
+    # fresh ones before verifying, or the draft hangs off that live campaign and
+    # editing its page content rewrites it (the Sport WOF bug). The audit below
+    # is the backstop for anything this misses.
+    try:
+        from compose import refresh_promotion_identity
+        for _src in SOURCES:
+            try:
+                _ref = json.loads(_src.read_text(encoding="utf-8-sig"))
+            except (OSError, ValueError):
+                continue
+            for _line in refresh_promotion_identity(res["body"], _ref, _id_map):
+                res.setdefault("report", []).append(_line)
+    except Exception:
+        pass
+    # Cloning the page turns those minted ids from blanks into a real tree, which
+    # is the difference between a shippable journey and one the player sees an
+    # empty card in. Only when asked for: a silent clone of another campaign's
+    # page is a surprise, and the INCOMPLETE warning is the honest default.
+    if _placement_clone_requested and _id_map:
+        promo_clones, promo_problems = placement_content_clones(_id_map)
+        for _line in promo_problems:
+            errs_extra.append(f"placement_content — {_line}")
+        if promo_clones:
+            # refresh_promotion_identity's INCOMPLETE line is about the minted
+            # PLACEMENT ids owning no tree, which is what this clone fixes — so it
+            # would contradict the run. Its advice to build the promo page in GOW
+            # still stands and is repeated in the line below, because the promo
+            # page is a different object this does not touch.
+            res["report"] = [ln for ln in res.get("report", [])
+                             if "INCOMPLETE — the promo page" not in ln]
+            res.setdefault("report", []).append(
+                f"promotion: cloning {len(promo_clones)} placement card bundle(s) at "
+                f"paste time ({', '.join(c['role'] for c in promo_clones)}) — they carry "
+                f"the captured campaign's words and artwork. This is NOT the promo page; "
+                f"build that in GOW and pass content_id/front_id")
+    elif _placement_clone_requested:
+        errs_extra.append("placement_content: 'clone' was asked for but no ContentId was "
+                          "minted — this journey shares no page with its reference, "
+                          "so there is nothing to copy")
+    errs = verify(res["body"]) + errs_extra
     # Treat leaked campaign content as a verification failure: a journey that
     # messages players with another campaign's copy is not a usable draft, and
     # "VERIFIED OK" on one is exactly how the wrong SMS reached a real draft.
     errs = errs + [f"inherited content — {line}" for line in _inherited_content_errors(res["body"])]
+    # A PICK sentinel is only ever resolved by the console script's file picker.
+    # In a JSON-only build it is an unresolved placeholder sitting where a URL
+    # belongs, so it must fail rather than look like a composed value.
+    slots = pick_slots(res["body"])
+    if slots and not script:
+        errs = errs + [f"artwork left for paste time ({s['label']}) but no script was "
+                       f"requested — re-run with --script, or give a URL instead of PICK"
+                       for s in slots]
     OUT.mkdir(exist_ok=True)
     slug = re.sub(r"[^\w]+", "_", res["name"].lower()).strip("_")[:60]
-    out_path = OUT / f"{slug}.journey.json"
-    out_path.write_text(json.dumps(res["body"], ensure_ascii=False, indent=2), encoding="utf-8")
+    # The name-derived path is shared: every run for the same campaign writes the
+    # same file. That is fine for a shell run, but for a caller that passes a
+    # basename (the admin, which already uniquifies to survive concurrent
+    # requests) it means two operators building one campaign overwrite each
+    # other — and a file left behind by a run under a different user makes every
+    # later run fail with EACCES on a path nobody asked about.
+    out_path = OUT / (f"{basename}.journey.json" if basename else f"{slug}.journey.json")
+    try:
+        out_path.write_text(json.dumps(res["body"], ensure_ascii=False, indent=2),
+                            encoding="utf-8")
+    except OSError as exc:
+        # The composed body is a debugging artefact, not the deliverable. Losing
+        # it must not cost the operator the console script they asked for.
+        print(f"  WARN  could not write {out_path}: {exc}")
+        out_path = None
 
     js_path = None
     if script and not errs:
@@ -1236,13 +2272,15 @@ def cmd_compose(spec: dict, as_json: bool, script: bool, basename: str | None = 
             # console_scripts/<basename>_console.js — same convention as every
             # other generator. Bare CLI runs keep the name-derived out/ path.
             CONSOLE_OUT.mkdir(parents=True, exist_ok=True)
-            js_path = emit_console_script(res["body"], CONSOLE_OUT / f"{basename}_console.js")
+            js_path = emit_console_script(res["body"], CONSOLE_OUT / f"{basename}_console.js",
+                                          res.get("email_content"), promo_clones)
         else:
-            js_path = emit_console_script(res["body"], OUT / f"{slug}.console.js")
+            js_path = emit_console_script(res["body"], OUT / f"{slug}.console.js",
+                                          res.get("email_content"), promo_clones)
 
     summary = {
         "ok": not errs,
-        "output": str(out_path),
+        "output": str(out_path) if out_path else None,
         "console_script": js_path,
         "chain": res["chain"],
         "activities": len(res["body"]["activities"]),
@@ -1261,7 +2299,8 @@ def cmd_compose(spec: dict, as_json: bool, script: bool, basename: str | None = 
         print(json.dumps(summary, ensure_ascii=False, indent=2))
     else:
         print(f"chain    : {' -> '.join(res['chain'])} -> end")
-        print(f"output   : {out_path}")
+        if out_path:
+            print(f"output   : {out_path}")
         if js_path:
             print(f"script   : {js_path}")
         print(f"activities {summary['activities']}, elements {summary['elements']}")

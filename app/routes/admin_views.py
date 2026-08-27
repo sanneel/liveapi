@@ -40,6 +40,7 @@ from ..services.journey_cloner_runner import (
     generate_gow_console_script,
     generate_bet_and_get_pmcl_console_script,
     generate_tournament_pmcl_console_script,
+    generate_tournament_jbcl_console_script,
     missing_templates,
     run_journey_cloner,
     save_template_from_fetch,
@@ -642,7 +643,7 @@ def figma_run(
     return templates.TemplateResponse(request, "figma.html", ctx)
 
 
-_PROMO_TABS = {"overview", "gow", "tournament_pmcl", "bet_and_get", "journey_cloner", "randomizers", "nc_discount", "scripts", "prediction", "slot_cards"}
+_PROMO_TABS = {"overview", "gow", "tournament_pmcl", "tournament_jbcl", "bet_and_get", "journey_cloner", "randomizers", "nc_discount", "scripts", "prediction", "slot_cards", "sport_comms", "comms_builder", "welcome_pack"}
 _JC_TYPES = ["followup", "bfr", "two_hours", "aft"]
 
 
@@ -685,7 +686,7 @@ def _jc_ns(*, team=DEFAULT_TEAM, form=None, selected_types=None, dry_run=True,
 
 
 def _rnd_ns(*, kind="sport_wof", date="", days="", weights="", journeys="",
-           error="", result=None, console_script=None) -> dict:
+           prize_text="", error="", result=None, console_script=None) -> dict:
     from ..services.journey_cloner_runner import RANDOMIZER_KINDS
     return {
         "kinds": RANDOMIZER_KINDS,
@@ -694,6 +695,7 @@ def _rnd_ns(*, kind="sport_wof", date="", days="", weights="", journeys="",
         "days": days,
         "weights": weights,
         "journeys": journeys,
+        "prize_text": prize_text,
         "error": error,
         "result": result,
         "console_script": console_script,
@@ -702,12 +704,29 @@ def _rnd_ns(*, kind="sport_wof", date="", days="", weights="", journeys="",
 
 def _nc_ns(*, error="", result=None, console_script=None,
            pmcl_error="", pmcl_result=None, pmcl_console_script=None,
+           brief_error="", brief_result=None, brief_console_script=None,
+           brief_text="",
            git_result=None) -> dict:
+    # Both calendars are read from the generators' own CALENDAR at render time,
+    # so the panel cannot advertise a month the script no longer builds.
+    from ..services.journey_cloner_runner import nc_discount_calendar
     return {
         "error": error, "result": result, "console_script": console_script,
         "pmcl_error": pmcl_error, "pmcl_result": pmcl_result,
         "pmcl_console_script": pmcl_console_script,
+        "brief_error": brief_error, "brief_result": brief_result,
+        "brief_console_script": brief_console_script,
+        "brief_text": brief_text,
         "git_result": git_result,
+        "calendar": nc_discount_calendar(),
+        "pmcl_calendar": nc_discount_calendar(pmcl=True),
+    }
+
+
+def _wp_ns(*, form=None, error="", result=None, console_script=None) -> dict:
+    return {
+        "form": form or {"code": "", "brand": "", "mode": ""},
+        "error": error, "result": result, "console_script": console_script,
     }
 
 
@@ -716,6 +735,49 @@ def _pred_ns(*, sheet="", draft_id="", content_id="", front_id="", base_body="",
     return {
         "sheet": sheet, "draft_id": draft_id, "content_id": content_id,
         "front_id": front_id, "base_body": base_body, "dry_run": dry_run,
+        "error": error, "result": result, "console_script": console_script,
+    }
+
+
+def _scomms_campaigns() -> list[dict]:
+    """Every enabled campaign, for the sport-comms dropdown.
+
+    Deliberately NOT filtered to campaigns that already carry an expiry. An
+    expiry is only the *default* stop date — the form has its own Stop date
+    field — so filtering on it would hide every usable campaign and leave the
+    operator with an empty dropdown and nothing to do about it. Each row
+    carries its expiry (or "") so the form can prefill that field.
+    """
+    from ..database import db_session
+    from ..repositories.campaign_repo import CampaignRepository
+
+    out = []
+    with db_session() as session:
+        for row in CampaignRepository(session).list_all(enabled_only=True):
+            out.append({
+                "slug": row.slug,
+                "title": row.title,
+                "sport": row.sport,
+                "mode": row.mode,
+                # datetime-local wants "YYYY-MM-DDTHH:MM"; "" means no default.
+                "expires_at": row.expires_at.strftime("%Y-%m-%dT%H:%M") if row.expires_at else "",
+                "expires_label": row.expires_at.strftime("%Y-%m-%d %H:%M") if row.expires_at else "no expiry",
+            })
+    out.sort(key=lambda c: (c["expires_at"] == "", c["expires_at"], c["slug"]))
+    return out
+
+
+def _scomms_ns(*, campaign="", sheet="", promo_link="", stop_at="", dry_run=False,
+               error="", result=None, console_script=None) -> dict:
+    try:
+        campaigns = _scomms_campaigns()
+        load_error = ""
+    except Exception as exc:  # noqa: BLE001 - a broken DB must not blank the page
+        campaigns, load_error = [], str(exc)
+    return {
+        "campaigns": campaigns, "load_error": load_error,
+        "campaign": campaign, "sheet": sheet, "promo_link": promo_link,
+        "stop_at": stop_at, "dry_run": dry_run,
         "error": error, "result": result, "console_script": console_script,
     }
 
@@ -731,11 +793,28 @@ def _slot_ns() -> dict:
 
 
 
+def _comms_ns(*, form=None, error="", result=None, console_script=None) -> dict:
+    """Comms builder tab state. `form` echoes the operator's picks back so a
+    refusal does not wipe the sheet they just pasted."""
+    return {
+        "form": form if form is not None else {
+            "channels": ["nc", "popup", "email", "sms"],
+            "splits": ["nc", "popup", "email"],
+            "wait_nc": "2h", "wait_popup": "1d", "wait_email": "1d", "wait_sms": "",
+            "variant": "", "sheet": "", "date": "", "days": "",
+            "journey_name": "", "link": "", "email_template": "", "email_heading": "",
+        },
+        "error": error, "result": result, "console_script": console_script,
+    }
+
+
 def _bag_ns(*, form=None, error="", result=None, console_script=None) -> dict:
     return {"form": form or {}, "error": error, "result": result, "console_script": console_script}
 
-def _promotions_context(*, user, active_tab="overview", gow=None, tournament=None, bag=None, jc=None,
-                        rnd=None, nc=None, pred=None) -> dict:
+def _promotions_context(*, user, active_tab="overview", gow=None, tournament=None,
+                        tournament_jbcl=None, bag=None, jc=None,
+                        rnd=None, nc=None, pred=None, scomms=None, comms=None,
+                        wp=None) -> dict:
     """Full context for the unified Optimization page: automation graph + the
     embedded generators (GOW, Tournament Comms, Journey Cloner, Randomizers,
     Discount NC, Prediction, Planner, Slot Cards) + all-scripts list. All of
@@ -756,11 +835,15 @@ def _promotions_context(*, user, active_tab="overview", gow=None, tournament=Non
         "all_scripts": pc.all_scripts(),
         "gow": gow if gow is not None else _gow_ns(),
         "tournament": tournament if tournament is not None else _tournament_ns(),
+        "tournament_jbcl": tournament_jbcl if tournament_jbcl is not None else _tournament_ns(),
         "bag": bag if bag is not None else _bag_ns(),
         "jc": jc if jc is not None else _jc_ns(),
         "rnd": rnd if rnd is not None else _rnd_ns(),
         "nc": nc if nc is not None else _nc_ns(),
         "pred": pred if pred is not None else _pred_ns(),
+        "scomms": scomms if scomms is not None else _scomms_ns(),
+        "comms": comms if comms is not None else _comms_ns(),
+        "wp": wp if wp is not None else _wp_ns(),
         "sc": _slot_ns(),
     }
 
@@ -817,6 +900,7 @@ def promotions_randomizer(
     days: str = Form(""),
     weights: str = Form(""),
     journeys: str = Form(""),
+    prize_text: str = Form(""),
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
     """Generate a Randomizer console script (Sport WOF / Casino WOF / Scratch
@@ -837,6 +921,7 @@ def promotions_randomizer(
             int(days.strip())  # validate
         exit_code, output, display_cmd, js_text, js_name = generate_randomizer_console_script(
             kind=kind, date=date, days=days, weights=weights, journeys=journeys,
+            prize_text=prize_text,
         )
         result = {"exit_code": exit_code, "output": output, "command": display_cmd,
                   "ok": exit_code == 0 and js_text is not None}
@@ -853,6 +938,7 @@ def promotions_randomizer(
         user=user,
         active_tab="randomizers",
         rnd=_rnd_ns(kind=kind, date=date, days=days, weights=weights, journeys=journeys,
+                    prize_text=prize_text,
                     error=error, result=result, console_script=console_script),
     )
     return templates.TemplateResponse(request, "promotions.html", ctx)
@@ -891,24 +977,16 @@ def promotions_nc_discount(
 @router.post("/admin/promotions/nc-discount-pmcl", response_class=HTMLResponse)
 def promotions_nc_discount_pmcl(
     request: Request,
-    folder_id: str = Form(""),
     user: User = Depends(require_role("editor")),
 ) -> HTMLResponse:
-    """Generate the "NC For Discount PMCL" console script for fortunazo.cl."""
+    """Generate the "NC For Discount PMCL" console script for fortunazo.cl.
+    PMCL media-library folder is baked into the generator."""
     from ..services.journey_cloner_runner import generate_nc_discount_pmcl_console_script
     pmcl_error = ""
     pmcl_result = None
     pmcl_console_script = None
-    if not folder_id.strip():
-        pmcl_error = "Media Library Folder ID is required. Find it in the PMCL backoffice URL: /media-library/folders/<uuid>."
-        ctx = _promotions_context(
-            user=user,
-            active_tab="nc_discount",
-            nc=_nc_ns(pmcl_error=pmcl_error),
-        )
-        return templates.TemplateResponse(request, "promotions.html", ctx)
     try:
-        exit_code, output, display_cmd, js_text, js_name = generate_nc_discount_pmcl_console_script(folder_id.strip())
+        exit_code, output, display_cmd, js_text, js_name = generate_nc_discount_pmcl_console_script()
         pmcl_result = {"exit_code": exit_code, "output": output, "command": display_cmd,
                        "ok": exit_code == 0 and js_text is not None}
         if exit_code == 0 and js_text is not None:
@@ -923,6 +1001,99 @@ def promotions_nc_discount_pmcl(
         active_tab="nc_discount",
         nc=_nc_ns(pmcl_error=pmcl_error, pmcl_result=pmcl_result,
                   pmcl_console_script=pmcl_console_script),
+    )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
+
+
+@router.post("/admin/promotions/nc-discount-pmcl-brief", response_class=HTMLResponse)
+def promotions_nc_discount_pmcl_brief(
+    request: Request,
+    brief: str = Form(""),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """PMCL "NC For Discount" from a pasted ops brief: calendar + copy variants
+    are parsed from the brief instead of the baked-in defaults. PMCL folder
+    and year are baked in (current year)."""
+    from ..services.journey_cloner_runner import (
+        generate_nc_discount_pmcl_from_brief_console_script,
+    )
+    brief_error = ""
+    brief_result = None
+    brief_console_script = None
+    btext = brief.strip()
+    if not btext:
+        brief_error = "Paste the ops brief in the box below."
+    else:
+        try:
+            exit_code, output, display_cmd, js_text, js_name = (
+                generate_nc_discount_pmcl_from_brief_console_script(btext)
+            )
+            brief_result = {"exit_code": exit_code, "output": output,
+                            "command": display_cmd,
+                            "ok": exit_code == 0 and js_text is not None}
+            if exit_code == 0 and js_text is not None:
+                brief_console_script = {"name": js_name, "text": js_text}
+            else:
+                brief_error = "Console script was not generated. Check the run output below (brief-parse errors are printed there)."
+        except Exception as exc:  # noqa: BLE001
+            brief_error = str(exc)
+
+    ctx = _promotions_context(
+        user=user,
+        active_tab="nc_discount",
+        nc=_nc_ns(brief_error=brief_error, brief_result=brief_result,
+                  brief_console_script=brief_console_script,
+                  brief_text=btext),
+    )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
+
+@router.post("/admin/promotions/welcome-pack", response_class=HTMLResponse)
+def promotions_welcome_pack(
+    request: Request,
+    code: str = Form(""),
+    brand: str = Form(""),
+    mode: str = Form(""),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """Generate the "Welcome Pack - 1st Deposit / Aff" console script: one
+    promocode -> up to four drafts (JBCL/PMCL x normal/boosted)."""
+    from ..services.journey_cloner_runner import generate_welcome_pack_console_script
+    error = ""
+    result = None
+    console_script = None
+    form = {"code": code.strip().upper(), "brand": brand, "mode": mode}
+
+    if not form["code"]:
+        return templates.TemplateResponse(request, "promotions.html", _promotions_context(
+            user=user, active_tab="welcome_pack",
+            wp=_wp_ns(form=form, error="Promo code is required."),
+        ))
+    if brand not in ("jbcl", "pmcl") or mode not in ("normal", "boosted"):
+        return templates.TemplateResponse(request, "promotions.html", _promotions_context(
+            user=user, active_tab="welcome_pack",
+            wp=_wp_ns(form=form, error="Pick a brand and a mode — one run builds one "
+                                       "draft, and a defaulted brand is how the wrong "
+                                       "brand's draft gets created."),
+        ))
+
+    try:
+        exit_code, output, display_cmd, js_text, js_name = generate_welcome_pack_console_script(
+            code=form["code"], brand=brand, mode=mode)
+        result = {"exit_code": exit_code, "output": output, "command": display_cmd,
+                  "ok": exit_code == 0 and js_text is not None}
+        if exit_code == 0 and js_text is not None:
+            console_script = {"name": js_name, "text": js_text}
+        else:
+            # The generator refuses a malformed promocode rather than emitting a
+            # wrong draft; its reason is in the run output below the form.
+            error = "Console script was not generated. Check the run output below."
+    except Exception as exc:  # noqa: BLE001
+        error = str(exc)
+
+    ctx = _promotions_context(
+        user=user,
+        active_tab="welcome_pack",
+        wp=_wp_ns(form=form, error=error, result=result, console_script=console_script),
     )
     return templates.TemplateResponse(request, "promotions.html", ctx)
 
@@ -952,9 +1123,12 @@ def promotions_git_pull(
 def promotions_prediction(
     request: Request,
     sheet: str = Form(...),
-    draft_id: str = Form(...),
-    content_id: str = Form(...),
-    front_id: str = Form(...),
+    # The three ids are baked into prediction_campaign.py (they belong to the
+    # promo, not the run). Still accepted so an existing form post keeps working,
+    # but optional — blank means "use the generator's own".
+    draft_id: str = Form(""),
+    content_id: str = Form(""),
+    front_id: str = Form(""),
     base_body: str = Form(""),
     dry_run: str = Form(""),
     user: User = Depends(require_role("editor")),
@@ -990,6 +1164,52 @@ def promotions_prediction(
         pred=_pred_ns(sheet=sheet, draft_id=draft_id, content_id=content_id, front_id=front_id,
                       base_body=base_body, dry_run=do_dry_run,
                       error=error, result=result, console_script=console_script),
+    )
+    return templates.TemplateResponse(request, "promotions.html", ctx)
+
+
+@router.post("/admin/promotions/sport-comms", response_class=HTMLResponse)
+def promotions_sport_comms(
+    request: Request,
+    campaign: str = Form(...),
+    sheet: str = Form(...),
+    promo_link: str = Form(""),
+    stop_at: str = Form(""),
+    dry_run: str = Form(""),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """Build the sport scratch-card comms journey for a liveapi campaign, from
+    the Optimization page's Scratch Card Comms tab (wraps
+    journey-cloner/sport_comms_campaign.py)."""
+    from ..services.journey_cloner_runner import generate_sport_comms_console_script
+    do_dry_run = dry_run.strip().lower() in ("on", "true", "1", "yes")
+    error = ""
+    result = None
+    console_script = None
+    try:
+        exit_code, output, display_cmd, js_text, js_name = generate_sport_comms_console_script(
+            campaign_slug=campaign, sheet_text=sheet, promo_link=promo_link,
+            stop_at=stop_at, dry_run=do_dry_run,
+        )
+        result = {"exit_code": exit_code, "output": output, "command": display_cmd,
+                  "ok": exit_code == 0}
+        if exit_code == 0 and js_text is not None:
+            console_script = {"name": js_name, "text": js_text}
+        elif exit_code != 0:
+            # The generator refuses rather than warns, so a non-zero exit is
+            # usually a named check that failed — the reason is in the output.
+            error = "Refused — nothing was generated. The reason is in the run output below."
+    except ValueError as exc:
+        error = str(exc)
+    except Exception as exc:  # noqa: BLE001
+        error = str(exc)
+
+    ctx = _promotions_context(
+        user=user,
+        active_tab="sport_comms",
+        scomms=_scomms_ns(campaign=campaign, sheet=sheet, promo_link=promo_link,
+                          stop_at=stop_at, dry_run=do_dry_run,
+                          error=error, result=result, console_script=console_script),
     )
     return templates.TemplateResponse(request, "promotions.html", ctx)
 
@@ -1120,30 +1340,20 @@ def gow_console_script(
     return templates.TemplateResponse(request, "promotions.html", ctx)
 
 
-@router.post("/admin/promotions/tournament-pmcl", response_class=HTMLResponse)
-def promotions_tournament_pmcl(
-    request: Request,
-    date: str = Form(...),
-    spec: str = Form(...),
-    tournament_id: str = Form(""),
-    folder_id: str = Form(""),
-    journey_name: str = Form(""),
-    tournament_start: str = Form(""),
-    tournament_end: str = Form(""),
-    no_photos: str = Form(""),
-    user: User = Depends(require_role("editor")),
-) -> HTMLResponse:
-    """Generate the PMCL (Fortunazo) Tournament comms console script — the same
-    paste-a-sheet → console-script flow as GOW comms, wired to the Smartico
-    tournament deeplink instead of a promo page."""
+def _run_tournament_tab(*, request, user, tab, generate, date, spec, link,
+                        journey_name, email_content_id, email_link, no_photos):
+    """Shared handler for both brands' Tournament comms tabs.
+
+    The two differ only in which generator runs and which panel the result goes
+    back to — every rule (any link, sheet-owned tournament window, hardcoded
+    media-library folder) lives in the generator, not here."""
     form = {
         "date": date,
         "spec": spec,
-        "tournament_id": tournament_id,
-        "folder_id": folder_id,
+        "link": link,
         "journey_name": journey_name,
-        "tournament_start": tournament_start,
-        "tournament_end": tournament_end,
+        "email_content_id": email_content_id,
+        "email_link": email_link,
         "no_photos": bool(no_photos),
     }
     error = ""
@@ -1153,17 +1363,16 @@ def promotions_tournament_pmcl(
         if not date.strip():
             raise ValueError("Date is required.")
         if not spec.strip():
-            raise ValueError("Paste the spec blob (Communication channels table from the sheet).")
-        if bool(tournament_start.strip()) != bool(tournament_end.strip()):
-            raise ValueError("Tournament start and end dates must be filled in together (or both left blank).")
-        exit_code, output, display_cmd, js_text, js_name = generate_tournament_pmcl_console_script(
+            raise ValueError("Paste the spec blob (Specifications + Communication channels from the sheet).")
+        if not link.strip():
+            raise ValueError("The promo link is required — every channel points at it.")
+        exit_code, output, display_cmd, js_text, js_name = generate(
             date=date,
             spec_text=spec,
-            tournament_id=tournament_id,
-            folder_id=folder_id,
+            link=link,
             journey_name=journey_name,
-            tournament_start=tournament_start,
-            tournament_end=tournament_end,
+            email_content_id=email_content_id,
+            email_link=email_link,
             no_photos=bool(no_photos),
         )
         result = {
@@ -1179,13 +1388,51 @@ def promotions_tournament_pmcl(
     except Exception as exc:  # noqa: BLE001
         error = str(exc)
 
+    ns = _tournament_ns(form=form, error=error, result=result, console_script=console_script)
     ctx = _promotions_context(
-        user=user,
-        active_tab="tournament_pmcl",
-        tournament=_tournament_ns(form=form, error=error, result=result, console_script=console_script),
-    )
+        user=user, active_tab=tab,
+        **({"tournament": ns} if tab == "tournament_pmcl" else {"tournament_jbcl": ns}))
     return templates.TemplateResponse(request, "promotions.html", ctx)
 
+
+@router.post("/admin/promotions/tournament-pmcl", response_class=HTMLResponse)
+def promotions_tournament_pmcl(
+    request: Request,
+    date: str = Form(...),
+    spec: str = Form(...),
+    link: str = Form(""),
+    journey_name: str = Form(""),
+    email_content_id: str = Form(""),
+    email_link: str = Form(""),
+    no_photos: str = Form(""),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """PMCL (Fortunazo) Tournament comms — paste a sheet, get a console script."""
+    return _run_tournament_tab(
+        request=request, user=user, tab="tournament_pmcl",
+        generate=generate_tournament_pmcl_console_script,
+        date=date, spec=spec, link=link, journey_name=journey_name,
+        email_content_id=email_content_id, email_link=email_link, no_photos=no_photos)
+
+
+@router.post("/admin/promotions/tournament-jbcl", response_class=HTMLResponse)
+def promotions_tournament_jbcl(
+    request: Request,
+    date: str = Form(...),
+    spec: str = Form(...),
+    link: str = Form(""),
+    journey_name: str = Form(""),
+    email_content_id: str = Form(""),
+    email_link: str = Form(""),
+    no_photos: str = Form(""),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """JBCL (JugaBet) Tournament comms — paste a sheet, get a console script."""
+    return _run_tournament_tab(
+        request=request, user=user, tab="tournament_jbcl",
+        generate=generate_tournament_jbcl_console_script,
+        date=date, spec=spec, link=link, journey_name=journey_name,
+        email_content_id=email_content_id, email_link=email_link, no_photos=no_photos)
 
 
 @router.post("/admin/promotions/bet-and-get", response_class=HTMLResponse)
@@ -1310,3 +1557,78 @@ def parser_feeds_test_telegram(
 @router.get("/admin/")
 def admin_trailing_slash() -> RedirectResponse:
     return RedirectResponse(url="/admin")
+
+
+@router.post("/admin/promotions/comms-builder", response_class=HTMLResponse)
+def promotions_comms_builder(
+    request: Request,
+    sheet: str = Form(""),
+    channels: List[str] = Form([]),
+    splits: List[str] = Form([]),
+    variant: str = Form(""),
+    wait_nc: str = Form(""),
+    wait_popup: str = Form(""),
+    wait_email: str = Form(""),
+    wait_sms: str = Form(""),
+    date: str = Form(""),
+    days: str = Form(""),
+    journey_name: str = Form(""),
+    link: str = Form(""),
+    email_template: str = Form(""),
+    email_heading: str = Form(""),
+    user: User = Depends(require_role("editor")),
+) -> HTMLResponse:
+    """Build a JBCL comms journey from ticked channels + the pasted sheet.
+
+    Nothing here is inferred: the chain is exactly what was ticked, and every
+    word of copy comes from the sheet. A gap — a channel ticked with no copy, a
+    split on SMS, a missing link or date — is a refusal with the reason in the
+    log, which is the generator working rather than a crash."""
+    from ..services.journey_cloner_runner import generate_comms_builder_console_script
+
+    waits = {"nc": wait_nc, "popup": wait_popup, "email": wait_email, "sms": wait_sms}
+    form = {
+        "channels": channels, "splits": splits, "variant": variant,
+        "wait_nc": wait_nc, "wait_popup": wait_popup, "wait_email": wait_email,
+        "wait_sms": wait_sms, "sheet": sheet, "date": date, "days": days,
+        "journey_name": journey_name, "link": link,
+        "email_template": email_template, "email_heading": email_heading,
+    }
+    error = ""
+    result = None
+    console_script = None
+    try:
+        exit_code, output, display_cmd, js_text, js_name = generate_comms_builder_console_script(
+            sheet_text=sheet,
+            channels=list(channels),
+            splits=list(splits),
+            waits=waits,
+            variant=variant,
+            date=date,
+            days=days,
+            journey_name=journey_name,
+            link=link,
+            email_template=email_template,
+            email_heading=email_heading,
+        )
+        result = {"exit_code": exit_code, "output": output, "command": display_cmd,
+                  "ok": exit_code == 0 and js_text is not None}
+        if exit_code == 0 and js_text is not None:
+            console_script = {"name": js_name, "text": js_text}
+        else:
+            # The builder refuses by design; the reason is already in `output`,
+            # so do not bury it behind a generic message.
+            error = "Refused — see the run output below."
+    except ValueError as exc:
+        error = str(exc)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("comms builder failed")
+        error = str(exc)
+
+    ctx = _promotions_context(
+        user=user,
+        active_tab="comms_builder",
+        comms=_comms_ns(form=form, error=error, result=result,
+                        console_script=console_script),
+    )
+    return templates.TemplateResponse(request, "promotions.html", ctx)

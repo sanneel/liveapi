@@ -128,8 +128,11 @@ def parse_email_spec(text: str) -> dict[str, str]:
             preheader = line.split(":", 1)[1].strip()
             mode = ""
             continue
-        if low in ("body:", "body"):
+        if low.startswith("body:") or low == "body":
             mode = "body"
+            inline = line.split(":", 1)[1].strip()
+            if inline:
+                body_lines.append(inline)
             continue
         if mode == "body":
             body_lines.append(line)

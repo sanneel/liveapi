@@ -649,6 +649,21 @@ def _build_system_prompt(lean: bool = False) -> str:
     return prompt
 
 
+def _assert_no_unfilled_blocks(prompt: str) -> None:
+    """Refuse a prompt still carrying an empty <TAG>\n</TAG> placeholder.
+
+    An unsubstituted placeholder is worse than a missing section: the model reads
+    an empty tagged block as "this IS the list", so one typo'd tag name quietly
+    tells it there are no recipes, no games, or no generators. This page builds its
+    own prompt, so a block wired only into journey-planner/planner.py reaches the
+    CLI and not the UI — which is how a literal <GENERATORS_CATALOG> shipped here.
+    """
+    stray = re.findall(r"<([A-Z_]+)>\n</\1>", prompt)
+    if stray:
+        raise RuntimeError(f"system_prompt.txt has unfilled blocks: {stray} — "
+                           f"_assemble_system_prompt must substitute every one")
+
+
 def _assemble_system_prompt(lean: bool = False) -> str:
     """The actual splice. Only ever called through the cache above."""
     tpl = (PLANNER_DIR / "system_prompt.txt").read_text(encoding="utf-8")
@@ -675,15 +690,23 @@ def _assemble_system_prompt(lean: bool = False) -> str:
         games = games_file.read_text(encoding="utf-8")
     else:
         games = "{}"
-    return (
+    # Every finished promo tool, so "is there a script for X" is answered from
+    # the registry instead of invented. Never leaned: it is the smallest of the
+    # injected docs and the one whose absence makes the model make things up.
+    gen_file = REPO_ROOT / "journey-cloner" / "generators_catalog.json"
+    generators = gen_file.read_text(encoding="utf-8") if gen_file.exists() else "{}"
+    out = (
         tpl
         .replace("<KNOWLEDGE_BASE>\n</KNOWLEDGE_BASE>", kb)
         .replace("<CAPTURE_BACKLOG>\n</CAPTURE_BACKLOG>", backlog)
         .replace("<COMMS_PLAYBOOK>\n</COMMS_PLAYBOOK>", comms)
         .replace("<RECIPES_CATALOG>\n</RECIPES_CATALOG>", catalog)
+        .replace("<GENERATORS_CATALOG>\n</GENERATORS_CATALOG>", generators)
         .replace("<GAMES_REGISTRY>\n</GAMES_REGISTRY>", games)
         .replace("<CORRECTIONS>\n</CORRECTIONS>", corrections)
     )
+    _assert_no_unfilled_blocks(out)
+    return out
 
 
 def planner_view_context() -> dict:

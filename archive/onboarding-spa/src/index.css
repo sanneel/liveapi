@@ -1,0 +1,229 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  :root {
+    /* Single source for the accent so a .tsx inline style does not have to
+       re-declare the hex and drift from the token. */
+    --accent: theme('colors.accent.DEFAULT');
+    --line: theme('colors.line.DEFAULT');
+  }
+
+  body {
+    background-color: theme('colors.canvas');
+    color: theme('colors.ink.DEFAULT');
+    font-family: theme('fontFamily.sans');
+    font-size: 15px;   /* base matches the retuned body size */
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    outline: 3px solid theme('colors.accent.DEFAULT');
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: theme('colors.accent.weak');
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #CFCFDA;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #B6B6C6;
+  }
+}
+
+@layer components {
+  /* The tiny uppercase mono label. */
+  .mono-label {
+    @apply font-mono text-label uppercase tracking-[0.09em] text-muted;
+  }
+
+  .headline {
+    @apply font-display font-extrabold text-headline text-ink leading-none;
+    letter-spacing: -0.025em;
+  }
+
+  /* Primary CTA — sits on canvas, so it gets a very slight shadow for lift. */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2
+           rounded-control bg-accent text-white font-semibold
+           px-6 py-3 text-[15px]
+           shadow-[0_1px_3px_rgba(0,0,0,.10),0_4px_12px_-4px_rgba(107,72,242,.35)]
+           transition-all duration-150;
+  }
+  .btn-primary:hover:not(:disabled) {
+    @apply bg-accent-deep;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0,0,0,.10), 0 8px 20px -4px rgba(107,72,242,.42);
+  }
+  .btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  .btn-primary:disabled {
+    @apply cursor-default opacity-30;
+  }
+
+  /* Secondary control. Back is available but never competes with Continue. */
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-control
+           border border-line bg-surface text-ink-soft font-medium
+           px-4 py-3 text-[14px] transition-colors duration-150;
+  }
+  .btn-ghost:hover:not(:disabled) { @apply bg-line-soft text-ink; }
+  .btn-ghost:disabled { @apply opacity-40 cursor-default; }
+
+  /* White card surface. */
+  .surface-card {
+    @apply rounded-card bg-surface shadow-soft;
+  }
+
+  /* ── The rail ───────────────────────────────────────────────────────────── */
+
+  .rail-item {
+    @apply w-full text-left flex items-start gap-3 rounded-control px-3 py-2.5
+           transition-colors duration-100;
+  }
+  .rail-item .num {
+    @apply shrink-0 grid place-items-center w-6 h-6 rounded-full
+           text-[11px] font-semibold font-mono;
+    @apply bg-line-soft text-muted;
+  }
+  .rail-item .nm { @apply text-[13.5px] font-semibold text-ink-soft leading-tight; }
+  .rail-item .hn { @apply text-[11.5px] text-muted leading-tight mt-0.5; }
+  .rail-item:hover { @apply bg-line-soft; }
+
+  .rail-item[data-state='current'] { @apply bg-accent-weak; }
+  .rail-item[data-state='current'] .num { @apply bg-accent text-white; }
+  .rail-item[data-state='current'] .nm { @apply text-ink; }
+
+  .rail-item[data-state='done'] .num { @apply bg-accent-weak text-accent; }
+
+  /* ── Step dots across the top ───────────────────────────────────────────── */
+
+  .dot {
+    @apply grid place-items-center w-7 h-7 rounded-full border text-[11px]
+           font-mono font-semibold shrink-0;
+    @apply border-line bg-surface text-muted;
+  }
+  .dot[data-state='current'] { @apply bg-accent border-accent text-white; }
+  .dot[data-state='done']    { @apply bg-accent-weak border-accent-weak text-accent; }
+  .dot-line { @apply h-px flex-1 bg-line min-w-[10px]; }
+  .dot-line[data-state='done'] { @apply bg-accent-weak; }
+
+  /* ── Cards in the right-hand column ─────────────────────────────────────── */
+
+  .pane {
+    @apply rounded-card border border-line bg-surface p-4;
+  }
+  .pane-title {
+    @apply text-[13.5px] font-semibold text-ink mb-3;
+  }
+  .chip {
+    @apply shrink-0 grid place-items-center w-8 h-8 rounded-chip text-[15px];
+  }
+
+  /* A screenshot you can open. Legibility inline is limited by the column, so
+     the affordance matters as much as the size. */
+  .shot-open {
+    @apply relative block w-fit max-w-full mx-auto rounded-card border border-line
+           bg-surface overflow-hidden transition-shadow duration-150 cursor-zoom-in;
+  }
+  .shot-open:hover { @apply shadow-raised border-accent; }
+  .shot-open .badge {
+    @apply absolute right-2 top-2 rounded-chip bg-ink/70 text-white
+           px-2 py-1 text-[10.5px] font-medium opacity-0 transition-opacity;
+  }
+  .shot-open:hover .badge, .shot-open:focus-visible .badge { @apply opacity-100; }
+
+  /* A red pointer over a screenshot. Positioned in percentages by the caller. */
+  .mark {
+    @apply absolute z-10 pointer-events-none flex items-center gap-1;
+  }
+  .mark-dot {
+    @apply block w-3.5 h-3.5 rounded-full border-2 border-white;
+    background: #E4342B;
+    box-shadow: 0 0 0 2px rgba(228,52,43,.35);
+  }
+  .mark-label {
+    @apply rounded-chip px-1.5 py-0.5 text-[10.5px] font-semibold text-white whitespace-nowrap;
+    background: #E4342B;
+  }
+  .mark-stem { @apply block h-0.5 rounded; background: #E4342B; }
+
+  /* Flick, the guide. */
+  .flick-panel { @apply flex flex-col items-center gap-2 select-none; }
+  .flick-figure { @apply block w-full h-auto; }
+  .flick-hit {
+    @apply block w-full rounded-card transition-transform duration-150;
+  }
+  .flick-hit:hover { transform: translateY(-2px) scale(1.02); }
+  .flick-hit:active { transform: translateY(0) scale(0.99); }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-bob { animation: none !important; }
+  }
+
+  .flick-bubble {
+    @apply flex items-start gap-3 rounded-card border border-line bg-surface p-3;
+  }
+  .flick-face {
+    @apply shrink-0 rounded-chip object-cover bg-line-soft;
+  }
+
+  /* ── Content blocks inside lessons ──────────────────────────────────────── */
+
+  /* Paragraph body text */
+  .lesson-prose {
+    @apply text-body text-ink-soft leading-[1.65];
+  }
+  .lesson-prose strong {
+    @apply font-semibold text-ink;
+  }
+  .lesson-prose em {
+    font-style: italic;
+    color: theme('colors.ink.DEFAULT');
+  }
+}
+
+/* ── Step transitions ─────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-step-in,
+  .animate-step-out {
+    animation-duration: 160ms;
+  }
+  .animate-step-in  { animation-name: reducedIn; }
+  .animate-step-out { animation-name: reducedOut; }
+  .animate-shake    { animation: none; }
+  .btn-primary:hover:not(:disabled) { transform: none; }
+}
+
+@keyframes reducedIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes reducedOut { from { opacity: 1; } to { opacity: 0; } }

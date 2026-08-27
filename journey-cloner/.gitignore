@@ -15,3 +15,4 @@ email_cards/email_jugabet_preview.html
 
 __pycache__/
 *.py[cod]
+console_scripts/comms_builder_*_console.js

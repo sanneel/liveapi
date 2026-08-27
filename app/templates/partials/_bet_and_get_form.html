@@ -47,39 +47,12 @@ Vive la emoción de Premier League en el [Liverpool vs Chelsea](https://fortunaz
   </form>
 
   <div class="col-main stack">
-    {% if bag.console_script %}
-      <section class="card" style="overflow:hidden">
-        <div class="card-head">
-          <div>
-            <h2 class="card-title">Console Script Ready</h2>
-            <p class="card-sub">{{ bag.console_script.name }}</p>
-          </div>
-          <button type="button" id="copy-bag-script" class="btn primary">Copy script</button>
-        </div>
-        <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
-          <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
-            <li>Click <b>Copy script</b> above.</li>
-            <li>Open the <b>PMCL</b> backoffice in Chrome (logged in). Press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
-            <li>Paste and press Enter. No file pickers — the promo page keeps its captured background.</li>
-            <li>Watch for the green <b>DONE</b> with the journey, promo page and email ids. All three are <b>drafts</b> — review and publish them by hand.</li>
-          </ol>
-          <textarea id="bag-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ bag.console_script.text }}</textarea>
-        </div>
-      </section>
-      <script>
-        (function () {
-          var btn = document.getElementById('copy-bag-script');
-          var area = document.getElementById('bag-script-text');
-          if (!btn || !area) return;
-          btn.addEventListener('click', function () {
-            var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-              navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); });
-            } else { area.select(); document.execCommand('copy'); done(); }
-          });
-        })();
-      </script>
-    {% endif %}
+    {% with console_script=bag.console_script,
+            steps=["Open the <b>PMCL</b> backoffice — Chrome, logged in — before pasting.",
+                   "Paste and press Enter. No file pickers — the promo page keeps its captured background."],
+            final_step="Watch for the green <b>DONE</b> with the journey, promo page and email ids. All three are <b>drafts</b> — review and publish them by hand." %}
+      {% include "partials/_console_script.html" %}
+    {% endwith %}
 
     {% if bag.result %}
       <section class="card" style="overflow:hidden">

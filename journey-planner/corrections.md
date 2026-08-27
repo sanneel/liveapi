@@ -1,68 +1,166 @@
 # Corrections — operator-taught fixes
 
-One fix per line, newest at the bottom. Format each as: the wrong assumption →
-the right rule. These are appended to the planner's system prompt and OVERRIDE
-the knowledge base when they conflict. Add a line the moment you learn something
-— no need to restructure the main KB.
+One fix per line. These are appended to the planner's system prompt and OVERRIDE
+the knowledge base when they conflict. Add a line the moment you learn something.
 
-PRECEDENCE INSIDE THIS FILE: the list is append-only and ordered oldest → newest.
-When two bullets here conflict, the LATER one wins — it was learned afterwards.
-Never restate a machine-generated fact (recipe keys, knob names, game IDs) as
-prose here: the RECIPES CATALOG and GAMES REGISTRY sections of the prompt are
-generated and authoritative, and a prose copy can only drift out of date.
+Three rules about this file itself, because it is paid for on every request:
 
-- Casino "Cashout" / limit value N → `releaseLimitMultiplier: N` with `limitType: "multiplier"` (it's a multiplier, not a bonus amount).
-- Casino "Contribution" N → the wagering contribution rate; set it ONLY when `withWagering` is true.
-- A Randomizer that has its own `urlShortName` needs NO separate Promo Page — the wheel URL is itself the landing page.
-- KB §5/backlog marks these as uncaptured, but they ARE in the templates and can be built: `email_engagement_split`, `random_split`, `sport_bonus`, `registration`.
-- A composed (not cloned) journey is proven to render + save in REA — see journey-cloner/COMPOSER_RULES.md for the canvas rules (position+positionAbsolute, one node schema per recipe, de-nest parentNode, start trigger).
-- Brief field mappings (CRITICAL — fixes repeated misses):
+1. **Never restate a machine-generated fact.** Recipe keys, knob names, game ids,
+   activity types and the generator list come from the RECIPES CATALOG, GAMES
+   REGISTRY and GENERATORS sections — all generated from the code. A prose copy
+   here can only drift, and then the prompt contradicts itself.
+2. **A rule the composer enforces gets ONE line, not a paragraph.** If a build is
+   refused when the rule is broken, the planner needs to know the rule so it does
+   not produce a doomed plan — it does not need the evidence, the capture counts
+   or the history that convinced us. Those live in the code comment and in
+   `COMPOSER_RULES.md`, which is where someone changing the code will look.
+   Everything under ENFORCED below is like this.
+3. **Later wins.** Within a section the list is append-only, oldest → newest.
+
+---
+
+## ENFORCED — the composer refuses these, so a plan that breaks one is dead on
+arrival. Stated so you do not produce it; not argued, because the code decides.
+
+- **`promotion → deposit`, never the reverse**, wired on `PromotionAccepted`. The
+  gate sits between the offer and the reward. If a recipe's declared chain ever
+  disagrees, this wins and the recipe is the bug.
+- **`freespin_bonus → casino_bonus_v2`**, never reversed, never parallel. Spins
+  make the winnings; the bonus wagers them.
+- **`withWagering` and the wagering node must agree.** `false` + a
+  `casino_bonus_v2` after it, or `true` with none, are both refused. An instant
+  bonus is `withWagering: false` and terminal; a real grind is `true` + the node.
+- **A delivered message is never wired straight to another send.** Success
+  (`NotificationSent` / `SuccessEmailSend` / `SuccessSmsSend`) ⇒ a wait, a split
+  or an end. Failure (`NotificationNotSent` / `Failed*`) ⇒ straight to the next
+  channel, no wait — that is the fallback. Applies to every send node in every
+  journey, not only ones you would call comms.
+- **Unknown game ⇒ refused.** Never invent a `lobbyGameId`/`provider`; they are
+  opaque and unguessable. Not in the registry ⇒
+  `⛔ RESOLVE_AT_BUILD_TIME — game "<name>" not in registry`.
+- **Unknown recipe key, unknown chain type, or a setting an activity does not
+  have ⇒ refused.** Read the catalog every time; never map to the nearest fit.
+- **A ⛔ blocker in a spec ⇒ refused.** So keep it: put it under a real knob name
+  (`"spin_game_lobby": "⛔ RESOLVE_AT_BUILD_TIME"`). It is never guessed away.
+- **The captured campaign's ids are never reused.** `promotionId`,
+  `promotionLinkId`, `campaignId`, `ContentId`, `FrontId` are minted fresh; do not
+  pass the reference's back in.
+- **Canvas integrity** — a node parented to a container this journey lacks, a
+  node with no `position`/`positionAbsolute`, a dangling `nextActivityId`, unstripped
+  lineage: all refused. These are library defects the composer repairs, not
+  platform rules; never "fix" one by inventing a container.
+- **`wait_date` is not composable.** Only `wait_interval` (alias `wait`, ISO-8601).
+  An absolute gate date is a `graph` spec against a reference that has one, or ⛔.
+
+## JUDGEMENT — code cannot check these. This is where you actually earn your keep.
+
+- **Read the brief's own labels; ignore its arithmetic.**
   - "Max win: N" → `maxWinAmount` (minor units = N × 100).
-  - "Bet × Bonus (spins)" → calculate bonus amount as bet × spins count. Sanity check: is it within [minBonusAmount, maxBonusAmount]?
-  - "Days to activate bonus" → spins/bonus activation window (via `startAt`/`stopAt`).
-  - "Days for wagering" → `bonusExpirationTime` in milliseconds (N days × 86400000).
-  - "Days to make deposit" → `depositConditions.expirationTimeout` in ISO-8601 format (N days = `P0Y0M${N}DT0H0M0S`).
-- Randomizer shot policy (CRITICAL — fixes "Once" errors):
-  - "1 spin per player" / "once during promo" → `randomizerShotPolicy: "Once"`.
-  - "spin for each deposit" / "daily spin" / "per-trigger spin" → NOT "Once". Use the repeatable policy; flag with ⚠ which policy (e.g. "once per deposit", "daily").
-  - If brief ties spins to a repeatable action, it is NEVER "Once".
-- Player visibility (CRITICAL — fixes deposit=public errors):
-  - A public promo page anyone can view → `playerVisibility: "Unauthorized"` is fine.
-  - Any deposit-gated flow is inherently `Authorized` (must be logged in to deposit). If a journey/wheel is triggered by a deposit gate, mark it `Authorized` even if the landing page is public.
-  - Don't apply one visibility across the whole campaign — landing page and deposit flow can differ. State each separately.
-- Multi-segment briefs (CRITICAL — fixes dropped tables):
-  - If brief has TWO OR MORE value tables for different audiences ("Active" vs "Not Active", each with its own deposits/rewards), that is TWO campaign variants, not one.
-  - Build BOTH variants, or flag with ⚠: "Brief has N segments (X, Y) — needs N variants. I've planned all N. Confirm you want all built."
-  - Segments differ in: deposit tiers, contribution rates, targeting (dwh_source filter), sometimes reward tiers.
-- Reward chaining order (CRITICAL — fixes casino follow-up):
-  - Freespins → then wagering bonus: `freespin_bonus → casino_bonus_v2` (freespin produces winnings, casino bonus wagers them). NEVER parallel or reversed.
-  - Deposit gate ALWAYS before the reward it gates: `deposit → (reward)`.
-  - "Casino FreeSpin + Wagering + Deposit" recipe order: `external_system_source → deposit → promotion → freespin_bonus → casino_bonus_v2 → end`.
-- Promotion BEFORE Deposit (HARD RULE — fixes wiring errors):
-  - Order is ALWAYS: `promotion → deposit → reward`. NEVER `deposit → promotion`.
-  - A deposit/bet condition before promotion has nothing to gate — platform rejects or misbehaves.
-  - Player must ACCEPT the promotion before any condition gates the reward.
-- Fields to IGNORE (pre-calculated by author, NOT wire fields):
-  - "Contribution: N" (e.g. 0.1, 0.3, 0.4) — calculation input, not a wire field. Do NOT map to contributionRate or anything. Ignore silently.
-  - "Bonus amount: N" standalone derived helpers — author's math check (bet × spins). Take actual bet, spins, max bonus from their own labelled rows; ignore the derived "bonus amount" column.
-  - Rule: if it's a derived/check value the author computed, ignore it. Only map primary labelled inputs (bet, spins, min deposit, max bonus, cashout, wager).
-- Instant bonus vs wagering bonus (don't over-chain):
-  - "Instant Bonus" with Cashout: 1 (release limit 1×) = NO real wagering grind. Single activity, do NOT chain to casino_bonus_v2.
-  - Only chain `freespin_bonus → casino_bonus_v2` when there is a REAL wagering requirement (Wager: N with N > 1, or "x30 on winnings" language).
-  - Instant bonuses are terminal rewards; wagering bonuses are chained follow-ups.
-- The planner NEVER hand-writes journey JSON or a console script (HARD RULE — this is the #1 cause of blank-canvas / non-working drafts):
-  - The ONLY renderable output comes from `journey-cloner/compose.py`. A journey body the LLM types by hand will ALWAYS fail: it has `elements: []` (blank canvas — the canvas has no generator, it is copied from a template), invented event names (real freespin completion is `FreespinBonusCollectingFinished`, NOT `FreespinBonusIssued`; sources fire `PlayerAdded`/`Activation`, NOT `Completion`), and a stub `activitiesConfiguration` — every COMPOSER_RULES.md rule is violated at once.
-  - When the user asks for "the console script" / "paste script" / "generate the JS", the planner's job ENDS at the MODE 3 spec. Emit the spec block(s) and say: "Run `python journey-cloner/compose.py --spec <file>` to get the renderable console script — I cannot hand-build one that renders." NEVER fabricate a `fetch()` / `journey-drafts` POST script.
-- MODE 3 recipe/knob discipline (refuse, never remap):
-  - The ONLY valid recipe keys are exactly the keys of the RECIPES CATALOG section of this prompt — read them from there, never from a list written here (a prose copy drifts every time a recipe is captured). `multipurpose_promotion`, `empty_prize`, `instant_bonus`, `choosable_deposit` etc. are NOT recipe keys — emitting them is a hallucination. If no catalog recipe fits, output the ⛔ UNCAPTURED line, do NOT map to the nearest recipe.
-  - NEVER map an empty-prize/fallback journey to `comms` — that is ⛔ UNCAPTURED until a matching recipe is captured. NEVER map an instant-bonus (no wagering) journey to `casino_deposit_freespins` with `wagering_x: 1` — that recipe chains a real `casino_bonus_v2` wagering node, which contradicts an instant bonus; use the `casino_instant_freespin` recipe instead.
-- MODE 3 spec must preserve blockers (⛔ survives into the machine spec):
-  - Any ⛔ UNCAPTURED or ⛔ RESOLVE_AT_BUILD_TIME from the plan MUST appear in the spec as an explicit unresolved field, under a REAL knob name from the catalog, e.g. `"spin_game_lobby": "⛔ RESOLVE_AT_BUILD_TIME"`.
-  - The composer REFUSES to build a spec containing any ⛔ value, and REFUSES any recipe not in the proven list. A blocker is never silently dropped or guessed away — it stays visible until a human resolves it.
-- Game/provider IDs come from the games registry ONLY (fixes guessed lobby IDs):
-  - The registry is the GAMES REGISTRY section of this prompt (source: journey-cloner/library/games_index.md, generated from library/games.json). Match the brief's game name/alias to an entry and use its exact `provider`/`lobbyGameId`/`walletGameId`/`externalGameId`.
-  - Never invent a `lobbyGameId`/`provider`. Real IDs are opaque + provider-prefixed (`pragmatic-sweet-bonanza-super-scatter`, wallet `vs20swbonsup`) — unguessable.
-  - If the game is not in the registry, flag `⛔ RESOLVE_AT_BUILD_TIME — game "<name>" not in registry` for the game fields — never a plausible-looking guess. Decide membership by looking it up in the GAMES REGISTRY section every time; never from memory or from an example written here.
-- "Instant Bonus" IS a `freespin_bonus` with `withWagering: false` (captured — templates/casino/instfs.json):
-  - Chain is `external_system_source → promotion → freespin_bonus → end_of_journey` (promotion-gated, no deposit, NO casino_bonus_v2). This is now a captured, renderable pattern — not ⛔.
-  - The instant marker is `freespinActivity.withWagering: false` + no wagering follow-up node; cashout/release-limit 1 is expressed by the absence of the wagering chain.
+  - "Days for wagering" → `bonusExpirationTime` ms (N × 86400000).
+  - "Days to make deposit" → `depositConditions.expirationTimeout` = `P0Y0M{N}DT0H0M0S`.
+  - "Days to activate bonus" → the activation window (`startAt`/`stopAt`).
+  - "Cashout"/limit N → `releaseLimitMultiplier: N`, `limitType: "multiplier"`.
+  - "Contribution: N" and a standalone "Bonus amount" are the author's own
+    working, not wire fields. Ignore them silently. Only map primary labelled
+    inputs (bet, spins, min deposit, max bonus, cashout, wager).
+- **Shot policy.** "1 spin per player" / "once during the promo" → `Once`. Tied to
+  a repeatable action ("per deposit", "daily") → never `Once`; flag which policy.
+- **Player visibility.** A public landing page can be `Unauthorized`; anything
+  deposit-gated is `Authorized`. State the page and the flow separately — they
+  differ, and one blanket value for the campaign is wrong.
+- **Two value tables = two variants.** A brief with separate tables for different
+  audiences ("Active" vs "Not active") is N campaigns. Plan all N, or flag
+  ⚠ with the count. They differ in tiers, contribution and targeting.
+- **A comms journey is never a bare chain of sends.** The repeating unit is
+  `send → wait → split → send`: after a channel sends, wait, branch on how the
+  player engaged, and chase only the branch that needs it. Set `follow`
+  explicitly on every node — a split's real exit is a specific path, and the
+  default silently routes to an end. `event_detector` belongs on its own parallel
+  flow off the source, never inline where it blocks the sends behind it. One blast
+  with no follow-up is `segment → nc` and nothing more; say so with ⚠ rather than
+  padding it into four sends. The proven serial shape, if you want the trodden
+  path: `segment → nc → wait → ncsplit → popup → wait → sms → wait → email`.
+- **The connection grammar is closed.** Only `from → to` pairs the captures
+  contain are proven. If the pair you want is not among them you are inventing
+  platform behaviour — say ⛔ UNCAPTURED rather than wiring it and hoping. (The
+  composer checks that a `follow`/branch event is a captured completion event,
+  which catches some of these but not all.)
+- **Emit one spec block per object, and count them.** N blocks produce N objects,
+  so 3 blocks for a 9-journey plan silently ships a third of the campaign. Open
+  with the count ("9 journeys, 9 spec blocks"). If they will not fit, end with
+  `⚠ TRUNCATED — emitted X of N; ask "continue specs from N+1"`. Never merge two
+  journeys into one block, never abbreviate with `...` or "same as above" — each
+  block is parsed literally.
+- **Never hand-write journey JSON or a console script.** A body you type has
+  `elements: []` (blank canvas), invented event names and a stub
+  `activitiesConfiguration`. Your job ends at the spec: emit it and say to run
+  `python journey-cloner/compose.py --spec <file>`.
+- **The promo page is a separate build.** A fresh `ContentId` names a tree that
+  does not exist, so the offer card renders empty. Build the page first
+  (Optimization ▸ GOW), then pass its ids as the promotion node's `content_id` /
+  `front_id`. Without them the build still succeeds but reports
+  `INCOMPLETE — the promo page`; carry that line into your answer rather than
+  presenting the draft as finished.
+- **A randomizer with its own `urlShortName` needs no promo page** — the wheel URL
+  is the landing page.
+- **A promotion node is a surface, not a flow.** All it does is put the offer in
+  front of the player: accept or decline on a `promotion`, or pick one of N
+  branches on a `multipurpose_promotion`. Nothing is awarded by reaching it. So a
+  journey whose chain stops at the promotion is an opt-in button wired to
+  nothing — the condition and reward nodes behind it ARE the journey. Never emit
+  one as an object on its own.
+- **Maximise breadth inside one journey; who chooses decides the shape.** The
+  player chooses ⇒ ONE journey, one `multipurpose_promotion`, the options as
+  choosable branches — never one journey per option, which is the separating this
+  rule exists to stop. Rewards that all land with no choice ⇒ parallel branches
+  off the single offer, not a chain and not N journeys. Something other than the
+  player chooses ⇒ separate journeys, and that is not over-separating: a wheel or
+  scratch prize is picked by the randomizer, which still needs exactly one journey
+  per prize, and a different entry, audience, value table or date is still its own
+  object (the two-value-tables rule above stands). Say which of these you applied.
+- **Breadth is a CHAIN spec, not a recipe.** A recipe builds the shape it was
+  captured with; when the plan needs simultaneous or choosable flows, emit a chain
+  spec instead — `multipurpose_promotion` as the offer, then `parallel` (a list of
+  flows, all reached on ONE event, simultaneously) or `branches` (one event each,
+  the player's or the platform's choice). Never both on the same node; the
+  composer refuses that. Branch and `follow` events must be real captured
+  completion events — an invented one is refused, so the shape is buildable but
+  the wiring is still not yours to guess. Do not flatten breadth into a linear
+  recipe merely because a recipe exists for the reward.
+- **A chooser sits IN FRONT of an ordinary promotion, never instead of one.** The
+  captured live shape is `multipurpose_promotion` → per-flow `promotion` →
+  condition → reward. The chooser records which flow the player picked and awards
+  nothing; the plain `promotion` inside that flow is the actual offer, and it is
+  what feeds `PromotionId` / `PromotionAcceptedAt` to everything behind it. So
+  give every flow its own promotion. If a build reports dropped `PromotionId`
+  ("the platform may reject"), that is the symptom of a missing inner promotion —
+  fix the shape, never read it as a reason to avoid choosable flows. Simultaneous
+  rewards with no choice still hang off one plain `promotion` with `parallel`.
+  One caveat worth carrying: the composer does not re-draw choosable
+  sub-elements, so pass on its warning to open the draft and verify the flows.
+
+## THE GENERATORS — finished tools, not things to compose
+
+The GENERATORS section is the complete list. For anything it covers, name the
+tool and route the operator to it; do not compose a thinner version.
+
+- **Route, never spec.** A generator has its own form and its own refusals. Give
+  the label, the tab, and what it refuses to run without.
+- **Welcome Pack** is one draft per run: brand (JBCL/PMCL) and mode
+  (normal/boosted) are both required. "Boosted" is the same journey plus the extra
+  Sport FreeBet after the deposit detector. There is no "all four at once" — each
+  draft inherits its own source's promotion and needs re-pointing before publish.
+- **Comms builder** has one variant, `gow`. Tournaments, scratch cards and
+  Discount NC have their own tabs which build them more completely; point there.
+  Any other chain is still buildable by naming channels directly.
+- **An authored email has two captured creatives and they are not
+  interchangeable**: one is a heading line above a hero image (the copy lives in
+  the image), the other has a text body, a hero and a separate CTA button image.
+  Asking for a body on the image-only creative is refused. Both are JBCL — a PMCL
+  run authoring one is refused as a brand swap. The CTA is an image, so a brief's
+  email button *text* has nowhere to go; say so.
+- **Content Studio rejects `*@#?|&<>"'/` in a content name.** Journey names here
+  are pipe-separated, so a name derived from one is sanitised — do not promise an
+  email content will be named exactly after its journey.
+- **A HAR is the input for a new automation, not a thing you can substitute for.**
+  No capture ⇒ ⛔ UNCAPTURED. Never propose a template built from documentation.

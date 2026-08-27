@@ -4,22 +4,24 @@
 Business flow: promote discounted games to active players via Notification
 Center push, twice a week (Saturday 12:00 / Sunday 13:00 Chile time). Each
 game/day is its own journey: segment (active players) -> notification
-(template 16001) -> end. Four rotating message variants by calendar position
-(Sat1, Sun1, Sat2, Sun2).
+(template 16001) -> end. Ten per-day copy variants (Day 1..10), each unique.
 
-Before first run:
-  1. Set PMCL_FOLDER_ID to your PMCL media-library folder UUID (find it in
-     the backoffice URL when you open Media Library for the PMCL brand).
+The PMCL media-library folder UUID is baked into PMCL_FOLDER_ID below (same
+UUID the tournament PMCL script uses). If PMCL moves to a new folder, update
+the constant — no CLI flag needed for day-to-day runs.
 
 Usage:
-  python nc_discount_pmcl_campaign.py                 # July calendar
-  python nc_discount_pmcl_campaign.py --name nc_july  # custom output name
-  python nc_discount_pmcl_campaign.py --dry-run       # write bodies to out/
+  python nc_discount_pmcl_campaign.py                   # August calendar
+  python nc_discount_pmcl_campaign.py --name nc_august  # custom output name
+  python nc_discount_pmcl_campaign.py --dry-run         # write bodies to out/
+  python nc_discount_pmcl_campaign.py --brief brief.txt # calendar + copy from brief
+  python nc_discount_pmcl_campaign.py --brief -         #  ... piped via stdin
 """
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -31,9 +33,10 @@ TEMPLATE_PATH = HERE / "templates" / "casino" / "nc_discount_pmcl.json"
 BASE_URL = "https://pmi.rea-backoffice.gr8.tech/api/ubo/api/v0/crm/journey-builder/v0"
 BRAND = "PMCL"
 
-# Media-library folder for PMCL image uploads. Passed via --folder-id at
-# runtime (or set here to avoid passing it every time).
-PMCL_FOLDER_ID = ""
+# Media-library folder for PMCL image uploads. Same UUID the tournament PMCL
+# script uses (only one PMCL media library, folders are organizational). Update
+# here if PMCL ever moves discount NC assets to a different folder.
+PMCL_FOLDER_ID = "67e37e66-3532-47d7-b574-195ede915ff4"
 
 # ── template literals from the captured body (nc_discount_pmcl.json) ────
 # Replace stop BEFORE start in every s.replace() call — stop contains the
@@ -61,33 +64,78 @@ TPL_RESERVED = "JRN-0-617221"
 ICON_TOKEN = "%%ICON%%"
 RESERVED_TOKEN = "%%RESERVED%%"
 
-# ── per-day copy variants (indexed by calendar position 0-3) ────────────
+# ── per-day copy variants (indexed by calendar position 0-9) ────────────
+# One entry per day: 10 unique messages, Sat 12:00 / Sun 13:00 alternating.
+# Any "[game name]" token in title or des is swapped for the display name at
+# render time by a global replace after TPL_TITLE / TPL_DES substitution.
 DAY_COPY = [
-    # 0 — first Saturday, 12:00
+    # 0 — Day 1 Sat 12:00
     {
-        "title": "🔥 ¡{name} está rompiendo récords! 🔥",
-        "des": "Cada vez más jugadores la eligen. ¿Ya la probaste?",
+        "title": "⭐ La elección de miles de jugadores",
+        "des": "[game name] sigue conquistando a nuevos jugadores cada día.",
         "caption": "¡Juega ahora!",
         "time": (12, 0),
     },
-    # 1 — first Sunday, 13:00
+    # 1 — Day 2 Sun 13:00
     {
-        "title": "🔥 ¡{name} no para de sumar jugadores! 🔥",
-        "des": "Una de las favoritas del momento.",
-        "caption": "¡A jugar!",
+        "title": "🚀 La tendencia del momento",
+        "des": "Miles de jugadores ya descubrieron [game name]. ¡Ahora es tu turno!",
+        "caption": "¡Entrar al juego!",
         "time": (13, 0),
     },
-    # 2 — second Saturday, 12:00
+    # 2 — Day 3 Sat 12:00
     {
-        "title": "⭐ Los jugadores eligieron {name} como su favorita. ⭐",
-        "des": "¿Te unes a la diversión?",
+        "title": "👀 ¿Ya viste [game name]?",
+        "des": "Está llamando la atención de toda la comunidad. ¡No te la pierdas!",
+        "caption": "¡Probar ahora!",
+        "time": (12, 0),
+    },
+    # 3 — Day 4 Sun 13:00
+    {
+        "title": "🔥 La más buscada del momento",
+        "des": "Cada día más jugadores eligen [game name].",
+        "caption": "¡Juega ahora!",
+        "time": (13, 0),
+    },
+    # 4 — Day 5 Sat 12:00
+    {
+        "title": "🍀 ¿Será tu próxima favorita?",
+        "des": "Entra a [game name] y descubre por qué todos la están jugando.",
+        "caption": "¡Descúbrela!",
+        "time": (12, 0),
+    },
+    # 5 — Day 6 Sun 13:00
+    {
+        "title": "💎 ¡Descubre [game name]!",
+        "des": "Cada vez más jugadores la están descubriendo. ¿Te animas a probarla?",
+        "caption": "¡Juega ahora!",
+        "time": (13, 0),
+    },
+    # 6 — Day 7 Sat 12:00
+    {
+        "title": "🎰 ¿Buscas una nueva favorita?",
+        "des": "[game name] podría sorprenderte desde el primer giro.",
+        "caption": "¡Pruébala!",
+        "time": (12, 0),
+    },
+    # 7 — Day 8 Sun 13:00
+    {
+        "title": "⚡ ¡No dejes pasar [game name]!",
+        "des": "Es una de las experiencias que más están disfrutando los jugadores.",
+        "caption": "¡Entrar al juego!",
+        "time": (13, 0),
+    },
+    # 8 — Day 9 Sat 12:00
+    {
+        "title": "✨ ¡Vale la pena jugar [game name]!",
+        "des": "Descubre por qué tantos jugadores vuelven a esta aventura una y otra vez.",
         "caption": "¡A jugar!",
         "time": (12, 0),
     },
-    # 3 — second Sunday, 13:00
+    # 9 — Day 10 Sun 13:00
     {
-        "title": "🔥 Todos están jugando {name}. 🔥",
-        "des": "No te quedes fuera de la acción.",
+        "title": "🎰 Tu próximo juego favorito te espera",
+        "des": "Entra a [game name] y descubre una experiencia que ya conquistó a muchos jugadores.",
         "caption": "¡Juega ahora!",
         "time": (13, 0),
     },
@@ -95,10 +143,16 @@ DAY_COPY = [
 
 # ── games calendar (date, url-slug, display name) ────────────────────────
 CALENDAR = [
-    ("2026-07-18", "tada-jackpot-joker",      "Jackpot Joker"),       # Sat — Day 1
-    ("2026-07-19", "tada-3-coin-golden-ox",    "3 Coin Golden Ox"),    # Sun — Day 2
-    ("2026-07-25", "tada-fortune-garuda-500",  "Fortune Garuda 500"),  # Sat — Day 3
-    ("2026-07-26", "tada-fortune-gems-500",    "Fortune Gems 500"),    # Sun — Day 4
+    ("2026-08-01", "fazi-winning-clover-5",                    "Winning Clover 5"),                # Sat — Day 1
+    ("2026-08-02", "champion-fruit-party-deluxe",              "Fruit Party Deluxe"),              # Sun — Day 2
+    ("2026-08-08", "fazi-fruit-island",                        "Fruit Island"),                    # Sat — Day 3
+    ("2026-08-09", "endorphina-fortune-chests",                "Fortune Chests"),                  # Sun — Day 4
+    ("2026-08-15", "3oaks-coin-volcano",                       "Coin Volcano"),                    # Sat — Day 5
+    ("2026-08-16", "endorphina-3-witch-pots",                  "3 Witch Pots"),                    # Sun — Day 6
+    ("2026-08-22", "pragmatic-gates-of-olympus-super-scatter", "Gates of Olympus Super Scatter"),  # Sat — Day 7
+    ("2026-08-23", "3oaks-4-pots-of-egypt",                    "4 Pots of Egypt"),                 # Sun — Day 8
+    ("2026-08-29", "endorphina-burning-coins-40",              "Burning Coins 40"),                # Sat — Day 9
+    ("2026-08-30", "3oaks-egypt-fire",                         "Egypt Fire"),                      # Sun — Day 10
 ]
 
 
@@ -120,7 +174,7 @@ def _window(day: datetime, hh: int, mm: int) -> tuple[str, str, datetime, dateti
 def prepare_game(date_str: str, slug: str, name: str, day_index: int) -> tuple[dict, list[str]]:
     day = datetime.strptime(date_str, "%Y-%m-%d")
     cp = DAY_COPY[day_index]
-    title = cp["title"].format(name=name)
+    title = cp["title"]
     des = cp["des"]
     caption = cp["caption"]
     hh, mm = cp["time"]
@@ -140,6 +194,10 @@ def prepare_game(date_str: str, slug: str, name: str, day_index: int) -> tuple[d
     s = s.replace(TPL_STOPAT, stop_at)         # stop before start (date prefix overlap)
     s = s.replace(TPL_STARTAT, start_at)
     s = s.replace(TPL_RESERVED, RESERVED_TOKEN)
+    # Some day-copy strings carry a "[game name]" token in title or des that
+    # only makes sense per-game — swap after TPL_TITLE / TPL_DES so it also
+    # rewrites the localized mirrors (title-en / title-es / description-*).
+    s = s.replace("[game name]", name)
 
     body = json.loads(s)
     body["duplicatedFromId"] = None
@@ -341,6 +399,160 @@ def build_js(games: list[dict], folder_id: str) -> str:
     return js
 
 
+# ── brief parser ─────────────────────────────────────────────────────────
+# A brief looks like the request the operator was handed by ops:
+#
+#   Day 1: Saturday
+#   Time: 12.00 (Chile time)
+#   Message: + image of the game
+#
+#   ⭐ La elección de miles de jugadores
+#   [game name] sigue conquistando a nuevos jugadores cada día.
+#
+#   CTA (button): ¡Juega ahora!
+#
+#   ... (more Day N: blocks) ...
+#
+#   Games calendar:
+#
+#   01.08 Saturday - https://fortunazo.cl/services/slots/game/fazi-winning-clover-5
+#   02.08 Sunday   - https://fortunazo.cl/services/slots/game/champion-fruit-party-deluxe
+#   ...
+#
+# Refusal-over-warning: any missing piece raises rather than fudging.
+
+# Slug prefixes we recognize as the game *provider*; dropped from the derived
+# display name. Add more as new providers land.
+_PROVIDER_PREFIXES = {
+    "fazi", "champion", "endorphina", "3oaks", "pragmatic", "tada",
+    "playngo", "netent", "yggdrasil", "hacksaw", "gamzix", "spribe",
+    "evoplay", "playson", "quickspin", "isoftbet", "belatra", "amatic",
+    "bgaming", "bfgames", "gameart", "novomatic", "playtech", "microgaming",
+}
+# Connector words kept lowercase inside a title-cased game name.
+_CONNECTORS = {"of", "the", "and", "a", "an", "for", "in", "on", "de", "la", "el"}
+
+
+def slug_to_name(slug: str) -> str:
+    parts = [p for p in slug.split("-") if p]
+    if parts and parts[0].lower() in _PROVIDER_PREFIXES:
+        parts = parts[1:]
+    if not parts:
+        raise ValueError(f"empty display name after stripping provider from slug {slug!r}")
+
+    def cap(word: str, is_first: bool) -> str:
+        if not is_first and word.lower() in _CONNECTORS:
+            return word.lower()
+        return word[:1].upper() + word[1:].lower() if word[:1].isalpha() else word
+
+    return " ".join(cap(p, i == 0) for i, p in enumerate(parts))
+
+
+_DAY_HEAD_RE = re.compile(r"^\s*Day\s+(\d+)\s*[:\-–—]", re.IGNORECASE)
+_TIME_RE = re.compile(r"^\s*Time\s*[:\-–—]\s*(\d{1,2})[.:](\d{2})", re.IGNORECASE)
+_MSG_RE = re.compile(r"^\s*Message\s*[:\-–—]", re.IGNORECASE)
+_CTA_RE = re.compile(r"^\s*CTA\b[^:]*:\s*(.+?)\s*$", re.IGNORECASE)
+_CAL_ROW_RE = re.compile(
+    r"^\s*(\d{1,2})[./\-](\d{1,2})\b[^-\n]*?[-–—]\s*"
+    r"(https?://\S+?/services/slots/game/([A-Za-z0-9\-]+))\s*$",
+    re.IGNORECASE,
+)
+
+
+def parse_brief(text: str, *, default_year: int) -> tuple[list[tuple[str, str, str]], list[dict]]:
+    """Parse a promo brief into (CALENDAR, DAY_COPY). Raises ValueError on any
+    missing/ambiguous piece — never silently fudges."""
+    lines = text.splitlines()
+    n = len(lines)
+
+    day_copy: list[dict] = []
+    i = 0
+    while i < n:
+        m = _DAY_HEAD_RE.match(lines[i])
+        if not m:
+            i += 1
+            continue
+        day_num = int(m.group(1))
+        i += 1
+
+        # Time on the next non-blank line
+        while i < n and not lines[i].strip():
+            i += 1
+        if i >= n or not (tm := _TIME_RE.match(lines[i])):
+            raise ValueError(f"Day {day_num}: missing 'Time: HH.MM' line right after the Day header.")
+        hh, mm = int(tm.group(1)), int(tm.group(2))
+        if not (0 <= hh <= 23 and 0 <= mm <= 59):
+            raise ValueError(f"Day {day_num}: invalid time {hh:02d}:{mm:02d}.")
+        i += 1
+
+        # Skip to the Message: line
+        while i < n and not _MSG_RE.match(lines[i]):
+            if _DAY_HEAD_RE.match(lines[i]):
+                raise ValueError(f"Day {day_num}: reached next Day before finding 'Message:'.")
+            i += 1
+        if i >= n:
+            raise ValueError(f"Day {day_num}: missing 'Message:' line.")
+        i += 1  # step past Message:
+
+        # Collect message body lines until CTA (or next Day)
+        block: list[str] = []
+        cta: str | None = None
+        while i < n:
+            if _DAY_HEAD_RE.match(lines[i]):
+                break
+            if c := _CTA_RE.match(lines[i]):
+                cta = c.group(1).strip()
+                i += 1
+                break
+            block.append(lines[i])
+            i += 1
+
+        # Trim blank edges
+        while block and not block[0].strip():
+            block.pop(0)
+        while block and not block[-1].strip():
+            block.pop()
+        if not block:
+            raise ValueError(f"Day {day_num}: empty message body between 'Message:' and 'CTA:'.")
+        if cta is None:
+            raise ValueError(f"Day {day_num}: no 'CTA:' line before the next Day.")
+
+        title = block[0].strip()
+        des = " ".join(ln.strip() for ln in block[1:] if ln.strip())
+        if not des:
+            raise ValueError(f"Day {day_num}: message body has a title but no description line under it.")
+
+        day_copy.append({"title": title, "des": des, "caption": cta, "time": (hh, mm)})
+
+    if not day_copy:
+        raise ValueError("No 'Day N:' blocks found in the brief.")
+
+    calendar: list[tuple[str, str, str]] = []
+    for line in lines:
+        cm = _CAL_ROW_RE.match(line)
+        if not cm:
+            continue
+        dd, mo = int(cm.group(1)), int(cm.group(2))
+        slug = cm.group(4)
+        try:
+            iso = datetime(default_year, mo, dd).strftime("%Y-%m-%d")
+        except ValueError as e:
+            raise ValueError(f"invalid calendar date {dd:02d}.{mo:02d}: {e}")
+        calendar.append((iso, slug, slug_to_name(slug)))
+
+    if not calendar:
+        raise ValueError(
+            "No 'Games calendar' rows found. Expected lines like "
+            "'01.08 Saturday - https://fortunazo.cl/services/slots/game/<slug>'."
+        )
+    if len(calendar) != len(day_copy):
+        raise ValueError(
+            f"Calendar has {len(calendar)} game(s) but brief has {len(day_copy)} "
+            "message variant(s). They must match one-to-one."
+        )
+    return calendar, day_copy
+
+
 def main() -> int:
     p = argparse.ArgumentParser(
         description=__doc__,
@@ -352,7 +564,24 @@ def main() -> int:
                    help="PMCL media-library folder UUID (from backoffice URL)")
     p.add_argument("--dry-run", action="store_true",
                    help="write prepared bodies to out/ instead of a console script")
+    p.add_argument("--brief", default=None,
+                   help="Path to a brief text file (or '-' for stdin). Overrides "
+                        "the baked-in CALENDAR + DAY_COPY.")
+    p.add_argument("--brief-year", type=int, default=None,
+                   help="Year to apply to DD.MM dates in --brief (default: current year).")
     args = p.parse_args()
+
+    if args.brief is not None:
+        text = sys.stdin.read() if args.brief == "-" else Path(args.brief).read_text(encoding="utf-8")
+        year = args.brief_year or datetime.now(LOCAL_TZ).year
+        try:
+            new_calendar, new_copy = parse_brief(text, default_year=year)
+        except ValueError as e:
+            print(f"BRIEF PARSE FAILED: {e}", file=sys.stderr)
+            return 1
+        global CALENDAR, DAY_COPY
+        CALENDAR, DAY_COPY = new_calendar, new_copy
+        print(f"Brief parsed: {len(CALENDAR)} game(s), {len(DAY_COPY)} copy variant(s).")
 
     games: list[dict] = []
     all_ok = True

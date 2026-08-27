@@ -1,0 +1,76 @@
+{#
+  Shared "console script ready" card — the one final step every generator shares:
+  copy the script, paste it into a logged-in backoffice tab, watch it run.
+
+  Before this, each tab hand-rolled its own copy button (unique element ids) and
+  re-typed the DevTools paste ritual. This renders it once, and a single
+  delegated click handler (bound once, at the bottom) drives every instance via
+  data- attributes — so a new tab gets the flow for free by including this.
+
+  Usage:
+    {% with console_script=<ns>.console_script, steps=[...] %}
+      {% include "partials/_console_script.html" %}
+    {% endwith %}
+
+  Inputs:
+    console_script : {"name": <basename>, "text": <js>}  — the card renders only when set.
+    title          : optional card heading (default "Console script ready") — for a
+                     tab that emits more than one script (e.g. JBCL vs PMCL).
+    steps          : optional list of extra <li> strings (marked safe) inserted
+                     before the final step. Use it for the tab-specific bit
+                     (e.g. "it asks for three images").
+    final_step     : optional string (marked safe) replacing the default closing
+                     "Watch for the green confirmation line." — for a tab that
+                     wants to name exactly what success looks like.
+#}
+{% if console_script %}
+<section class="card console-ready" style="overflow:hidden">
+  <div class="card-head">
+    <div>
+      <h2 class="card-title">{{ title or "Console script ready" }}</h2>
+      <p class="card-sub">{{ console_script.name }}</p>
+    </div>
+    <button type="button" class="btn primary" data-copy-script>Copy script</button>
+  </div>
+  <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+    <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
+      <li>Click <b>Copy script</b> above.</li>
+      <li>Open the backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
+      <li>Paste and press Enter. If it says “Waiting for a token”, click anything in the UI.</li>
+      {% for step in steps or [] %}<li>{{ step | safe }}</li>{% endfor %}
+      <li>{{ (final_step or "Watch for the green confirmation line.") | safe }}</li>
+    </ol>
+    <textarea class="input mono" data-copy-source readonly rows="10" spellcheck="false" style="font-size:12px">{{ console_script.text }}</textarea>
+  </div>
+</section>
+{% endif %}
+
+{#
+  One handler for all instances, bound once per page load. Event delegation on
+  the document means it covers tabs rendered now and any added later, with no
+  per-tab ids to keep unique.
+#}
+<script>
+  if (!window.__consoleCopyBound) {
+    window.__consoleCopyBound = true;
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest && e.target.closest('[data-copy-script]');
+      if (!btn) return;
+      var card = btn.closest('.console-ready');
+      var area = card && card.querySelector('[data-copy-source]');
+      if (!area) return;
+      var done = function () {
+        var label = btn.getAttribute('data-label') || 'Copy script';
+        btn.textContent = 'Copied!';
+        setTimeout(function () { btn.textContent = label; }, 2000);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(area.value).then(done, function () {
+          area.select(); document.execCommand('copy'); done();
+        });
+      } else {
+        area.select(); document.execCommand('copy'); done();
+      }
+    });
+  }
+</script>

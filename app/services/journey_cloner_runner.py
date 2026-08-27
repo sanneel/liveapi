@@ -80,12 +80,21 @@ def save_template_from_fetch(
 
 
 def python_executable() -> str:
-    if os.name == "nt":
-        candidate = CLONER_DIR / ".venv" / "Scripts" / "python.exe"
-    else:
-        candidate = CLONER_DIR / ".venv" / "bin" / "python"
-    if candidate.exists():
-        return str(candidate)
+    """The interpreter the generators run under.
+
+    The repo venv comes first. journey-cloner/.venv holds 8 packages (requests +
+    dotenv); the repo venv is a strict superset of it, so preferring the small one
+    could only ever fail where the big one works — and it did:
+    sport_comms_campaign.py reads campaigns by importing this app, and died on
+    "No module named 'pydantic_settings'" with no way for the operator to tell it
+    was an environment problem rather than their sheet.
+    """
+    sub = "Scripts" if os.name == "nt" else "bin"
+    exe = "python.exe" if os.name == "nt" else "python"
+    for root in (BASE_DIR, CLONER_DIR):
+        candidate = root / ".venv" / sub / exe
+        if candidate.exists():
+            return str(candidate)
     return sys.executable
 
 
@@ -181,11 +190,63 @@ COMBINED_SCRIPT_PATH = CLONER_DIR / "gow_combined.py"
 RANDOMIZER_SCRIPT_PATH = CLONER_DIR / "randomizer_campaign.py"
 NC_DISCOUNT_SCRIPT_PATH = CLONER_DIR / "nc_discount_campaign.py"
 NC_DISCOUNT_PMCL_SCRIPT_PATH = CLONER_DIR / "nc_discount_pmcl_campaign.py"
+WELCOME_PACK_SCRIPT_PATH = CLONER_DIR / "welcome_pack_campaign.py"
 PREDICTION_SCRIPT_PATH = CLONER_DIR / "prediction_campaign.py"
+
+
+def nc_discount_calendar(pmcl: bool = False) -> List[Dict[str, str]]:
+    """The baked CALENDAR of the Discount NC generator, for display in the UI.
+
+    Read out of the generator's source with `ast` rather than imported: the
+    generator pulls in requests/dotenv via create_journeys, and the admin page
+    must not fail to render because a CLI dependency moved. Parsing also keeps
+    this a display-only read — the generator stays the single source of truth.
+
+    The panel used to hard-code this list, which silently went stale the first
+    time the calendar changed (it advertised July after August shipped). Never
+    hard-code it again: return [] and the template omits the list.
+    """
+    import ast
+
+    path = NC_DISCOUNT_PMCL_SCRIPT_PATH if pmcl else NC_DISCOUNT_SCRIPT_PATH
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError):
+        return []
+
+    rows: List[Dict[str, str]] = []
+    for node in tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(isinstance(t, ast.Name) and t.id == "CALENDAR" for t in node.targets):
+            continue
+        try:
+            entries = ast.literal_eval(node.value)
+        except ValueError:
+            return []
+        for entry in entries:
+            try:
+                date_str, slug, name = entry[0], entry[1], entry[2]
+                day = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+            except (TypeError, IndexError, ValueError):
+                continue
+            rows.append({
+                "date": day.strftime("%d.%m"),
+                # Derived from the date, never transcribed — a hand-typed weekday
+                # is how "14.08 Monday" (a Friday) got into a brief.
+                "weekday": day.strftime("%a"),
+                "slug": slug,
+                "name": name,
+            })
+        break
+    return rows
 TOURNAMENT_PMCL_SCRIPT_PATH = CLONER_DIR / "tournament_pmcl_campaign.py"
+TOURNAMENT_JBCL_SCRIPT_PATH = CLONER_DIR / "tournament_jbcl_campaign.py"
 COMPOSE_SCRIPT_PATH = CLONER_DIR / "compose.py"
 CHAIN_COMPOSER_SCRIPT_PATH = CLONER_DIR / "journey_composer.py"
 BET_AND_GET_PMCL_SCRIPT_PATH = CLONER_DIR / "bet_and_get_pmcl_campaign.py"
+SPORT_COMMS_SCRIPT_PATH = CLONER_DIR / "sport_comms_campaign.py"
+COMMS_BUILDER_SCRIPT_PATH = CLONER_DIR / "comms_builder.py"
 
 # Randomizer promos (weighted prize wheels / scratch cards). Keys must match
 # randomizer_campaign.py --kind.
@@ -385,6 +446,7 @@ def generate_randomizer_console_script(
     days: str = "",
     weights: str = "",
     journeys: str = "",
+    prize_text: str = "",
 ) -> Tuple[int, str, str, str | None, str]:
     """Generate the console script for one or MORE Randomizer promos (Sport WOF,
     Casino WOF, or Raspa y Gana scratch card). `date` may hold several dates
@@ -413,65 +475,94 @@ def generate_randomizer_console_script(
         cmd += ["--weights", *weights.split()]
     if journeys.strip():
         cmd += ["--journeys", *journeys.split()]
+    if prize_text.strip():
+        # Sport WOF only: one line per prize slice, EN<TAB>ES, read from stdin.
+        cmd += ["--prize-text", "-"]
+        return _run_gow_cli(cmd, spec_text=prize_text, basename=basename)
     return _run_gow_cli(cmd, basename=basename)
 
 
-def generate_tournament_pmcl_console_script(
+def _generate_tournament_console_script(
     *,
+    script_path,
+    tag: str,
     date: str,
     spec_text: str,
-    tournament_id: str = "",
-    folder_id: str = "",
+    link: str = "",
     journey_name: str = "",
-    tournament_start: str = "",
-    tournament_end: str = "",
+    email_content_id: str = "",
+    email_link: str = "",
     no_photos: bool = False,
 ) -> Tuple[int, str, str, str | None, str]:
-    """Generate the paste-into-DevTools console script for the PMCL (Fortunazo)
-    tournament communications journey (Notification Center + Pop-up + SMS; email
-    left untouched). Copy comes from the pasted spec blob; every channel's link
-    is pointed at the Smartico tournament deeplink. When a media-library
-    ``folder_id`` is given the script uploads a fresh NC icon + Pop-up
-    background, otherwise the template's existing images are kept.
+    """Generate the paste-into-DevTools console script for one brand's tournament
+    comms journey (Notification Center + Pop-up + SMS + email).
 
-    ``tournament_start`` / ``tournament_end`` (YYYY-MM-DD) set the two Wait/Date
-    activities and the notification revoke period to the exact tournament run.
-    Both override the spec's own "Start date"/"End date" rows when given.
+    Everything else the journey needs comes from the pasted sheet, not from an
+    operator field: its ``Start date``/``End date`` rows set the two Wait/Date
+    gates, the notification revoke period and the journey name, and its copy
+    fills every channel. ``link`` is any promo URL — its path is what the
+    notification and pop-up open, and the SMS carries it behind
+    ``https://{{BrandDomain}}``. The media-library folder is a property of the
+    brand and is baked into the generator.
+
+    The console script CREATES the draft (POST) and then SAVES it (PUT) — the
+    save is what finalises the canvas.
 
     Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
     """
-    basename = _unique_basename("tournament_pmcl", date)
+    basename = _unique_basename(tag, date)
     cmd = [
         python_executable(),
-        str(TOURNAMENT_PMCL_SCRIPT_PATH),
-        "--date",
-        date.strip(),
-        "--spec",
-        "-",
-        "--name",
-        basename,
+        str(script_path),
+        "--date", date.strip(),
+        "--spec", "-",
+        "--name", basename,
     ]
-    if tournament_id.strip():
-        cmd += ["--tournament-id", tournament_id.strip()]
-    if folder_id.strip():
-        cmd += ["--folder-id", folder_id.strip()]
+    if link.strip():
+        cmd += ["--link", link.strip()]
     if journey_name.strip():
         cmd += ["--journey-name", journey_name.strip()]
-    if tournament_start.strip():
-        cmd += ["--tournament-start", tournament_start.strip()]
-    if tournament_end.strip():
-        cmd += ["--tournament-end", tournament_end.strip()]
+    if email_content_id.strip():
+        cmd += ["--email-content-id", email_content_id.strip()]
+    if email_link.strip():
+        cmd += ["--email-link", email_link.strip()]
     if no_photos:
         cmd += ["--no-photos"]
     return _run_gow_cli(cmd, spec_text=spec_text, basename=basename)
 
 
-def generate_nc_discount_pmcl_console_script(folder_id: str) -> Tuple[int, str, str, str | None, str]:
-    """Generate the "NC For Discount PMCL" console script for fortunazo.cl."""
+def generate_tournament_pmcl_console_script(**kw) -> Tuple[int, str, str, str | None, str]:
+    """PMCL (Fortunazo) tournament comms."""
+    return _generate_tournament_console_script(
+        script_path=TOURNAMENT_PMCL_SCRIPT_PATH, tag="tournament_pmcl", **kw)
+
+
+def generate_tournament_jbcl_console_script(**kw) -> Tuple[int, str, str, str | None, str]:
+    """JBCL (JugaBet) tournament comms."""
+    return _generate_tournament_console_script(
+        script_path=TOURNAMENT_JBCL_SCRIPT_PATH, tag="tournament_jbcl", **kw)
+
+
+def generate_nc_discount_pmcl_console_script() -> Tuple[int, str, str, str | None, str]:
+    """Generate the "NC For Discount PMCL" console script for fortunazo.cl.
+    The PMCL media-library folder UUID is baked into the CLI script."""
     basename = _unique_basename("nc_discount_pmcl", "")
     cmd = [python_executable(), str(NC_DISCOUNT_PMCL_SCRIPT_PATH),
-           "--name", basename, "--folder-id", folder_id]
+           "--name", basename]
     return _run_gow_cli(cmd, basename=basename)
+
+
+def generate_nc_discount_pmcl_from_brief_console_script(
+    brief_text: str,
+) -> Tuple[int, str, str, str | None, str]:
+    """Same as generate_nc_discount_pmcl_console_script, but the calendar and
+    per-day copy come from a pasted ops brief piped via stdin — overrides the
+    baked-in defaults in nc_discount_pmcl_campaign.py. Year is auto-detected
+    from the current date."""
+    basename = _unique_basename("nc_discount_pmcl", "")
+    cmd = [python_executable(), str(NC_DISCOUNT_PMCL_SCRIPT_PATH),
+           "--name", basename, "--brief", "-"]
+    return _run_gow_cli(cmd, basename=basename, spec_text=brief_text)
 
 
 def generate_prediction_console_script(
@@ -494,18 +585,21 @@ def generate_prediction_console_script(
     of a console script, and that request plan is appended to output_log so
     it's still visible without pasting anything.
     """
-    if not draft_id.strip() or not content_id.strip() or not front_id.strip():
-        raise ValueError("Draft id, Content id, and Front id are all required.")
-    basename = name.strip() or _unique_basename("prediction", draft_id.strip())
+    # The draft/content/front ids are baked into prediction_campaign.py — they
+    # are properties of the promo, not of a run, and having them as form fields
+    # meant three GUIDs retyped from memory each time. Only forwarded when the
+    # caller actually supplied one, so the generator's own defaults apply.
+    basename = name.strip() or _unique_basename("prediction", draft_id.strip() or "draft")
     cmd = [
         python_executable(),
         str(PREDICTION_SCRIPT_PATH),
         "--sheet", "-",
-        "--draft-id", draft_id.strip(),
-        "--content-id", content_id.strip(),
-        "--front-id", front_id.strip(),
         "--name", basename,
     ]
+    for flag, value in (("--draft-id", draft_id), ("--content-id", content_id),
+                        ("--front-id", front_id)):
+        if value.strip():
+            cmd += [flag, value.strip()]
     if base_body_path.strip():
         cmd += ["--base-body", base_body_path.strip()]
     if dry_run:
@@ -535,6 +629,84 @@ def generate_prediction_console_script(
         plan_path = CLONER_DIR / "out" / basename / "00_request_plan.txt"
         if proc.returncode == 0 and plan_path.exists():
             output += "\n\n" + plan_path.read_text(encoding="utf-8")
+        return proc.returncode, output, display_cmd, None, basename
+
+    js_filename = f"{basename}_console.js"
+    js_text = None
+    if proc.returncode == 0:
+        js_path = CLONER_DIR / "console_scripts" / js_filename
+        if js_path.exists():
+            js_text = js_path.read_text(encoding="utf-8")
+        else:
+            output += f"\nERROR: expected script file not found: {js_path}"
+    return proc.returncode, output, display_cmd, js_text, js_filename
+
+
+def generate_sport_comms_console_script(
+    *,
+    campaign_slug: str,
+    sheet_text: str,
+    promo_link: str = "",
+    stop_at: str = "",
+    name: str = "",
+    dry_run: bool = False,
+) -> Tuple[int, str, str, str | None, str]:
+    """Build the sport scratch-card comms journey for a liveapi campaign.
+
+    Wraps journey-cloner/sport_comms_campaign.py. The pasted content sheet goes
+    in over stdin (--spec -) so it never touches disk; the campaign is read from
+    this app's own database by the generator.
+
+    Returns (returncode, output_log, display_cmd, js_text or None, basename).
+    A refusal — no such campaign, no expiry, a sheet missing its Link row, or a
+    verify() check that failed — exits non-zero with the reason in the log, and
+    js_text is None. That is the generator working, not a crash.
+    """
+    if not campaign_slug.strip():
+        raise ValueError("Pick the liveapi campaign this promo belongs to.")
+    if not sheet_text.strip():
+        raise ValueError("Paste the content sheet (channel copy + the Link row).")
+
+    # _unique_basename slugs on digits only, which would flatten a campaign
+    # slug to "date". Keep the slug readable; the uuid still makes the
+    # console_scripts/<basename>.js path unique per request.
+    safe = re.sub(r"[^a-z0-9]+", "-", campaign_slug.strip().lower()).strip("-") or "campaign"
+    basename = name.strip() or f"sport_comms_{safe}_{uuid.uuid4().hex[:8]}"
+    cmd = [
+        python_executable(),
+        str(SPORT_COMMS_SCRIPT_PATH),
+        "--campaign", campaign_slug.strip(),
+        "--spec", "-",
+        "--name", basename,
+    ]
+    if promo_link.strip():
+        cmd += ["--promo-link", promo_link.strip()]
+    if stop_at.strip():
+        cmd += ["--stop-at", stop_at.strip()]
+    if dry_run:
+        cmd.append("--dry-run")
+
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    display_cmd = " ".join(
+        part if " " not in part else repr(part) for part in cmd
+    ) + "  < (pasted sheet piped via stdin)"
+
+    proc = subprocess.run(
+        cmd,
+        cwd=CLONER_DIR,
+        env=env,
+        text=True,
+        encoding="utf-8",
+        capture_output=True,
+        timeout=120,
+        input=sheet_text,
+    )
+    output = proc.stdout
+    if proc.stderr:
+        output += "\nSTDERR:\n" + proc.stderr
+
+    if dry_run:
         return proc.returncode, output, display_cmd, None, basename
 
     js_filename = f"{basename}_console.js"
@@ -672,6 +844,34 @@ def generate_nc_discount_console_script() -> Tuple[int, str, str, str | None, st
     return _run_gow_cli(cmd, basename=basename)
 
 
+def generate_welcome_pack_console_script(
+    *, code: str, brand: str, mode: str
+) -> Tuple[int, str, str, str | None, str]:
+    """Generate the "Welcome Pack - 1st Deposit / Aff" console script: one
+    promocode, one brand, one mode -> one draft.
+
+    brand and mode have no default on purpose. They used to accept "both", which
+    built up to four drafts in one paste — four separate promotions to re-point
+    before publishing — and a defaulted brand is how a Fortunazo operator ends up
+    holding a JugaBet draft.
+
+    The generator refuses a malformed promocode, so a bad input comes back as a
+    non-zero exit with the reason in the output rather than a wrong draft.
+
+    Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
+    """
+    basename = _unique_basename("welcome_pack", "")
+    cmd = [
+        python_executable(),
+        str(WELCOME_PACK_SCRIPT_PATH),
+        "--code", code.strip().upper(),
+        "--brand", brand,
+        "--mode", mode,
+        "--name", basename,
+    ]
+    return _run_gow_cli(cmd, basename=basename)
+
+
 def run_journey_cloner(
     *,
     token: str,
@@ -754,3 +954,96 @@ def generate_bet_and_get_pmcl_console_script(
     if allow_any_weekday:
         cmd += ["--allow-any-weekday"]
     return _run_gow_cli(cmd, spec_text=email_spec, basename=basename)
+
+
+def generate_comms_builder_console_script(
+    *,
+    sheet_text: str,
+    channels: List[str],
+    splits: List[str],
+    waits: Dict[str, str],
+    variant: str = "",
+    date: str = "",
+    days: str = "",
+    journey_name: str = "",
+    link: str = "",
+    email_template: str = "",
+    email_heading: str = "",
+    artwork: str = "PICK",
+) -> Tuple[int, str, str, str | None, str]:
+    """Build a JBCL comms journey from ticked channels + the pasted sheet.
+
+    Wraps journey-cloner/comms_builder.py, which is deterministic: the chain is
+    exactly the channels/splits/waits passed in, and every word of copy comes
+    from the sheet via spec_parser. No model is involved, so there is nothing to
+    hallucinate — and a gap (a channel with no copy, a split on SMS, a missing
+    link or date) exits non-zero with the reason instead of being filled in.
+
+    The sheet goes in over stdin so it never touches disk.
+
+    Returns (returncode, output_log, display_cmd, js_text or None, js_filename).
+    """
+    if not sheet_text.strip():
+        raise ValueError("Paste the content sheet (the channel copy + the Link row).")
+    if not channels:
+        raise ValueError("Tick at least one channel.")
+
+    basename = _unique_basename("comms_builder", date)
+    cmd = [
+        python_executable(),
+        str(COMMS_BUILDER_SCRIPT_PATH),
+        "--sheet", "-",
+        "--channels", ",".join(channels),
+        "--splits", ",".join(splits),          # explicit, so "none ticked" means none
+        "--out-name", basename,
+        "--script",
+    ]
+    if variant.strip():
+        cmd += ["--variant", variant.strip()]
+    for chan, dur in waits.items():
+        if dur.strip():
+            cmd += ["--wait", f"{chan}={dur.strip()}"]
+    if date.strip():
+        cmd += ["--date", date.strip()]
+    if days.strip():
+        cmd += ["--days", days.strip()]
+    if journey_name.strip():
+        cmd += ["--name", journey_name.strip()]
+    if link.strip():
+        cmd += ["--link", link.strip()]
+    if email_template.strip():
+        cmd += ["--email-template", email_template.strip()]
+    if email_heading.strip():
+        cmd += ["--email-heading", email_heading.strip()]
+    if artwork.strip() and artwork.strip() != "PICK":
+        cmd += ["--artwork", artwork.strip()]
+
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    display_cmd = " ".join(
+        part if " " not in part else repr(part) for part in cmd
+    ) + "  < (pasted sheet piped via stdin)"
+
+    proc = subprocess.run(
+        cmd,
+        cwd=CLONER_DIR,
+        env=env,
+        text=True,
+        encoding="utf-8",
+        capture_output=True,
+        timeout=180,
+        input=sheet_text,
+    )
+    output = proc.stdout
+    if proc.stderr:
+        output += "\nSTDERR:\n" + proc.stderr
+
+    js_filename = f"{basename}_console.js"
+    js_text = None
+    if proc.returncode == 0:
+        js_path = CLONER_DIR / "console_scripts" / js_filename
+        if js_path.exists():
+            js_text = js_path.read_text(encoding="utf-8")
+        else:
+            output += f"\n(expected {js_filename} but it was not written)"
+    return proc.returncode, output, display_cmd, js_text, js_filename

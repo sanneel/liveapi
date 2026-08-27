@@ -54,10 +54,8 @@ AUTOMATION_SCRIPTS: Dict[str, List[str]] = {
     "sport_wof": [
         "randomizer_campaign.py",
         "templates/sport/sport_wof_randomizer.json",
-        "templates/sport/wof_visual/content-en.json",
-        "templates/sport/wof_visual/content-es.json",
-        "templates/sport/wof_visual/settings.json",
-        "templates/sport/wof_visual/manifest.json",
+        "templates/sport/sport_wof_save.json",
+        "templates/sport/wof_visual/uploads.json",
     ],
     "casino_scratch_card": [
         "randomizer_campaign.py",
@@ -149,18 +147,22 @@ GENERATORS: List[dict] = [
      "label": "Game of the Week",
      "what": "Free-spin journey + promo page + comms, one paste",
      "script": "gow_combined.py", "tab": "gow"},
-    {"key": "casino_gow_clone", "group": "Casino", "brand": "JBCL",
-     "label": "Casino GOW clone",
-     "what": "Older path: clone GOW with new game/bets. Prefer the composer recipes",
-     "script": "casino_journey.py", "tab": None, "legacy": True},
     {"key": "instant_freespin", "group": "Casino", "brand": "JBCL/PMCL",
      "label": "Instant free spins",
      "what": "Promotion → free spins, no deposit gate (composer recipe)",
      "script": "compose.py", "route": "/admin/ai"},
+    {"key": "comms_builder", "group": "Comms", "brand": "JBCL",
+     "label": "Comms builder",
+     "what": "THE JBCL comms entry point: pick channels/splits/waits, paste the sheet. "
+             "--variant gow for the GOW comms shape; the other shapes have tabs of "
+             "their own. No model involved",
+     "script": "comms_builder.py", "tab": "comms_builder"},
     {"key": "nc_discount", "group": "Casino", "brand": "JBCL",
      "label": "Discount NC",
-     "what": "One notification journey per game/day from the calendar",
-     "script": "nc_discount_campaign.py", "tab": "nc_discount"},
+     "what": "One notification journey per game/day from the calendar. Superseded by "
+             "Comms builder --variant nc_only; kept for the baked calendar",
+     "script": "nc_discount_campaign.py", "tab": "nc_discount",
+     "superseded_by": "comms_builder"},
     {"key": "nc_discount_pmcl", "group": "Casino", "brand": "PMCL",
      "label": "Discount NC — PMCL",
      "what": "The fortunazo.cl variant, same shape",
@@ -175,10 +177,20 @@ GENERATORS: List[dict] = [
      "label": "Promo Codes",
      "what": "Four match journeys per fixture (UDCH, Colo Colo)",
      "script": "create_journeys.py", "tab": "journey_cloner"},
+    {"key": "welcome_pack", "group": "Sport", "brand": "JBCL/PMCL",
+     "label": "Welcome Pack promo codes",
+     "what": "One promocode → one draft; pick the brand (JBCL/PMCL) and mode (normal/boosted)",
+     "script": "welcome_pack_campaign.py", "tab": "welcome_pack"},
     {"key": "prediction", "group": "Sport", "brand": "JBCL",
      "label": "Prediction",
      "what": "Multi-number prediction promo from a pasted sheet",
      "script": "prediction_campaign.py", "tab": "prediction"},
+    {"key": "sport_comms", "group": "Sport", "brand": "JBCL",
+     "label": "Scratch Card Comms",
+     "what": "SMS + notification + pop-up + email for a liveapi campaign. Superseded by "
+             "Comms builder --variant scratch_card, except the liveapi card fetch",
+     "script": "sport_comms_campaign.py", "tab": "sport_comms",
+     "superseded_by": "comms_builder"},
 
     # ── Wheels & cards ────────────────────────────────────────────────────
     {"key": "randomizers", "group": "Wheels & cards", "brand": "JBCL/PMCL",
@@ -188,17 +200,23 @@ GENERATORS: List[dict] = [
 
     # ── Comms ─────────────────────────────────────────────────────────────
     {"key": "tournament_pmcl", "group": "Comms", "brand": "PMCL",
-     "label": "PMCL Tournament",
-     "what": "NC + pop-up + SMS wired to the Smartico deeplink",
+     "label": "PMCL Tournament comms",
+     "what": "NC + pop-up + SMS + email for a Fortunazo tournament, one journey (create + save)",
      "script": "tournament_pmcl_campaign.py", "tab": "tournament_pmcl"},
+    {"key": "tournament_jbcl", "group": "Comms", "brand": "JBCL",
+     "label": "JBCL Tournament comms",
+     "what": "NC + pop-up + SMS + email for a JugaBet tournament, one journey (create + save)",
+     "script": "tournament_jbcl_campaign.py", "tab": "tournament_jbcl"},
     {"key": "comms_chain", "group": "Comms", "brand": "JBCL/PMCL",
      "label": "Comms journey from content",
      "what": "NC + pop-up + SMS + email with your copy, one journey per date",
      "script": "journey_composer.py", "route": "/admin/ai"},
     {"key": "gow_comms", "group": "Comms", "brand": "JBCL",
      "label": "GOW comms",
-     "what": "The comms half of a GOW campaign (built with it by default)",
-     "script": "comms_campaign.py", "tab": "gow"},
+     "what": "The comms half of a GOW campaign (built with it by default). Superseded "
+             "for standalone use by Comms builder --variant gow",
+     "script": "comms_campaign.py", "tab": "gow",
+     "superseded_by": "comms_builder"},
 
     # ── Assets ────────────────────────────────────────────────────────────
     {"key": "slot_cards", "group": "Assets", "brand": "JBCL",
@@ -209,38 +227,27 @@ GENERATORS: List[dict] = [
      "label": "Figma export",
      "what": "Pull GOW image slots straight out of Figma",
      "script": "figma_export.py", "tab": "gow"},
-
-    # ── Tools ─────────────────────────────────────────────────────────────
-    {"key": "games_registry", "group": "Tools", "brand": "—",
-     "label": "Games registry",
-     "what": "Rebuild library/games.json from the backoffice catalog",
-     "script": "build_games_registry.py", "tab": None},
-    {"key": "catalog", "group": "Tools", "brand": "—",
-     "label": "Automation catalog",
-     "what": "Rebuild catalog.json (what the Overview graph reads)",
-     "script": "build_catalog.py", "tab": None},
-    {"key": "planner", "group": "Tools", "brand": "JBCL/PMCL",
-     "label": "AI planner",
-     "what": "Brief → plan → design boards → console scripts",
-     "script": "compose.py", "route": "/admin/ai"},
 ]
 
 # Scripts that are library/tooling, not campaign generators — excluded from the
 # "unregistered" warning so it only fires on something genuinely new.
 _NOT_GENERATORS = {
-    "__init__.py", "spec_parser.py", "email_content.py", "compose_comms.py",
+    "__init__.py", "spec_parser.py", "email_content.py", "media_library.py",
+    "har_analyse.py",
     "journey_composer.py", "compose.py", "plan_lint.py", "extract_fragments.py",
     "extract_knobs.py", "extract_templates.py", "mine_flows.py", "web_ui.py",
     "generate_console_script.py", "ai_campaign_builder.py", "casino_journey.py",
     "gow_campaign.py", "comms_campaign.py", "build_catalog.py",
-    "build_games_registry.py", "nc_discount_campaign.py",
-    "nc_discount_pmcl_campaign.py", "tournament_pmcl_email.py",
+    "build_games_registry.py", "build_generators_catalog.py",
+    "nc_discount_campaign.py",
+    "nc_discount_pmcl_campaign.py",
+    "comms_engine.py", "tournament_comms_base.py", "har_analyse.py",
 }
 
 
 # Reading order for the Overview. Jinja's groupby sorts alphabetically, which put
 # Assets and Tools above the thing most people came for.
-GROUP_ORDER = ["Casino", "Sport", "Wheels & cards", "Comms", "Assets", "Tools"]
+GROUP_ORDER = ["Casino", "Sport", "Wheels & cards", "Comms", "Assets"]
 
 
 def generators() -> List[dict]:
