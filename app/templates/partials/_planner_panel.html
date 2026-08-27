@@ -8,7 +8,17 @@
    the operator picked, and working in dark mode. #}
 <style>
   /* ── shell ─────────────────────────────────────────────────────────────── */
-  .jp-wrap{display:flex;flex-direction:column;gap:14px;height:calc(100vh - 250px);min-height:660px}
+  /* The workspace IS the page. The old height was viewport-minus-250px, a guess
+     at the chrome above it, which left the conversation in a short box with a
+     dead band under it however tall the screen was. The page shell is a flex
+     column now and the workspace takes whatever is left, so the chat grows with
+     the window instead of being cropped to a square. Scoped to .ai-page so no
+     other admin page changes. */
+  main.ai-page{height:100vh;min-height:0;overflow:hidden;padding:18px 22px 16px;
+    display:flex;flex-direction:column}
+  main.ai-page .page-head{flex:none;margin-bottom:12px}
+  main.ai-page .page-body{flex:1;min-height:0;display:flex;flex-direction:column}
+  .jp-wrap{display:flex;flex-direction:column;gap:12px;flex:1;min-height:0}
   .jp-wrap.jp-full{position:fixed;inset:0;z-index:60;background:var(--canvas);
     padding:18px 22px 20px;height:100vh;min-height:0}
   .jp-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 318px;gap:14px}
@@ -55,10 +65,12 @@
   .jp-bubble{flex:1;min-width:0;border:1px solid var(--border);border-radius:14px;
     padding:12px 15px;background:var(--surface);overflow-x:auto}
   .jp-msg.user .jp-bubble{background:var(--acw);border-color:color-mix(in srgb, var(--ac) 20%, transparent)}
-  .jp-bubble pre{margin:0;font-family:'SFMono-Regular',Consolas,Menlo,monospace;font-size:12.5px;
+  .jp-bubble pre{margin:0;font-family:'SFMono-Regular',Consolas,Menlo,monospace;font-size:13px;
     line-height:1.55;white-space:pre-wrap;word-break:break-word;color:var(--t-body)}
-  .jp-bubble .u{white-space:pre-wrap;line-height:1.55;font-size:13.5px;color:var(--t-body)}
-  .jp-bubble .jp-sum{font-size:13.5px;font-weight:700;color:var(--t-strong)}
+  /* 13.5px was sized for the cropped panel. This is a reading surface — a plan
+     runs to several screens — so the conversation gets body-copy size. */
+  .jp-bubble .u{white-space:pre-wrap;line-height:1.62;font-size:15px;color:var(--t-body)}
+  .jp-bubble .jp-sum{font-size:14.5px;font-weight:700;color:var(--t-strong)}
   .jp-warn{color:var(--warn-t)}
   .jp-uncap{color:var(--live-t);font-weight:700}
   .jp-q{color:var(--club-t)}
@@ -130,9 +142,21 @@
     font-size:11.5px;font-weight:700;color:var(--t-muted)}
   .jp-inline-board figcaption span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
+  /* A script is pasted, never opened. Downloading put a file in ~/Downloads that
+     the operator then had to find and open just to copy out of it, so the two
+     actions that matter — read it, copy it — are the two buttons, and the script
+     opens in place under its row. flex-basis:100% so it takes its own line in
+     the row rather than squeezing the buttons. */
+  .jp-script{flex:0 0 100%;margin:9px 0 0;padding:11px 13px;border-radius:11px;
+    background:var(--subtle);border:1px solid var(--border);max-height:340px;overflow:auto;
+    font-family:'SFMono-Regular',Consolas,Menlo,monospace;font-size:12px;line-height:1.5;
+    white-space:pre;color:var(--t-body);tab-size:2}
+  .jp-srow .t{cursor:pointer}
+  .jp-srow.bad .t{cursor:default}
+
   /* ── results: Boards / Script ──────────────────────────────────────────── */
   .jp-results{background:var(--surface);border:1px solid var(--border);border-radius:16px;
-    box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;flex-direction:column;max-height:46%;
+    box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;flex-direction:column;max-height:38%;
     animation:jp-in .2s cubic-bezier(.22,.61,.36,1) both}
   /* a `display` rule of our own beats the UA's [hidden]{display:none} */
   .jp-wrap [hidden]{display:none}
@@ -675,9 +699,28 @@ NOTES
     a.className = "jp-dl"; a.textContent = label || "⬇ Download";
     return a;
   }
-  function dlLink(text, filename, label, mime){
-    return dlAnchor(URL.createObjectURL(new Blob([text], { type: mime || "text/javascript" })),
-                    filename || "composed_console.js", label);
+  // Copy, with a fallback. navigator.clipboard needs a secure context and can be
+  // refused outright by a permission policy; when it is, the caller opens the
+  // preview so the text can be selected by hand rather than a click that looks
+  // like it worked and put nothing on the clipboard.
+  async function copyText(text){
+    try{
+      if(navigator.clipboard && window.isSecureContext){
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    }catch(e){ /* fall through to the textarea route */ }
+    try{
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+      document.body.append(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      ta.remove();
+      return ok;
+    }catch(e){ return false; }
   }
 
   // Tokens spent, so the cost of a campaign is visible while you work rather
@@ -810,11 +853,43 @@ NOTES
     sendBtn.title = on ? "Stop this answer (Esc)" : "";
   }
 
+  // Which journeys a message is asking for the scripts of — "give me only
+  // journey 1 2 script" -> [1,2]. Recognised only when it names scripts AND
+  // journeys AND at least one number, so a question about a journey ("what does
+  // journey 2 do?") still goes to the model. Sending a build request to the
+  // model just returns prose; what the operator wants is those scripts.
+  function scriptRequest(text){
+    if(!/\bscripts?\b/i.test(text)) return null;
+    if(!/\bjourneys?\b/i.test(text)) return null;
+    // A question about a script is still a question. "why did journey 2's script
+    // fail?" names scripts, journeys and a number, and hijacking it into a build
+    // would answer something the operator did not ask.
+    if(/\?\s*$/.test(text)) return null;
+    if(/^\s*(why|what|which|how|when|where|who|does|do|did|is|are|was|can|could|should|would)\b/i.test(text)) return null;
+    const nums = (text.match(/\d+/g) || []).map(Number).filter(n => n >= 1 && n <= 99);
+    return nums.length ? [...new Set(nums)].sort((a, b) => a - b) : null;
+  }
+
+  let pendingOnly = null;    // journeys the next compose is limited to
+
   async function send(){
     if(busy) return;
     const text = input.value.trim();
     if(!text) return;
     hint.textContent = "";
+
+    const only = scriptRequest(text);
+    if(only){
+      addMsg("user", text);
+      history.push({ role: "user", text });     // kept, so the thread still reads
+      input.value = ""; autoGrow(); toBottom(true);
+      pendingOnly = only;
+      hint.textContent = `Building journey${only.length === 1 ? "" : "s"} `
+                       + `${only.join(", ")}…`;
+      await buildBtn.onclick();
+      return;
+    }
+
     addMsg("user", text);
     history.push({ role: "user", text });
     input.value = ""; autoGrow();
@@ -878,7 +953,10 @@ NOTES
   };
   document.getElementById("jpCopy").onclick = () => {
     const last = [...history].reverse().find(m => m.role === "model");
-    if(last){ navigator.clipboard.writeText(last.text); hint.textContent = "Copied last reply."; }
+    if(last){ copyText(last.text).then(ok => {
+        hint.textContent = ok ? "Copied last reply."
+                              : "Clipboard blocked by the browser — select the reply and copy.";
+      }); }
     else { hint.textContent = "Nothing to copy yet."; }
   };
 
@@ -1112,7 +1190,8 @@ NOTES
       const res = await fetch("/admin/planner/compose", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text: last.text, mode }),
+        body: JSON.stringify({ text: last.text, mode,
+                               only: pendingOnly || undefined }),
         signal: controller.signal,
       });
       let data;
@@ -1131,6 +1210,46 @@ NOTES
         return row;
       }
 
+      // One script row: read it here, copy it, paste it. No download.
+      function scriptRow(title, sub, text, filename){
+        const bar = document.createElement("div");
+        bar.style.cssText = "display:flex;gap:7px;flex-wrap:wrap;align-items:center";
+        const pv = document.createElement("button");
+        pv.type = "button"; pv.className = "jp-dl"; pv.textContent = "👁 Preview";
+        const cp = document.createElement("button");
+        cp.type = "button"; cp.className = "jp-dl"; cp.textContent = "⧉ Copy";
+        const pre = document.createElement("pre");
+        pre.className = "jp-script"; pre.hidden = true; pre.textContent = text || "";
+        const toggle = () => {
+          pre.hidden = !pre.hidden;
+          pv.textContent = pre.hidden ? "👁 Preview" : "▲ Hide";
+          if(!pre.hidden) pre.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        };
+        pv.onclick = toggle;
+        cp.onclick = async () => {
+          const ok = await copyText(text || "");
+          cp.textContent = ok ? "✓ Copied" : "⚠ Select it";
+          setTimeout(() => { cp.textContent = "⧉ Copy"; }, 1800);
+          if(ok){
+            hint.textContent = `${filename || "Script"} copied — paste it into a `
+                             + `logged-in backoffice console (F12).`;
+          } else {
+            // Clipboard access can be refused (permission, or a non-secure
+            // context). Opening the preview at least puts the text where it can
+            // be selected by hand instead of failing silently.
+            pre.hidden = false; pv.textContent = "▲ Hide";
+            hint.textContent = "Clipboard blocked by the browser — select the script above and copy.";
+          }
+        };
+        bar.append(pv, cp);
+        const row = srow(title, sub, bar);
+        row.style.flexWrap = "wrap";
+        row.append(pre);
+        const t = row.querySelector(".t");
+        if(t) t.onclick = toggle;          // clicking the name previews it too
+        return row;
+      }
+
       if(data.error){
         bodyOf(bub).innerHTML = `<pre class="jp-err">${esc(data.error)}</pre>`;
         hint.textContent = "";
@@ -1139,9 +1258,9 @@ NOTES
         for(const r of data.results){
           if(r.ok && r.batch){
             // One script, N drafts — the whole campaign in a single paste.
-            srow(`${r.name}${r.partial ? " (partial)" : ""}`,
-                 (r.detail || []).map((n,i) => `${i+1}. ${n}`).join("  ·  "),
-                 dlLink(r.js, r.filename, "⬇ ONE paste"));
+            scriptRow(`${r.name}${r.partial ? " (partial)" : ""}`,
+                      (r.detail || []).map((n,i) => `${i+1}. ${n}`).join("  ·  "),
+                      r.js, r.filename);
             if(r.partial){
               const pre = document.createElement("pre");
               pre.className = "jp-err";
@@ -1151,7 +1270,7 @@ NOTES
               scriptsBox.append(pre);
             }
           } else if(r.ok){
-            srow(`${r.index}. ${r.name}`, r.mode, dlLink(r.js, r.filename, "⬇ script"));
+            scriptRow(`${r.index}. ${r.name}`, r.mode, r.js, r.filename);
           } else {
             // The FIRST informative line names the object and the reason ("game
             // X is not a known lobbyGameId — did you mean …?"). The last line is
@@ -1169,7 +1288,10 @@ NOTES
           }
         }
         showPane("script");
-        bodyOf(bub).innerHTML = `<div class="jp-sum">⚙ Built ${data.built} of ${data.total} objects</div>`
+        const pick = (data.selected || []).length
+                   ? ` · journey${data.selected.length === 1 ? "" : "s"} ${data.selected.join(", ")}`
+                   : "";
+        bodyOf(bub).innerHTML = `<div class="jp-sum">⚙ Built ${data.built} of ${data.total} objects${pick}</div>`
                       + `<div class="u" style="color:var(--t-muted);font-size:12.5px;margin-top:4px">`
                       + `In the Script tab below.</div>`;
         hint.textContent = data.built === data.total
@@ -1180,16 +1302,9 @@ NOTES
                       + `${esc(data.log || "")}</pre>`;
         hint.textContent = "Refused — paste the reason back into the chat to have the planner fix it.";
       } else {
-        const dl = dlLink(data.js, data.filename, "⬇ script");
-        const cp = document.createElement("button");
-        cp.type = "button"; cp.className = "jp-dl"; cp.textContent = "⧉ Copy";
-        cp.onclick = () => { navigator.clipboard.writeText(data.js);
-                             hint.textContent = "Script copied — paste into the backoffice console (F12)."; };
-        const wrapRow = document.createElement("div");
-        wrapRow.style.cssText = "display:flex;gap:7px;flex-wrap:wrap";
-        wrapRow.append(dl, cp);
-        srow(data.filename || "console script",
-             (data.log || "").trim().split("\n").filter(Boolean).pop() || "", wrapRow);
+        scriptRow(data.filename || "console script",
+                  (data.log || "").trim().split("\n").filter(Boolean).pop() || "",
+                  data.js, data.filename);
         showPane("script");
         bodyOf(bub).innerHTML = `<div class="jp-sum">⚙ Script built</div>`
                       + `<div class="u" style="color:var(--t-muted);font-size:12.5px;margin-top:4px">`
@@ -1205,6 +1320,9 @@ NOTES
         : `Compose failed: ${err}`)}</pre>`;
       hint.textContent = "";
     }finally{
+      // One request, one selection: a later "Full script" press builds
+      // everything again rather than silently inheriting the last filter.
+      pendingOnly = null;
       think.stop(); stopped = false;
       setBusy(false); buildBtn.disabled = false; toBottom();
     }

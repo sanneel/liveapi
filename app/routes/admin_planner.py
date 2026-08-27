@@ -1105,6 +1105,34 @@ def planner_compose(
     # A campaign is many objects; a spec builds one. Build every spec present so
     # a reply listing several journeys produces several scripts in one click.
     specs = _extract_all_specs(text)
+
+    # "give me only journey 1 2 script": build a SUBSET. The reply carries every
+    # journey's spec, and composing all six to hand over two is minutes of
+    # subprocess time and, on a refusal anywhere, repair rounds for objects
+    # nobody asked about. Indexes are 1-based and in the order the reply lists
+    # them, which is the numbering the operator is reading off the plan.
+    only_raw = payload.get("only")
+    selected: list[int] = []
+    if only_raw:
+        if not isinstance(only_raw, (list, tuple)):
+            return JSONResponse({"error": "'only' must be a list of journey numbers."})
+        try:
+            selected = sorted({int(n) for n in only_raw})
+        except (TypeError, ValueError):
+            return JSONResponse({"error": f"'only' must be journey numbers, got {only_raw!r}."})
+        out_of_range = [n for n in selected if n < 1 or n > len(specs)]
+        if out_of_range:
+            # Naming the count is the useful half: asking for journey 5 of a
+            # 3-journey reply means the plan and the request disagree, and
+            # building 1-3 quietly would answer a question nobody asked.
+            return JSONResponse({
+                "error": f"You asked for journey {', '.join(map(str, out_of_range))}, "
+                         f"but this reply has {len(specs)} buildable object"
+                         f"{'' if len(specs) == 1 else 's'}. Ask for the spec JSON "
+                         f"for the missing journeys first, or pick from 1"
+                         f"{'' if len(specs) == 1 else f'-{len(specs)}'}."})
+        specs = [specs[n - 1] for n in selected]
+
     if not specs:
         return JSONResponse({
             "error": "That reply is a plan, not a spec — there is no buildable "
@@ -1270,6 +1298,7 @@ def planner_compose(
             })
         built = sum(1 for r in results if r["ok"])
         return JSONResponse({"ok": built > 0, "multi": True, "built": built,
+                             "selected": selected,
                              "repaired": repaired, "objects": built_objects,
                              "total": len(results), "results": results})
 
