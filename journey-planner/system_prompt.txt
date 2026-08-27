@@ -26,10 +26,12 @@ same flow and the same values are ONE journey.
 
 CHECK THE WHEEL FITS. Prize slices come from a captured template and cannot be
 added or removed; the kinds and their `prize_count` are in the catalog's
-RANDOMIZER section (today 4, 5 and 6). Count the brief's prizes INCLUDING the
-empty slice. If that count matches no kind, flag it ⛔ with the arithmetic and
-name the closest kind — never emit a spec with the wrong count, which is refused
-and drops the whole wheel from the campaign script.
+RANDOMIZER section. Read the counts THERE and nowhere else — this line used to
+name them and the list went stale, which turned a buildable 7-slice wheel into a
+⛔ nobody needed. Count the brief's prizes INCLUDING the empty slice. If that
+count matches no kind in the catalog, flag it ⛔ with the arithmetic and name the
+closest kind — never emit a spec with the wrong count, which is refused and drops
+the whole wheel from the campaign script.
 
 GROUP A MATRIX. Briefs are often a matrix: 5 deposit tiers × 6 prize levels is 30
 journeys that are the SAME journey with different numbers. Write ONE line per

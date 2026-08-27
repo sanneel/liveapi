@@ -550,6 +550,13 @@ SETTINGS_DOC = {
                 "max_odds": "maximum odds the free bet can be used at",
                 "expire_days": "days the free bet stays valid once issued"},
     "registration": {"promocode": "the promocode players redeem to enter"},
+    "campaign_connector": {
+        "host_journey_id": "the JRN id of the journey this connects players INTO "
+                           "(e.g. JRN-0-575389). REQUIRED — without it the node "
+                           "keeps the captured campaign's host and the draft "
+                           "feeds players into an unrelated live journey",
+        "campaign_id": "that journey's campaign uuid, from the same backoffice "
+                       "row. REQUIRED — a minted one points at nothing"},
     "casino_bonus_v2": {"bonus_percent": "deposit-match %", "wagering": "wagering requirement (x)",
                         "release_multiplier": "releaseLimitMultiplier", "expiration_ms": "bonusExpirationTime in ms"},
     "notification_center#contract1": {"title_en/es, desc_en/es, caption_en/es": "on-site notification copy",
@@ -768,6 +775,47 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
             dc = init.get("depositConditions") or {}
             note("expirationTimeout", dc.get("expirationTimeout"), s["timeout"])
             dc["expirationTimeout"] = s["timeout"]
+    elif kind == "campaign_connector":
+        # The captured connector points at the campaign it was captured from —
+        # JRN-0-575389, a June sport follow-up — and the node had NO settings, so
+        # every chain using one shipped feeding players into that live journey
+        # while the builder labelled the row with its name. refresh_promotion_
+        # identity mints a fresh campaignId but never touches HostJourneyId, so
+        # the two then disagreed and the connector pointed at nothing coherent.
+        # There is no safe default for "which campaign": it is the one fact only
+        # the operator has, so a connector without it is refused rather than
+        # guessed. See CLAUDE.md — content still shared with the captured
+        # campaign is never shipped.
+        cc = init.get("campaignConnectorConditions")
+        if cc is None:
+            raise SystemExit(
+                "campaign_connector: the captured node has no "
+                "campaignConnectorConditions — recapture it before composing.")
+        host, camp = s.get("host_journey_id"), s.get("campaign_id")
+        if not host or not camp:
+            missing = [k for k, v in (("host_journey_id", host), ("campaign_id", camp)) if not v]
+            raise SystemExit(
+                f"campaign_connector: {' and '.join(missing)} required.\n"
+                f"  It currently points at "
+                f"{(cc.get('activityData') or {}).get('HostJourneyId')!r} "
+                f"({(init.get('displayData') or ['?'])[0]}) — the campaign this node\n"
+                f"  was captured from, which is a LIVE journey players would be fed into.\n"
+                f"  Open the target journey in the backoffice and take both ids from its\n"
+                f"  row, then set them on this chain node.")
+        host, camp = str(host).strip(), str(camp).strip()
+        if not host.upper().startswith("JRN-"):
+            raise SystemExit(
+                f"campaign_connector: host_journey_id {host!r} is not a JRN id — "
+                f"it should look like JRN-0-575389.")
+        note("campaignConnectorConditions.campaignId", cc.get("campaignId"), camp)
+        cc["campaignId"] = camp
+        ad = cc.setdefault("activityData", {})
+        note("activityData.HostJourneyId", ad.get("HostJourneyId"), host)
+        ad["HostJourneyId"] = host
+        # displayData is what the builder prints on the row. Left alone it names
+        # the captured campaign, so the draft reads as connected to that one.
+        note("displayData", init.get("displayData"), [host])
+        init["displayData"] = [host]
     elif kind == "freespin_bonus":
         fa = init.get("freespinActivity") or {}
         if "spins" in s:
@@ -1077,8 +1125,10 @@ def _apply_settings(kind: str, node: dict, s: dict, report: list, warnings: list
         "casino_bonus_v2": {"bonus_percent", "wagering", "release_multiplier", "expiration_ms"},
         "notification_center#contract1": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "image", "deeplink"},
         "notification_center#contract5": {f"{a}_{l}" for a in ("title", "desc", "caption", "link") for l in ("en", "es")} | {"icon", "image", "deeplink"},
-        "promotion": {"content_id", "front_id"},
+        # NB there were two "promotion" keys here; the second silently won, so an
+        # edit to the first would have done nothing. Merged.
         "promotion": {"content_id", "front_id", "placement_content"},
+        "campaign_connector": {"host_journey_id", "campaign_id"},
         "dextra_sms": {"text_en", "text_es"},
         "dextra_email": {"template", "from_name"} | EMAIL_AUTHORING_KEYS,
         "wait_interval": {"wait"},

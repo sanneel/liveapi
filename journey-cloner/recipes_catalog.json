@@ -264,7 +264,10 @@
           "connector"
         ],
         "follow": "PlayerAddedToCampaign",
-        "inline_keys": []
+        "inline_keys": [
+          "campaign_id",
+          "host_journey_id"
+        ]
       },
       "casino_bonus_v2": {
         "aliases": [

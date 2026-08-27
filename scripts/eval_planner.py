@@ -16,9 +16,11 @@ Each check is a failure that really happened, not a hypothetical:
                  brief never asked for.
   grouped        A 5-tier x 6-level matrix was enumerated as 30-37 journeys
                  instead of grouped into lines.
-  wheel_fits     A wheel was planned with 7 prize slices; no captured template
-                 has 7 (they have 4, 5 and 6), so the whole wheel was refused
-                 at build time.
+  wheel_fits     A wheel was planned with more prize slices than any captured
+                 template has, so the whole wheel was refused at build time. The
+                 buildable counts are read from recipes_catalog.json, not listed
+                 here: they were once hardcoded {4,5,6} and the day sport_wof was
+                 captured with 7 this check started failing a correct answer.
   design_block   The `diagram` block was missing, or truncated into JSON the
                  renderer could not parse, so no boards were drawn.
   flags_terse    A single ❓ flag ran to 1,200 characters of prose. The limit is
@@ -58,7 +60,22 @@ import render_journey_design as R                                      # noqa: E
 
 # Prize slice counts of the captured randomizer templates. A plan asking for any
 # other count cannot be built, so the wheel silently vanishes from the campaign.
-CAPTURED_SLICES = {4, 5, 6}
+def _captured_slices() -> set[int]:
+    """Every prize_count the composer can actually build, from the catalog the
+    prompt itself is given. Hardcoded {4,5,6} here scored a correct answer as a
+    failure the day sport_wof was captured with 7: the model declined to flag a
+    7-slice wheel, which was right, and the harness called it wrong."""
+    try:
+        cat = json.loads((REPO / "journey-cloner" / "recipes_catalog.json")
+                         .read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return set()
+    kinds = ((cat.get("randomizer") or {}).get("kinds") or {})
+    return {int(k["prize_count"]) for k in kinds.values()
+            if isinstance(k, dict) and str(k.get("prize_count", "")).isdigit()}
+
+
+CAPTURED_SLICES = _captured_slices()
 
 
 def _game_resolves(name: str) -> bool:
@@ -115,15 +132,20 @@ Comms on both days: NC, Email, SMS and Pop Up.""",
         "expect_slice_warning": True,
     },
     "wheel_too_big": {
-        "why": "7 prize slices exist in no captured template — the plan must SAY so.",
+        "why": "more slices than any captured template has — the plan must SAY so.",
         "brief": """CAMPAIGN BRIEF — "Mega Wheel"
 Brand: JugaBet Chile (JBCL). Currency: CLP. Runs 20 Aug 2026, one day.
-A public fortune wheel anyone can spin once. Seven prizes:
-  10 FS, 20 FS, 30 FS, 40 FS, 50 FS, 100 FS, and one empty slice.
+A public fortune wheel anyone can spin once. Nine prizes:
+  10 FS, 20 FS, 30 FS, 40 FS, 50 FS, 60 FS, 80 FS, 100 FS, and one empty slice.
 All free spins on "La Gran Copa Jugabet", bet 100 CLP, x30 wagering.""",
         "max_journeys": 10,
         "expect_wheel": True,
-        # The point of this brief: the reply must flag that 7 slices do not fit.
+        # The point of this brief: the reply must flag that this count does not
+        # fit. Stated so the harness can check ITSELF against the catalog below —
+        # the day a template with this many slices is captured, the fixture is
+        # the thing that is wrong, and it should say so instead of failing a
+        # correct answer.
+        "slices_requested": 9,
         "expect_slice_warning": True,
     },
 }
@@ -181,7 +203,14 @@ def score(text: str, spec: dict) -> dict[str, tuple[bool, str]]:
 
     if spec.get("expect_wheel"):
         n = wheel_slices(text)
-        if spec.get("expect_slice_warning"):
+        want = spec.get("slices_requested")
+        if want is not None and want in CAPTURED_SLICES:
+            out["wheel_fits"] = (False,
+                                 f"FIXTURE STALE: the brief asks for {want} slices "
+                                 f"and {want} IS buildable now (captured: "
+                                 f"{sorted(CAPTURED_SLICES)}). Change the brief, not "
+                                 f"the planner — this is not a model failure.")
+        elif spec.get("expect_slice_warning"):
             # The honest answer is a flag, not a spec: 7 slices fit nothing.
             said = bool(re.search(r"(?i)(slice|prize).{0,80}(no captured|does not fit|"
                                   r"cannot be added|max is|closest)", text)) or \
