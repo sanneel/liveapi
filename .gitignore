@@ -67,6 +67,9 @@ ARCHITECTURE_REPORT.md
 # Editor/agent workspace and preview artifacts — not part of the app.
 .claude/
 ci_test.db
+# journey-cloner/content_pages/preview.py output: the doctype-wrapped copy of
+# a content blob, for opening in a browser. The blob is the source of truth.
+*.preview.html
 
 # Local snapshots / backups
 _phase_c_backup/

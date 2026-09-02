@@ -1,0 +1,1031 @@
+<style type="text/css">@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono');
+/* Tres @import de una familia cada uno, a proposito: un solo parametro
+   por URL significa cero ampersands en todo el archivo, y un round-trip
+   de CKEditor que escape el cuerpo no puede romper un separador y dejar
+   la pagina sin fuentes. El salto de layout que provoca
+   no usar display=swap se absorbe recolocando la cinta en fonts.ready. */
+/* ══════════════════════════════════════════════════════════════════
+   GIRO GANADOR DIARIO — tragamonedas de 3 rodillos, 4 premios.
+   Una tirada por dia, cada dia es su propio randomizer.
+
+   Reglas de supervivencia en CKEditor (las mismas de LA MINA):
+     · todo va con !important y bajo el scope .gg
+     · el script NO contiene el signo menor-que ni ningun ampersand
+     · el script NO escribe markup: crea nodos con createElement
+     · ningun simbolo es SVG — son cajas con gradiente y ::before
+   Si editas, manten las cuatro. Un round-trip que escape el cuerpo
+   no puede romper nada de esto.
+   ══════════════════════════════════════════════════════════════════ */
+.gg, .gg *, .gg *::before, .gg *::after { box-sizing:border-box !important; margin:0 !important; padding:0 !important; }
+.gg [hidden] { display:none !important; }
+.gg {
+  --ink:#08090B; --cab:#191C13; --cab2:#0E1009; --well:#05060A;
+  --lime:#B6DE13; --lime-d:#8FBF08; --gold:#F2B33D; --hot:#FFF0BC; --red:#DE3226;
+  --gem:#6C8CF5; --sil:#A9AE96;
+  --text:#F1EFE6; --mut:#9B9F89; --dim:#63674F; --faint:#4A4E3B;
+  --line:rgba(241,239,230,.10);
+  --disp:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;
+  --body:'Instrument Sans','Helvetica Neue',Arial,sans-serif;
+  --mono:'DM Mono',ui-monospace,Menlo,monospace;
+  font-family:var(--body) !important;
+  display:block !important; width:100% !important; max-width:100% !important;
+  color:var(--text) !important;
+  background:
+    radial-gradient(80% 70% at 50% 34%, #1A1D12 0%, rgba(26,29,18,0) 70%),
+    linear-gradient(180deg,#0B0D07,#08090B) !important;
+  border-radius:14px !important; overflow:hidden !important;
+  padding:0 0 clamp(24px,3.2cqi,38px) 0 !important;
+  container-type:inline-size !important; container-name:gg !important;
+}
+.gg-blank { font-size:0 !important; line-height:0 !important; }
+.gg-pad { padding-left:clamp(18px,4cqi,52px) !important; padding-right:clamp(18px,4cqi,52px) !important; }
+
+/* ── simulacion: imposible de dejar prendida sin verla ── */
+.gg-sim {
+  display:block !important; text-align:center !important;
+  font-family:var(--mono) !important; font-size:11px !important;
+  letter-spacing:.16em !important; text-transform:uppercase !important;
+  color:#08090B !important; background:var(--gold) !important;
+  padding:7px 12px 6px !important;
+}
+
+/* ── hero ── */
+.gg-hero { padding:clamp(26px,4cqi,50px) clamp(18px,4cqi,52px) clamp(16px,2.2cqi,24px) !important; text-align:center !important; }
+.gg-kick {
+  display:inline-flex !important; align-items:center !important; gap:.55em !important;
+  font-family:var(--mono) !important; font-size:clamp(9px,1.15cqi,11.5px) !important;
+  letter-spacing:.18em !important; text-transform:uppercase !important;
+  color:var(--lime) !important; border:1px solid rgba(182,222,19,.32) !important;
+  border-radius:999px !important; padding:.45em .9em !important;
+  background:rgba(182,222,19,.06) !important;
+}
+.gg-kick i { width:5px !important; height:5px !important; border-radius:50% !important; background:var(--lime) !important; box-shadow:0 0 8px var(--lime) !important; display:block !important; flex:0 0 auto !important; }
+.gg-h1 {
+  font-family:var(--disp) !important; font-weight:900 !important; text-transform:uppercase !important;
+  font-size:clamp(30px,6.4cqi,58px) !important; line-height:.88 !important; letter-spacing:-.005em !important;
+  margin:.3em auto 0 !important; max-width:18ch !important;
+  background:linear-gradient(177deg,#FFFDF2 6%,#F2E4AE 44%,#C89A2E 98%) !important;
+  -webkit-background-clip:text !important; background-clip:text !important; color:transparent !important;
+}
+.gg-lede { font-size:clamp(14px,1.85cqi,17px) !important; line-height:1.6 !important; color:#C4C8B0 !important; max-width:54ch !important; margin:14px auto 0 !important; }
+.gg-lede b { color:var(--text) !important; font-weight:600 !important; }
+
+/* ── los dos dias ── */
+.gg-days {
+  list-style:none !important; display:grid !important;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr)) !important; gap:10px !important;
+  max-width:620px !important; margin:0 auto clamp(20px,2.6cqi,30px) !important;
+  padding:0 clamp(18px,4cqi,52px) !important;
+}
+.gg-day {
+  position:relative !important; text-align:left !important;
+  background:linear-gradient(180deg,#171A10,#0D1008) !important;
+  border:1px solid var(--line) !important; border-radius:11px !important;
+  padding:13px 14px 12px !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.045) !important;
+}
+.gg-dnum { font-family:var(--mono) !important; font-size:10px !important; letter-spacing:.15em !important; text-transform:uppercase !important; color:var(--faint) !important; margin:0 0 6px 0 !important; }
+.gg-dstate { font-family:var(--disp) !important; font-weight:700 !important; font-size:17px !important; line-height:1.08 !important; color:var(--dim) !important; }
+.gg-day.is-now { border-color:rgba(182,222,19,.45) !important; box-shadow:0 0 0 1px rgba(182,222,19,.28), inset 0 1px 0 rgba(255,255,255,.05) !important; }
+.gg-day.is-now .gg-dnum { color:var(--lime) !important; }
+.gg-day.is-now .gg-dstate { color:var(--text) !important; }
+.gg-day.is-won .gg-dstate { color:var(--lime) !important; }
+.gg-day.is-won .gg-dnum { color:var(--mut) !important; }
+
+/* ── cuerpo: copy + maquina ── */
+.gg-body { display:grid !important; grid-template-columns:1fr !important; gap:clamp(22px,3cqi,34px) !important; align-items:center !important; justify-items:center !important; text-align:center !important; padding:0 clamp(18px,4cqi,52px) !important; }
+/* Apilado (movil): la maquina va PRIMERO. Es lo que el jugador vino a ver, y
+   deja los rodillos a la vista cuando toca el boton que queda debajo. */
+.gg-machine { order:-1 !important; }
+@container gg (min-width:720px) {
+  .gg-body { grid-template-columns:1fr .92fr !important; justify-items:start !important; text-align:left !important; }
+  .gg-machine { order:0 !important; justify-self:end !important; }
+}
+
+/* ── gabinete ── */
+.gg-machine { position:relative !important; width:min(84cqi,400px) !important; }
+.gg-cab {
+  position:relative !important; border-radius:10px !important; padding:5% 5.5% 6% !important;
+  background:linear-gradient(#2A2E1F,#14170E 58%,#0A0C06) !important;
+  border:1px solid rgba(241,239,230,.13) !important;
+  box-shadow:0 18px 44px rgba(0,0,0,.62), inset 0 1px 0 rgba(255,255,255,.08) !important;
+}
+.gg-marquee { display:flex !important; align-items:center !important; justify-content:center !important; gap:.55em !important; font-family:var(--mono) !important; font-size:clamp(7.5px,1cqi,10.5px) !important; letter-spacing:.2em !important; text-transform:uppercase !important; color:var(--gold) !important; margin-bottom:5% !important; }
+.gg-marquee s { width:16% !important; height:1px !important; display:block !important; text-decoration:none !important; background:linear-gradient(90deg,rgba(242,179,61,0),rgba(242,179,61,.7)) !important; }
+.gg-marquee s+s { background:linear-gradient(90deg,rgba(242,179,61,.7),rgba(242,179,61,0)) !important; }
+
+.gg-well { position:relative !important; display:grid !important; grid-template-columns:repeat(3,1fr) !important; gap:2.4% !important; padding:2.4% !important; border-radius:6px !important; background:var(--well) !important; box-shadow:inset 0 3px 14px rgba(0,0,0,.9), inset 0 0 0 1px rgba(241,239,230,.07) !important; }
+.gg-reel { position:relative !important; overflow:hidden !important; border-radius:4px !important; aspect-ratio:1/3 !important; background:linear-gradient(#1C2013,#0D1008 52%,#171A10) !important; box-shadow:inset 0 0 0 1px rgba(241,239,230,.06) !important; }
+.gg-reel::after { content:"" !important; position:absolute !important; inset:0 !important; z-index:4 !important; pointer-events:none !important; background:linear-gradient(rgba(0,0,0,.72) 0%, rgba(0,0,0,.12) 26%, rgba(0,0,0,0) 50%, rgba(0,0,0,.12) 74%, rgba(0,0,0,.72) 100%) !important; }
+.gg-lane { position:absolute !important; left:0 !important; top:0 !important; width:100% !important; will-change:transform !important;
+  /* transform SIN !important a proposito: el script lo escribe inline y un
+     !important de autor le ganaria, dejando la cinta clavada. Misma razon
+     en .gg-strip y en la animacion de abajo. */
+  transform:translateY(0); }
+.gg-strip { position:relative !important; width:100% !important; transform:translateY(0); }
+.gg-cell { position:relative !important; width:100% !important; aspect-ratio:1/1 !important; display:grid !important; place-items:center !important; padding:13% !important; }
+.gg-reel.is-blur .gg-lane { filter:blur(1.5px) !important; }
+@keyframes gg-roll { from { transform:translateY(0); } to { transform:translateY(calc(-1 * var(--gg-cyc,0px))); } }
+.gg-reel.is-rolling .gg-strip { animation:gg-roll var(--gg-spd,520ms) linear infinite; }
+.gg-payline { position:absolute !important; left:1.2% !important; right:1.2% !important; top:50% !important; height:2px !important; z-index:5 !important; transform:translateY(-50%) !important; pointer-events:none !important; opacity:0 !important; transition:opacity .3s ease !important; background:linear-gradient(90deg,rgba(182,222,19,0),var(--lime),rgba(182,222,19,0)) !important; }
+.gg.is-won .gg-payline { opacity:1 !important; }
+.gg-glass { position:absolute !important; inset:0 !important; z-index:6 !important; pointer-events:none !important; border-radius:6px !important; background:linear-gradient(104deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 38%) !important; }
+
+/* ── palanca ── */
+.gg-lever { position:absolute !important; right:-6.5% !important; top:14% !important; width:10% !important; aspect-ratio:1/3.2 !important; z-index:2 !important; display:flex !important; flex-direction:column !important; align-items:center !important; transform-origin:50% 100% !important; transition:transform .3s cubic-bezier(.3,1.5,.4,1) !important; }
+.gg-lever u { width:100% !important; aspect-ratio:1 !important; border-radius:50% !important; flex:0 0 auto !important; text-decoration:none !important; background:radial-gradient(circle at 34% 30%, #FF8B7C, #C0261B 58%, #660F09) !important; box-shadow:0 6px 16px rgba(0,0,0,.65), inset 0 -4px 9px rgba(0,0,0,.45), inset 0 3px 6px rgba(255,255,255,.28) !important; }
+.gg-lever s { flex:1 1 auto !important; width:30% !important; border-radius:99px !important; margin-top:-6% !important; text-decoration:none !important; background:linear-gradient(90deg,#3A3F2E 0%,#A8AE90 40%,#7A8066 62%,#2C3124 100%) !important; box-shadow:0 2px 6px rgba(0,0,0,.5) !important; }
+.gg-lever i { width:150% !important; height:7% !important; border-radius:3px !important; flex:0 0 auto !important; margin-top:-1% !important; background:linear-gradient(#5D6249,#23271C) !important; }
+.gg.is-pulling .gg-lever { transform:translateY(9%) scaleY(.82) !important; }
+.gg-badge { position:absolute !important; left:50% !important; bottom:-7% !important; transform:translateX(-50%) !important; z-index:7 !important; font-family:var(--mono) !important; font-size:clamp(7.5px,.95cqi,10px) !important; letter-spacing:.16em !important; text-transform:uppercase !important; color:var(--dim) !important; background:var(--cab2) !important; padding:.32em .75em !important; border-radius:99px !important; border:1px solid var(--line) !important; white-space:nowrap !important; }
+
+/* ── los simbolos: puro CSS, cero SVG (CKEditor no puede limpiarlos) ──
+   Cada celda lleva gg-s0..gg-s5. El glifo es un ::before, asi el script
+   nunca escribe texto y nunca necesita el signo menor-que.            */
+.gg-g { position:relative !important; width:100% !important; height:100% !important; display:grid !important; place-items:center !important; font-family:var(--disp) !important; font-weight:900 !important; line-height:1 !important; font-size:clamp(13px,3.4cqi,27px) !important; letter-spacing:.01em !important; }
+.gg-g::before { display:block !important; }
+
+/* s0 — giros gratis con deposito (ticket GG lima) */
+.gg-s0 .gg-g { border-radius:16% !important; background:linear-gradient(180deg,#EDFF8A,#B6DE13 50%,#6C8A06) !important; box-shadow:inset 0 0 0 2px #43570A, 0 3px 10px rgba(0,0,0,.5) !important; color:#1B2205 !important; }
+.gg-s0 .gg-g::before { content:"GG" !important; }
+.gg-s0 .gg-g::after { content:"" !important; position:absolute !important; left:0 !important; right:0 !important; top:18% !important; bottom:18% !important; border-left:2px dashed rgba(67,87,10,.55) !important; border-right:2px dashed rgba(67,87,10,.55) !important; margin:0 14% !important; }
+/* s1 — bono con deposito (moneda dorada %) */
+.gg-s1 .gg-g { border-radius:50% !important; background:radial-gradient(circle at 38% 30%, #FFF3CB, #F2B33D 52%, #9A6510) !important; box-shadow:inset 0 0 0 2px rgba(138,91,12,.75), 0 3px 10px rgba(0,0,0,.5) !important; color:#6B4406 !important; }
+.gg-s1 .gg-g::before { content:"%" !important; font-size:1.35em !important; }
+/* s2 — giros gratis sin deposito (gema) */
+.gg-s2 .gg-g { background:linear-gradient(135deg,#B9E6FF,#6C8CF5 50%,#7A3BD0) !important; clip-path:polygon(50% 2%, 92% 36%, 50% 98%, 8% 36%) !important; box-shadow:0 3px 10px rgba(0,0,0,.5) !important; }
+.gg-s2 .gg-g::after { content:"" !important; position:absolute !important; inset:0 !important; clip-path:polygon(50% 2%, 92% 36%, 50% 98%, 8% 36%) !important; background:linear-gradient(96deg, rgba(255,255,255,.42) 0 22%, rgba(255,255,255,0) 23%) !important; }
+/* s3 — bono sin deposito (ficha) */
+.gg-s3 .gg-g { border-radius:50% !important; background:radial-gradient(circle at 40% 32%, #FF8B7C, #DE3226 56%, #7C1610) !important; box-shadow:inset 0 0 0 3px rgba(255,255,255,.82), inset 0 0 0 6px rgba(124,22,16,.85), 0 3px 10px rgba(0,0,0,.5) !important; color:#FFF0BC !important; }
+.gg-s3 .gg-g::before { content:"$" !important; }
+/* s4 — relleno (siete) */
+.gg-s4 .gg-g { color:#F2B33D !important; text-shadow:0 2px 0 rgba(0,0,0,.55) !important; font-size:clamp(19px,5cqi,40px) !important; }
+.gg-s4 .gg-g::before { content:"7" !important; }
+/* s5 — relleno (BAR) */
+.gg-s5 .gg-g { border-radius:10% !important; background:linear-gradient(180deg,#F2F4EA,#A9AE96 52%,#5B6049) !important; box-shadow:inset 0 0 0 2px #3C4131, 0 3px 10px rgba(0,0,0,.5) !important; color:#2C3124 !important; font-size:clamp(9px,2.3cqi,18px) !important; letter-spacing:.06em !important; }
+.gg-s5 .gg-g::before { content:"BAR" !important; }
+
+/* ── boton ── */
+.gg-btn {
+  display:inline-flex !important; align-items:center !important; justify-content:center !important; gap:.5em !important;
+  border:0 !important; cursor:pointer !important; text-decoration:none !important;
+  font-family:var(--disp) !important; font-weight:900 !important; text-transform:uppercase !important;
+  letter-spacing:.04em !important; font-size:clamp(15px,2cqi,21px) !important;
+  color:#12140C !important; border-radius:3px !important; padding:.62em 1.35em .54em !important;
+  background:linear-gradient(#D3F52A,#9CC00A) !important;
+  box-shadow:0 4px 0 #6E8A00, 0 10px 26px rgba(182,222,19,.22) !important;
+  transition:transform .1s ease, box-shadow .1s ease, filter .18s ease !important;
+}
+.gg-btn:hover { filter:brightness(1.06) !important; transform:translateY(-1px) !important; box-shadow:0 5px 0 #6E8A00, 0 12px 30px rgba(182,222,19,.28) !important; }
+.gg-btn:active { transform:translateY(3px) !important; box-shadow:0 1px 0 #6E8A00 !important; }
+.gg-btn:focus-visible { outline:3px solid var(--hot) !important; outline-offset:3px !important; }
+.gg-btn:disabled { background:#22314A !important; color:#5D7391 !important; cursor:default !important; transform:none !important; filter:none !important; box-shadow:0 4px 0 #16202F !important; }
+.gg-act { margin-top:clamp(14px,1.8cqi,20px) !important; }
+.gg-fine { margin:.85em 0 0 0 !important; font-family:var(--mono) !important; font-size:clamp(8.5px,1.05cqi,11px) !important; letter-spacing:.1em !important; text-transform:uppercase !important; color:var(--dim) !important; }
+
+/* ── resultado ── */
+.gg-res { animation:gg-pop .5s cubic-bezier(.2,1.4,.4,1) !important; }
+@keyframes gg-pop { 0% { opacity:0; transform:translateY(10px) scale(.96); } 100% { opacity:1; transform:none; } }
+.gg-rtag { margin:0 !important; font-family:var(--mono) !important; font-size:clamp(9px,1.1cqi,11.5px) !important; letter-spacing:.2em !important; text-transform:uppercase !important; color:var(--lime) !important; }
+.gg-rttl { font-family:var(--disp) !important; font-weight:900 !important; text-transform:uppercase !important; margin:.28em 0 0 0 !important; font-size:clamp(24px,4.4cqi,46px) !important; line-height:.9 !important; background:linear-gradient(177deg,#FFFDF2 6%,#F6DC8E 46%,#DFA42C 98%) !important; -webkit-background-clip:text !important; background-clip:text !important; color:transparent !important; }
+.gg-rbody { margin:.6em 0 0 0 !important; color:#C4C8B0 !important; font-size:clamp(13px,1.7cqi,15.5px) !important; line-height:1.55 !important; max-width:38ch !important; }
+.gg-rnote { margin:.7em 0 0 0 !important; font-family:var(--mono) !important; font-size:clamp(8.5px,1.05cqi,11px) !important; letter-spacing:.08em !important; text-transform:uppercase !important; color:var(--dim) !important; }
+
+/* ── paneles ── */
+.gg-panel { margin:clamp(14px,1.8cqi,20px) 0 0 0 !important; padding:15px 17px !important; border-radius:11px !important; text-align:left !important; background:rgba(241,239,230,.03) !important; border:1px solid var(--line) !important; max-width:44ch !important; }
+.gg-panel--err { background:rgba(222,50,38,.07) !important; border-color:rgba(222,50,38,.32) !important; }
+.gg-panel--wait { background:rgba(242,179,61,.07) !important; border-color:rgba(242,179,61,.32) !important; }
+.gg-ph { font-family:var(--disp) !important; font-weight:700 !important; font-size:18px !important; margin:0 0 4px 0 !important; }
+.gg-pt { font-size:13.5px !important; line-height:1.55 !important; color:var(--mut) !important; }
+.gg-panel .gg-btn { margin-top:12px !important; font-size:15px !important; padding:.55em 1.1em .48em !important; }
+.gg-trace { font-family:var(--mono) !important; font-size:10.5px !important; color:var(--faint) !important; margin:10px 0 0 0 !important; word-break:break-all !important; }
+
+/* ── terminos + cta ── */
+.gg-terms { padding:clamp(22px,3cqi,34px) clamp(18px,4cqi,52px) 0 !important; }
+.gg-terms p { font-family:var(--body) !important; font-size:12px !important; line-height:1.8 !important; color:#5E6150 !important; max-width:92ch !important; margin:0 auto !important; text-align:center !important; }
+.gg-ctawrap { padding:clamp(18px,2.4cqi,28px) clamp(18px,4cqi,52px) 0 !important; text-align:center !important; }
+
+@media (prefers-reduced-motion:reduce) {
+  .gg-lane, .gg-lever, .gg-payline, .gg-btn { transition:none !important; }
+  .gg-reel.is-rolling .gg-strip { animation:none !important; }
+  .gg-reel.is-blur .gg-lane { filter:none !important; }
+  .gg-res { animation:none !important; }
+}
+</style>
+<!-- ═══ CONFIG — los data-* son los únicos ajustes ═══════════════════
+     data-slugs        urlShortName de CADA día, en orden, separados por
+                       coma. Un randomizer por día: shotPolicy "Once" da
+                       una sola tirada, y la ventana 04:02 -> 03:58 del
+                       día siguiente es la que hace cumplir "una por día".
+                       El navegador nunca decide: se consulta cada slug.
+     data-prize-*      JSON por POSICIÓN ("0".."3") o por prizeId exacto.
+                       El orden es el de prizes[] en el randomizer:
+                         0 giros gratis con depósito   (peso 60)
+                         1 bono con depósito           (peso 35)
+                         2 giros gratis sin depósito   (peso 5)
+                         3 bono sin depósito           (peso 0 hoy)
+                       La POSICIÓN sobrevive a duplicar el randomizer.
+     data-mock         "1" corre la simulación offline (badge visible).
+     data-mock-seq     orden de premios que devuelve la simulación.
+     OJO: el premio 3 no tiene monto en la ficha. Su copy no dice
+     ninguna cifra a propósito. Si algún día se le da peso, hay que
+     ponerle el texto real de la ficha de contenido ANTES.
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="gg" id="gg"
+     data-slugs="casino-wof-19-09-2026,casino-wof-20-09-2026"
+     data-language="es" data-channel="DESKTOP_IOLITE" data-currency="CLP"
+     data-min-ms="2200" data-timeout-ms="8000" data-roll-ms="520"
+     data-mock="0" data-mock-seq="0,1,2,3"
+     data-days='["Día 1 · 19 sep","Día 2 · 20 sep"]'
+     data-prize-tags='{"0":"Se activan con tu depósito","1":"Se activa con tu depósito","2":"Ya están en tu cuenta","3":"Ya está en tu cuenta"}'
+     data-prize-labels='{"0":"Giros gratis con tu depósito","1":"Bono de casino con tu depósito","2":"20 giros gratis, sin depósito","3":"Bono de casino sin depósito"}'
+     data-prize-bodies='{"0":"Deposita desde $5.000 y recibe 20, 40, 60 u 80 giros gratis según el monto.","1":"Deposita desde $5.000 y suma 60%, 80%, 100% o 120% según el monto. Bono máximo $200.000.","2":"Sin depósito. Ya los tienes acreditados, ve a jugarlos.","3":"Ya está acreditado en tu cuenta. Revisa tu saldo de bono."}'
+     data-prize-ctas='{"0":"Depositar y activar","1":"Depositar y activar","2":"Jugar ahora","3":"Jugar ahora"}'
+     data-prize-hrefs='{"0":"https://jugabet.cl/deposit","1":"https://jugabet.cl/deposit","2":"https://jugabet.cl/casino","3":"https://jugabet.cl/casino"}'
+     data-prize-syms='{"0":"0","1":"1","2":"2","3":"3"}'
+     data-copy='{"spin":"Girar gratis","spinning":"Girando…","opening":"Leyendo tu premio…","again":"Girar de nuevo","fine":"Un giro por día por cliente","lockedH":"Ya jugaste hoy","lockedT":"Vuelve mañana por tu segundo giro.","doneH":"Usaste tus dos giros","doneT":"Gracias por jugar. Revisa tus premios en tu cuenta.","soonH":"Todavía no arranca","soonT":"Esta promoción no está activa en este momento.","endedH":"La promo terminó","endedT":"Esta promoción ya finalizó.","errH":"No pudimos leer tu giro","errT":"Tu giro no se perdió. Prueba de nuevo.","retry":"Reintentar","emptyTag":"Sin premio esta vez","emptyTtl":"No salió premio","emptyBody":"Esta vez la máquina no pagó. Vuelve mañana por tu siguiente giro.","claimed":"Ya está acreditado.","claimSlow":"El premio es tuyo. La acreditación puede tardar unos minutos.","unknownTtl":"Tu premio quedó asignado","unknownBody":"Ya está registrado en tu cuenta. Si no lo ves en unos minutos, escríbenos.","dayPending":"Pendiente","dayNow":"Tu giro de hoy","dayLocked":"Mañana","loading":"Cargando…"}'>
+
+  <p class="gg-sim" id="ggsim" hidden="">Simulación — la máquina no consulta la plataforma</p>
+
+  <header class="gg-hero">
+    <span class="gg-kick"><i class="gg-blank">&nbsp;</i>Gratis · 1 giro por día</span>
+    <h1 class="gg-h1">Giro Ganador Diario</h1>
+    <p class="gg-lede">Tira la palanca y llévate <b>giros gratis</b> o un <b>bono de casino</b>. Un giro por día, el 19 y el 20 de septiembre.</p>
+  </header>
+
+  <ol class="gg-days" id="ggdays">
+    <li class="gg-day" data-day="0">
+      <p class="gg-dnum" data-dlabel="1">Día 1</p>
+      <p class="gg-dstate" data-dstate="1">Pendiente</p>
+    </li>
+    <li class="gg-day" data-day="1">
+      <p class="gg-dnum" data-dlabel="1">Día 2</p>
+      <p class="gg-dstate" data-dstate="1">Pendiente</p>
+    </li>
+  </ol>
+
+  <div class="gg-body">
+    <div>
+      <div id="ggcopy">
+        <p class="gg-rtag" id="ggtag" hidden="">&nbsp;</p>
+        <h2 class="gg-rttl" id="ggttl" hidden="">&nbsp;</h2>
+        <p class="gg-rbody" id="ggbody" hidden="">&nbsp;</p>
+        <p class="gg-rnote" id="ggnote" hidden="">&nbsp;</p>
+
+        <div class="gg-act" id="ggctawrap" hidden="">
+          <a class="gg-btn" id="ggcta" href="https://jugabet.cl/deposit">Depositar</a>
+        </div>
+
+        <div class="gg-act" id="ggact">
+          <button class="gg-btn" id="ggspin" type="button" disabled="disabled">Girar gratis</button>
+          <p class="gg-fine" id="ggfine">Cargando…</p>
+        </div>
+      </div>
+
+      <div class="gg-panel gg-panel--err" id="ggerr" hidden="" role="alert">
+        <p class="gg-ph" id="ggerrh">No pudimos leer tu giro</p>
+        <p class="gg-pt" id="ggerrt">Tu giro no se perdió. Prueba de nuevo.</p>
+        <button class="gg-btn" id="ggretry" type="button">Reintentar</button>
+        <p class="gg-trace" id="ggtrace" hidden="">&nbsp;</p>
+      </div>
+
+      <div class="gg-panel gg-panel--wait" id="ggwait" hidden="">
+        <p class="gg-ph" id="ggwaith">Ya jugaste hoy</p>
+        <p class="gg-pt" id="ggwaitt">Vuelve mañana por tu segundo giro.</p>
+      </div>
+    </div>
+
+    <div class="gg-machine">
+      <div class="gg-cab">
+        <p class="gg-marquee"><s class="gg-blank">&nbsp;</s>Giro Ganador Diario<s class="gg-blank">&nbsp;</s></p>
+        <div class="gg-well" id="ggwell" aria-hidden="true">
+          <div class="gg-reel"><div class="gg-lane"><div class="gg-strip gg-blank">&nbsp;</div></div></div>
+          <div class="gg-reel"><div class="gg-lane"><div class="gg-strip gg-blank">&nbsp;</div></div></div>
+          <div class="gg-reel"><div class="gg-lane"><div class="gg-strip gg-blank">&nbsp;</div></div></div>
+          <span class="gg-payline gg-blank">&nbsp;</span>
+          <span class="gg-glass gg-blank">&nbsp;</span>
+        </div>
+        <span class="gg-lever gg-blank" id="gglever" aria-hidden="true"><u>&nbsp;</u><s>&nbsp;</s><i>&nbsp;</i></span>
+      </div>
+      <p class="gg-badge" id="ggbadge">2 días · 19 y 20 sep</p>
+    </div>
+  </div>
+
+  <div class="gg-terms">
+    <p>Un giro por día por cliente, el 19 y el 20 de septiembre de 2026. Depósito mínimo $5.000. Los giros gratis y el bono dependen del monto depositado: $5.000, $10.000, $20.000 o $30.000. Apuesta por giro $250 o $400 según el tramo. Los giros sin depósito tienen apuesta por giro $100. Rollover x30. Cashout x20. Bono máximo $200.000. Solo mayores de 18 años con cuenta verificada. Aplican términos y condiciones completos. Juega con responsabilidad.</p>
+  </div>
+
+  <div class="gg-ctawrap"><a class="gg-btn" href="https://jugabet.cl/deposit">Ir a depositar</a></div>
+</div>
+<script type="text/javascript">
+/* GIRO GANADOR DIARIO — la plataforma decide el premio, esto lo coreografia.
+
+   Un randomizer POR DIA (shotPolicy "Once", ventana 04:02 -> 03:58). Asi la
+   regla "una tirada por dia" la hace cumplir el servidor y no el navegador:
+   este archivo no tiene una sola linea de sessionStorage ni localStorage, a
+   proposito. Si no hay tirada abierta, la pagina no la inventa.
+
+   Coreografia de cada tirada, en dos etapas:
+     etapa 1  click -> los rodillos arrancan en loop fijo (no depende del
+              resultado) Y sale el PUT turn. El click nunca se siente muerto.
+     etapa 2  llega la respuesta Y paso el piso de tiempo -> los rodillos
+              frenan de izquierda a derecha sobre el simbolo del premio.
+   El ultimo de los dos en terminar es el que abre. Nunca hay salto: el
+   desplazamiento de la animacion se pliega dentro del lane antes de frenar.
+
+   No contiene el signo menor-que ni ningun ampersand, y no escribe markup
+   (crea nodos con createElement), asi que un round-trip de CKEditor que
+   escape el cuerpo no puede romperlo. Mantenlo asi al editar.
+   Todo el texto visible vive en los data-* de arriba, cero copy aca. */
+(function () {
+  var root = document.getElementById('gg');
+  if (!root) { return; }
+  var q = function (id) { return root.querySelector('#' + id); };
+
+  /* ── config ─────────────────────────────────────────────────────── */
+  function attr(n, d) { var v = root.getAttribute(n); if (!v) { return d; } return v; }
+  function num(n, d) {
+    var x = parseInt(root.getAttribute(n), 10);
+    if (isFinite(x)) { if (x > 0) { return x; } }
+    return d;
+  }
+  function jsonAttr(n, d) {
+    try {
+      var raw = root.getAttribute(n);
+      if (raw) { return JSON.parse(raw); }
+    } catch (e) { return d; }
+    return d;
+  }
+
+  var SLUGS = attr('data-slugs', '').split(',');
+  var i0;
+  for (i0 = 0; i0 !== SLUGS.length; i0 = i0 + 1) { SLUGS[i0] = SLUGS[i0].replace(/\s+/g, ''); }
+  SLUGS = SLUGS.filter(function (s) { return s !== ''; });
+
+  var LANG     = attr('data-language', 'es');
+  var CHANNEL  = attr('data-channel', 'DESKTOP_IOLITE');
+  var CURRENCY = attr('data-currency', 'CLP');
+  var MIN_MS   = num('data-min-ms', 2200);
+  var TMO_MS   = num('data-timeout-ms', 8000);
+  var ROLL_MS  = num('data-roll-ms', 520);
+  var MOCK     = attr('data-mock', '0') === '1';
+
+  var TAGS   = jsonAttr('data-prize-tags', {});
+  var LABELS = jsonAttr('data-prize-labels', {});
+  var BODIES = jsonAttr('data-prize-bodies', {});
+  var CTAS   = jsonAttr('data-prize-ctas', {});
+  var HREFS  = jsonAttr('data-prize-hrefs', {});
+  var SYMS   = jsonAttr('data-prize-syms', {});
+  var COPY   = jsonAttr('data-copy', {});
+  var DAYTXT = jsonAttr('data-days', []);
+  function t(k) { var v = COPY[k]; if (v) { return v; } return ''; }
+
+  /* ── nodos ──────────────────────────────────────────────────────── */
+  var sim = q('ggsim'), daysBox = q('ggdays');
+  var tagEl = q('ggtag'), ttlEl = q('ggttl'), bodyEl = q('ggbody'), noteEl = q('ggnote');
+  var actBox = q('ggact'), spinBtn = q('ggspin'), fineEl = q('ggfine');
+  var ctaBox = q('ggctawrap'), ctaEl = q('ggcta');
+  var errBox = q('ggerr'), errH = q('ggerrh'), errT = q('ggerrt'), traceEl = q('ggtrace'), retryBtn = q('ggretry');
+  var waitBox = q('ggwait'), waitH = q('ggwaith'), waitT = q('ggwaitt');
+  var lever = q('gglever');
+  if (!spinBtn) { return; }
+
+  var reels = root.querySelectorAll('.gg-reel');
+  var lanes = root.querySelectorAll('.gg-lane');
+  var strips = root.querySelectorAll('.gg-strip');
+  if (reels.length !== 3) { return; }
+
+  /* ── rodillos ───────────────────────────────────────────────────── */
+  var SETLEN = 6;      /* 6 simbolos: 4 premios + 2 de relleno */
+  var LOOPS = 10;      /* vueltas de cinta; +1 extra para tener vecinos */
+  /* Cada rodillo lleva su PROPIO orden. Si los tres compartieran el mismo,
+     los vecinos de arriba y abajo serian siempre el mismo par y se notaria
+     que es una sola cinta repetida tres veces. */
+  var ORDER = [[0, 4, 1, 5, 2, 3], [1, 3, 0, 5, 4, 2], [2, 5, 3, 0, 1, 4]];
+  var REST_POS = 0;
+  var LAND_EXTRA = [3, 4, 5];
+  var LAND_DUR = [900, 1150, 1400];
+  var firstCell = [null, null, null];
+
+  var reduced = false;
+  try { reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+  catch (e) { reduced = false; }
+
+  function build() {
+    var i, j, total = LOOPS * SETLEN + SETLEN;
+    for (i = 0; i !== 3; i = i + 1) {
+      strips[i].textContent = '';
+      for (j = 0; j !== total; j = j + 1) {
+        var cell = document.createElement('div');
+        cell.className = 'gg-cell gg-s' + ORDER[i][j % SETLEN];
+        var g = document.createElement('i');
+        g.className = 'gg-g';
+        cell.appendChild(g);
+        strips[i].appendChild(cell);
+        if (j === 0) { firstCell[i] = cell; }
+      }
+    }
+  }
+  function cellH() {
+    if (!firstCell[0]) { return 0; }
+    var h = firstCell[0].getBoundingClientRect().height;
+    if (h > 0) { return h; }
+    return 0;
+  }
+  function posOf(reel, symIdx) {
+    var k;
+    for (k = 0; k !== SETLEN; k = k + 1) { if (ORDER[reel][k] === symIdx) { return k; } }
+    return 0;
+  }
+  /* ty de matrix(a,b,c,d,tx,ty) o matrix3d(...16) */
+  function matrixY(tr) {
+    if (!tr) { return 0; }
+    if (tr === 'none') { return 0; }
+    var a = tr.indexOf('(');
+    var b = tr.indexOf(')');
+    if (a === -1) { return 0; }
+    if (b === -1) { return 0; }
+    var parts = tr.slice(a + 1, b).split(',');
+    if (parts.length === 6) { return parseFloat(parts[5]) || 0; }
+    if (parts.length === 16) { return parseFloat(parts[13]) || 0; }
+    return 0;
+  }
+  function laneNow(i) { return matrixY(window.getComputedStyle(lanes[i]).transform); }
+  function setLane(i, y) {
+    lanes[i].style.transition = 'none';
+    lanes[i].style.transform = 'translateY(' + y + 'px)';
+  }
+  function toRest() {
+    var h = cellH(), i, idx = SETLEN + REST_POS;
+    if (h === 0) { return; }
+    for (i = 0; i !== 3; i = i + 1) {
+      reels[i].classList.remove('is-rolling');
+      reels[i].classList.remove('is-blur');
+      strips[i].style.animation = '';
+      strips[i].style.transform = 'translateY(0)';
+      setLane(i, -((idx - 1) * h));
+    }
+  }
+  function startRoll() {
+    var h = cellH(), i;
+    if (h === 0) { return; }
+    for (i = 0; i !== 3; i = i + 1) {
+      strips[i].style.setProperty('--gg-cyc', (SETLEN * h) + 'px');
+      strips[i].style.setProperty('--gg-spd', (ROLL_MS + i * 70) + 'ms');
+      strips[i].style.animation = '';
+      strips[i].style.transform = 'translateY(0)';
+      reels[i].classList.add('is-rolling');
+      reels[i].classList.add('is-blur');
+    }
+  }
+  /* Frena un rodillo sobre symIdx sin salto: pliega el desplazamiento de la
+     animacion dentro del lane, normaliza por ciclos enteros (invisible, la
+     cinta se repite cada SETLEN) y recien entonces anima hasta el destino. */
+  function landReel(i, symIdx, done) {
+    var h = cellH();
+    if (h === 0) { if (done) { done(); } return; }
+    var cyc = SETLEN * h;
+    var animY = matrixY(window.getComputedStyle(strips[i]).transform);
+    reels[i].classList.remove('is-rolling');
+    strips[i].style.animation = 'none';
+    strips[i].style.transform = 'translateY(0)';
+
+    var cur = laneNow(i) + animY;
+    var n = Math.floor(-cur / cyc);
+    if (n > 0) { cur = cur + n * cyc; }
+    setLane(i, cur);
+    void lanes[i].offsetWidth;
+
+    var idx0 = 1 - cur / h;
+    var m = Math.ceil(idx0 + LAND_EXTRA[i] * SETLEN);
+    var want = posOf(i, symIdx);
+    var d = ((want - m) % SETLEN + SETLEN) % SETLEN;
+    var idxF = m + d;
+    var dur = LAND_DUR[i];
+
+    lanes[i].style.transition = 'transform ' + dur + 'ms cubic-bezier(.12,.62,.12,1)';
+    lanes[i].style.transform = 'translateY(' + (-((idxF - 1) * h)) + 'px)';
+    window.setTimeout(function () {
+      reels[i].classList.remove('is-blur');
+      if (done) { done(); }
+    }, dur);
+  }
+  function placeAll(symIdx) {
+    var h = cellH(), i;
+    if (h === 0) { return; }
+    for (i = 0; i !== 3; i = i + 1) {
+      reels[i].classList.remove('is-rolling');
+      reels[i].classList.remove('is-blur');
+      strips[i].style.animation = '';
+      strips[i].style.transform = 'translateY(0)';
+      setLane(i, -((SETLEN + posOf(i, symIdx) - 1) * h));
+    }
+  }
+
+  /* ── red ────────────────────────────────────────────────────────── */
+  var API = '/service-discovery/service/promo/api/client/v1';
+  function hdrs() {
+    return {
+      'accept': 'application/json', 'content-type': 'application/json',
+      'x-api-key': '', 'x-application-id': '', 'x-clientid': '',
+      'x-betsterversion': '2.0.0', 'x-extensionname': 'promoApi',
+      'x-extensionversion': '1.0.0', 'x-teamname': 'Engagement HUB',
+      'x-channel': CHANNEL, 'x-currency': CURRENCY, 'x-language': LANG
+    };
+  }
+  function realApi(method, path, body) {
+    var ctrl = null;
+    try { if (window.AbortController) { ctrl = new window.AbortController(); } } catch (e) {}
+    var opts = { method: method, credentials: 'include', headers: hdrs() };
+    if (body) { opts.body = JSON.stringify(body); }
+    if (ctrl) { opts.signal = ctrl.signal; }
+    var timer = window.setTimeout(function () {
+      if (ctrl) { try { ctrl.abort(); } catch (e) {} }
+    }, TMO_MS);
+    return fetch(API + path, opts).then(function (r) {
+      window.clearTimeout(timer);
+      return r.text().then(function (txt) {
+        var data = null;
+        try { if (txt) { data = JSON.parse(txt); } } catch (e) { data = null; }
+        if (r.ok) { return data; }
+        var err = new Error('HTTP ' + String(r.status));
+        err.status = r.status; err.data = data;
+        throw err;
+      });
+    }, function (e) { window.clearTimeout(timer); throw e; });
+  }
+
+  /* ── simulacion offline: mismas firmas, cero red ─────────────────
+     Existe para poder mostrar las 4 combinaciones y las 2 tiradas sin
+     la plataforma. El estado vive en memoria (no en el navegador), asi
+     que recargar reinicia la demo y ningun camino de "verdad local"
+     queda en el archivo. El badge de arriba la delata siempre.       */
+  var MSEQ = attr('data-mock-seq', '0').split(',');
+  var mockIdx = 0, mockTurns = [];
+  function later(v, ms) {
+    return new Promise(function (res) { window.setTimeout(function () { res(v); }, ms); });
+  }
+  function mockDayOf(path) {
+    var k = path.indexOf('/randomizers/mock-');
+    if (k === -1) { return 0; }
+    var n = parseInt(path.slice(k + 18), 10);
+    if (isFinite(n)) { return n; }
+    return 0;
+  }
+  function tailOf(path) { return decodeURIComponent(path.slice(path.lastIndexOf('/') + 1)); }
+  function mockApi(method, path, body) {
+    var d;
+    if (path.indexOf('/url-short-name/') !== -1) {
+      d = SLUGS.indexOf(tailOf(path));
+      if (d === -1) { d = 0; }
+      if (!mockTurns[d]) { mockTurns[d] = []; }
+      return later({
+        id: 'mock-' + d, status: 'Active', timeline: {},
+        prizes: [{ prizeId: 'mp0' }, { prizeId: 'mp1' }, { prizeId: 'mp2' }, { prizeId: 'mp3' }],
+        playerProgress: { playerTurns: mockTurns[d] }
+      }, 320);
+    }
+    if (path.indexOf('/turn/') !== -1) {
+      d = mockDayOf(path);
+      var pos = MSEQ[mockIdx % MSEQ.length];
+      mockIdx = mockIdx + 1;
+      var rec = {
+        playerTurnId: tailOf(path),
+        playerPrize: { prizeId: 'mp' + pos, isEmptyPrize: false },
+        prizeReceivedAt: 'mock', prizeClaimedAt: null
+      };
+      if (!mockTurns[d]) { mockTurns[d] = []; }
+      mockTurns[d].push(rec);
+      return later({ playerPrize: rec.playerPrize }, 900);
+    }
+    if (path.indexOf('/claim-prize/') !== -1) { return later({ prizeClaimedAt: 'mock' }, 200); }
+    return later(null, 100);
+  }
+  var api = MOCK ? mockApi : realApi;
+
+  function uuid() {
+    try { if (window.crypto) { if (window.crypto.randomUUID) { return window.crypto.randomUUID(); } } } catch (e) {}
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      var r = Math.floor(Math.random() * 16), v = r;
+      if (c === 'y') { v = (r % 4) + 8; }
+      return v.toString(16);
+    });
+  }
+  function traceOf(e) {
+    if (!e) { return ''; }
+    if (!e.data) { return ''; }
+    return e.data.traceId || '';
+  }
+  function serverMsg(e) {
+    if (!e) { return ''; }
+    if (!e.data) { return ''; }
+    return e.data.message || e.data.title || e.data.detail || '';
+  }
+
+  /* ── premios: posicion en prizes[], no id adivinado ──────────────
+     El randomizer expone prizeId; el template de backoffice lo llama id.
+     Aceptamos los dos: si esto quedara en undefined, TODOS los premios
+     caerian al texto generico y nadie se daria cuenta.               */
+  var PRIZE_POS = {};
+  function indexPrizes(cfg) {
+    var ps = [];
+    if (cfg) { ps = cfg.prizes || []; }
+    var i, id;
+    for (i = 0; i !== ps.length; i = i + 1) {
+      if (!ps[i]) { continue; }
+      id = ps[i].prizeId || ps[i].id;
+      if (id) { PRIZE_POS[id] = String(i); }
+    }
+  }
+  function prizeIdOf(p) { if (!p) { return ''; } return p.prizeId || p.id || ''; }
+  function prizePosOf(p) {
+    var id = prizeIdOf(p);
+    if (!id) { return ''; }
+    var ix = PRIZE_POS[id];
+    if (ix === undefined) { return ''; }
+    return ix;
+  }
+  function pick(map, p, dflt) {
+    var id = prizeIdOf(p);
+    if (id) { if (map[id]) { return map[id]; } }
+    var ix = prizePosOf(p);
+    if (ix !== '') { if (map[ix]) { return map[ix]; } }
+    return dflt;
+  }
+  function symOf(p) {
+    var s = pick(SYMS, p, '');
+    if (s === '') { s = prizePosOf(p); }
+    var n = parseInt(s, 10);
+    if (isFinite(n)) { if (n > -1) { if (SETLEN > n) { return n; } } }
+    return 0;
+  }
+
+  /* ── estado ─────────────────────────────────────────────────────── */
+  var days = [], active = -1, turnId = null;
+  /* `active` = dia armado para la proxima tirada. `shown` = dia cuyo premio
+     esta en pantalla ahora. Son distintos: afterReveal() adelanta `active`.
+     Confundirlos borra la combinacion ganadora en el primer resize. */
+  var shown = -1;
+  var held = null, minOk = false, landing = false, spinning = false, failed = false;
+
+  function endedNow(c) {
+    var tl = c.timeline || {};
+    if (!tl.finishDate) { return false; }
+    var ts = Date.parse(tl.finishDate);
+    if (!isFinite(ts)) { return false; }
+    if (Date.now() > ts) { return true; }
+    return false;
+  }
+  /* Un dia puede estar: won (ya tiene premio) | resume (tirada abierta sin
+     resolver) | open (activo y sin usar) | soon (todavia no) | ended | unknown
+     (el slug no cargo: en produccion es lo normal para el dia 2 durante el
+     dia 1, asi que NO es un error).                                        */
+  function derive(i, r) {
+    var d = { idx: i, slug: SLUGS[i], state: 'unknown', randId: null, turnId: null, prize: null, claimed: false };
+    if (!r.ok) { return d; }
+    var c = r.cfg;
+    if (!c) { return d; }
+    d.randId = c.id;
+    indexPrizes(c);
+    var turns = [], pp = c.playerProgress;
+    if (pp) { turns = pp.playerTurns || []; }
+    if (turns.length > 0) {
+      var last = turns[turns.length - 1];
+      d.turnId = last.playerTurnId;
+      if (last.prizeReceivedAt) {
+        d.state = 'won'; d.prize = last.playerPrize;
+        if (last.prizeClaimedAt) { d.claimed = true; }
+        return d;
+      }
+      d.state = 'resume';
+    }
+    if (c.status !== 'Active') {
+      if (d.state !== 'resume') {
+        if (endedNow(c)) { d.state = 'ended'; } else { d.state = 'soon'; }
+      } else { d.state = 'soon'; }
+      return d;
+    }
+    if (d.state !== 'resume') { d.state = 'open'; }
+    return d;
+  }
+  function findPlayable() {
+    var i;
+    for (i = 0; i !== days.length; i = i + 1) {
+      if (days[i].state === 'open') { return i; }
+      if (days[i].state === 'resume') { return i; }
+    }
+    return -1;
+  }
+  function show(el, txt) {
+    if (!el) { return; }
+    if (!txt) { el.hidden = true; return; }
+    el.textContent = txt; el.hidden = false;
+  }
+  function dayText(d) {
+    var txt = pick(LABELS, d.prize, '');
+    if (d.prize) { if (d.prize.isEmptyPrize === true) { return t('emptyTtl'); } }
+    if (!txt) { return t('unknownTtl'); }
+    return txt;
+  }
+  function renderDays() {
+    if (!daysBox) { return; }
+    var items = daysBox.querySelectorAll('.gg-day');
+    var i;
+    for (i = 0; i !== items.length; i = i + 1) {
+      var lab = items[i].querySelector('.gg-dnum');
+      var st = items[i].querySelector('.gg-dstate');
+      items[i].classList.remove('is-now');
+      items[i].classList.remove('is-won');
+      if (i > days.length - 1) { items[i].hidden = true; continue; }
+      items[i].hidden = false;
+      if (DAYTXT[i]) { if (lab) { lab.textContent = DAYTXT[i]; } }
+      var d = days[i];
+      if (!st) { continue; }
+      if (d.state === 'won') { items[i].classList.add('is-won'); st.textContent = dayText(d); continue; }
+      if (d.state === 'open') { items[i].classList.add('is-now'); st.textContent = t('dayNow'); continue; }
+      if (d.state === 'resume') { items[i].classList.add('is-now'); st.textContent = t('dayNow'); continue; }
+      if (d.state === 'soon') { st.textContent = t('dayLocked'); continue; }
+      if (d.state === 'ended') { st.textContent = t('dayPending'); continue; }
+      st.textContent = t('dayPending');
+    }
+  }
+
+  /* ── el unico lugar donde un premio llega a la pantalla ─────────── */
+  function reveal(p, claimed) {
+    spinning = false;
+    root.classList.add('is-won');
+    actBox.hidden = true;
+    errBox.hidden = true;
+    var di = active;
+    if (di !== -1) {
+      if (days[di]) { days[di].state = 'won'; days[di].prize = p; days[di].claimed = claimed; shown = di; }
+    }
+    var empty = false;
+    if (p) { if (p.isEmptyPrize === true) { empty = true; } }
+    var tg = '', tl = '', bd = '', ct = '', hf = '';
+    if (empty) {
+      tg = t('emptyTag'); tl = t('emptyTtl'); bd = t('emptyBody');
+    } else {
+      tg = pick(TAGS, p, '');
+      tl = pick(LABELS, p, '');
+      bd = pick(BODIES, p, '');
+      ct = pick(CTAS, p, '');
+      hf = pick(HREFS, p, '');
+      /* Un premio sin copy configurada es el fallo que hay que ver: no se
+         inventa una cifra, se dice lo unico que es seguro y se avisa. */
+      if (!tl) {
+        tg = ''; tl = t('unknownTtl'); bd = t('unknownBody'); ct = ''; hf = '';
+        if (window.console) {
+          window.console.warn('gg: premio sin copy configurada', prizeIdOf(p), prizePosOf(p));
+        }
+      }
+    }
+    show(tagEl, tg); show(ttlEl, tl); show(bodyEl, bd);
+    if (ct) {
+      ctaEl.textContent = ct;
+      if (hf) { ctaEl.setAttribute('href', hf); }
+      ctaBox.hidden = false;
+    } else { ctaBox.hidden = true; }
+    if (claimed) { show(noteEl, t('claimed')); } else { show(noteEl, t('claimSlow')); }
+    renderDays();
+    afterReveal();
+  }
+  function paintSettled(d) {
+    shown = d.idx;
+    placeAll(symOf(d.prize));
+    reveal(d.prize, d.claimed);
+  }
+  /* Se llama despues de revelar. En produccion el dia 2 todavia no esta
+     activo, asi que aca sale el panel de "vuelve manana". Solo aparece un
+     segundo giro si la PLATAFORMA tiene otra tirada abierta de verdad. */
+  function afterReveal() {
+    var nxt = findPlayable();
+    if (nxt !== -1) {
+      active = nxt;
+      turnId = days[nxt].turnId || null;
+      held = null; minOk = false; landing = false; failed = false;
+      spinBtn.textContent = t('again');
+      spinBtn.disabled = false;
+      fineEl.textContent = t('fine');
+      actBox.hidden = false;
+      waitBox.hidden = true;
+      return;
+    }
+    showWait();
+  }
+  function showWait() {
+    var i, s, allWon = true, mayReturn = false;
+    for (i = 0; i !== days.length; i = i + 1) {
+      s = days[i].state;
+      if (s !== 'won') { allWon = false; }
+      if (s === 'soon') { mayReturn = true; }
+      if (s === 'unknown') { mayReturn = true; }
+    }
+    if (mayReturn) { waitH.textContent = t('lockedH'); waitT.textContent = t('lockedT'); }
+    else if (allWon) { waitH.textContent = t('doneH'); waitT.textContent = t('doneT'); }
+    else { waitH.textContent = t('endedH'); waitT.textContent = t('endedT'); }
+    waitBox.hidden = false;
+    actBox.hidden = true;
+  }
+  function showConfigError() {
+    errH.textContent = t('errH');
+    errT.textContent = t('errT');
+    traceEl.hidden = false;
+    traceEl.textContent = 'data-slugs: ' + SLUGS.join(', ');
+    if (retryBtn) { retryBtn.hidden = true; }
+    errBox.hidden = false;
+    actBox.hidden = true;
+    if (window.console) { window.console.warn('gg: ningun slug cargo', SLUGS); }
+  }
+
+  /* ── claim: recupera un premio que quedo sin acreditar ──────────── */
+  function claimTurn(randId, tid, paint) {
+    if (!randId) { return; }
+    if (!tid) { return; }
+    api('PUT', '/crm/v2/randomizers/' + encodeURIComponent(randId) + '/claim-prize/' + encodeURIComponent(tid), null)
+      .then(function (data) {
+        var stamped = false;
+        if (data) { if (data.prizeClaimedAt) { stamped = true; } }
+        if (paint) { if (stamped) { show(noteEl, t('claimed')); } }
+      }, function (e) {
+        if (window.console) { window.console.warn('gg: claim-prize fallo', e.status, traceOf(e)); }
+      });
+  }
+
+  /* ── la tirada ──────────────────────────────────────────────────── */
+  function sendTurn() {
+    var d = days[active];
+    if (!d) { return; }
+    if (!turnId) { turnId = uuid(); }
+    api('PUT', '/crm/v2/randomizers/' + encodeURIComponent(d.randId) + '/turn/' + encodeURIComponent(turnId), null)
+      .then(function (data) {
+        var p = null;
+        if (data) { p = data.playerPrize; }
+        if (!p) { throw new Error('NO_PRIZE'); }
+        held = p;
+        tryLand();
+      }, function (e) { onFail(e); });
+  }
+  function tryLand() {
+    if (landing) { return; }
+    if (failed) { return; }
+    if (!held) { return; }
+    if (!minOk) { return; }
+    landing = true;
+    var sym = symOf(held);
+    var p = held;
+    /* reveal() adelanta `active` al proximo dia jugable, asi que el randomizer
+       y el turno recien jugados se fotografian ANTES: si no, el claim se iria
+       al randomizer del dia siguiente con turnId nulo y el premio quedaria
+       ganado en pantalla pero sin acreditar. */
+    var rid = days[active].randId;
+    var tid = turnId;
+    if (reduced) {
+      placeAll(sym);
+      reveal(p, false);
+      claimTurn(rid, tid, true);
+      return;
+    }
+    fineEl.textContent = t('opening');
+    var stopped = 0, i;
+    for (i = 0; i !== 3; i = i + 1) {
+      landReel(i, sym, function () {
+        stopped = stopped + 1;
+        if (stopped === 3) {
+          reveal(p, false);
+          claimTurn(rid, tid, true);
+        }
+      });
+    }
+  }
+  function onFail(e) {
+    failed = true; spinning = false; landing = false;
+    toRest();
+    errH.textContent = t('errH');
+    errT.textContent = t('errT');
+    var bits = [];
+    if (e) { if (e.status) { bits.push('HTTP ' + String(e.status)); } }
+    var tid = traceOf(e);
+    if (tid) { bits.push('ref ' + tid); }
+    /* El mensaje del servidor va al renglon tecnico, nunca al copy del
+       jugador: puede venir en ingles o hablar de ids internos. */
+    var msg = serverMsg(e);
+    if (msg) { bits.push(msg); }
+    if (bits.length > 0) { traceEl.hidden = false; traceEl.textContent = bits.join(' · '); }
+    else { traceEl.hidden = true; }
+    if (retryBtn) { retryBtn.hidden = false; retryBtn.textContent = t('retry'); }
+    errBox.hidden = false;
+    actBox.hidden = true;
+    if (window.console) { window.console.warn('gg: turn fallo', e.status, tid, msg); }
+  }
+  function armAndSend() {
+    held = null; minOk = false; landing = false; failed = false;
+    fineEl.textContent = t('spinning');
+    if (!reduced) { startRoll(); }
+    window.setTimeout(function () { minOk = true; tryLand(); }, MIN_MS);
+    sendTurn();
+  }
+  function pull() {
+    if (spinning) { return; }
+    if (active === -1) { return; }
+    if (spinBtn.disabled) { return; }
+    spinning = true;
+    shown = -1;
+    spinBtn.disabled = true;
+    root.classList.remove('is-won');
+    show(tagEl, ''); show(ttlEl, ''); show(bodyEl, ''); show(noteEl, '');
+    ctaBox.hidden = true;
+    waitBox.hidden = true;
+    root.classList.add('is-pulling');
+    window.setTimeout(function () { root.classList.remove('is-pulling'); }, 320);
+    try { if (navigator.vibrate) { navigator.vibrate(30); } } catch (e) {}
+    armAndSend();
+  }
+
+  spinBtn.addEventListener('click', pull);
+  if (lever) { lever.addEventListener('click', pull); }
+  if (retryBtn) {
+    retryBtn.addEventListener('click', function () {
+      /* turnId se conserva a proposito: re-PUT al MISMO id es la garantia
+         de idempotencia, asi que un reintento no puede crear otro premio. */
+      errBox.hidden = true; traceEl.hidden = true;
+      actBox.hidden = false;
+      spinning = true;
+      armAndSend();
+    });
+  }
+  /* Recolocar la cinta cuando cambia el layout NO puede volver al reposo si
+     ya hay un premio en pantalla: un resize (o la fuente cargando tarde)
+     borraria la combinacion ganadora mientras el texto sigue anunciandola. */
+  function replace() {
+    if (spinning) { return; }
+    if (shown !== -1) {
+      if (days[shown]) {
+        if (days[shown].prize) { placeAll(symOf(days[shown].prize)); return; }
+      }
+    }
+    toRest();
+  }
+  window.addEventListener('resize', replace);
+
+  /* ── boot ───────────────────────────────────────────────────────── */
+  function loadDay(slug) {
+    return api('GET', '/crm/v2/randomizers/url-short-name/' + encodeURIComponent(slug), null).then(
+      function (c) { return { ok: true, cfg: c }; },
+      function (e) { return { ok: false, err: e }; }
+    );
+  }
+  function loadAll() {
+    var jobs = [], i;
+    for (i = 0; i !== SLUGS.length; i = i + 1) { jobs.push(loadDay(SLUGS[i])); }
+    Promise.all(jobs).then(function (rs) {
+      var k, unknown = 0;
+      days = [];
+      for (k = 0; k !== rs.length; k = k + 1) { days.push(derive(k, rs[k])); }
+      for (k = 0; k !== days.length; k = k + 1) {
+        if (days[k].state === 'unknown') { unknown = unknown + 1; }
+        if (days[k].state === 'won') {
+          if (!days[k].claimed) { claimTurn(days[k].randId, days[k].turnId, false); }
+        }
+      }
+      renderDays();
+      if (unknown === days.length) { showConfigError(); return; }
+      var p = findPlayable();
+      if (p !== -1) {
+        active = p;
+        turnId = days[p].turnId || null;
+        spinBtn.textContent = t('spin');
+        spinBtn.disabled = false;
+        fineEl.textContent = t('fine');
+        return;
+      }
+      var lastWon = -1;
+      for (k = 0; k !== days.length; k = k + 1) { if (days[k].state === 'won') { lastWon = k; } }
+      if (lastWon !== -1) {
+        active = lastWon;
+        turnId = days[lastWon].turnId;
+        paintSettled(days[lastWon]);
+        return;
+      }
+      showWait();
+    });
+  }
+
+  build();
+  if (MOCK) { if (sim) { sim.hidden = false; } }
+  spinBtn.disabled = true;
+  spinBtn.textContent = t('spin');
+  fineEl.textContent = t('loading');
+  /* La cinta se posiciona cuando ya hay layout: una vez ahora y otra
+     cuando la fuente termina de cargar, que cambia la altura de la celda. */
+  if (window.requestAnimationFrame) { window.requestAnimationFrame(replace); } else { replace(); }
+  window.setTimeout(replace, 120);
+  try {
+    if (document.fonts) { document.fonts.ready.then(replace); }
+  } catch (e) {}
+
+  if (SLUGS.length === 0) { showConfigError(); } else { loadAll(); }
+}());
+</script>
