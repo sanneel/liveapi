@@ -51,6 +51,13 @@ AUTOMATION_SCRIPTS: Dict[str, List[str]] = {
         "templates/casino/gow_email.json",
         "templates/casino/segment_cs_301.json",
     ],
+    "comms_copy": [
+        "comms_copy_update.py",
+        "email_content.py",
+        "spec_parser.py",
+        "templates/casino/champions_email.json",
+        "examples/champions_comms.tsv",
+    ],
     "sport_wof": [
         "randomizer_campaign.py",
         "templates/sport/sport_wof_randomizer.json",
@@ -199,6 +206,10 @@ GENERATORS: List[dict] = [
      "label": "GOW comms",
      "what": "The comms half of a GOW campaign (built with it by default)",
      "script": "comms_campaign.py", "tab": "gow"},
+    {"key": "comms_copy", "group": "Comms", "brand": "JBCL",
+     "label": "Comms copy into an existing draft",
+     "what": "This week's copy, photos and email into a journey copied in the UI",
+     "script": "comms_copy_update.py", "tab": None},
 
     # ── Assets ────────────────────────────────────────────────────────────
     {"key": "slot_cards", "group": "Assets", "brand": "JBCL",

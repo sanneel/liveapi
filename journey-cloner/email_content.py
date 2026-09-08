@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
+from html import escape as html_escape
 from pathlib import Path
 
 EMAIL_TEMPLATE_PATH = Path(__file__).resolve().parent / "templates" / "casino" / "gow_email.json"
@@ -77,4 +78,89 @@ def prepare_email_content(
     if promo_page_id:
         src = src.replace(PROMO_PAGE_ID_TOKEN, promo_page_id)
     comp["body"]["source"] = src
+    return content
+
+
+# ── the Champions/comms shell (templates/casino/champions_email.json) ────────
+# A second captured shell, kept apart from the GOW one because its chrome
+# differs: the footer and banner are content-studio blocks
+# ([[block(CSE-0-...)]]) rather than inline HTML, and its call to action is an
+# image, not a text button. Everything outside the tokens below is reproduced
+# exactly as captured.
+COMMS_EMAIL_TEMPLATE_PATH = (
+    Path(__file__).resolve().parent / "templates" / "casino" / "champions_email.json"
+)
+
+# Filled at build time, server-side.
+EMAIL_BODY_TOKEN = "@@EMAIL_BODY_HTML@@"
+EMAIL_GREETING_TOKEN = "@@EMAIL_GREETING@@"
+EMAIL_LINK_TOKEN = "@@EMAIL_LINK@@"
+EMAIL_CTA_TEXT_TOKEN = "@@EMAIL_CTA_TEXT@@"
+# Filled at paste time, once the console script has uploaded the photo.
+EMAIL_TOP_IMAGE_TOKEN = "@@EMAIL_TOP_IMAGE_URL@@"
+EMAIL_CTA_IMAGE_TOKEN = "@@EMAIL_CTA_IMAGE_URL@@"
+
+DEFAULT_GREETING_ES = "¡Hola, {{FirstName}}!"
+
+
+def body_html_from_text(text: str) -> str:
+    """Turn the sheet's plain email copy into the shell's paragraph markup.
+
+    A blank line becomes the double break the captured shell uses between
+    thoughts, a single newline a single break. HTML metacharacters are escaped,
+    so sheet copy can never inject markup — pass already-marked-up copy through
+    ``body_html`` instead.
+    """
+    lines = [html_escape(ln.strip()) for ln in str(text).strip().splitlines()]
+    out: list[str] = []
+    for ln in lines:
+        out.append(ln if ln else "<br>")
+    return "<br>\n".join(out)
+
+
+def prepare_comms_email_content(
+    *,
+    name: str,
+    subject_es: str,
+    preheader_es: str,
+    body_html: str,
+    link: str,
+    cta_text: str = "",
+    greeting: str = DEFAULT_GREETING_ES,
+) -> dict:
+    """Return the email-content payload for POST .../email/contents.
+
+    Refuses rather than warns: an empty subject, pre-header, body or link would
+    publish the captured campaign's placeholder to real players. The two photo
+    slots stay as tokens for the console script to fill after the upload.
+    """
+    missing = [n for n, v in (("name", name), ("subject", subject_es),
+                              ("pre-header", preheader_es), ("body", body_html),
+                              ("link", link)) if not str(v).strip()]
+    if missing:
+        raise ValueError("email content is missing " + ", ".join(missing)
+                         + " — refusing to build a content that would publish blank.")
+    if not str(link).startswith(("http://", "https://")):
+        raise ValueError(f"email link {link!r} is not absolute — the CTA would not resolve.")
+
+    content = json.loads(COMMS_EMAIL_TEMPLATE_PATH.read_text(encoding="utf-8"))
+    content["name"] = name
+
+    comp = content["translations"]["es"]["composition"]
+    comp["subject"] = subject_es
+    comp["preHeader"] = preheader_es
+
+    src = comp["body"]["source"]
+    for token, value in ((EMAIL_BODY_TOKEN, body_html),
+                         (EMAIL_GREETING_TOKEN, greeting),
+                         (EMAIL_LINK_TOKEN, link),
+                         (EMAIL_CTA_TEXT_TOKEN, cta_text)):
+        if token not in src and token != EMAIL_CTA_TEXT_TOKEN:
+            raise ValueError(f"{token} is not in the captured shell — it has drifted.")
+        src = src.replace(token, value)
+    comp["body"]["source"] = src
+
+    for token in (EMAIL_TOP_IMAGE_TOKEN, EMAIL_CTA_IMAGE_TOKEN):
+        if token not in src:
+            raise ValueError(f"{token} vanished from the shell — the photo slot would ship empty.")
     return content

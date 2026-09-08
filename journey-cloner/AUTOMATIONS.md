@@ -171,6 +171,51 @@ the Game of the Week SMS, email and promo link.
 ### GOW comms — `comms_campaign.py` → built with GOW
 The comms half of a GOW campaign; runs as part of that tab by default.
 
+### Comms copy into an existing draft — `comms_copy_update.py` → script only
+The case the marketing team actually works in: they copy a comms journey of the
+right shape in the UI, and it needs this week's copy, this week's photos and
+this week's email. Every other generator here *builds* a journey from a captured
+template; this one **edits an existing draft in place**, so `--draft-id` is the
+journey they just copied.
+
+The emitted console script asks for four photos through a real file picker (a
+browse button pinned to the top-left of the page — the console cannot open a
+file dialog by itself) and uploads each into the same media-library folder the
+backoffice's own picker uses:
+
+| slot | goes to | as |
+| --- | --- | --- |
+| NC ICON | `nc` `icon` | the asset's `absolute_link` |
+| POP-UP BACKGROUND | `popup` `background_image_src` | the asset's `absolute_link` |
+| EMAIL TOP IMAGE | the email body's hero | `https://{{cdn_hostname}}<relative_link>` |
+| EMAIL CTA IMAGE | the email body's call to action | `https://{{cdn_hostname}}<relative_link>` |
+
+The email is built from `templates/casino/champions_email.json` — a second
+captured shell, separate from the GOW one because its banner and footer are
+content-studio blocks (`[[block(CSE-0-...)]]`, the footer carrying unsubscribe
+and legal) and its call to action is an image rather than a text button. **The
+CTA words have to be in the artwork**: `--email-cta` only reaches the image's
+`alt`. The script creates, saves and publishes the content, and only then points
+the draft's email activity at the new id — an unpublished id on a live email
+activity is an email that renders as nothing.
+
+Copy is written **by path**, not by whole-body string replace, because a copied
+draft routinely holds one string in both its English and its Spanish variable
+and a replace could not then place different EN and ES copy. The link still goes
+in by replace: that one *should* reach every channel. Every write lands in both
+the compiled `activities[]` and the `rawJourneyData` mirror.
+
+`DRY_RUN` starts **on**: the first paste prints the whole plan, uploads nothing
+and creates no email. `--live` emits it already off.
+
+    python comms_copy_update.py --draft-id 690315 \
+        --name "JBCL | CS | Champions | comms" \
+        --link "https://jugabet.cl/services/promo/offers/randomizer/cl-round-1?%$utm_tags%" \
+        --spec examples/champions_comms.tsv
+
+`scripts/test_comms_copy_update.py` runs a generated script against a stubbed
+browser and backoffice and asserts on what it tried to save.
+
 ---
 
 ## Assets
