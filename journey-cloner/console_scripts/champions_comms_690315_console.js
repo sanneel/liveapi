@@ -1,4 +1,4 @@
-// JBCL | CS | Champions | comms — comms copy, artwork and email. Generated 2026-09-08 10:23 -03.
+// JBCL | CS | Champions | comms — comms copy, artwork and email. Generated 2026-09-08 10:33 -03.
 //
 // Paste into the DevTools console on a logged-in backoffice tab.
 //
@@ -45,6 +45,8 @@
   // is deliberate — the slot's picker is then skipped and listed at the end.
   const KEEP_INHERITED_ASSETS = false;
   const ALLOW_SHARED_COPY_REWRITE = true;
+  // Which language's text a place holding one message for both should get.
+  const SMS_DEFAULT_LANG = "es";
 
   const LINK = "https://jugabet.cl/services/promo/offers/randomizer/cl-round-1?%$utm_tags%";
   const COPY = {
@@ -133,6 +135,33 @@
   }
   const u16 = (s) => Array.from(String(s)).reduce((n, c) => n + (c.codePointAt(0) > 0xFFFF ? 2 : 1), 0);
   const fail = (m) => { throw new Error(m); };
+
+  // Where a string actually lives inside one node, and how to replace it there.
+  // The SMS node's shape is not knowable in advance — writing only the paths a
+  // generator happens to know is how the source journey's message survived a
+  // run that reported success.
+  function exactPaths(root, needle) {
+    const out = [];
+    const walk = (val, p) => {
+      if (typeof val === 'string') { if (val === needle) out.push(p || '(root)'); return; }
+      if (!val || typeof val !== 'object') return;
+      if (Array.isArray(val)) { val.forEach((v, i) => walk(v, p + '[' + i + ']')); return; }
+      for (const k of Object.keys(val)) walk(val[k], p ? p + '.' + k : k);
+    };
+    walk(root, '');
+    return out;
+  }
+  function replaceExact(root, oldV, newV) {
+    let n = 0;
+    const walk = (parent, key, val) => {
+      if (typeof val === 'string') { if (val === oldV) { parent[key] = newV; n++; } return; }
+      if (!val || typeof val !== 'object') return;
+      if (Array.isArray(val)) { val.forEach((v, i) => walk(val, i, v)); return; }
+      for (const k of Object.keys(val)) walk(val, k, val[k]);
+    };
+    const box = { r: root }; walk(box, 'r', root);
+    return n;
+  }
 
   // ── the browse button ───────────────────────────────────────────────────
   // A real <input type="file"> pinned to the top-left of the page: the console
@@ -334,6 +363,7 @@
   //   rawValues.localizedMessageTexts.{en|es}    (dict form, .messageText or a bare string)
   //   smsSettings.localizedMessageTexts[]        (list form, matched on languageCode)
   const smsWrites = [];
+  let smsAmbiguous = false;
   if (ROLES.indexOf('sms') > -1) {
     for (const lang of ['en', 'es']) {
       const v = (COPY.sms || {})['text_' + lang];
@@ -354,8 +384,13 @@
       const real = [...olds].filter((x) => typeof x === 'string' && x.trim());
       if (!real.length) fail('sms: no captured message text found for ' + lang
         + '. rawValues/smsSettings keys: ' + Object.keys(found.sms.initializationData || {}).join(', '));
-      smsWrites.push({ lang, newValue: v, oldValue: real[0] });
+      smsWrites.push({ lang, newValue: v, oldValue: real[0],
+                       paths: exactPaths(found.sms, real[0]) });
     }
+    // One string serving both languages cannot be split by an exact-match
+    // replace, so the per-language paths below are all the separation there is.
+    const olds = smsWrites.map((w) => w.oldValue);
+    smsAmbiguous = olds.length > 1 && olds[0] === olds[1];
   }
   // The pop-up holds its promo link in ONE language-independent `link` (its
   // per-language slots read "%link%?%$utm_tags%"), so the link_en/link_es swap
@@ -526,8 +561,37 @@
   for (const p of plan) if (p.skip) console.log('    = ' + p.label + '  (' + p.skip + ')');
   for (const w of smsWrites) {
     if (w.oldValue === w.newValue) { console.log('    = sms.text_' + w.lang + '  (already correct)'); continue; }
-    console.log('    sms.text_' + w.lang + '  (by path)'
+    console.log('    sms.text_' + w.lang + '  (' + w.paths.length + ' place(s) in the node: '
+                + (w.paths.join(', ') || 'none') + ')'
                 + '\n        old: ' + JSON.stringify(w.oldValue) + '\n        new: ' + JSON.stringify(w.newValue));
+  }
+  if (smsAmbiguous) {
+    console.warn('  NOTE — the source SMS node holds ONE string for both languages, so only the'
+      + ' per-language paths it carries can be told apart. Every other place holding that string'
+      + ' gets the ' + SMS_DEFAULT_LANG.toUpperCase() + ' text (change SMS_DEFAULT_LANG to flip it).');
+  }
+  if (smsWrites.length) {
+    // Every message-length string the node holds, wherever it keeps it. The
+    // shape differs between captured journeys, and a message sitting somewhere
+    // this script does not list is one it would not replace.
+    const claimed = new Set(smsWrites.map((w) => w.oldValue));
+    const others = [];
+    const walk = (val, p) => {
+      if (typeof val === 'string') {
+        if (val.length > 30 && !claimed.has(val) && !/^https?:\/\//.test(val) && !isSlotRef(val))
+          others.push('        ' + (p || '(root)') + ' = ' + JSON.stringify(val));
+        return;
+      }
+      if (!val || typeof val !== 'object') return;
+      if (Array.isArray(val)) { val.forEach((v, i) => walk(v, p + '[' + i + ']')); return; }
+      for (const k of Object.keys(val)) walk(val[k], p ? p + '.' + k : k);
+    };
+    walk(found.sms, '');
+    if (others.length) {
+      console.warn('  NOTE — the SMS activity also holds ' + others.length + ' other long string(s),'
+        + ' which this run does NOT replace. Check none of them is the message that actually sends:'
+        + '\n' + others.join('\n'));
+    }
   }
   for (const w of writes) {
     if (w.oldValue === w.newValue) { console.log('    = ' + w.role + '.' + w.field + ' [' + w.varName + ']  (already correct)'); continue; }
@@ -671,9 +735,37 @@
         }
       }
     }
-    if (!hit) fail('sms.text_' + w.lang + ': nothing was written. Refusing to save a body where the'
-      + ' copied campaign\'s SMS silently survived.');
     smsApplied.push({ w, hit });
+  }
+  // The paths above are only the shapes journey_composer.py happens to know. Any
+  // other place the node keeps its message is swept here by exact match, scoped
+  // to the SMS node and its mirror, so an unknown shape cannot ship the source
+  // journey's text under this campaign's name.
+  const smsSwept = [];
+  if (smsWrites.length) {
+    const fallback = smsWrites.find((w) => w.lang === SMS_DEFAULT_LANG) || smsWrites[0];
+    const pairs = smsAmbiguous
+      ? [{ oldValue: smsWrites[0].oldValue, newValue: fallback.newValue, lang: fallback.lang }]
+      : smsWrites;
+    for (const w of pairs) {
+      if (w.oldValue === w.newValue) continue;
+      let n = 0;
+      for (const root of holdersFor('sms')) n += replaceExact(root, w.oldValue, w.newValue);
+      if (n) smsSwept.push({ lang: w.lang, n });
+    }
+  }
+  for (const { w, hit } of smsApplied) {
+    const swept = smsSwept.reduce((t, x) => t + (x.lang === w.lang ? x.n : 0), 0);
+    if (!hit && !swept && w.oldValue !== w.newValue)
+      fail('sms.text_' + w.lang + ': nothing was written. Refusing to build a draft where the'
+        + ' source journey\'s SMS silently survived.');
+  }
+  for (const root of holdersFor('sms')) {
+    for (const w of smsWrites) {
+      const left = exactPaths(root, w.oldValue);
+      if (left.length) fail('sms.text_' + w.lang + ': the source journey\'s message is still at '
+        + left.join(', ') + ' after the write. Refusing to build a draft that would send it.');
+    }
   }
 
   // The language-independent promo link, written by exact variable name so it
@@ -806,18 +898,17 @@
     else if (back.indexOf(ov) > -1) bad.push(g.labels.join(' / ') + ': the source journey\'s copy is still there');
   }
   const backNode = (role) => (backObj.activities || []).find((a) => akey(a) === want[role]);
-  for (const { w } of smsApplied) {
-    const init = (backNode('sms') || {}).initializationData || {};
-    const loc = (init.rawValues || {}).localizedMessageTexts;
-    let got;
-    if (loc && !Array.isArray(loc)) { const x = loc[w.lang] || loc[w.lang.toUpperCase()];
-      got = typeof x === 'string' ? x : (x && x.messageText); }
-    else if (Array.isArray(loc)) { const it = loc.find((i) => String(i.languageCode || '').toLowerCase() === w.lang);
-      got = it && it.messageText; }
-    if (got !== undefined && got !== w.newValue) {
-      bad.push('sms.text_' + w.lang + ': reads back as ' + JSON.stringify(got)
-               + ', expected ' + JSON.stringify(w.newValue));
-    }
+  // Checked on the node itself rather than on a path this script guessed: an
+  // unknown shape must read as a failure, never as "the field was not there".
+  const smsBack = backNode('sms');
+  if (smsWrites.length && !smsBack) bad.push('sms: the created draft has no dextra_sms activity');
+  for (const w of smsWrites) {
+    if (!smsBack) break;
+    const left = exactPaths(smsBack, w.oldValue);
+    if (left.length) bad.push('sms.text_' + w.lang + ': the source journey\'s message is still at '
+                              + left.join(', '));
+    if (!exactPaths(smsBack, w.newValue).length && !(smsAmbiguous && w.lang !== SMS_DEFAULT_LANG))
+      bad.push('sms.text_' + w.lang + ': the new message is nowhere in the created SMS activity');
   }
   for (const { w } of applied) {
     const vs = ((( backNode(w.role) || {}).initializationData || {}).objectForSend || {}).variables || [];

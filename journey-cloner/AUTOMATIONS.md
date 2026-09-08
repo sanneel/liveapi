@@ -241,6 +241,20 @@ that still belongs to the source:
 | campaign-connector `campaignId` | the connector is bound to an existing campaign |
 | top-level keys outside a POSTable draft's shape | the GET's `id`/`version`/`status` are the source's identity |
 
+**The SMS node's shape is not knowable in advance.** Where the cards keep their
+copy in named variables, a captured SMS activity may hold its message in
+`rawValues.messageText`, in `localizedMessageTexts` (dict or list form), in
+`smsSettings`, in `objectForSend.variables`, or in more than one at once.
+Writing only the paths a generator was taught is how the source journey's SMS
+survived a run that reported success: the write hit *a* holder, and the readback
+looked for a path that was not there, found `undefined`, and passed. So the
+message is now replaced by exact match **scoped to the SMS activity and its
+mirror**, whatever it is keyed under, the plan lists every place it lives plus
+any other long string the node holds, and the run refuses if a single copy of
+the source's message is still there afterwards. Where one string serves both
+languages nothing can tell the copies apart, so they take `--sms-default-lang`
+(`es` by default) and the plan says so.
+
 **Nothing may be left as the source journey's.** Every content field the run does
 not write would ship last week's value, so the script totals up what its plan
 covers and refuses on anything left over — including a whole channel the draft

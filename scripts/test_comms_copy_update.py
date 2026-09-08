@@ -134,10 +134,34 @@ def popup_init() -> dict:
     }
 
 
-def sms_init() -> dict:
-    return {"rawValues": {"messageText": "JugaBet | OLD sms text en",
-                          "localizedMessageTexts": {"en": {"messageText": "JugaBet | OLD sms text en"},
-                                                    "es": {"messageText": "JugaBet | OLD sms text es"}}}}
+OLD_SMS_EN = "JugaBet | Big European nights, big chances. Bet $10.000 and win a Free Bet of $2.000."
+OLD_SMS_ES = "JugaBet | Grandes partidos de Europa, grandes oportunidades. Apuesta $10.000 y gana una Free Bet de $2.000."
+
+
+def sms_init(shape: str = "known") -> dict:
+    """The SMS node's shape differs between captured journeys.
+
+    ``known``   the holders journey_composer.py knows.
+    ``unknown`` the message ALSO sits somewhere no generator was taught, which
+                is how the source journey's SMS survived a run that reported
+                success and read back clean.
+    ``shared``  one string serves both languages, so no exact-match replace can
+                tell them apart.
+    """
+    if shape == "shared":
+        return {"rawValues": {"messageText": OLD_SMS_ES,
+                              "localizedMessageTexts": {"en": {"messageText": OLD_SMS_ES},
+                                                        "es": {"messageText": OLD_SMS_ES}}}}
+    init = {"rawValues": {"messageText": OLD_SMS_EN,
+                          "localizedMessageTexts": {"en": {"messageText": OLD_SMS_EN},
+                                                    "es": {"messageText": OLD_SMS_ES}}}}
+    if shape == "unknown":
+        init["objectForSend"] = {"variables": [{"name": "text-en", "value": OLD_SMS_EN},
+                                               {"name": "text-es", "value": OLD_SMS_ES}]}
+        init["singleChannel"] = {"localizedLanguagesTab": {"en": {"message": OLD_SMS_EN},
+                                                           "es": {"message": OLD_SMS_ES}}}
+        init["smsSettings"] = {"body": OLD_SMS_ES}
+    return init
 
 
 def email_init() -> dict:
@@ -146,10 +170,10 @@ def email_init() -> dict:
 
 
 def make_draft(*, with_email: bool = True, with_icon: bool = True,
-               drop_popup: bool = False) -> dict:
+               drop_popup: bool = False, sms_shape: str = "known") -> dict:
     nodes = [(NODE_IDS["nc"], "notification_center", nc_init()),
              (NODE_IDS["popup"], "notification_center", popup_init()),
-             (NODE_IDS["sms"], "dextra_sms", sms_init())]
+             (NODE_IDS["sms"], "dextra_sms", sms_init(sms_shape))]
     if drop_popup:
         nodes = [n for n in nodes if n[0] != NODE_IDS["popup"]]
     if with_email:
@@ -303,6 +327,40 @@ def main() -> int:
                   "pre-header from the sheet")
         check(len(res.get("published") or []) == 1, "the content was published exactly once")
         check(len(res.get("uploads") or []) == 4, "four photos were uploaded")
+
+        SMS_ES = ("JugaBet | Real Madrid vs Inter llega con la Champions. "
+                  "Raspa y Gana y descubre que premio te espera.")
+        SMS_EN = ("JugaBet | Real Madrid vs Inter comes with the Champions League. "
+                  "Scratch and Win and discover what prize awaits you.")
+
+        print("\nthe SMS keeps its message somewhere no generator was taught")
+        res = run(generate(tmp), make_draft(sms_shape="unknown"), tmp)
+        check(not res.get("error"), f"script ran without refusing (got {res.get('error')!r})")
+        created = res.get("created")
+        if created:
+            for storage in ("compiled", "mirror"):
+                blob = json.dumps(init_of(created, storage, "dextra_sms"), ensure_ascii=False)
+                check(OLD_SMS_ES not in blob and OLD_SMS_EN not in blob,
+                      f"no copy of the source journey's SMS is left in {storage}")
+                check(SMS_ES in blob and SMS_EN in blob, f"both new messages are in {storage}")
+                sms = init_of(created, storage, "dextra_sms")
+                # the places a generator knows, and the ones it does not
+                check(sms["rawValues"]["localizedMessageTexts"]["es"]["messageText"] == SMS_ES,
+                      f"known path written in {storage}")
+                check(sms["smsSettings"]["body"] == SMS_ES, f"unknown path swept in {storage}")
+                check({v["name"]: v["value"] for v in sms["objectForSend"]["variables"]}["text-es"] == SMS_ES,
+                      f"unknown variable swept in {storage}")
+                check(sms["singleChannel"]["localizedLanguagesTab"]["en"]["message"] == SMS_EN,
+                      f"unknown language tab swept in {storage}")
+
+        print("\nthe SMS keeps ONE message for both languages")
+        res = run(generate(tmp), make_draft(sms_shape="shared"), tmp)
+        check(not res.get("error"), f"script ran without refusing (got {res.get('error')!r})")
+        created = res.get("created")
+        if created:
+            blob = json.dumps(init_of(created, "compiled", "dextra_sms"), ensure_ascii=False)
+            check(OLD_SMS_ES not in blob, "no copy of the source journey's SMS is left")
+            check(SMS_ES in blob, "the un-separable copies got the default language (es)")
 
         print("\nrefusal — the NC node has no icon variable")
         res = run(generate(tmp, channels="nc"), make_draft(with_icon=False, with_email=False,
