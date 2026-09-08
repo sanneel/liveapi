@@ -1,23 +1,26 @@
 #!/usr/bin/env python3
-"""Rewrite the copy, artwork and email of an EXISTING comms journey draft.
+"""Build a NEW comms journey draft from an existing one, with this run's content.
 
-The other generators in this folder build a journey from a captured template.
-This one is for the case the marketing team actually works in: they copy a
-comms journey of the right shape in the UI, then need this week's copy, this
-week's photos and this week's email in it. It edits that draft in place.
+The other generators in this folder build a journey from a template captured in
+this repo. This one takes a live journey as its template instead: the marketing
+team already has a comms journey of the right shape in the backoffice, and each
+week it needs new copy, new photos and a new email. The source journey is read
+and never written — the run ends in a brand-new draft.
 
 What the emitted console script does, in order:
   1. captures the bearer token from the page's own requests (the backoffice
      never gives it to the server, so nothing here can run server-side),
-  2. reads the draft and works out where every field currently lives,
+  2. reads the SOURCE draft and works out where every field currently lives,
   3. prints the whole plan and stops if DRY_RUN is left on,
   4. opens a file picker per photo slot — NC icon, pop-up background, and the
      email's top and CTA images — uploading each into the media library the
      backoffice's own picker uses,
   5. creates, saves and publishes the marketing email from the captured shell
-     with this run's subject, pre-header, body and link, then points the
-     draft's email activity at the new content id,
-  6. PUTs the draft once and reads it back to prove every field landed.
+     with this run's subject, pre-header, body and link,
+  6. reserves a fresh journey id, regenerates every activity id, drops the
+     source's lineage and server-minted ids, and POSTs a new draft,
+  7. reads the new draft back and proves that nothing in it is still the
+     source's: not a word of copy, not a link, not a photo, not the email.
 
 Why it writes the way it does: a journey lives twice — the compiled
 ``activities[]`` and the ``rawJourneyData`` editor mirror — and disagreement
@@ -28,13 +31,13 @@ whole-body replace could not then place different EN and ES copy. The link
 still goes in by swap: that one *should* reach every channel.
 
 Usage:
-  python comms_copy_update.py --draft-id 690315 \
+  python comms_copy_update.py --source-draft-id 690315 \
       --name "JBCL | CS | Champions | comms" \
       --link "https://jugabet.cl/services/promo/offers/randomizer/cl-round-1?%$utm_tags%" \
       --spec spec.txt
 
   # copy straight from the pasted sheet block:
-  pbpaste | python comms_copy_update.py --draft-id 690315 --name "..." \
+  pbpaste | python comms_copy_update.py --source-draft-id 690315 --name "..." \
       --link "..." --spec -
 
 Channels default to whatever the sheet ticked TRUE. --channels overrides it.
@@ -66,6 +69,17 @@ OUT_DIR = HERE / "console_scripts"
 
 # The media-library folder the backoffice's own photo picker uploads into.
 DEFAULT_FOLDER_ID = "c5c7c614-5169-4346-b90b-8225836a1c63"
+
+# A captured comms draft that is known to POST. Its top-level keys are the shape
+# a create accepts, so anything the GET adds on top of them (the numeric id,
+# version, status, timestamps) is the source draft's own identity and is dropped.
+POSTABLE_SHAPE_PATH = HERE / "templates" / "casino" / "gow_comms.json"
+
+
+def postable_keys() -> list[str]:
+    body = json.loads(POSTABLE_SHAPE_PATH.read_text(encoding="utf-8"))
+    # the lineage markers are stripped, not carried
+    return sorted(k for k in body if k not in ("duplicatedFromId", "duplicatedFromVersion"))
 
 CHANNELS = ("popup", "nc", "sms", "email")
 
@@ -169,21 +183,27 @@ JS_TEMPLATE = r"""// @JOURNEY_NAME@ — comms copy, artwork and email. Generated
 // Paste into the DevTools console on a logged-in backoffice tab.
 //
 // WHAT IT DOES
-//   Edits journey draft @DRAFT_ID@ IN PLACE: this run's copy for the channels
-//   the sheet ticked, a photo you pick per artwork slot, and a freshly created
-//   and published marketing email the draft's email activity is pointed at.
-//   Make the draft first by copying a journey of the same shape in the UI, then
-//   put its id in DRAFT_ID below. For another date: copy again, change DRAFT_ID,
-//   rerun.
+//   Reads journey draft @SOURCE_DRAFT_ID@ as its template and CREATES A NEW
+//   DRAFT from it: this run's copy for the channels the sheet ticked, a photo
+//   you pick per artwork slot, and a freshly created and published marketing
+//   email the new draft's email activity points at. The source journey is only
+//   read — it is never written, so rerunning this is always safe. For another
+//   date: change the copy and rerun; you get another new draft.
 //
 // HOW IT WRITES
 //   A journey lives TWICE — compiled `activities[]` and the `rawJourneyData`
 //   editor mirror — and disagreement between them is a blank canvas in the
 //   builder, so every write below lands in both. Copy goes in BY PATH, because
-//   a copied draft routinely holds one string in its English and Spanish
+//   the source draft routinely holds one string in its English and Spanish
 //   variable and a whole-body replace could not then place different EN and ES
 //   copy. The link goes in by whole-body swap: it SHOULD reach every channel.
 //   Field locations come from journey_composer.py.
+//
+//   Before the POST the body is made standalone: a fresh reservedJourneyId, a
+//   fresh uuid for every activity (shared activityIds collide), no
+//   duplicatedFrom* lineage, no server-minted promotionDisplayId, no stale
+//   campaign-connector campaignId, and only the top-level keys a POSTable
+//   comms draft carries.
 //
 // IT REFUSES RATHER THAN WARNS
 //   The generator already checked the copy — lengths in UTF-16 units, GSM-7 on
@@ -191,11 +211,12 @@ JS_TEMPLATE = r"""// @JOURNEY_NAME@ — comms copy, artwork and email. Generated
 //   re-checks what only the live draft can tell it: every node present exactly
 //   once, every field matched to a captured variable, no ambiguous swap, every
 //   photo slot filled, the email published before the draft points at it, the
-//   name in all three of its homes, and a readback after the PUT.
+//   name in all three of its homes, every activity id freshly minted, and a
+//   readback proving the new draft shares no content with the source.
 (async () => {
   'use strict';
   const DRY_RUN = true;               // THE SWITCH. true = preview only. false = writes.
-  const DRAFT_ID = @DRAFT_ID@;
+  const SOURCE_DRAFT_ID = @SOURCE_DRAFT_ID@;   // read only; never written
   const BRAND = @BRAND@;
   const JOURNEY_NAME = @JOURNEY_NAME_JSON@;
 
@@ -211,6 +232,7 @@ JS_TEMPLATE = r"""// @JOURNEY_NAME@ — comms copy, artwork and email. Generated
   const FOLDER_ID = @FOLDER_ID@;
   const EMAIL_NAME = @EMAIL_NAME@;
   const EMAIL_CONTENT = @EMAIL_CONTENT@;   // null when the email is left alone
+  const KEEP_KEYS = @KEEP_KEYS@;          // the top-level shape a create accepts
   const TOP_IMAGE_TOKEN = @TOK_TOP_IMAGE@;
   const CTA_IMAGE_TOKEN = @TOK_CTA_IMAGE@;
 
@@ -250,7 +272,7 @@ JS_TEMPLATE = r"""// @JOURNEY_NAME@ — comms copy, artwork and email. Generated
   // Say it before anything else, so a preview run is never mistaken for a failed one.
   console.log(DRY_RUN
     ? '%cPREVIEW ONLY — this run writes NOTHING, uploads NOTHING and creates NO email. Set DRY_RUN = false to apply.'
-    : '%cWRITE MODE — this run will change draft ' + DRAFT_ID + '.',
+    : '%cWRITE MODE — this run will create a new draft from ' + SOURCE_DRAFT_ID + '.',
     'color:' + (DRY_RUN ? '#eab308' : '#ef4444') + ';font-weight:bold;font-size:14px');
 
   // journey-drafts take x-brand (singular). The drafts LIST wants x-brands;
@@ -345,6 +367,37 @@ JS_TEMPLATE += r"""
     return await uploadAsset(await pickFile(label), label);
   }
 
+  // A new draft needs an identifier the backoffice minted for it; reusing the
+  // source's is "the journey with the same identifier already exists".
+  async function reserveId() {
+    const r = await fetch(CRM_BASE + '/journey-builder/v0/journeys/identifier', { method: 'POST',
+      headers: { accept: 'application/json, text/plain, */*', authorization: auth, 'x-brand': BRAND,
+                 'content-type': 'application/x-www-form-urlencoded' }, credentials: 'include' });
+    const raw = (await r.text()).trim();
+    let id = raw.replace(/^"+|"+$/g, '');
+    try { const d = JSON.parse(raw);
+          if (typeof d === 'string') id = d.trim();
+          else if (d && typeof d === 'object') id = String(d.identifier || d.journeyId || d.id || d.value || '').trim();
+    } catch (e) {}
+    if (!r.ok || !id.startsWith('JRN-')) throw new Error('Reserve failed: HTTP ' + r.status + ' ' + raw.slice(0, 200));
+    return id;
+  }
+
+  const newUuid = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID()
+    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16); });
+  const UUID_RE = /"(?:activityId|journeyActivityId|id)"\s*:\s*"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"/g;
+  // Text-level, not per-field: the same uuid is also an OBJECT KEY in
+  // rawJourneyData.activitiesConfiguration and an endpoint in every edge, and
+  // a draft whose ids only half-changed points its edges at the source's nodes.
+  function regenIds(body) {
+    let txt = JSON.stringify(body);
+    const old = new Set(); let m; UUID_RE.lastIndex = 0;
+    while ((m = UUID_RE.exec(txt)) !== null) old.add(m[1]);
+    for (const o of old) txt = txt.split(o).join(newUuid());
+    return { body: JSON.parse(txt), count: old.size };
+  }
+
   // create -> save -> publish. The draft is only pointed at the content after
   // the publish succeeds: an unpublished content id on a live email activity
   // is an email that renders as nothing.
@@ -375,10 +428,10 @@ JS_TEMPLATE += r"""
 JS_TEMPLATE += r"""
   // ── the draft ────────────────────────────────────────────────────────────
   if (!JOURNEY_NAME.trim()) fail('JOURNEY_NAME is empty.');
-  const draft = await send('GET', CRM_BASE + '/journey-builder/v0/journey-drafts/' + DRAFT_ID);
+  const draft = await send('GET', CRM_BASE + '/journey-builder/v0/journey-drafts/' + SOURCE_DRAFT_ID);
   const acts = draft.activities;
-  if (!Array.isArray(acts) || !acts.length) fail('draft ' + DRAFT_ID + ' has no activities[] — not a journey draft body.');
-  if (!draft.rawJourneyData) fail('draft ' + DRAFT_ID + ' has no rawJourneyData mirror. Saving it would blank the builder canvas.');
+  if (!Array.isArray(acts) || !acts.length) fail('draft ' + SOURCE_DRAFT_ID + ' has no activities[] — not a journey draft body.');
+  if (!draft.rawJourneyData) fail('draft ' + SOURCE_DRAFT_ID + ' has no rawJourneyData mirror. A draft built from it would open as a blank canvas.');
   const akey = (a) => { const n = a.activityName || '?'; const i = a.initializationData || {};
                         return (n === 'notification_center' && 'contract' in i) ? n + '#contract' + i.contract : n; };
   const want = { nc: 'notification_center#contract1', popup: 'notification_center#contract5',
@@ -386,11 +439,11 @@ JS_TEMPLATE += r"""
   const found = {};
   for (const role of ROLES) {
     const hits = acts.filter((a) => akey(a) === want[role]);
-    if (hits.length !== 1) fail('expected exactly one ' + role + ' node (' + want[role] + ') in draft ' + DRAFT_ID
+    if (hits.length !== 1) fail('expected exactly one ' + role + ' node (' + want[role] + ') in source draft ' + SOURCE_DRAFT_ID
       + ', found ' + hits.length + '. Node kinds present: ' + [...new Set(acts.map(akey))].join(', '));
     found[role] = hits[0];
   }
-  console.log('%cdraft ' + DRAFT_ID + ' — ' + acts.length + ' activities; found ' + ROLES.join(', '),
+  console.log('%csource draft ' + SOURCE_DRAFT_ID + ' — ' + acts.length + ' activities; found ' + ROLES.join(', '),
               'color:#22c55e');
 
   // ── locate each field's CURRENT value ────────────────────────────────────
@@ -424,6 +477,7 @@ JS_TEMPLATE += r"""
       const hits = currentVar(found[role], STEM.link, lang);
       if (!hits) continue;                     // not every node carries a link
       for (const h of hits) plan.push({ label: role + '.link_' + lang + ' [' + h.name + ']',
+                                        role: role, varName: h.name,
                                         oldValue: String(h.value == null ? '' : h.value), newValue: v });
     }
   }
@@ -456,7 +510,7 @@ JS_TEMPLATE += r"""
       smsWrites.push({ lang, newValue: v, oldValue: real[0] });
     }
   }
-  if (!draft.journeyName) fail('draft ' + DRAFT_ID + ' has no journeyName.');
+  if (!draft.journeyName) fail('source draft ' + SOURCE_DRAFT_ID + ' has no journeyName.');
   const nameWas = { top: String(draft.journeyName),
                     info: ((draft.rawJourneyData || {}).infoValues || {}).journeyName };
 
@@ -509,8 +563,9 @@ JS_TEMPLATE += r"""
       console.warn('        also held by: ' + (others.length ? [...new Set(others)].join(', ') : 'the same node or its mirror'));
     }
     if (!DRY_RUN && !ALLOW_SHARED_COPY_REWRITE) {
-      fail(spill.length + ' string(s) are shared with another activity. Rewriting them changes that'
-        + ' wave too. Set ALLOW_SHARED_COPY_REWRITE = true if that is what you want.');
+      fail(spill.length + ' string(s) are shared with another activity, which would be rewritten in'
+        + ' the new draft too (the source journey is untouched either way).'
+        + ' Set ALLOW_SHARED_COPY_REWRITE = true if that is what you want.');
     }
   }
 """
@@ -531,7 +586,8 @@ JS_TEMPLATE += r"""
     const hits = varMatch(found[s.role], s.stems);
     if (!hits.length) fail(s.key + ': no captured variable is named ' + s.stems.join('/')
       + ' on the ' + s.role + ' node. Variables present: ' + varsOf(found[s.role]).map((v) => v.name).join(', ')
-      + '. Uploading a photo with nowhere to put it would leave the copied campaign\'s artwork in place.');
+      + '. Uploading a photo with nowhere to put it would leave the source journey\'s artwork in place.');
+    s.names = hits.map((h) => h.name);
     s.oldValue = hits[0].value == null ? '' : String(hits[0].value);
   }
   if (EMAIL_CONTENT) {
@@ -547,6 +603,37 @@ JS_TEMPLATE += r"""
     slots.push({ key: 'email.template.id', label: null, kind: 'template',
                  oldValue: String(((es.template || {}).id) || '') });
   }
+  // ── nothing may be left as the source journey's ─────────────────────────
+  // A content field this run never writes ships the source's value, and that
+  // is how last week's campaign goes out under this week's name. Knowable from
+  // the plan alone, so it refuses HERE — before a photo is uploaded, an email
+  // is published, or a draft exists to have to delete.
+  const written = new Set();
+  for (const w of writes) written.add(w.role + '::' + w.varName);
+  for (const pl of plan) if (pl.role) written.add(pl.role + '::' + pl.varName);
+  for (const s of slots) if (s.kind === 'variable') for (const n of s.names) written.add(s.role + '::' + n);
+  const CONTENT_RE = /(title|des|caption|link|icon|image|deeplink|text|message)/i;
+  const leaks = [];
+  for (const role of ROLES) {
+    if (role === 'sms' || role === 'email') continue;
+    for (const v of varsOf(found[role])) {
+      const name = String(v.name || '');
+      if (!CONTENT_RE.test(name) || written.has(role + '::' + name)) continue;
+      const was = v.value == null ? '' : String(v.value);
+      if (was.trim()) leaks.push(role + '.' + name + ' would stay the source journey\'s: ' + JSON.stringify(was));
+    }
+  }
+  const touched = new Set(ROLES.map((r) => want[r]));
+  for (const a of acts) {
+    const k = akey(a);
+    const role = Object.keys(want).find((r) => want[r] === k);
+    if (role && !touched.has(k))
+      leaks.push('the ' + role + ' activity is not in ROLES, so all of its content would stay the source journey\'s');
+  }
+  if (leaks.length) fail('the new draft would still carry the source journey\'s content:\n      '
+    + leaks.join('\n      ')
+    + '\n      Give the sheet a value for each, or regenerate with that channel in --channels.');
+
   console.log('  photos and email:');
   for (const s of slots) {
     const ph = typeof s.oldValue === 'string' && /^%.*%$/.test(s.oldValue.trim());
@@ -566,7 +653,8 @@ JS_TEMPLATE += r"""
        + ' Either let the pickers run, or regenerate the script with --no-email.');
 
   // ── the plan ────────────────────────────────────────────────────────────
-  console.log('%c' + JOURNEY_NAME + ' -> draft ' + DRAFT_ID + (DRY_RUN ? '   [DRY RUN — nothing written]' : ''),
+  console.log('%c' + JOURNEY_NAME + '  — a NEW draft, built from ' + SOURCE_DRAFT_ID
+              + (DRY_RUN ? '   [DRY RUN — nothing created]' : ''),
               'color:#3b82f6;font-weight:bold;font-size:14px');
   for (const p of plan) if (p.skip) console.log('    = ' + p.label + '  (' + p.skip + ')');
   for (const w of smsWrites) {
@@ -698,9 +786,10 @@ JS_TEMPLATE += r"""
     const value = uploaded[s.key];
     if (value == null) continue;                       // KEEP_INHERITED_ASSETS
     let hit = 0;
+    const names = new Set();
     for (const holder of holdersFor(s.role)) {
       for (const v of ((holder.objectForSend || {}).variables) || [])
-        if (s.stems.indexOf(String(v.name || '').toLowerCase()) > -1) { v.value = value; hit++; }
+        if (s.stems.indexOf(String(v.name || '').toLowerCase()) > -1) { v.value = value; names.add(v.name); hit++; }
       const tabs = ((holder.singleChannel || {}).localizedLanguagesTab) || {};
       for (const tab of Object.values(tabs)) {
         if (!tab || typeof tab !== 'object') continue;
@@ -708,9 +797,9 @@ JS_TEMPLATE += r"""
           if (s.stems.indexOf(tk.toLowerCase()) > -1) { tab[tk] = value; hit++; }
       }
     }
-    if (!hit) fail(s.key + ': the uploaded photo was not written anywhere. Refusing to save a body'
-      + ' where the copied campaign\'s artwork silently survived.');
-    assetApplied.push({ key: s.key, value, hit });
+    if (!hit) fail(s.key + ': the uploaded photo was not written anywhere. Refusing to build a draft'
+      + ' where the source journey\'s artwork silently survived.');
+    assetApplied.push({ key: s.key, value, hit, names: [...names] });
   }
 
   if (cseId) {
@@ -748,16 +837,56 @@ JS_TEMPLATE += r"""
   walk(patched, nameHomes);
   if (nameHomes.length) fail('the journey name did not reach: ' + [...new Set(nameHomes)].join(', '));
 
-  await send('PUT', CRM_BASE + '/journey-builder/v0/journey-drafts/' + DRAFT_ID, patched);
+  // ── make the body standalone, then create the new draft ─────────────────
+  // Posted with the source's lineage or its server-minted ids, a create is
+  // rejected ("the journey with the same identifier already exists", or a 422
+  // on a promotionDisplayId that already exists).
+  for (const key of ['duplicatedFromId', 'duplicatedFromVersion']) delete patched[key];
+  let connectors = 0, displayIds = 0;
+  const scrub = (o) => {
+    if (!o || typeof o !== 'object') return;
+    if (Array.isArray(o)) { for (const v of o) scrub(v); return; }
+    const cc = o.campaignConnectorConditions;
+    if (cc && typeof cc === 'object' && cc.campaignId) { cc.campaignId = ''; connectors++; }
+    if ('promotionDisplayId' in o) { delete o.promotionDisplayId; displayIds++; }
+    for (const v of Object.values(o)) scrub(v);
+  };
+  scrub(patched);
+
+  // A GET hands back fields the server owns (the numeric id, version, status,
+  // timestamps). KEEP_KEYS is the top-level shape of a real POSTable comms
+  // draft, so anything outside it is the source's own identity.
+  const dropped = Object.keys(patched).filter((k) => KEEP_KEYS.indexOf(k) === -1);
+  for (const k of dropped) delete patched[k];
+  if (dropped.length) console.log('  dropped the source draft\'s own field(s): ' + dropped.join(', '));
+  if (connectors || displayIds)
+    console.log('  cleared ' + connectors + ' campaign-connector id(s) and ' + displayIds + ' promotionDisplayId(s)');
+
+  console.log('Reserving a journey id...');
+  const reserved = await reserveId();
+  patched.reservedJourneyId = reserved;
+  console.log('  reserved ' + reserved);
+
+  const regenerated = regenIds(patched);
+  console.log('  regenerated ' + regenerated.count + ' activity id(s)');
+  if (!regenerated.count) fail('no activity id was regenerated — shared activityIds collide with the source journey.');
+
+  const created = await send('POST', CRM_BASE + '/journey-builder/v0/journey-drafts', regenerated.body);
+  const newDraftId = created && (created.id || created.journeyDraftId || created.draftId);
+  console.log('%cCreated draft ' + (newDraftId || '(the create response carried no id)') + '   ' + reserved,
+              'color:#22c55e;font-weight:bold');
 
   // ── readback ────────────────────────────────────────────────────────────
-  const back = JSON.stringify(await send('GET', CRM_BASE + '/journey-builder/v0/journey-drafts/' + DRAFT_ID));
-  const backObj = JSON.parse(back);
+  if (!newDraftId) console.warn('  no draft id came back, so the checks below run on the body that was sent.');
+  const backObj = newDraftId
+    ? await send('GET', CRM_BASE + '/journey-builder/v0/journey-drafts/' + newDraftId)
+    : regenerated.body;
+  const back = JSON.stringify(backObj);
   const bad = [];
   for (const g of swaps) {
     const nv = JSON.stringify(g.newValue).slice(1, -1), ov = JSON.stringify(g.oldValue).slice(1, -1);
-    if (back.indexOf(nv) === -1) bad.push(g.labels.join(' / ') + ': new copy is not in the saved draft');
-    else if (back.indexOf(ov) > -1) bad.push(g.labels.join(' / ') + ': the OLD copy is still there');
+    if (back.indexOf(nv) === -1) bad.push(g.labels.join(' / ') + ': the new copy is not in the created draft');
+    else if (back.indexOf(ov) > -1) bad.push(g.labels.join(' / ') + ': the source journey\'s copy is still there');
   }
   const backNode = (role) => (backObj.activities || []).find((a) => akey(a) === want[role]);
   for (const { w } of smsApplied) {
@@ -795,32 +924,35 @@ JS_TEMPLATE += r"""
     if (String(gotId) !== String(cseId))
       bad.push('email.template.id: reads back as ' + JSON.stringify(gotId) + ', expected ' + JSON.stringify(cseId));
   }
-  if (bad.length) fail('saved, but the readback disagrees:\n      ' + bad.join('\n      '));
+  if (bad.length) fail('the draft was created, but the readback disagrees:\n      ' + bad.join('\n      '));
 
-  console.log('%cDONE — draft ' + DRAFT_ID + ' saved and verified ('
+  console.log('%cDONE — new draft ' + (newDraftId || reserved) + ' created and verified ('
               + (plan.filter((p) => !p.skip).length + applied.length + smsApplied.length) + ' copy field(s), '
-              + assetApplied.length + ' photo(s)' + (cseId ? ', 1 email' : '') + ').',
+              + assetApplied.length + ' photo(s)' + (cseId ? ', 1 email' : '')
+              + '); nothing is the source journey\'s.',
               'color:#22c55e;font-weight:bold;font-size:14px');
   for (const a of assetApplied) console.log('    ' + a.key + ' -> ' + a.value);
   if (cseId) console.log('    email content ' + cseId + ' created, published, and pointed at.');
+  console.log('    source draft ' + SOURCE_DRAFT_ID + ' was not modified.');
   if (KEEP_INHERITED_ASSETS) {
-    console.log('%cSTILL TO DO BY HAND — the photo slots are the copied journey\'s:',
+    console.log('%cSTILL TO DO BY HAND — the photo slots are the source journey\'s:',
                 'color:#f59e0b;font-weight:bold;font-size:14px');
     for (const s of slots) if (s.kind === 'variable') console.log('    ' + s.key + '  currently ' + JSON.stringify(s.oldValue));
     console.log('    DO NOT PUBLISH until those are changed.');
   }
-  console.log('Unpublished. Open the journey in the builder and check the canvas is not blank.');
+  console.log('Unpublished. Open the new journey in the builder and check the canvas is not blank.');
 })();
 """
 
 
-def build_js(*, draft_id: str, name: str, link: str, copy: dict, roles: list[str],
+def build_js(*, source_draft_id: str, name: str, link: str, copy: dict, roles: list[str],
              email_content: dict | None, live: bool) -> str:
     js = JS_TEMPLATE
     js = js.replace("@GENERATED_AT@", datetime.now(LOCAL_TZ).strftime("%Y-%m-%d %H:%M %Z"))
     js = js.replace("@JOURNEY_NAME@", name)
     js = js.replace("@JOURNEY_NAME_JSON@", json.dumps(name, ensure_ascii=False))
-    js = js.replace("@DRAFT_ID@", json.dumps(draft_id))
+    js = js.replace("@SOURCE_DRAFT_ID@", json.dumps(source_draft_id))
+    js = js.replace("@KEEP_KEYS@", json.dumps(postable_keys()))
     js = js.replace("@BRAND@", json.dumps(BRAND))
     js = js.replace("@LINK@", json.dumps(link, ensure_ascii=False))
     js = js.replace("@ROLES@", json.dumps(roles))
@@ -846,8 +978,8 @@ def build_js(*, draft_id: str, name: str, link: str, copy: dict, roles: list[str
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--draft-id", required=True,
-                    help="the numeric id of the draft to edit (copy the journey in the UI first)")
+    ap.add_argument("--source-draft-id", required=True,
+                    help="the numeric id of the journey draft to build FROM; it is read, never written")
     ap.add_argument("--name", required=True, help="the journey name to set")
     ap.add_argument("--link", required=True, help="the promo link every channel points at")
     ap.add_argument("--spec", required=True,
@@ -896,17 +1028,17 @@ def main() -> int:
 
     email_content = build_email(args, spec, args.link) if "email" in channels else None
 
-    js = build_js(draft_id=args.draft_id, name=args.name, link=args.link, copy=copy,
+    js = build_js(source_draft_id=args.source_draft_id, name=args.name, link=args.link, copy=copy,
                   roles=channels, email_content=email_content, live=args.live)
 
     stamp = hashlib.sha1(js.encode("utf-8")).hexdigest()[:8]
-    base = args.basename or f"comms_copy_{args.draft_id}_{stamp}"
+    base = args.basename or f"comms_copy_{args.source_draft_id}_{stamp}"
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     out = OUT_DIR / f"{base}_console.js"
     out.write_text(js, encoding="utf-8")
 
     print(f"wrote {out.relative_to(HERE)}")
-    print(f"  draft    {args.draft_id}")
+    print(f"  source   draft {args.source_draft_id} (read only; a NEW draft is created)")
     print(f"  name     {args.name}")
     print(f"  channels {', '.join(channels)}")
     print(f"  photos   {', '.join(l for r, k, l in PHOTO_SLOTS if r in channels)}")
@@ -917,7 +1049,7 @@ def main() -> int:
                   "words have to be in the artwork you upload.")
     else:
         print("  email    left alone")
-    print(f"  DRY_RUN  {'off — it writes on paste' if args.live else 'on — preview first, then flip it'}")
+    print(f"  DRY_RUN  {'off — it creates on paste' if args.live else 'on — preview first, then flip it'}")
     return 0
 
 

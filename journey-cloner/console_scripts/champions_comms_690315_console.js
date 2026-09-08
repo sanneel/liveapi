@@ -1,23 +1,29 @@
-// JBCL | CS | Champions | comms — comms copy, artwork and email. Generated 2026-09-08 08:26 -03.
+// JBCL | CS | Champions | comms — comms copy, artwork and email. Generated 2026-09-08 09:09 -03.
 //
 // Paste into the DevTools console on a logged-in backoffice tab.
 //
 // WHAT IT DOES
-//   Edits journey draft "690315" IN PLACE: this run's copy for the channels
-//   the sheet ticked, a photo you pick per artwork slot, and a freshly created
-//   and published marketing email the draft's email activity is pointed at.
-//   Make the draft first by copying a journey of the same shape in the UI, then
-//   put its id in DRAFT_ID below. For another date: copy again, change DRAFT_ID,
-//   rerun.
+//   Reads journey draft "690315" as its template and CREATES A NEW
+//   DRAFT from it: this run's copy for the channels the sheet ticked, a photo
+//   you pick per artwork slot, and a freshly created and published marketing
+//   email the new draft's email activity points at. The source journey is only
+//   read — it is never written, so rerunning this is always safe. For another
+//   date: change the copy and rerun; you get another new draft.
 //
 // HOW IT WRITES
 //   A journey lives TWICE — compiled `activities[]` and the `rawJourneyData`
 //   editor mirror — and disagreement between them is a blank canvas in the
 //   builder, so every write below lands in both. Copy goes in BY PATH, because
-//   a copied draft routinely holds one string in its English and Spanish
+//   the source draft routinely holds one string in its English and Spanish
 //   variable and a whole-body replace could not then place different EN and ES
 //   copy. The link goes in by whole-body swap: it SHOULD reach every channel.
 //   Field locations come from journey_composer.py.
+//
+//   Before the POST the body is made standalone: a fresh reservedJourneyId, a
+//   fresh uuid for every activity (shared activityIds collide), no
+//   duplicatedFrom* lineage, no server-minted promotionDisplayId, no stale
+//   campaign-connector campaignId, and only the top-level keys a POSTable
+//   comms draft carries.
 //
 // IT REFUSES RATHER THAN WARNS
 //   The generator already checked the copy — lengths in UTF-16 units, GSM-7 on
@@ -25,11 +31,12 @@
 //   re-checks what only the live draft can tell it: every node present exactly
 //   once, every field matched to a captured variable, no ambiguous swap, every
 //   photo slot filled, the email published before the draft points at it, the
-//   name in all three of its homes, and a readback after the PUT.
+//   name in all three of its homes, every activity id freshly minted, and a
+//   readback proving the new draft shares no content with the source.
 (async () => {
   'use strict';
   const DRY_RUN = true;               // THE SWITCH. true = preview only. false = writes.
-  const DRAFT_ID = "690315";
+  const SOURCE_DRAFT_ID = "690315";   // read only; never written
   const BRAND = "JBCL";
   const JOURNEY_NAME = "JBCL | CS | Champions | comms";
 
@@ -67,7 +74,8 @@
   const ROLES = ["popup", "nc", "sms", "email"];                    // only the channels the sheet ticked TRUE
   const FOLDER_ID = "c5c7c614-5169-4346-b90b-8225836a1c63";
   const EMAIL_NAME = "JBCL CS - Champions 08.09";
-  const EMAIL_CONTENT = {"brand": "JBCL", "name": "JBCL CS - Champions 08.09", "type": "template", "parameters": [{"name": "cdn_hostname", "required": false, "type": "string"}, {"name": "unsubscribe_url", "required": false, "type": "string"}], "translations": {"es": {"composition": {"subject": "¡La Champions viene con premios!", "preHeader": "Real Madrid vs Inter — raspa y descubre tu premio", "body": {"type": "html", "source": "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n  <head>\n  </head>\n  <body __processed_08afac4b-3918-4b63-8c6c-1dad15f06926__=\"true\" bis_status=\"ok\" bis_frame_id=\"1856\">\n    <div>\n      <div align=\"center\" style=\"padding:0 0;margin:0;\">\n        <table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" bgcolor=\"\" background=\"http://dextra-pm.com/i/038ab59740854999b9a952db2212317c/timg_655b1b9a8c3c0.png\" style=\" background-position: top center; background-size: cover; background-repeat: no-repeat;;line-height: normal; margin:0 auto; padding: 0\">\n          <tbody>\n            <tr>\n              <td align=\"center\">\n                <div>\n                  <table \n                    border=\"0\" \n                    cellspacing=\"0\" \n                    cellpadding=\"0\" \n                    style=\"background: #EDEBEB; \n                    max-width: 600px; \n                    min-width:300px; \n                    width:100%; \n                    margin:0 auto;\"\n                    >\n                    <tbody>\n                      <tr>\n                        <td>\n                          <table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\" background=\"http://dextra-pm.com/i/038ab59740854999b9a952db2212317c/timg_6555fbd5eaa20.png\" style=\"width:100%;margin:0;padding: 0; background-position: top center; background-size: cover; background-repeat: no-repeat; padding-bottom: 15px;\">\n                            <tbody>\n                              \n                              <!--logo start -->\n                              \n                              <tr>\n                                <td>\n                                  <table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" style=\"box-sizing: border-box; width: 100%; padding: 5px 20px 0; text-align: center;\">\n                                    <tbody>\n                                      <tr>\n                                        <td>\n                                          <a href=\"https://jugabet.cl/es/\">\n                                            <img src=\"http://dextra-pm.com/i/038ab59740854999b9a952db2212317c/timg_655b26966d131.png\" alt=\"header logo\" style=\"display: inline-block; width: 135px; height: auto; padding: 8px 0 8px 0;\">\n                                          </a>\n                                        </td>\n                                      </tr>\n                                    </tbody>\n                                  </table>\n                                </td>\n                              </tr>\n                              \n                              <!--logo end -->\n                              \n                              <!--nav start -->\n                              \n                              <tr>\n                                <td style=\"width: 100%; padding: 10px 15px 5px 15px;\">\n                                  <table cellpadding=\"0\" cellspacing=\"0\" border=\"0\" width=\"100%\" style=\"  background: rgba(0, 0, 0, 0.40); border-radius: 10px; padding: 5px;; text-align: center; \">\n                                    <tbody>\n                                      <tr>\n                                        <td align=\"center\" style=\"text-align: center; display: inline-block; vertical-align: middle; width: 33%;\">\n                                          <a href=\"https://jugabet.cl/es/national-events\" style=\"color: #fff; box-sizing: border-box; display: inline-block;vertical-align: middle; width: 95%; min-width: 95%; padding: 10px 0; font-family: Verdana, sans-serif; font-style: italic; font-size: 10px; font-weight: 700;  text-transform: uppercase; text-align: center; border-radius: 8px;\"> \n                                            Eventos Nacionales\n                                          </a>\n                                        </td>\n                                        <td align=\"center\" style=\"text-align: center; display: inline-block; vertical-align: middle; width: 33%;\">\n                                          <a href=\"https://jugabet.cl/es/football/live\" style=\"color: #fff; box-sizing: border-box; display: inline-block;vertical-align: middle; width: 95%; min-width: 95%; padding: 10px 0; font-family: Verdana, sans-serif; font-style: italic; font-size: 10px; font-weight: 700;  text-transform: uppercase; text-align: center; border-radius: 8px;\">\n                                            Eventos en vivo\n                                          </a>\n                                        </td>\n                                        <td align=\"center\" style=\"text-align: center; display: inline-block; vertical-align: middle; width: 33%;\">\n                                          <a href=\"https://jugabet.cl/es/promo\" style=\"color: #fff; box-sizing: border-box; display: inline-block;vertical-align: middle; width: 95%; min-width: 95%; padding: 10px 0; font-family: Verdana, sans-serif; font-style: italic; font-size: 10px; font-weight: 700;  text-transform: uppercase; text-align: center; border-radius: 8px;\">\n                                            Promoción\n                                          </a>\n                                        </td>\n                                      </tr>\n                                    </tbody>\n                                  </table>\n                                </td>\n                              </tr>\n                              \n                              <!--nav end -->\n                              \n                              <!--topimg start -->\n                              \n                              <tr>\n                                <td style=\"padding: 10px 17px 10px 17px; border: 0;\">\n                                  <table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\" style=\"margin:0; padding:0; border-top: 0; border-bottom; 0;\">\n                                    <tbody>\n                                      <tr>\n                                        <td align=\"center\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\" style=\"margin:0;padding:0;\">\n                                          <a class=\"image-link\" href=\"https://jugabet.cl/services/promo/offers/randomizer/cl-round-1?%$utm_tags%\" target=\"_blank\" style=\"margin:0; padding:0;\">\n                                            <img src=\"@@EMAIL_TOP_IMAGE_URL@@\" alt=\"\" style=\"border-radius: 10px; border: none; width: 100%; max-width: 100%; height: auto;  outline: none; text-decoration: none;display:block;\" width=\"100%\">\n                                          </a>\n                                        </td>\n                                      </tr>\n                                    </tbody>\n                                  </table>\n                                </td>\n                              </tr>\n                              \n                              <!--topimg end -->\n                              \n                              <tr>\n                                <td style=\"padding: 0 17px;\">\n                                  <table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\" style=\"box-sizing: border-box; padding: 0; margin: 0; border-radius: 10px; padding-bottom: 30px;  background-position: center center; background-size: 100% 100%; background-repeat: no-repeat;; background: rgba(0, 0, 0, 0.6)  url('http://dextra-pm.com/i/038ab59740854999b9a952db2212317c/timg_65b0e9e9c680c.png') center center / cover no-repeat;\">\n                                    <tbody>\n                                      <tr>\n                                        <td align=\"center\" valign=\"top\" style=\"padding: 25px 4% 0;\">\n                                          <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"padding: 0; margin: 0; border: 0;\">\n                                            <tbody>\n                                              <tr style=\"\">\n                                                <td align=\"left\" valign=\"top\" style=\"padding: 0; margin: 0 auto;\">\n                                                  <span style=\"color: #FAF9F8; padding: 0; margin: 0; display: block; text-transform: uppercase; font-family: Verdana, sans-serif; font-size: 28px; font-weight: 700; font-style: italic; line-height: normal; text-align: center;\">\n                                                    ¡Hola, {{FirstName}}!\n                                                  </span>\n                                                </td>\n                                              </tr>\n                                            </tbody>\n                                          </table>\n                                        </td>\n                                      </tr>\n                                      \n                                      <tr>\n                                        <td align=\"center\" valign=\"top\" style=\"padding: 15px 20px 30px;\">\n                                          <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"padding: 0; margin: 0;\">  \n                                            <tbody>\n                                              <tr style=\"padding:0; margin: 0;\">\n                                                <td align=\"left\" valign=\"top\" style=\"padding: 0 10px; margin: 0 auto;\">\n                                                  <span style=\"color: #FAF9F8; padding: 0; margin: 0; display: block; font-family: Verdana, sans-serif; font-size: 16px; font-weight: 400; line-height: 160%; text-align: left;\">\n⚽ Real Madrid vs Inter se juegan la Champions esta noche.<br>\n<br><br>\n🎟️ Raspa y Gana y descubre qué premio te espera.\n                                                  </span>\n                                                </td>\n                                              </tr>\n                                            </tbody>\n                                          </table>\n                                        </td>\n                                      </tr>\n                                      \n                                      <tr>\n                                        <td style=\"\">\n                                          <table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\" style=\"margin:0; padding:0; border-top: 0; border-bottom; 0;\">\n                                            <tbody>\n                                              <tr>\n                                                <td align=\"center\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\" style=\"margin:0;padding:0;\">\n                                                  <a class=\"image-link\" href=\"https://jugabet.cl/services/promo/offers/randomizer/cl-round-1?%$utm_tags%\" target=\"_blank\" style=\"margin:0; padding:0;\">\n                                                    <img src=\"@@EMAIL_CTA_IMAGE_URL@@\" alt=\"RASPA Y GANA\" style=\"\" width=\"45%\" />\n                                                  </a>\n                                                </td>\n                                              </tr>\n                                            </tbody>\n                                          </table>\n                                        </td>\n                                      </tr>\n                                    </tbody>\n                                  </table>\n                                </td>\n                              </tr>\n                              <!--banner start -->\n                              [[block(CSE-0-10142)]]\n                              <!--banner end -->\n                              <!--footer start -->\n             \n                             <table role=\"presentation\" width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" style=\"width:100%;\">\n  <tr>\n    <td align=\"center\" style=\"padding:0;margin:0;\">\n      [[block(CSE-0-6450)]]\n    </td>\n  </tr>\n</table>\n                              \n                              <!--footer end-->\n                            \n                            </tbody>\n                          </table>\n                        </td>\n                      </tr>\n                    </tbody>\n                  </table>\n                </div>\n              </td>\n            </tr>\n          </tbody>\n        </table>\n      </div>\n    </div>\n  </body>\n</html>\n"}}}}, "unsubscribeSettings": {"default": {"id": 56, "allowedAgreements": [], "defaultSelectedAgreements": []}, "langSpecific": []}};   // null when the email is left alone
+  const EMAIL_CONTENT = {"brand": "JBCL", "name": "JBCL CS - Champions 08.09", "type": "template", "parameters": [{"name": "cdn_hostname", "required": false, "type": "string"}, {"name": "unsubscribe_url", "required": false, "type": "string"}], "translations": {"es": {"composition": {"subject": "¡La Champions viene con premios!", "preHeader": "Real Madrid vs Inter: raspa y descubre tu premio", "body": {"type": "html", "source": "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n  <head>\n  </head>\n  <body __processed_08afac4b-3918-4b63-8c6c-1dad15f06926__=\"true\" bis_status=\"ok\" bis_frame_id=\"1856\">\n    <div>\n      <div align=\"center\" style=\"padding:0 0;margin:0;\">\n        <table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" bgcolor=\"\" background=\"http://dextra-pm.com/i/038ab59740854999b9a952db2212317c/timg_655b1b9a8c3c0.png\" style=\" background-position: top center; background-size: cover; background-repeat: no-repeat;;line-height: normal; margin:0 auto; padding: 0\">\n          <tbody>\n            <tr>\n              <td align=\"center\">\n                <div>\n                  <table \n                    border=\"0\" \n                    cellspacing=\"0\" \n                    cellpadding=\"0\" \n                    style=\"background: #EDEBEB; \n                    max-width: 600px; \n                    min-width:300px; \n                    width:100%; \n                    margin:0 auto;\"\n                    >\n                    <tbody>\n                      <tr>\n                        <td>\n                          <table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\" background=\"http://dextra-pm.com/i/038ab59740854999b9a952db2212317c/timg_6555fbd5eaa20.png\" style=\"width:100%;margin:0;padding: 0; background-position: top center; background-size: cover; background-repeat: no-repeat; padding-bottom: 15px;\">\n                            <tbody>\n                              \n                              <!--logo start -->\n                              \n                              <tr>\n                                <td>\n                                  <table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" style=\"box-sizing: border-box; width: 100%; padding: 5px 20px 0; text-align: center;\">\n                                    <tbody>\n                                      <tr>\n                                        <td>\n                                          <a href=\"https://jugabet.cl/es/\">\n                                            <img src=\"http://dextra-pm.com/i/038ab59740854999b9a952db2212317c/timg_655b26966d131.png\" alt=\"header logo\" style=\"display: inline-block; width: 135px; height: auto; padding: 8px 0 8px 0;\">\n                                          </a>\n                                        </td>\n                                      </tr>\n                                    </tbody>\n                                  </table>\n                                </td>\n                              </tr>\n                              \n                              <!--logo end -->\n                              \n                              <!--nav start -->\n                              \n                              <tr>\n                                <td style=\"width: 100%; padding: 10px 15px 5px 15px;\">\n                                  <table cellpadding=\"0\" cellspacing=\"0\" border=\"0\" width=\"100%\" style=\"  background: rgba(0, 0, 0, 0.40); border-radius: 10px; padding: 5px;; text-align: center; \">\n                                    <tbody>\n                                      <tr>\n                                        <td align=\"center\" style=\"text-align: center; display: inline-block; vertical-align: middle; width: 33%;\">\n                                          <a href=\"https://jugabet.cl/es/national-events\" style=\"color: #fff; box-sizing: border-box; display: inline-block;vertical-align: middle; width: 95%; min-width: 95%; padding: 10px 0; font-family: Verdana, sans-serif; font-style: italic; font-size: 10px; font-weight: 700;  text-transform: uppercase; text-align: center; border-radius: 8px;\"> \n                                            Eventos Nacionales\n                                          </a>\n                                        </td>\n                                        <td align=\"center\" style=\"text-align: center; display: inline-block; vertical-align: middle; width: 33%;\">\n                                          <a href=\"https://jugabet.cl/es/football/live\" style=\"color: #fff; box-sizing: border-box; display: inline-block;vertical-align: middle; width: 95%; min-width: 95%; padding: 10px 0; font-family: Verdana, sans-serif; font-style: italic; font-size: 10px; font-weight: 700;  text-transform: uppercase; text-align: center; border-radius: 8px;\">\n                                            Eventos en vivo\n                                          </a>\n                                        </td>\n                                        <td align=\"center\" style=\"text-align: center; display: inline-block; vertical-align: middle; width: 33%;\">\n                                          <a href=\"https://jugabet.cl/es/promo\" style=\"color: #fff; box-sizing: border-box; display: inline-block;vertical-align: middle; width: 95%; min-width: 95%; padding: 10px 0; font-family: Verdana, sans-serif; font-style: italic; font-size: 10px; font-weight: 700;  text-transform: uppercase; text-align: center; border-radius: 8px;\">\n                                            Promoción\n                                          </a>\n                                        </td>\n                                      </tr>\n                                    </tbody>\n                                  </table>\n                                </td>\n                              </tr>\n                              \n                              <!--nav end -->\n                              \n                              <!--topimg start -->\n                              \n                              <tr>\n                                <td style=\"padding: 10px 17px 10px 17px; border: 0;\">\n                                  <table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\" style=\"margin:0; padding:0; border-top: 0; border-bottom; 0;\">\n                                    <tbody>\n                                      <tr>\n                                        <td align=\"center\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\" style=\"margin:0;padding:0;\">\n                                          <a class=\"image-link\" href=\"https://jugabet.cl/services/promo/offers/randomizer/cl-round-1?%$utm_tags%\" target=\"_blank\" style=\"margin:0; padding:0;\">\n                                            <img src=\"@@EMAIL_TOP_IMAGE_URL@@\" alt=\"\" style=\"border-radius: 10px; border: none; width: 100%; max-width: 100%; height: auto;  outline: none; text-decoration: none;display:block;\" width=\"100%\">\n                                          </a>\n                                        </td>\n                                      </tr>\n                                    </tbody>\n                                  </table>\n                                </td>\n                              </tr>\n                              \n                              <!--topimg end -->\n                              \n                              <tr>\n                                <td style=\"padding: 0 17px;\">\n                                  <table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\" style=\"box-sizing: border-box; padding: 0; margin: 0; border-radius: 10px; padding-bottom: 30px;  background-position: center center; background-size: 100% 100%; background-repeat: no-repeat;; background: rgba(0, 0, 0, 0.6)  url('http://dextra-pm.com/i/038ab59740854999b9a952db2212317c/timg_65b0e9e9c680c.png') center center / cover no-repeat;\">\n                                    <tbody>\n                                      <tr>\n                                        <td align=\"center\" valign=\"top\" style=\"padding: 25px 4% 0;\">\n                                          <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"padding: 0; margin: 0; border: 0;\">\n                                            <tbody>\n                                              <tr style=\"\">\n                                                <td align=\"left\" valign=\"top\" style=\"padding: 0; margin: 0 auto;\">\n                                                  <span style=\"color: #FAF9F8; padding: 0; margin: 0; display: block; text-transform: uppercase; font-family: Verdana, sans-serif; font-size: 28px; font-weight: 700; font-style: italic; line-height: normal; text-align: center;\">\n                                                    ¡Hola, {{FirstName}}!\n                                                  </span>\n                                                </td>\n                                              </tr>\n                                            </tbody>\n                                          </table>\n                                        </td>\n                                      </tr>\n                                      \n                                      <tr>\n                                        <td align=\"center\" valign=\"top\" style=\"padding: 15px 20px 30px;\">\n                                          <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"padding: 0; margin: 0;\">  \n                                            <tbody>\n                                              <tr style=\"padding:0; margin: 0;\">\n                                                <td align=\"left\" valign=\"top\" style=\"padding: 0 10px; margin: 0 auto;\">\n                                                  <span style=\"color: #FAF9F8; padding: 0; margin: 0; display: block; font-family: Verdana, sans-serif; font-size: 16px; font-weight: 400; line-height: 160%; text-align: left;\">\nLa máxima competición europea ya está aquí y uno de los grandes partidos de la jornada enfrenta a Real Madrid vs. Inter. ⚽🔥<br>\nY para acompañar este partidazo, en JugaBet tenemos algo especial para ti:<br>\n<br><br>\n🎟️ ¡Raspa y Gana!<br>\nReclama tu tarjeta, raspa y descubre qué premio te espera. 👀<br>\n<br><br>\n🎁 Puedes encontrar diferentes premios, así que cada tarjeta puede traer una sorpresa.<br>\n🎟️ Y una oportunidad más para hacer tu jugada.<br>\n<br><br>\nJugaBet. Haz tu Jugada, Hazla Legendaria.\n                                                  </span>\n                                                </td>\n                                              </tr>\n                                            </tbody>\n                                          </table>\n                                        </td>\n                                      </tr>\n                                      \n                                      <tr>\n                                        <td style=\"\">\n                                          <table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\" style=\"margin:0; padding:0; border-top: 0; border-bottom; 0;\">\n                                            <tbody>\n                                              <tr>\n                                                <td align=\"center\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\" style=\"margin:0;padding:0;\">\n                                                  <a class=\"image-link\" href=\"https://jugabet.cl/services/promo/offers/randomizer/cl-round-1?%$utm_tags%\" target=\"_blank\" style=\"margin:0; padding:0;\">\n                                                    <img src=\"@@EMAIL_CTA_IMAGE_URL@@\" alt=\"RASPA Y GANA\" style=\"\" width=\"85%\" />\n                                                  </a>\n                                                </td>\n                                              </tr>\n                                            </tbody>\n                                          </table>\n                                        </td>\n                                      </tr>\n                                    </tbody>\n                                  </table>\n                                </td>\n                              </tr>\n                              <!--banner start -->\n                              [[block(CSE-0-10142)]]\n                              <!--banner end -->\n                              <!--footer start -->\n             \n                             <table role=\"presentation\" width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" style=\"width:100%;\">\n  <tr>\n    <td align=\"center\" style=\"padding:0;margin:0;\">\n      [[block(CSE-0-6450)]]\n    </td>\n  </tr>\n</table>\n                              \n                              <!--footer end-->\n                            \n                            </tbody>\n                          </table>\n                        </td>\n                      </tr>\n                    </tbody>\n                  </table>\n                </div>\n              </td>\n            </tr>\n          </tbody>\n        </table>\n      </div>\n    </div>\n  </body>\n</html>\n"}}}}, "unsubscribeSettings": {"default": {"id": 56, "allowedAgreements": [], "defaultSelectedAgreements": []}, "langSpecific": []}};   // null when the email is left alone
+  const KEEP_KEYS = ["activities", "activityEventConversionMetrics", "brand", "currencyCodes", "exitCriteriaId", "isImmediatelyAfterPublish", "isUnlimited", "journeyName", "metadata", "rawJourneyData", "reEntryRule", "reservedJourneyId", "startAt", "stopAt", "testControlGroupParameters", "timeZoneId"];          // the top-level shape a create accepts
   const TOP_IMAGE_TOKEN = "@@EMAIL_TOP_IMAGE_URL@@";
   const CTA_IMAGE_TOKEN = "@@EMAIL_CTA_IMAGE_URL@@";
 
@@ -107,7 +115,7 @@
   // Say it before anything else, so a preview run is never mistaken for a failed one.
   console.log(DRY_RUN
     ? '%cPREVIEW ONLY — this run writes NOTHING, uploads NOTHING and creates NO email. Set DRY_RUN = false to apply.'
-    : '%cWRITE MODE — this run will change draft ' + DRAFT_ID + '.',
+    : '%cWRITE MODE — this run will create a new draft from ' + SOURCE_DRAFT_ID + '.',
     'color:' + (DRY_RUN ? '#eab308' : '#ef4444') + ';font-weight:bold;font-size:14px');
 
   // journey-drafts take x-brand (singular). The drafts LIST wants x-brands;
@@ -200,6 +208,37 @@
     return await uploadAsset(await pickFile(label), label);
   }
 
+  // A new draft needs an identifier the backoffice minted for it; reusing the
+  // source's is "the journey with the same identifier already exists".
+  async function reserveId() {
+    const r = await fetch(CRM_BASE + '/journey-builder/v0/journeys/identifier', { method: 'POST',
+      headers: { accept: 'application/json, text/plain, */*', authorization: auth, 'x-brand': BRAND,
+                 'content-type': 'application/x-www-form-urlencoded' }, credentials: 'include' });
+    const raw = (await r.text()).trim();
+    let id = raw.replace(/^"+|"+$/g, '');
+    try { const d = JSON.parse(raw);
+          if (typeof d === 'string') id = d.trim();
+          else if (d && typeof d === 'object') id = String(d.identifier || d.journeyId || d.id || d.value || '').trim();
+    } catch (e) {}
+    if (!r.ok || !id.startsWith('JRN-')) throw new Error('Reserve failed: HTTP ' + r.status + ' ' + raw.slice(0, 200));
+    return id;
+  }
+
+  const newUuid = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID()
+    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16); });
+  const UUID_RE = /"(?:activityId|journeyActivityId|id)"\s*:\s*"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"/g;
+  // Text-level, not per-field: the same uuid is also an OBJECT KEY in
+  // rawJourneyData.activitiesConfiguration and an endpoint in every edge, and
+  // a draft whose ids only half-changed points its edges at the source's nodes.
+  function regenIds(body) {
+    let txt = JSON.stringify(body);
+    const old = new Set(); let m; UUID_RE.lastIndex = 0;
+    while ((m = UUID_RE.exec(txt)) !== null) old.add(m[1]);
+    for (const o of old) txt = txt.split(o).join(newUuid());
+    return { body: JSON.parse(txt), count: old.size };
+  }
+
   // create -> save -> publish. The draft is only pointed at the content after
   // the publish succeeds: an unpublished content id on a live email activity
   // is an email that renders as nothing.
@@ -228,10 +267,10 @@
 
   // ── the draft ────────────────────────────────────────────────────────────
   if (!JOURNEY_NAME.trim()) fail('JOURNEY_NAME is empty.');
-  const draft = await send('GET', CRM_BASE + '/journey-builder/v0/journey-drafts/' + DRAFT_ID);
+  const draft = await send('GET', CRM_BASE + '/journey-builder/v0/journey-drafts/' + SOURCE_DRAFT_ID);
   const acts = draft.activities;
-  if (!Array.isArray(acts) || !acts.length) fail('draft ' + DRAFT_ID + ' has no activities[] — not a journey draft body.');
-  if (!draft.rawJourneyData) fail('draft ' + DRAFT_ID + ' has no rawJourneyData mirror. Saving it would blank the builder canvas.');
+  if (!Array.isArray(acts) || !acts.length) fail('draft ' + SOURCE_DRAFT_ID + ' has no activities[] — not a journey draft body.');
+  if (!draft.rawJourneyData) fail('draft ' + SOURCE_DRAFT_ID + ' has no rawJourneyData mirror. A draft built from it would open as a blank canvas.');
   const akey = (a) => { const n = a.activityName || '?'; const i = a.initializationData || {};
                         return (n === 'notification_center' && 'contract' in i) ? n + '#contract' + i.contract : n; };
   const want = { nc: 'notification_center#contract1', popup: 'notification_center#contract5',
@@ -239,11 +278,11 @@
   const found = {};
   for (const role of ROLES) {
     const hits = acts.filter((a) => akey(a) === want[role]);
-    if (hits.length !== 1) fail('expected exactly one ' + role + ' node (' + want[role] + ') in draft ' + DRAFT_ID
+    if (hits.length !== 1) fail('expected exactly one ' + role + ' node (' + want[role] + ') in source draft ' + SOURCE_DRAFT_ID
       + ', found ' + hits.length + '. Node kinds present: ' + [...new Set(acts.map(akey))].join(', '));
     found[role] = hits[0];
   }
-  console.log('%cdraft ' + DRAFT_ID + ' — ' + acts.length + ' activities; found ' + ROLES.join(', '),
+  console.log('%csource draft ' + SOURCE_DRAFT_ID + ' — ' + acts.length + ' activities; found ' + ROLES.join(', '),
               'color:#22c55e');
 
   // ── locate each field's CURRENT value ────────────────────────────────────
@@ -277,6 +316,7 @@
       const hits = currentVar(found[role], STEM.link, lang);
       if (!hits) continue;                     // not every node carries a link
       for (const h of hits) plan.push({ label: role + '.link_' + lang + ' [' + h.name + ']',
+                                        role: role, varName: h.name,
                                         oldValue: String(h.value == null ? '' : h.value), newValue: v });
     }
   }
@@ -309,7 +349,7 @@
       smsWrites.push({ lang, newValue: v, oldValue: real[0] });
     }
   }
-  if (!draft.journeyName) fail('draft ' + DRAFT_ID + ' has no journeyName.');
+  if (!draft.journeyName) fail('source draft ' + SOURCE_DRAFT_ID + ' has no journeyName.');
   const nameWas = { top: String(draft.journeyName),
                     info: ((draft.rawJourneyData || {}).infoValues || {}).journeyName };
 
@@ -362,8 +402,9 @@
       console.warn('        also held by: ' + (others.length ? [...new Set(others)].join(', ') : 'the same node or its mirror'));
     }
     if (!DRY_RUN && !ALLOW_SHARED_COPY_REWRITE) {
-      fail(spill.length + ' string(s) are shared with another activity. Rewriting them changes that'
-        + ' wave too. Set ALLOW_SHARED_COPY_REWRITE = true if that is what you want.');
+      fail(spill.length + ' string(s) are shared with another activity, which would be rewritten in'
+        + ' the new draft too (the source journey is untouched either way).'
+        + ' Set ALLOW_SHARED_COPY_REWRITE = true if that is what you want.');
     }
   }
 
@@ -382,7 +423,8 @@
     const hits = varMatch(found[s.role], s.stems);
     if (!hits.length) fail(s.key + ': no captured variable is named ' + s.stems.join('/')
       + ' on the ' + s.role + ' node. Variables present: ' + varsOf(found[s.role]).map((v) => v.name).join(', ')
-      + '. Uploading a photo with nowhere to put it would leave the copied campaign\'s artwork in place.');
+      + '. Uploading a photo with nowhere to put it would leave the source journey\'s artwork in place.');
+    s.names = hits.map((h) => h.name);
     s.oldValue = hits[0].value == null ? '' : String(hits[0].value);
   }
   if (EMAIL_CONTENT) {
@@ -398,6 +440,37 @@
     slots.push({ key: 'email.template.id', label: null, kind: 'template',
                  oldValue: String(((es.template || {}).id) || '') });
   }
+  // ── nothing may be left as the source journey's ─────────────────────────
+  // A content field this run never writes ships the source's value, and that
+  // is how last week's campaign goes out under this week's name. Knowable from
+  // the plan alone, so it refuses HERE — before a photo is uploaded, an email
+  // is published, or a draft exists to have to delete.
+  const written = new Set();
+  for (const w of writes) written.add(w.role + '::' + w.varName);
+  for (const pl of plan) if (pl.role) written.add(pl.role + '::' + pl.varName);
+  for (const s of slots) if (s.kind === 'variable') for (const n of s.names) written.add(s.role + '::' + n);
+  const CONTENT_RE = /(title|des|caption|link|icon|image|deeplink|text|message)/i;
+  const leaks = [];
+  for (const role of ROLES) {
+    if (role === 'sms' || role === 'email') continue;
+    for (const v of varsOf(found[role])) {
+      const name = String(v.name || '');
+      if (!CONTENT_RE.test(name) || written.has(role + '::' + name)) continue;
+      const was = v.value == null ? '' : String(v.value);
+      if (was.trim()) leaks.push(role + '.' + name + ' would stay the source journey\'s: ' + JSON.stringify(was));
+    }
+  }
+  const touched = new Set(ROLES.map((r) => want[r]));
+  for (const a of acts) {
+    const k = akey(a);
+    const role = Object.keys(want).find((r) => want[r] === k);
+    if (role && !touched.has(k))
+      leaks.push('the ' + role + ' activity is not in ROLES, so all of its content would stay the source journey\'s');
+  }
+  if (leaks.length) fail('the new draft would still carry the source journey\'s content:\n      '
+    + leaks.join('\n      ')
+    + '\n      Give the sheet a value for each, or regenerate with that channel in --channels.');
+
   console.log('  photos and email:');
   for (const s of slots) {
     const ph = typeof s.oldValue === 'string' && /^%.*%$/.test(s.oldValue.trim());
@@ -417,7 +490,8 @@
        + ' Either let the pickers run, or regenerate the script with --no-email.');
 
   // ── the plan ────────────────────────────────────────────────────────────
-  console.log('%c' + JOURNEY_NAME + ' -> draft ' + DRAFT_ID + (DRY_RUN ? '   [DRY RUN — nothing written]' : ''),
+  console.log('%c' + JOURNEY_NAME + '  — a NEW draft, built from ' + SOURCE_DRAFT_ID
+              + (DRY_RUN ? '   [DRY RUN — nothing created]' : ''),
               'color:#3b82f6;font-weight:bold;font-size:14px');
   for (const p of plan) if (p.skip) console.log('    = ' + p.label + '  (' + p.skip + ')');
   for (const w of smsWrites) {
@@ -547,9 +621,10 @@
     const value = uploaded[s.key];
     if (value == null) continue;                       // KEEP_INHERITED_ASSETS
     let hit = 0;
+    const names = new Set();
     for (const holder of holdersFor(s.role)) {
       for (const v of ((holder.objectForSend || {}).variables) || [])
-        if (s.stems.indexOf(String(v.name || '').toLowerCase()) > -1) { v.value = value; hit++; }
+        if (s.stems.indexOf(String(v.name || '').toLowerCase()) > -1) { v.value = value; names.add(v.name); hit++; }
       const tabs = ((holder.singleChannel || {}).localizedLanguagesTab) || {};
       for (const tab of Object.values(tabs)) {
         if (!tab || typeof tab !== 'object') continue;
@@ -557,9 +632,9 @@
           if (s.stems.indexOf(tk.toLowerCase()) > -1) { tab[tk] = value; hit++; }
       }
     }
-    if (!hit) fail(s.key + ': the uploaded photo was not written anywhere. Refusing to save a body'
-      + ' where the copied campaign\'s artwork silently survived.');
-    assetApplied.push({ key: s.key, value, hit });
+    if (!hit) fail(s.key + ': the uploaded photo was not written anywhere. Refusing to build a draft'
+      + ' where the source journey\'s artwork silently survived.');
+    assetApplied.push({ key: s.key, value, hit, names: [...names] });
   }
 
   if (cseId) {
@@ -597,16 +672,56 @@
   walk(patched, nameHomes);
   if (nameHomes.length) fail('the journey name did not reach: ' + [...new Set(nameHomes)].join(', '));
 
-  await send('PUT', CRM_BASE + '/journey-builder/v0/journey-drafts/' + DRAFT_ID, patched);
+  // ── make the body standalone, then create the new draft ─────────────────
+  // Posted with the source's lineage or its server-minted ids, a create is
+  // rejected ("the journey with the same identifier already exists", or a 422
+  // on a promotionDisplayId that already exists).
+  for (const key of ['duplicatedFromId', 'duplicatedFromVersion']) delete patched[key];
+  let connectors = 0, displayIds = 0;
+  const scrub = (o) => {
+    if (!o || typeof o !== 'object') return;
+    if (Array.isArray(o)) { for (const v of o) scrub(v); return; }
+    const cc = o.campaignConnectorConditions;
+    if (cc && typeof cc === 'object' && cc.campaignId) { cc.campaignId = ''; connectors++; }
+    if ('promotionDisplayId' in o) { delete o.promotionDisplayId; displayIds++; }
+    for (const v of Object.values(o)) scrub(v);
+  };
+  scrub(patched);
+
+  // A GET hands back fields the server owns (the numeric id, version, status,
+  // timestamps). KEEP_KEYS is the top-level shape of a real POSTable comms
+  // draft, so anything outside it is the source's own identity.
+  const dropped = Object.keys(patched).filter((k) => KEEP_KEYS.indexOf(k) === -1);
+  for (const k of dropped) delete patched[k];
+  if (dropped.length) console.log('  dropped the source draft\'s own field(s): ' + dropped.join(', '));
+  if (connectors || displayIds)
+    console.log('  cleared ' + connectors + ' campaign-connector id(s) and ' + displayIds + ' promotionDisplayId(s)');
+
+  console.log('Reserving a journey id...');
+  const reserved = await reserveId();
+  patched.reservedJourneyId = reserved;
+  console.log('  reserved ' + reserved);
+
+  const regenerated = regenIds(patched);
+  console.log('  regenerated ' + regenerated.count + ' activity id(s)');
+  if (!regenerated.count) fail('no activity id was regenerated — shared activityIds collide with the source journey.');
+
+  const created = await send('POST', CRM_BASE + '/journey-builder/v0/journey-drafts', regenerated.body);
+  const newDraftId = created && (created.id || created.journeyDraftId || created.draftId);
+  console.log('%cCreated draft ' + (newDraftId || '(the create response carried no id)') + '   ' + reserved,
+              'color:#22c55e;font-weight:bold');
 
   // ── readback ────────────────────────────────────────────────────────────
-  const back = JSON.stringify(await send('GET', CRM_BASE + '/journey-builder/v0/journey-drafts/' + DRAFT_ID));
-  const backObj = JSON.parse(back);
+  if (!newDraftId) console.warn('  no draft id came back, so the checks below run on the body that was sent.');
+  const backObj = newDraftId
+    ? await send('GET', CRM_BASE + '/journey-builder/v0/journey-drafts/' + newDraftId)
+    : regenerated.body;
+  const back = JSON.stringify(backObj);
   const bad = [];
   for (const g of swaps) {
     const nv = JSON.stringify(g.newValue).slice(1, -1), ov = JSON.stringify(g.oldValue).slice(1, -1);
-    if (back.indexOf(nv) === -1) bad.push(g.labels.join(' / ') + ': new copy is not in the saved draft');
-    else if (back.indexOf(ov) > -1) bad.push(g.labels.join(' / ') + ': the OLD copy is still there');
+    if (back.indexOf(nv) === -1) bad.push(g.labels.join(' / ') + ': the new copy is not in the created draft');
+    else if (back.indexOf(ov) > -1) bad.push(g.labels.join(' / ') + ': the source journey\'s copy is still there');
   }
   const backNode = (role) => (backObj.activities || []).find((a) => akey(a) === want[role]);
   for (const { w } of smsApplied) {
@@ -644,19 +759,21 @@
     if (String(gotId) !== String(cseId))
       bad.push('email.template.id: reads back as ' + JSON.stringify(gotId) + ', expected ' + JSON.stringify(cseId));
   }
-  if (bad.length) fail('saved, but the readback disagrees:\n      ' + bad.join('\n      '));
+  if (bad.length) fail('the draft was created, but the readback disagrees:\n      ' + bad.join('\n      '));
 
-  console.log('%cDONE — draft ' + DRAFT_ID + ' saved and verified ('
+  console.log('%cDONE — new draft ' + (newDraftId || reserved) + ' created and verified ('
               + (plan.filter((p) => !p.skip).length + applied.length + smsApplied.length) + ' copy field(s), '
-              + assetApplied.length + ' photo(s)' + (cseId ? ', 1 email' : '') + ').',
+              + assetApplied.length + ' photo(s)' + (cseId ? ', 1 email' : '')
+              + '); nothing is the source journey\'s.',
               'color:#22c55e;font-weight:bold;font-size:14px');
   for (const a of assetApplied) console.log('    ' + a.key + ' -> ' + a.value);
   if (cseId) console.log('    email content ' + cseId + ' created, published, and pointed at.');
+  console.log('    source draft ' + SOURCE_DRAFT_ID + ' was not modified.');
   if (KEEP_INHERITED_ASSETS) {
-    console.log('%cSTILL TO DO BY HAND — the photo slots are the copied journey\'s:',
+    console.log('%cSTILL TO DO BY HAND — the photo slots are the source journey\'s:',
                 'color:#f59e0b;font-weight:bold;font-size:14px');
     for (const s of slots) if (s.kind === 'variable') console.log('    ' + s.key + '  currently ' + JSON.stringify(s.oldValue));
     console.log('    DO NOT PUBLISH until those are changed.');
   }
-  console.log('Unpublished. Open the journey in the builder and check the canvas is not blank.');
+  console.log('Unpublished. Open the new journey in the builder and check the canvas is not blank.');
 })();

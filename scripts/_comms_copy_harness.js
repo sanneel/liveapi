@@ -9,7 +9,7 @@ const draftPath = process.argv[3];
 const outPath = process.argv[4];
 
 const draft = JSON.parse(fs.readFileSync(draftPath, 'utf-8'));
-const saved = { put: null, contents: [], published: [], uploads: [] };
+const saved = { put: null, created: null, reserved: [], contents: [], published: [], uploads: [] };
 
 const b64u = (o) => Buffer.from(JSON.stringify(o)).toString('base64')
   .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -22,7 +22,20 @@ async function server(url, opts) {
   const body = () => JSON.parse(opts.body);
   const ok = (obj) => ({ ok: true, status: 200, text: async () => JSON.stringify(obj) });
 
-  if (/\/journey-drafts\/\d+$/.test(url) && method === 'GET') return ok(saved.put || draft);
+  if (/\/journeys\/identifier$/.test(url) && method === 'POST') {
+    const id = 'JRN-0-777001';
+    saved.reserved.push(id);
+    return ok(id);
+  }
+  if (/\/journey-drafts$/.test(url) && method === 'POST') {
+    saved.created = body();
+    return ok({ id: 777777 });
+  }
+  if (/\/journey-drafts\/\d+$/.test(url) && method === 'GET') {
+    // 777777 is the draft this run created; anything else is the source.
+    if (/\/777777$/.test(url)) return ok(saved.created);
+    return ok(draft);
+  }
   if (/\/journey-drafts\/\d+$/.test(url) && method === 'PUT') { saved.put = body(); return ok({}); }
   if (/\/media-library\/v0\/folder\/.*\/upload\//.test(url)) {
     uploadSeq += 1;

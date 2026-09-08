@@ -207,8 +207,8 @@ GENERATORS: List[dict] = [
      "what": "The comms half of a GOW campaign (built with it by default)",
      "script": "comms_campaign.py", "tab": "gow"},
     {"key": "comms_copy", "group": "Comms", "brand": "JBCL",
-     "label": "Comms copy into an existing draft",
-     "what": "This week's copy, photos and email into a journey copied in the UI",
+     "label": "Comms draft from an existing journey",
+     "what": "A new draft with this week's copy, photos and email; the source is read only",
      "script": "comms_copy_update.py", "tab": None},
 
     # ── Assets ────────────────────────────────────────────────────────────

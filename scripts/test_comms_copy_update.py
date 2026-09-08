@@ -4,13 +4,16 @@
 Offline, no key. It builds a fake comms draft of the shape the real ones have
 (both storages, both languages), generates the script from the example sheet,
 executes it under node with `_comms_copy_harness.js` standing in for the browser
-and the API, and then asserts on what the script tried to save:
+and the API, and then asserts on what the script tried to create:
 
+  * a NEW draft was POSTed and the source draft was never written,
+  * the new draft carries a freshly reserved journey id and fresh activity ids,
   * the copy landed in the compiled activity AND its rawJourneyData mirror,
   * each picked photo reached its slot in both storages,
   * the email was created, saved and published BEFORE the draft was pointed at
     it, with both photo tokens filled,
-  * the refusals fire when a slot or a node is missing.
+  * the refusals fire when a slot or a node is missing, or when a channel the
+    draft carries was left out and would ship the source journey's content.
 """
 from __future__ import annotations
 
@@ -27,12 +30,21 @@ CLONER = ROOT / "journey-cloner"
 HARNESS = ROOT / "scripts" / "_comms_copy_harness.js"
 SPEC = CLONER / "examples" / "champions_comms.tsv"
 
-DRAFT_ID = "690315"
+SOURCE_DRAFT_ID = "690315"
 NAME = "JBCL | CS | Champions | comms"
 LINK = "https://jugabet.cl/services/promo/offers/randomizer/cl-round-1?%$utm_tags%"
 OLD_LINK = "https://jugabet.cl/services/promo/offers/randomizer/old-round?%$utm_tags%"
 OLD_ICON = "https://cdn.example/old-icon.png"
 OLD_BG = "https://cdn.example/old-background.png"
+
+# Real uuids: the script regenerates every activity id, and a draft whose ids
+# did not change collides with the source journey in the builder.
+NODE_IDS = {
+    "nc": "11111111-1111-4111-8111-111111111111",
+    "popup": "22222222-2222-4222-8222-222222222222",
+    "sms": "33333333-3333-4333-8333-333333333333",
+    "email": "44444444-4444-4444-8444-444444444444",
+}
 
 failures: list[str] = []
 
@@ -100,12 +112,15 @@ def email_init() -> dict:
             "displayData": ["CSE-0-11111"]}
 
 
-def make_draft(*, with_email: bool = True, with_icon: bool = True) -> dict:
-    nodes = [("nc-1", "notification_center", nc_init()),
-             ("popup-1", "notification_center", popup_init()),
-             ("sms-1", "dextra_sms", sms_init())]
+def make_draft(*, with_email: bool = True, with_icon: bool = True,
+               drop_popup: bool = False) -> dict:
+    nodes = [(NODE_IDS["nc"], "notification_center", nc_init()),
+             (NODE_IDS["popup"], "notification_center", popup_init()),
+             (NODE_IDS["sms"], "dextra_sms", sms_init())]
+    if drop_popup:
+        nodes = [n for n in nodes if n[0] != NODE_IDS["popup"]]
     if with_email:
-        nodes.append(("email-1", "dextra_email", email_init()))
+        nodes.append((NODE_IDS["email"], "dextra_email", email_init()))
     if not with_icon:
         vs = nodes[0][2]["objectForSend"]["variables"]
         nodes[0][2]["objectForSend"]["variables"] = [v for v in vs if v["name"] != "icon"]
@@ -116,7 +131,10 @@ def make_draft(*, with_email: bool = True, with_icon: bool = True) -> dict:
         activities.append({"journeyActivityId": aid, "activityName": kind,
                            "initializationData": copymod.deepcopy(init)})
         config[aid] = copymod.deepcopy(init)
-    return {"id": int(DRAFT_ID), "journeyName": "JBCL | CS | Last week | comms",
+    return {"id": int(SOURCE_DRAFT_ID), "version": 3, "status": "DRAFT",
+            "duplicatedFromId": "JRN-0-111111", "duplicatedFromVersion": 1,
+            "reservedJourneyId": "JRN-0-111111",
+            "brand": "JBCL", "journeyName": "JBCL | CS | Last week | comms",
             "activities": activities,
             "rawJourneyData": {"infoValues": {"journeyName": "JBCL | CS | Last week | comms"},
                                "activitiesConfiguration": config}}
@@ -125,7 +143,7 @@ def make_draft(*, with_email: bool = True, with_icon: bool = True) -> dict:
 def generate(tmp: Path, *, channels: str = "") -> Path:
     sys.path.insert(0, str(CLONER))
     cmd = [sys.executable, str(CLONER / "comms_copy_update.py"),
-           "--draft-id", DRAFT_ID, "--name", NAME, "--link", LINK,
+           "--source-draft-id", SOURCE_DRAFT_ID, "--name", NAME, "--link", LINK,
            "--spec", str(SPEC), "--live", "--basename", "harness_" + (channels or "all").replace(",", "_")]
     if channels:
         cmd += ["--channels", channels]
@@ -147,10 +165,26 @@ def run(script: Path, draft: dict, tmp: Path) -> dict:
     return json.loads(opath.read_text(encoding="utf-8"))
 
 
-def variables(body: dict, storage: str, aid: str) -> dict:
-    init = (body["rawJourneyData"]["activitiesConfiguration"][aid] if storage == "mirror"
-            else next(a["initializationData"] for a in body["activities"] if a["journeyActivityId"] == aid))
-    return {v["name"]: v["value"] for v in init["objectForSend"]["variables"]}
+def node_of(body: dict, kind: str, contract: int | None = None) -> dict:
+    """The created draft's activity ids are all fresh, so nodes are found by
+    kind the way the console script finds them, not by the source's id."""
+    for a in body["activities"]:
+        if a["activityName"] != kind:
+            continue
+        if contract is None or a["initializationData"].get("contract") == contract:
+            return a
+    raise AssertionError(f"no {kind} node (contract {contract}) in the created draft")
+
+
+def init_of(body: dict, storage: str, kind: str, contract: int | None = None) -> dict:
+    a = node_of(body, kind, contract)
+    if storage == "mirror":
+        return body["rawJourneyData"]["activitiesConfiguration"][a["journeyActivityId"]]
+    return a["initializationData"]
+
+
+def variables(body: dict, storage: str, kind: str, contract: int | None = None) -> dict:
+    return {v["name"]: v["value"] for v in init_of(body, storage, kind, contract)["objectForSend"]["variables"]}
 
 
 def main() -> int:
@@ -161,38 +195,48 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as td:
         tmp = Path(td)
 
-        print("full run — copy, four photos, email")
+        print("full run — a new draft with copy, four photos and an email")
         res = run(generate(tmp), make_draft(), tmp)
         check(not res.get("error"), f"script ran without refusing (got {res.get('error')!r})")
-        put = res.get("put")
-        check(bool(put), "the draft was saved")
-        if put:
+        new_draft = res.get("created")
+        check(bool(new_draft), "a NEW draft was POSTed")
+        check(res.get("put") is None, "the source draft was never written")
+        check(res.get("reserved") == ["JRN-0-777001"], "a fresh journey id was reserved")
+
+        if new_draft:
+            check(new_draft.get("reservedJourneyId") == "JRN-0-777001",
+                  "the new draft carries the reserved id, not the source's")
+            for gone in ("id", "version", "status", "duplicatedFromId", "duplicatedFromVersion"):
+                check(gone not in new_draft, f"the source's {gone} was dropped")
+            ids = {a["journeyActivityId"] for a in new_draft["activities"]}
+            check(not (ids & set(NODE_IDS.values())), "every activity id was regenerated")
+            check(set(new_draft["rawJourneyData"]["activitiesConfiguration"]) == ids,
+                  "the mirror is keyed by the new activity ids")
+
             for storage in ("compiled", "mirror"):
-                nc = variables(put, storage, "nc-1")
+                nc = variables(new_draft, storage, "notification_center", 1)
                 check(nc["title-es"] == "🏆 ¡La Champions viene con premios!", f"nc title_es in {storage}")
                 check(nc["des-en"].startswith("⚽ Real Madrid vs. Inter."), f"nc desc_en in {storage}")
                 check(nc["caption-es"] == "RASPA Y GANA", f"nc caption_es in {storage}")
                 check(nc["link-es"] == LINK, f"nc link in {storage}")
                 check(nc["icon"] == "https://cdn.example/asset-1.png", f"nc icon photo in {storage}")
-                pop = variables(put, storage, "popup-1")
+                pop = variables(new_draft, storage, "notification_center", 5)
                 check(pop["description_es"].startswith("⚽ Real Madrid vs Inter."), f"popup desc_es in {storage}")
                 check(pop["background_image_src"] == "https://cdn.example/asset-2.png",
                       f"popup background photo in {storage}")
-
-            body = json.dumps(put, ensure_ascii=False)
-            check(OLD_LINK not in body, "the previous campaign's link is gone")
-            check(OLD_ICON not in body and OLD_BG not in body, "the previous campaign's artwork is gone")
-            check("OLD nc title es" not in body, "the previous campaign's copy is gone")
-            check(put["journeyName"] == NAME, "journeyName set")
-            check(put["rawJourneyData"]["infoValues"]["journeyName"] == NAME, "journeyName set in infoValues")
-
-            for storage in ("compiled", "mirror"):
-                init = (put["rawJourneyData"]["activitiesConfiguration"]["email-1"] if storage == "mirror"
-                        else next(a["initializationData"] for a in put["activities"]
-                                  if a["journeyActivityId"] == "email-1"))
-                check(init["emailSettings"]["template"]["id"] == "CSE-0-99999",
+                em = init_of(new_draft, storage, "dextra_email")
+                check(em["emailSettings"]["template"]["id"] == "CSE-0-99999",
                       f"email activity points at the new content in {storage}")
-                check(init["displayData"] == ["CSE-0-99999"], f"email displayData refreshed in {storage}")
+                check(em["displayData"] == ["CSE-0-99999"], f"email displayData refreshed in {storage}")
+
+            body = json.dumps(new_draft, ensure_ascii=False)
+            check(OLD_LINK not in body, "the source journey's link is gone")
+            check(OLD_ICON not in body and OLD_BG not in body, "the source journey's artwork is gone")
+            check("OLD nc title es" not in body, "the source journey's copy is gone")
+            check("CSE-0-11111" not in body, "the source journey's email is gone")
+            check(new_draft["journeyName"] == NAME, "journeyName set")
+            check(new_draft["rawJourneyData"]["infoValues"]["journeyName"] == NAME,
+                  "journeyName set in infoValues")
 
         contents = res.get("contents") or []
         check(len(contents) >= 1, "the email content was created")
@@ -203,25 +247,37 @@ def main() -> int:
             check(src.count("https://{{cdn_hostname}}/folder/asset-") == 2,
                   "both email photos are cdn_hostname-relative")
             check(src.count(LINK) == 2, "both email links point at this campaign")
-            check("[[block(CSE-0-6450)]]" in src, "the footer block survived (unsubscribe + legal)")
-            check("Raspa y Gana" in src, "the sheet's email body is in the content")
+            check(src.count("[[block(CSE-0-10142)]]") == 1, "the banner block is intact")
+            check(src.count("[[block(CSE-0-6450)]]") == 1, "the footer block is intact")
+            check('width="85%"' in src, "the CTA image keeps its captured width")
+            check("La máxima competición europea" in src and "Hazla Legendaria" in src,
+                  "the sheet's email body is in the content, first line to last")
             check(contents[0]["translations"]["es"]["composition"]["subject"]
                   == "¡La Champions viene con premios!", "subject from the sheet")
         check(len(res.get("published") or []) == 1, "the content was published exactly once")
         check(len(res.get("uploads") or []) == 4, "four photos were uploaded")
 
         print("\nrefusal — the NC node has no icon variable")
-        res = run(generate(tmp, channels="nc"), make_draft(with_icon=False, with_email=False), tmp)
+        res = run(generate(tmp, channels="nc"), make_draft(with_icon=False, with_email=False,
+                                                           drop_popup=True), tmp)
         check("no captured variable is named icon" in str(res.get("error")),
               f"refused before asking for a photo (got {res.get('error')!r})")
-        check(res.get("put") is None, "nothing was saved")
+        check(res.get("created") is None, "nothing was created")
         check(not (res.get("uploads") or []), "nothing was uploaded")
 
-        print("\nrefusal — the email is wanted but the draft has no email node")
+        print("\nrefusal — the email is wanted but the source draft has no email node")
         res = run(generate(tmp), make_draft(with_email=False), tmp)
         check("expected exactly one email node" in str(res.get("error")),
               f"refused on the missing node (got {res.get('error')!r})")
-        check(res.get("put") is None, "nothing was saved")
+        check(res.get("created") is None, "nothing was created")
+
+        print("\nrefusal — a channel the draft carries was left out of --channels")
+        res = run(generate(tmp, channels="nc,popup,sms"), make_draft(), tmp)
+        check("would still carry the source journey's content" in str(res.get("error")),
+              f"refused on the untouched email activity (got {res.get('error')!r})")
+        check(res.get("created") is None, "no draft was created")
+        check(not (res.get("uploads") or []), "no photo was uploaded")
+        check(not (res.get("contents") or []), "no email was published")
 
     print()
     if failures:
