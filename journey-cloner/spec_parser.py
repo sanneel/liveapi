@@ -112,14 +112,26 @@ def _row_values(row: list, start_idx: int = 1) -> list:
     return out
 
 
-def _row_bool(row: list) -> bool:
+def _row_bool_opt(row: list):
+    """TRUE / FALSE / None when the row carries no flag at all.
+
+    The difference matters: some sheets put the channel's name on one row and
+    its TRUE on the row underneath (the Sms block does), so "no flag here" and
+    "explicitly off" cannot be the same answer.
+    """
     for cell in row:
         c = (cell or "").strip().lower()
         if c == "true":
             return True
         if c == "false":
             return False
-    return False
+    return None
+
+
+def _set_enabled(spec, channel: str, value: bool) -> None:
+    target = {_NOTIFICATION: "nc", _POPUP: "popup", _SMS: "sms", _EMAIL: "email"}.get(channel)
+    if target:
+        getattr(spec, target).enabled = value
 
 
 def _channel_key(label: str) -> str:
@@ -203,6 +215,7 @@ def parse_spec(text: str, *, expect_game_offer: bool = True) -> ParsedSpec:
 
     current_channel = ""
     field_rows: dict = {}  # channel -> list[(label, en, es)]
+    flagged_channels: set = set()  # channels whose own header row carried TRUE/FALSE
 
     for row in rows:
         label = (row[0] or "").strip()
@@ -245,14 +258,10 @@ def parse_spec(text: str, *, expect_game_offer: bool = True) -> ParsedSpec:
                 continue
             current_channel = channel
             field_rows.setdefault(channel, [])
-            if channel == _NOTIFICATION:
-                spec.nc.enabled = _row_bool(row)
-            elif channel == _POPUP:
-                spec.popup.enabled = _row_bool(row)
-            elif channel == _SMS:
-                spec.sms.enabled = _row_bool(row)
-            elif channel == _EMAIL:
-                spec.email.enabled = _row_bool(row)
+            flag = _row_bool_opt(row)
+            if flag is not None:
+                flagged_channels.add(channel)
+                _set_enabled(spec, channel, flag)
 
             # Extract field name if label is "Channel FieldName" (e.g., "Notification Title")
             # or "Channel (descriptor) FieldName" (e.g., "Notification Pop-up (Cat-fish) Title")
@@ -269,41 +278,63 @@ def parse_spec(text: str, *, expect_game_offer: bool = True) -> ParsedSpec:
         if not current_channel:
             continue
 
+        # The Sms block names the channel on one row and ticks TRUE on the row
+        # under it, so a data row can turn on a channel whose own header said
+        # nothing. It can never contradict a header that did.
+        if current_channel not in flagged_channels and _row_bool_opt(row) is True:
+            _set_enabled(spec, current_channel, True)
+
         values = _row_values(row)
         en = values[0] if len(values) >= 1 else ""
         es = values[1] if len(values) >= 2 else en
         field_rows[current_channel].append((label.lower(), en, es))
 
     def _fill_channel(target: ChannelCopy, rows_for_channel: list) -> None:
+        # A channel's block is often followed by a second, empty Tittle/
+        # Description pair belonging to a nameless variant below it. Those rows
+        # land here too, so an empty value may never overwrite a filled one —
+        # letting it silently blanked the Notification's whole copy.
+        def put(attr_en: str, attr_es: str, en: str, es: str) -> None:
+            if en:
+                setattr(target, attr_en, en)
+            if es:
+                setattr(target, attr_es, es)
+
         for label, en, es in rows_for_channel:
             if label.startswith("tit"):
                 # Matches both "Title" and the sheet's "Tittle" spelling.
-                target.title_en, target.title_es = en, es
+                put("title_en", "title_es", en, es)
             elif "desc" in label:
-                target.desc_en, target.desc_es = en, es
+                put("desc_en", "desc_es", en, es)
             elif "button" in label or "caption" in label:
-                target.caption_en, target.caption_es = en, es
+                put("caption_en", "caption_es", en, es)
 
     _fill_channel(spec.nc, field_rows.get(_NOTIFICATION, []))
     _fill_channel(spec.popup, field_rows.get(_POPUP, []))
 
-    sms_rows = field_rows.get(_SMS, [])
-    if sms_rows:
-        _, en, es = sms_rows[0]
-        spec.sms.text_en, spec.sms.text_es = en, es
+    for _, en, es in field_rows.get(_SMS, []):
+        if en or es:
+            spec.sms.text_en, spec.sms.text_es = en, es
+            break
 
     for label, en, es in field_rows.get(_EMAIL, []):
         if label.startswith("tit"):
             # "Tittle"/"Title" row = the email subject line.
-            spec.email.subject_en, spec.email.subject_es = en, es
+            pair = ("subject_en", "subject_es")
         elif "header" in label:
             # "Pre-header" row.
-            spec.email.preheader_en, spec.email.preheader_es = en, es
+            pair = ("preheader_en", "preheader_es")
         elif "desc" in label:
             # "Description" row = the email body copy (may be multi-line).
-            spec.email.desc_en, spec.email.desc_es = en, es
+            pair = ("desc_en", "desc_es")
         elif "button" in label or "caption" in label:
-            spec.email.button_en, spec.email.button_es = en, es
+            pair = ("button_en", "button_es")
+        else:
+            continue
+        if en:
+            setattr(spec.email, pair[0], en)
+        if es:
+            setattr(spec.email, pair[1], es)
 
     if spec.nc.enabled and not (spec.nc.title_en and spec.nc.desc_en and spec.nc.caption_en):
         spec.warnings.append("Notification is ticked TRUE but some Notification fields are missing.")

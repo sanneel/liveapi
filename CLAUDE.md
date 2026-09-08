@@ -57,8 +57,12 @@ Offline, no key, safe to run any time:
 .venv/bin/python scripts/test_composer_contract.py   # planner -> composer contract
 .venv/bin/python scripts/test_journey_design.py      # design-board renderer
 .venv/bin/python scripts/test_har_analyse.py         # HAR analyser + secret scrubbing
-.venv/bin/python -m compileall -q app server.py journey-cloner journey-planner
+.venv/bin/python scripts/test_spec_parser.py         # the pasted sheet, real layout
+.venv/bin/python scripts/test_comms_copy_update.py   # comms draft, against a stubbed backoffice
+.venv/bin/python -m compileall -q app server.py journey-cloner journey-planner scripts
 ```
+
+`test_comms_copy_update.py` needs `node` on PATH; without it, it skips.
 
 Needs a live `GEMINI_API_KEY` and spends tokens — run deliberately, before and
 after any prompt change:

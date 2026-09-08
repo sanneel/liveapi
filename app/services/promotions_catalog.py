@@ -57,6 +57,7 @@ AUTOMATION_SCRIPTS: Dict[str, List[str]] = {
         "spec_parser.py",
         "templates/casino/champions_email.json",
         "examples/champions_comms.tsv",
+        "templates/casino/gow_comms.json",
     ],
     "sport_wof": [
         "randomizer_campaign.py",

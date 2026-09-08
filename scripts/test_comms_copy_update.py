@@ -254,7 +254,7 @@ def main() -> int:
                 check(nc["link-es"] == LINK, f"nc link in {storage}")
                 check(nc["icon"] == "https://cdn.example/asset-1.png", f"nc icon photo in {storage}")
                 pop = variables(new_draft, storage, "notification_center", 5)
-                check(pop["description_es"].startswith("⚽ Real Madrid vs Inter."), f"popup desc_es in {storage}")
+                check(pop["description_es"].startswith("⚽ Real Madrid vs. Inter llega"), f"popup desc_es in {storage}")
                 check(pop["background_image_src"] == "https://cdn.example/asset-2.png",
                       f"popup background photo in {storage}")
                 # The pop-up's link is language-independent; nothing per-language
@@ -297,8 +297,10 @@ def main() -> int:
             check('width="85%"' in src, "the CTA image keeps its captured width")
             check("La máxima competición europea" in src and "Hazla Legendaria" in src,
                   "the sheet's email body is in the content, first line to last")
-            check(contents[0]["translations"]["es"]["composition"]["subject"]
-                  == "¡La Champions viene con premios!", "subject from the sheet")
+            comp = contents[0]["translations"]["es"]["composition"]
+            check(comp["subject"] == "🏆 JugaBet: La Champions tiene premios", "subject from the sheet")
+            check(comp["preHeader"].startswith("⚽ Real Madrid vs. Inter es EL PARTIDAZO"),
+                  "pre-header from the sheet")
         check(len(res.get("published") or []) == 1, "the content was published exactly once")
         check(len(res.get("uploads") or []) == 4, "four photos were uploaded")
 

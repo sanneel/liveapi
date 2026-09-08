@@ -1,34 +1,62 @@
-Event	"""Real Madrid vs Inter (Champions League)"""
-Notification	TRUE
-Tittle	🏆 The Champions League comes with prizes!	🏆 ¡La Champions viene con premios!
-Description	⚽ Real Madrid vs. Inter. 🎟️ Scratch and find out what you win!	⚽ Real Madrid vs. Inter. 🎟️ ¡Raspa y descubre qué ganas!
-Button	SCRATCH AND WIN	RASPA Y GANA
-Notification Pop-up (Cat-fish)	TRUE
-Tittle	🏆 Champions	🏆 Champions
-Description	⚽ Real Madrid vs Inter. 🎟️ Scratch and Win — find your prize!	⚽ Real Madrid vs Inter. 🎟️ ¡Raspa y Gana y descubre tu premio!
-Button	SCRATCH AND WIN	RASPA Y GANA
-Sms	TRUE
-Text	JugaBet | Real Madrid vs Inter comes with the Champions League. Scratch and Win and discover what prize awaits you.	JugaBet | Real Madrid vs Inter llega con la Champions. Raspa y Gana y descubre que premio te espera.
-Email	TRUE
-Tittle	The Champions League comes with prizes	¡La Champions viene con premios!
-Pre-header	Real Madrid vs Inter: raspa y descubre tu premio	Real Madrid vs Inter: raspa y descubre tu premio
-Description	"La máxima competición europea ya está aquí y uno de los grandes partidos de la jornada enfrenta a Real Madrid vs. Inter. ⚽🔥
-Y para acompañar este partidazo, en JugaBet tenemos algo especial para ti:
+2			Eng	Max symb	Left symb			Esp	Max symb	Left symb
+Specifications
+Product							"Requirements:
 
+1. Please do not use CLP. Only $.
+2. Please check whether there any symbols that extends SMS. F.e: í. ó etc.
+3. Please Add some Emojis and stickers please
+"
+Event
+Start date
+End date
+User story
+Message			scratch card and win different prizes, mention champions league
+Offer			Real Madrid vs Inter Milan Focus
+Offer Link
+			Please Add some Emojis and stickers
+Сommunication channels
+		To do	Text	Max symb	Left symb		To do	Text	Max symb	Left symb
+Notification Pop-up (Cat-fish)		TRUE					TRUE			
+Tittle			🏆 Champions and awards	18	-5			🏆 Champions y premios	18	-4
+Description			⚽ Real Madrid vs. Inter arrives with the Champions League. 🎟️ Scratch and Win and discover your prize!	80	-23			⚽ Real Madrid vs. Inter llega con la Champions. 🎟️ ¡Raspa y Gana y descubre tu premio!	80	-7
+Button			SCRATCH AND WIN	20	5			RASPA Y GANA	20	8
+Notification		TRUE					TRUE			
+Tittle			🏆 The Champions League comes with prizes!	50	8			🏆 ¡La Champions viene con premios!	50	15
+Description			⚽ Real Madrid vs. Inter. 🎟️ Scratch and find out what you win!	65	2			⚽ Real Madrid vs. Inter. 🎟️ ¡Raspa y descubre qué ganas!	65	8
+Button			SCRATCH AND WIN	20	5			RASPA Y GANA	20	8
+Tittle				80	80				80	80
+Description				90	90				90	90
+Email		TRUE					TRUE			
+Tittle			🏆 JugaBet: The Champions League has prizes	41	-2			🏆 JugaBet: La Champions tiene premios	41	3
+Pre-header			⚽ Real Madrid vs. Inter is THE MATCH OF THE DAY. Scratch and Win!	80	15			⚽ Real Madrid vs. Inter es EL PARTIDAZO DE HOY. ¡Raspa y Gana!	80	18
+Description			"The top European competition is here, and one of the biggest matches of the day pits Real Madrid against Inter. ⚽🔥
+And to accompany this fantastic match, JugaBet has something special for you:
+🎟️ Scratch and Win!
+Claim your card, scratch, and discover what prize awaits you. 👀
+🎁 You can find different prizes, so each card could bring a surprise.
+
+🎟️ And another chance to place your bet.
+JugaBet. Place your bet, make it legendary."					"La máxima competición europea ya está aquí y uno de los grandes partidos de la jornada enfrenta a Real Madrid vs. Inter. ⚽🔥
+Y para acompañar este partidazo, en JugaBet tenemos algo especial para ti:
 🎟️ ¡Raspa y Gana!
 Reclama tu tarjeta, raspa y descubre qué premio te espera. 👀
-
 🎁 Puedes encontrar diferentes premios, así que cada tarjeta puede traer una sorpresa.
 🎟️ Y una oportunidad más para hacer tu jugada.
-
-JugaBet. Haz tu Jugada, Hazla Legendaria."	"La máxima competición europea ya está aquí y uno de los grandes partidos de la jornada enfrenta a Real Madrid vs. Inter. ⚽🔥
-Y para acompañar este partidazo, en JugaBet tenemos algo especial para ti:
-
-🎟️ ¡Raspa y Gana!
-Reclama tu tarjeta, raspa y descubre qué premio te espera. 👀
-
-🎁 Puedes encontrar diferentes premios, así que cada tarjeta puede traer una sorpresa.
-🎟️ Y una oportunidad más para hacer tu jugada.
-
-JugaBet. Haz tu Jugada, Hazla Legendaria."
-Button	SCRATCH AND WIN	RASPA Y GANA
+JugaBet. Haz tu Jugada, Hazla Legendaria."		
+Button			SCRATCH AND WIN	20	5			RASPA Y GANA	20	8
+Sms 
+"Description (all sms should begin from: ""JugaBet |"")"		TRUE	JugaBet | Real Madrid vs Inter comes with the Champions League. Scratch and Win and discover what prize awaits you.				TRUE	JugaBet | Real Madrid vs Inter llega con la Champions. Raspa y Gana y descubre que premio te espera.	130	30
+Promo Lobby		FALSE					FALSE			
+Tittle				70	70				70	70
+Description				40	40				40	40
+Button				20	20				20	20
+""
+Slider		FALSE					FALSE			
+Tittle				50	50				50	50
+Description				50	50				50	50
+Button			#VALUE!	20	#VALUE!				20	20
+""
+Push in app		FALSE					FALSE			
+Tittle			#VALUE!						50	50
+Description			#VALUE!						50	50
+Button			#VALUE!						20	20

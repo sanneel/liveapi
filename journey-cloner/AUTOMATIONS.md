@@ -256,6 +256,20 @@ publishes nothing and creates nothing. `--live` emits it already off.
         --link "https://jugabet.cl/services/promo/offers/randomizer/cl-round-1?%$utm_tags%" \
         --spec examples/champions_comms.tsv
 
+**The sheet is the real one**, `examples/champions_comms.tsv`, straight out of
+the spreadsheet: a label column, then an EN block of To do / Text / Max symb /
+Left symb, then the same for ES. Two things about that layout had to be taught
+to `spec_parser.py`, and both had silently wrong answers before:
+
+- a channel block is often followed by a second, **empty** Tittle/Description
+  pair belonging to a nameless variant under it. Those rows blanked the
+  Notification's real copy, so an empty value may never overwrite a filled one.
+- the **Sms** block names the channel on one row and ticks TRUE on the row
+  underneath. A header with no flag now leaves the channel undecided and a data
+  row may switch it on; a header that says FALSE still wins over anything below.
+
+`scripts/test_spec_parser.py` covers both, plus the simpler one-row-per-channel
+layout the GOW and tournament sheets use.
 `scripts/test_comms_copy_update.py` runs a generated script against a stubbed
 browser and backoffice and asserts on what it created, including that the source
 draft was never written and that every refusal fires before any side effect.
