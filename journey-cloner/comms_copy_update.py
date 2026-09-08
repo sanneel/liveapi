@@ -453,6 +453,14 @@ JS_TEMPLATE += r"""
   const langOf = (name) => { const m = String(name).toLowerCase().match(/(?:^|[-_])(en|es)$/); return m ? m[1] : null; };
   const plan = [];
   const varsOf = (node) => ((node.initializationData || {}).objectForSend || {}).variables || [];
+  // A card's variables are of two kinds. Some hold copy ("title-es" -> the
+  // Spanish headline); the rest are the template's own slots, holding a
+  // reference the platform resolves from the first kind ("title" -> "%title_es%",
+  // "buttons_1_link" -> "%link%?%$utm_tags%"). A slot reference is structure, not
+  // content: it is identical in every campaign, and overwriting one breaks the
+  // card. Anything left after its %...% runs are removed is a real value.
+  const isSlotRef = (v) => typeof v === 'string' && v.indexOf('%') > -1
+    && !/[A-Za-z0-9]/.test(v.replace(/%[^%]*%/g, ''));
   function currentVar(node, stem, lang) {
     const hits = varsOf(node).filter((v) => { const n = (v.name || '').toLowerCase();
                                               return n.indexOf(stem) > -1 && langOf(n) === lang; });
@@ -510,6 +518,22 @@ JS_TEMPLATE += r"""
       smsWrites.push({ lang, newValue: v, oldValue: real[0] });
     }
   }
+  // The pop-up holds its promo link in ONE language-independent `link` (its
+  // per-language slots read "%link%?%$utm_tags%"), so the link_en/link_es swap
+  // above never reaches it — the pop-up shipped the source journey's link.
+  // Same for `deeplink`, which both cards carry once.
+  const LINK_NAMES = ['link', 'deeplink'];
+  const commonWrites = [];
+  for (const role of ROLES) {
+    if (role === 'sms' || role === 'email') continue;
+    for (const v of varsOf(found[role])) {
+      if (LINK_NAMES.indexOf(String(v.name || '').toLowerCase()) === -1) continue;
+      if (isSlotRef(v.value)) continue;
+      commonWrites.push({ role, varName: v.name, newValue: LINK,
+                          oldValue: String(v.value == null ? '' : v.value) });
+    }
+  }
+
   if (!draft.journeyName) fail('source draft ' + SOURCE_DRAFT_ID + ' has no journeyName.');
   const nameWas = { top: String(draft.journeyName),
                     info: ((draft.rawJourneyData || {}).infoValues || {}).journeyName };
@@ -611,7 +635,12 @@ JS_TEMPLATE += r"""
   const written = new Set();
   for (const w of writes) written.add(w.role + '::' + w.varName);
   for (const pl of plan) if (pl.role) written.add(pl.role + '::' + pl.varName);
+  for (const w of commonWrites) written.add(w.role + '::' + w.varName);
   for (const s of slots) if (s.kind === 'variable') for (const n of s.names) written.add(s.role + '::' + n);
+  // What this run supplies, whatever variable it happens to land in. A field
+  // that already holds one of these is this campaign's, not the source's.
+  const ours = new Set([LINK]);
+  for (const r of Object.keys(COPY)) for (const v of Object.values(COPY[r] || {})) if (v) ours.add(String(v));
   const CONTENT_RE = /(title|des|caption|link|icon|image|deeplink|text|message)/i;
   const leaks = [];
   for (const role of ROLES) {
@@ -620,7 +649,8 @@ JS_TEMPLATE += r"""
       const name = String(v.name || '');
       if (!CONTENT_RE.test(name) || written.has(role + '::' + name)) continue;
       const was = v.value == null ? '' : String(v.value);
-      if (was.trim()) leaks.push(role + '.' + name + ' would stay the source journey\'s: ' + JSON.stringify(was));
+      if (!was.trim() || isSlotRef(was) || ours.has(was)) continue;
+      leaks.push(role + '.' + name + ' would stay the source journey\'s: ' + JSON.stringify(was));
     }
   }
   const touched = new Set(ROLES.map((r) => want[r]));
@@ -671,6 +701,39 @@ JS_TEMPLATE += r"""
     console.log('    ' + g.labels.join(' + ') + '  x' + g.hits + (g.outside ? '  (' + g.outside + ' outside this node)' : '')
                 + '\n        old: ' + JSON.stringify(g.oldValue) + '\n        new: ' + JSON.stringify(g.newValue));
   }
+  for (const w of commonWrites) {
+    if (w.oldValue === w.newValue) { console.log('    = ' + w.role + '.' + w.varName + '  (already this campaign\'s link)'); continue; }
+    console.log('    ' + w.role + '.' + w.varName + '  (by path, language-independent)'
+                + '\n        old: ' + JSON.stringify(w.oldValue) + '\n        new: ' + JSON.stringify(w.newValue));
+  }
+  // The card's own slot appends the utm tags to whatever the variable holds, so
+  // a value that already carries them renders the query string twice. The source
+  // journey is already shaped this way, so it is a note, not a refusal — but it
+  // is the operator's call, and it is invisible until an email lands.
+  const utmDoubled = [], utmSeen = new Set();
+  for (const role of ROLES) {
+    if (role === 'sms' || role === 'email') continue;
+    for (const v of varsOf(found[role])) {
+      const ref = String(v.value == null ? '' : v.value);
+      const m = isSlotRef(ref) ? ref.match(/^%([^%]+)%\?%\$utm_tags%$/) : null;
+      if (!m || utmSeen.has(role + '::' + v.name)) continue;
+      utmSeen.add(role + '::' + v.name);
+      const target = m[1].toLowerCase();
+      const supplied = [...writes, ...commonWrites, ...plan].find((w) => w.role === role
+        && String(w.varName || '').toLowerCase() === target);
+      if (supplied && String(supplied.newValue).indexOf('%$utm_tags%') > -1)
+        utmDoubled.push(role + '.' + v.name + ' -> %' + m[1] + '%');
+    }
+  }
+  if (utmDoubled.length) {
+    console.warn('  NOTE — these card slots append "?%$utm_tags%" themselves, and the link this run'
+      + ' writes already ends with it, so the rendered URL carries the tags twice:'
+      + '\n        ' + utmDoubled.join('\n        ')
+      + '\n        renders as ' + LINK + '?%$utm_tags%'
+      + '\n      The source journey is already shaped this way. Pass --link without the'
+      + ' "?%$utm_tags%" suffix if that is not what you want.');
+  }
+
   if (EMAIL_CONTENT) {
     const comp = ((EMAIL_CONTENT.translations || {}).es || {}).composition || {};
     console.log('    email content (created + published, then pointed at)'
@@ -776,6 +839,25 @@ JS_TEMPLATE += r"""
     if (!hit) fail('sms.text_' + w.lang + ': nothing was written. Refusing to save a body where the'
       + ' copied campaign\'s SMS silently survived.');
     smsApplied.push({ w, hit });
+  }
+
+  // The language-independent promo link, written by exact variable name so it
+  // cannot touch a template slot that merely mentions "link".
+  const commonApplied = [];
+  for (const w of commonWrites) {
+    let hit = 0;
+    for (const holder of holdersFor(w.role)) {
+      for (const v of ((holder.objectForSend || {}).variables) || [])
+        if (v.name === w.varName) { v.value = w.newValue; hit++; }
+      const tabs = ((holder.singleChannel || {}).localizedLanguagesTab) || {};
+      for (const tab of Object.values(tabs)) {
+        if (!tab || typeof tab !== 'object') continue;
+        for (const tk of Object.keys(tab)) if (tk === w.varName) { tab[tk] = w.newValue; hit++; }
+      }
+    }
+    if (!hit) fail(w.role + '.' + w.varName + ': the promo link was not written anywhere. Refusing to'
+      + ' build a draft whose ' + w.role + ' still points at the source journey\'s promotion.');
+    commonApplied.push({ w, hit });
   }
 
   // The photos. Language-independent, so they live once in the `common` tab
@@ -910,6 +992,14 @@ JS_TEMPLATE += r"""
                + JSON.stringify(v && v.value) + ', expected ' + JSON.stringify(w.newValue));
     }
   }
+  for (const { w } of commonApplied) {
+    const vs = (((backNode(w.role) || {}).initializationData || {}).objectForSend || {}).variables || [];
+    const v = vs.find((x) => x.name === w.varName);
+    if (!v || v.value !== w.newValue) {
+      bad.push(w.role + '.' + w.varName + ': reads back as ' + JSON.stringify(v && v.value)
+               + ', expected ' + JSON.stringify(w.newValue));
+    }
+  }
   for (const a of assetApplied) {
     const role = a.key.split('.')[0];
     const vs = (((backNode(role) || {}).initializationData || {}).objectForSend || {}).variables || [];
@@ -927,7 +1017,8 @@ JS_TEMPLATE += r"""
   if (bad.length) fail('the draft was created, but the readback disagrees:\n      ' + bad.join('\n      '));
 
   console.log('%cDONE — new draft ' + (newDraftId || reserved) + ' created and verified ('
-              + (plan.filter((p) => !p.skip).length + applied.length + smsApplied.length) + ' copy field(s), '
+              + (plan.filter((p) => !p.skip).length + applied.length + smsApplied.length
+                 + commonApplied.length) + ' copy field(s), '
               + assetApplied.length + ' photo(s)' + (cseId ? ', 1 email' : '')
               + '); nothing is the source journey\'s.',
               'color:#22c55e;font-weight:bold;font-size:14px');

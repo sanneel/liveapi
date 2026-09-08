@@ -56,9 +56,27 @@ def check(cond: bool, what: str) -> None:
 
 
 def nc_init() -> dict:
+    """The captured shape, from a real draft.
+
+    Two kinds of variable live side by side: the ones holding copy
+    (``title-en``) and the template's own slots holding a reference the platform
+    resolves from them (``title`` -> ``"%title-en%"``). The slots repeat per
+    language and are identical in every campaign; overwriting one breaks the
+    card, so nothing here may treat them as content.
+    """
+    slots = []
+    for lang in ("en", "es"):
+        slots += [
+            {"name": "title", "value": f"%title-{lang}%"},
+            {"name": "icon-src", "value": "%icon%"},
+            {"name": "description", "value": f"%des-{lang}%"},
+            {"name": "buttons_1_link", "value": f"%link-{lang}%?%$utm_tags%"},
+            {"name": "buttons_1_caption", "value": f"%caption-{lang}%"},
+            {"name": "buttons_1_deeplink", "value": "%deeplink%?%$utm_tags%"},
+        ]
     return {
         "contract": 1,
-        "objectForSend": {"variables": [
+        "objectForSend": {"variables": slots + [
             {"name": "title-en", "value": "OLD nc title en"},
             {"name": "title-es", "value": "OLD nc title es"},
             {"name": "des-en", "value": "OLD nc description en"},
@@ -67,6 +85,7 @@ def nc_init() -> dict:
             {"name": "caption-es", "value": "OLD NC CAPTION ES"},
             {"name": "link-en", "value": OLD_LINK},
             {"name": "link-es", "value": OLD_LINK},
+            {"name": "deeplink", "value": OLD_LINK},
             {"name": "icon", "value": OLD_ICON},
         ]},
         "singleChannel": {"localizedLanguagesTab": {
@@ -74,21 +93,35 @@ def nc_init() -> dict:
                    "caption": "OLD NC CAPTION EN", "link": OLD_LINK},
             "es": {"title": "OLD nc title es", "des": "OLD nc description es",
                    "caption": "OLD NC CAPTION ES", "link": OLD_LINK},
-            "common": {"icon": OLD_ICON},
+            "common": {"icon": OLD_ICON, "deeplink": OLD_LINK},
         }},
     }
 
 
 def popup_init() -> dict:
+    """The pop-up keeps its promo link in ONE language-independent ``link``:
+    its per-language slots read ``"%link%?%$utm_tags%"``. Nothing per-language
+    reaches it, which is how the pop-up shipped the source journey's link."""
+    slots = []
+    for lang in ("en", "es"):
+        slots += [
+            {"name": "title", "value": f"%title_{lang}%"},
+            {"name": "description", "value": f"%description_{lang}%"},
+            {"name": "buttons_1_link", "value": "%link%?%$utm_tags%"},
+            {"name": "buttons_1_caption", "value": f"%caption_{lang}%"},
+            {"name": "buttons_1_deeplink", "value": "%deeplink%?%$utm_tags%"},
+        ]
     return {
         "contract": 5,
-        "objectForSend": {"variables": [
+        "objectForSend": {"variables": slots + [
             {"name": "title_en", "value": "OLD popup title en"},
             {"name": "title_es", "value": "OLD popup title es"},
             {"name": "description_en", "value": "OLD popup description en"},
             {"name": "description_es", "value": "OLD popup description es"},
             {"name": "caption_en", "value": "OLD POPUP CAPTION EN"},
             {"name": "caption_es", "value": "OLD POPUP CAPTION ES"},
+            {"name": "link", "value": OLD_LINK},
+            {"name": "deeplink", "value": OLD_LINK},
             {"name": "background_image_src", "value": OLD_BG},
         ]},
         "singleChannel": {"localizedLanguagesTab": {
@@ -96,7 +129,7 @@ def popup_init() -> dict:
                    "caption": "OLD POPUP CAPTION EN"},
             "es": {"title": "OLD popup title es", "description": "OLD popup description es",
                    "caption": "OLD POPUP CAPTION ES"},
-            "common": {"background_image_src": OLD_BG},
+            "common": {"background_image_src": OLD_BG, "link": OLD_LINK, "deeplink": OLD_LINK},
         }},
     }
 
@@ -224,6 +257,18 @@ def main() -> int:
                 check(pop["description_es"].startswith("⚽ Real Madrid vs Inter."), f"popup desc_es in {storage}")
                 check(pop["background_image_src"] == "https://cdn.example/asset-2.png",
                       f"popup background photo in {storage}")
+                # The pop-up's link is language-independent; nothing per-language
+                # reaches it, so it needs its own write or it ships the source's.
+                check(pop["link"] == LINK, f"popup link in {storage}")
+                check(pop["deeplink"] == LINK, f"popup deeplink in {storage}")
+                check(nc["deeplink"] == LINK, f"nc deeplink in {storage}")
+                # The template's own slots are structure, identical in every
+                # campaign. Rewriting one breaks the card.
+                for holder, label in ((nc, "nc"), (pop, "popup")):
+                    for name, value in holder.items():
+                        if name in ("title", "description", "icon-src") or name.startswith("buttons_1_"):
+                            check(value.startswith("%") and value.endswith(("%", "%$utm_tags%")),
+                                  f"{label}.{name} is still a slot reference in {storage}")
                 em = init_of(new_draft, storage, "dextra_email")
                 check(em["emailSettings"]["template"]["id"] == "CSE-0-99999",
                       f"email activity points at the new content in {storage}")

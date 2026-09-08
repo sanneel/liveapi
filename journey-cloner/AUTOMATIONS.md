@@ -206,6 +206,30 @@ a replace could not then place different EN and ES copy. The link still goes in 
 replace: that one *should* reach every channel. Every write lands in both the
 compiled `activities[]` and the `rawJourneyData` mirror.
 
+**A card's `variables` are two different things**, and confusing them is the
+trap here. Some hold copy; the rest are the template's own slots, holding a
+reference the platform resolves from the first kind:
+
+| kind | example | is it content? |
+| --- | --- | --- |
+| value | `title-es` = `"🏆 ¡La Champions…"` | yes — this run writes it |
+| slot | `title` = `"%title-es%"` | no — identical in every campaign |
+| slot | `buttons_1_link` = `"%link%?%$utm_tags%"` | no — and it appends the utm tags itself |
+
+A slot is structure: overwriting one breaks the card. Anything left after a
+value's `%…%` runs are stripped is a real value, and that is the test used
+throughout — writes match variable names exactly so they cannot stray into a
+slot, and the inherited-content audit skips slots rather than reporting them.
+
+The **pop-up keeps its promo link in one language-independent `link`** (its
+per-language slots all read `%link%?%$utm_tags%`), so nothing per-language ever
+reaches it and the pop-up shipped the source journey's link. `link` and
+`deeplink` are therefore written by exact name on every on-site channel.
+
+Where a slot appends `?%$utm_tags%` and the link being written already ends with
+it, the rendered URL carries the tags twice. The captured journeys are already
+shaped that way, so the script says so and leaves the call to the operator.
+
 Before the POST the body is made standalone, because a create rejects anything
 that still belongs to the source:
 
