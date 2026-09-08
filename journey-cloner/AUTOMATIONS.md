@@ -33,8 +33,15 @@ that only the browser has. So every generator follows the same five steps.
  4. VERIFY      Refuse to emit when the result is wrong: an unknown game, a knob
                 the recipe lacks, content still shared with the template.
  5. EMIT        A console script that captures the token from the page's own
-                traffic, reserves a JRN id, and POSTs the draft(s).
+                traffic, reserves a JRN id, POSTs the draft(s) and PUTs the
+                save that finalises the canvas.
 ```
+
+The paste-time pieces every emitted script shares — the JSON response guard,
+the media-library photo upload and that create-then-save — live once in
+`console_js.py`. A generator drops them in with the `@JSON_GUARD_JS@`,
+`@MEDIA_UPLOAD_JS@` and `@DRAFT_SAVE_JS@` tokens and one `inject(JS_TEMPLATE)`
+call, so a fix there reaches every script.
 
 Two consequences worth internalising:
 

@@ -59,6 +59,7 @@ from create_journeys import (
 from casino_journey import chile_same_day_window, set_dates
 from spec_parser import ChannelCopy, SmsCopy, parse_spec
 from tournament_pmcl_email import EMAIL_CONTENT_ID_TOKEN, EMAIL_HERO_TOKEN, email_name, prepare_email_content
+from console_js import inject
 
 TEMPLATE_PATH = Path(__file__).resolve().parent / "templates" / "casino" / "tournament_pmcl_comms.json"
 
@@ -712,23 +713,11 @@ JS_TEMPLATE = r"""// PMCL Tournament Communications console script — generated
   const auth = await obtainAuth();
   const headers = () => ({ accept: 'application/json, text/plain, */*', authorization: auth, 'x-brand': BRAND });
 
+@JSON_GUARD_JS@
+@MEDIA_UPLOAD_JS@
+@DRAFT_SAVE_JS@
   async function uploadAsset(file, label) {
-    const dims = await imageDims(file);
-    const baseName = (file.name || 'photo').replace(/\.[^./]+$/, '');
-    const url = CRM_BASE + '/media-library/v0/folder/' + FOLDER_ID + '/upload/'
-      + encodeURIComponent(baseName) + '.png?height=' + dims.height + '&width=' + dims.width;
-    const fd = new FormData();
-    fd.append('file', file, file.name);
-    const r = await fetch(url, { method: 'PUT', headers: headers(), credentials: 'include', body: fd });
-    const resp = await r.text();
-    if (!r.ok) throw new Error(label + ' upload failed: HTTP ' + r.status + ' ' + resp);
-    const asset = JSON.parse(resp);
-    console.log('  [' + label + '] uploaded asset', asset.id, '->', asset.absolute_link);
-    const thumbFd = new FormData();
-    thumbFd.append('file', file, file.name);
-    const tr = await fetch(CRM_BASE + '/media-library/v0/asset/thumb/' + asset.id + '.png', { method: 'PUT', headers: headers(), credentials: 'include', body: thumbFd });
-    if (!tr.ok) console.warn('  [' + label + '] thumbnail upload failed (non-fatal): HTTP ' + tr.status, await tr.text());
-    return asset;
+    return uploadToMediaLibrary(file, label, headers);
   }
 
   // Creates the marketing-email content (create -> save -> publish), pointing
@@ -748,7 +737,7 @@ JS_TEMPLATE = r"""// PMCL Tournament Communications console script — generated
     let r = await fetch(CONTENT_BASE, { method: 'POST', headers: { ...headers(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(content) });
     let resp = await r.text();
     if (!r.ok) throw new Error('Email content create failed: HTTP ' + r.status + ' ' + resp);
-    const cseId = JSON.parse(resp).id;
+    const cseId = parseJsonText(resp, 'email content create', r.status).id;
     console.log('  created email content', cseId);
 
     r = await fetch(CONTENT_BASE + '/' + cseId, { method: 'POST', headers: { ...headers(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(content) });
@@ -792,7 +781,8 @@ JS_TEMPLATE = r"""// PMCL Tournament Communications console script — generated
     popupBgUrl = (await uploadAsset(popupBgFile, 'POP-UP BACKGROUND')).absolute_link;
     if (emailNeedsHero) {
       const emailHeroFile = await pickFile('EMAIL HERO IMAGE');
-      emailHeroUrl = (await uploadAsset(emailHeroFile, 'EMAIL HERO IMAGE')).absolute_link;
+      // The email body references every image as https://{{cdn_hostname}}<relative>.
+      emailHeroUrl = 'https://{{cdn_hostname}}' + (await uploadAsset(emailHeroFile, 'EMAIL HERO IMAGE')).relative_link;
     }
   } else {
     console.log('%cNo FOLDER_ID — keeping the template image URLs (no file pickers).', 'color:#eab308');
@@ -819,9 +809,7 @@ JS_TEMPLATE = r"""// PMCL Tournament Communications console script — generated
   const body = JSON.parse(text);
 
   console.log('Creating tournament comms journey draft', realId, ':', body.journeyName);
-  const r = await fetch(BASE + '/journey-drafts', { method: 'POST', headers: { ...headers(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(body) });
-  const resp = await r.text();
-  if (!r.ok) { console.error('FAILED HTTP ' + r.status, resp); throw new Error('Tournament comms journey draft not created.'); }
+  await createAndSaveDraft(body, 'Tournament comms journey', headers);
 
   console.log('%cDONE.', 'color:#22c55e;font-weight:bold;font-size:14px');
   console.log('  Tournament comms journey draft: ' + realId);
@@ -829,6 +817,8 @@ JS_TEMPLATE = r"""// PMCL Tournament Communications console script — generated
   else console.log('  Email activity left untouched — edit it by hand in the backoffice.');
 })();
 """
+
+JS_TEMPLATE = inject(JS_TEMPLATE)
 
 
 def build_js(body: dict, folder_id: str = "", email_content: dict | None = None) -> str:

@@ -42,6 +42,7 @@ from create_journeys import (
     template_files,
     verify_body,
 )
+from console_js import inject
 
 DEFAULT_BASE_URL = (
     "https://pmi.rea-backoffice.gr8.tech/api/ubo/api/v0/crm/journey-builder/v0"
@@ -146,6 +147,8 @@ JS_TEMPLATE = """\
     'content-type': contentType,
     'x-brand': BRAND,
   });
+@JSON_GUARD_JS@
+@DRAFT_SAVE_JS@
 
   const pad = (n) => String(n).padStart(2, '0');
   // offsetMinutes staggers "start now" journeys so two created in the same run
@@ -242,24 +245,22 @@ JS_TEMPLATE = """\
     }
 
     console.log(`[${type}] Creating draft ${body.reservedJourneyId}: ${body.journeyName}`);
-    const r = await fetch(BASE + '/journey-drafts', {
-      method: 'POST',
-      headers: headers('application/json'),
-      credentials: 'include',
-      body: JSON.stringify(body),
-    });
-    const respText = await r.text();
-    if (!r.ok) {
-      console.error(`[${type}] FAILED: HTTP ${r.status}`, respText);
+    let numId;
+    try {
+      numId = await createAndSaveDraft(body, `[${type}] journey`, headers);
+    } catch (e) {
+      console.error(`[${type}] FAILED:`, e.message);
       throw new Error(`Stopped at ${type}; later drafts were NOT created.`);
     }
-    console.log(`%c[${type}] Created.`, 'color:#22c55e', respText);
+    console.log(`%c[${type}] Created (draft ${numId}).`, 'color:#22c55e');
   }
 
   console.log('%cDONE. Created journey IDs:', 'color:#22c55e;font-weight:bold', realIds);
   console.log('Open the 2H draft and confirm its campaign connector shows', realIds.followup || '(followup id)');
 })();
 """
+
+JS_TEMPLATE = inject(JS_TEMPLATE)
 
 
 def build_console_js(

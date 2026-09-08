@@ -65,6 +65,7 @@ from casino_journey import (
     verify as casino_verify,
 )
 from spec_parser import parse_spec
+from console_js import inject
 
 # The 5 visual placements in templates/casino/gow.json: 1 free-spin offer
 # (multipurpose_promotion, with a per-tier-option flow of 4 items) + 4
@@ -291,6 +292,8 @@ JS_TEMPLATE = r"""// Game-of-Week campaign console script — generated @GENERAT
 
   const auth = await obtainAuth();
   const headers = (ct) => ({ accept: 'application/json, text/plain, */*', authorization: auth, 'content-type': ct, 'x-brand': BRAND });
+@JSON_GUARD_JS@
+@DRAFT_SAVE_JS@
 
   const newUuid = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID()
     : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const r = Math.random()*16|0; return (c === 'x' ? r : (r&0x3)|0x8).toString(16); });
@@ -557,9 +560,7 @@ JS_TEMPLATE = r"""// Game-of-Week campaign console script — generated @GENERAT
   const body = JSON.parse(regenResult.text);
 
   console.log('Creating journey draft', realId, ':', body.journeyName);
-  const r = await fetch(BASE + '/journey-drafts', { method: 'POST', headers: headers('application/json'), credentials: 'include', body: JSON.stringify(body) });
-  const resp = await r.text();
-  if (!r.ok) { console.error('FAILED HTTP ' + r.status, resp); throw new Error('Journey draft not created.'); }
+  await createAndSaveDraft(body, 'Journey', headers);
   console.log('%cJourney draft created: ' + realId, 'color:#22c55e;font-weight:bold');
 
   console.log('Cloning visual bundles and uploading the photo (5 placements, in parallel)...');
@@ -643,6 +644,8 @@ JS_TEMPLATE = r"""// Game-of-Week campaign console script — generated @GENERAT
   console.log('  Promo page draft: ' + presp);
 })();
 """
+
+JS_TEMPLATE = inject(JS_TEMPLATE)
 
 
 def build_js(

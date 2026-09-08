@@ -68,6 +68,7 @@ from email_content import (
     email_name,
     prepare_email_content,
 )
+from console_js import inject
 
 TEMPLATE_PATH = Path(__file__).resolve().parent / "templates" / "casino" / "gow_comms.json"
 
@@ -657,27 +658,11 @@ JS_TEMPLATE = r"""// GOW Communications console script — generated @GENERATED_
   const auth = await obtainAuth();
   const headers = () => ({ accept: 'application/json, text/plain, */*', authorization: auth, 'x-brand': BRAND });
 
-  // Uploads a photo into the media library (the same folder + endpoint the
-  // backoffice's own photo picker uses) and returns its public URL.
+@JSON_GUARD_JS@
+@MEDIA_UPLOAD_JS@
+@DRAFT_SAVE_JS@
   async function uploadAsset(file, label) {
-    const dims = await imageDims(file);
-    const baseName = (file.name || 'photo').replace(/\.[^./]+$/, '');
-    const url = CRM_BASE + '/media-library/v0/folder/' + FOLDER_ID + '/upload/'
-      + encodeURIComponent(baseName) + '.png?height=' + dims.height + '&width=' + dims.width;
-    const fd = new FormData();
-    fd.append('file', file, file.name);
-    const r = await fetch(url, { method: 'PUT', headers: headers(), credentials: 'include', body: fd });
-    const resp = await r.text();
-    if (!r.ok) throw new Error(label + ' upload failed: HTTP ' + r.status + ' ' + resp);
-    const asset = JSON.parse(resp);
-    console.log('  [' + label + '] uploaded asset', asset.id, '->', asset.absolute_link);
-
-    const thumbFd = new FormData();
-    thumbFd.append('file', file, file.name);
-    const tr = await fetch(CRM_BASE + '/media-library/v0/asset/thumb/' + asset.id + '.png', { method: 'PUT', headers: headers(), credentials: 'include', body: thumbFd });
-    if (!tr.ok) console.warn('  [' + label + '] thumbnail upload failed (non-fatal): HTTP ' + tr.status, await tr.text());
-
-    return asset;
+    return uploadToMediaLibrary(file, label, headers);
   }
 
   // Creates the marketing-email content (create -> save -> publish), wiring in
@@ -695,7 +680,7 @@ JS_TEMPLATE = r"""// GOW Communications console script — generated @GENERATED_
     let r = await fetch(CONTENT_BASE, { method: 'POST', headers: { ...headers(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(content) });
     let resp = await r.text();
     if (!r.ok) throw new Error('Email content create failed: HTTP ' + r.status + ' ' + resp);
-    const cseId = JSON.parse(resp).id;
+    const cseId = parseJsonText(resp, 'email content create', r.status).id;
     console.log('  created email content', cseId);
 
     r = await fetch(CONTENT_BASE + '/' + cseId, { method: 'POST', headers: { ...headers(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(content) });
@@ -752,9 +737,7 @@ JS_TEMPLATE = r"""// GOW Communications console script — generated @GENERATED_
   const body = JSON.parse(text);
 
   console.log('Creating comms journey draft', realId, ':', body.journeyName);
-  const r = await fetch(BASE + '/journey-drafts', { method: 'POST', headers: { ...headers(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(body) });
-  const resp = await r.text();
-  if (!r.ok) { console.error('FAILED HTTP ' + r.status, resp); throw new Error('Comms journey draft not created.'); }
+  await createAndSaveDraft(body, 'Comms journey (CS&SP)', headers);
 
   let csId = null;
   if (PAYLOAD_CS) {
@@ -768,9 +751,7 @@ JS_TEMPLATE = r"""// GOW Communications console script — generated @GENERATED_
     t2 = regen(t2);
     const body2 = JSON.parse(t2);
     console.log('Creating CS comms journey draft', csId, ':', body2.journeyName);
-    const r2 = await fetch(BASE + '/journey-drafts', { method: 'POST', headers: { ...headers(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(body2) });
-    const resp2 = await r2.text();
-    if (!r2.ok) { console.error('FAILED HTTP ' + r2.status, resp2); throw new Error('CS comms journey draft not created.'); }
+    await createAndSaveDraft(body2, 'CS comms journey', headers);
   }
 
   console.log('%cDONE.', 'color:#22c55e;font-weight:bold;font-size:14px');
@@ -780,6 +761,8 @@ JS_TEMPLATE = r"""// GOW Communications console script — generated @GENERATED_
   else console.log('  Email activity left untouched — edit it by hand in the backoffice.');
 })();
 """
+
+JS_TEMPLATE = inject(JS_TEMPLATE)
 
 
 def build_js(body: dict, email_content: dict | None = None, cs_body: dict | None = None) -> str:

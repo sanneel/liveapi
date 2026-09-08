@@ -22,6 +22,7 @@ import datetime
 import json
 import uuid
 from pathlib import Path
+from console_js import inject
 
 HERE = Path(__file__).resolve().parent
 FRAG = HERE / "library" / "fragments"
@@ -251,6 +252,8 @@ JS_TEMPLATE = r'''// Composed comms journey — CANVAS EXPERIMENT — generated 
 
   const auth = await obtainAuth();
   const headers=(ct)=>({ accept:'application/json, text/plain, */*', authorization:auth, 'content-type':ct, 'x-brand':BRAND });
+@JSON_GUARD_JS@
+@DRAFT_SAVE_JS@
 
   const newUuid=()=> (crypto&&crypto.randomUUID)? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,(c)=>{ const r=(Math.random()*16)|0; return (c==='x'?r:(r&0x3)|0x8).toString(16); });
   const UUID_RE=/"(?:activityId|id)"\s*:\s*"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"/g;
@@ -273,13 +276,15 @@ JS_TEMPLATE = r'''// Composed comms journey — CANVAS EXPERIMENT — generated 
   const body = JSON.parse(text);
 
   console.log('Creating draft', rid, ':', body.journeyName);
-  const r = await fetch(BASE+'/journey-drafts',{ method:'POST', headers:headers('application/json'), credentials:'include', body:JSON.stringify(body) });
-  const respText = await r.text();
-  if(!r.ok){ console.error('%cFAILED HTTP '+r.status,'color:#ef4444;font-weight:bold', respText); return; }
-  console.log('%cDRAFT CREATED: '+rid,'color:#22c55e;font-weight:bold');
-  console.log('Now open it in the editor and check the 5 nodes are wired. Response:', respText);
+  let numId;
+  try { numId = await createAndSaveDraft(body, 'Composed comms journey', headers); }
+  catch (e) { console.error('%c'+e.message,'color:#ef4444;font-weight:bold'); return; }
+  console.log('%cDRAFT CREATED: '+rid+' (draft '+numId+')','color:#22c55e;font-weight:bold');
+  console.log('Open it in the editor and check the 5 nodes are wired.');
 })();
 '''
+
+JS_TEMPLATE = inject(JS_TEMPLATE)
 
 
 def emit(body: dict, name: str) -> Path:

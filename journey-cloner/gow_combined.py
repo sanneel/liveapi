@@ -69,6 +69,7 @@ from comms_campaign import (
     verify as comms_verify,
 )
 from spec_parser import parse_spec
+from console_js import inject
 
 RESERVED_CAMPAIGN_ID_TOKEN = "DRY-RUN-CASINO"
 RESERVED_COMMS_ID_TOKEN = "DRY-RUN-COMMS"
@@ -234,25 +235,11 @@ JS_TEMPLATE = r"""// GOW combined console script (campaign + comms) — generate
   const auth = await obtainAuth();
   const headers = (ct) => { const h = { accept: 'application/json, text/plain, */*', authorization: auth, 'x-brand': BRAND }; if (ct) h['content-type'] = ct; return h; };
 
+@JSON_GUARD_JS@
+@MEDIA_UPLOAD_JS@
+@DRAFT_SAVE_JS@
   async function uploadAsset(file, label) {
-    const dims = await imageDims(file);
-    const baseName = (file.name || 'photo').replace(/\.[^./]+$/, '');
-    const url = CRM_BASE + '/media-library/v0/folder/' + FOLDER_ID + '/upload/'
-      + encodeURIComponent(baseName) + '.png?height=' + dims.height + '&width=' + dims.width;
-    const fd = new FormData();
-    fd.append('file', file, file.name);
-    const r = await fetch(url, { method: 'PUT', headers: headers(), credentials: 'include', body: fd });
-    const resp = await r.text();
-    if (!r.ok) throw new Error(label + ' upload failed: HTTP ' + r.status + ' ' + resp);
-    const asset = JSON.parse(resp);
-    console.log('  [' + label + '] uploaded asset', asset.id, '->', asset.absolute_link);
-
-    const thumbFd = new FormData();
-    thumbFd.append('file', file, file.name);
-    const tr = await fetch(CRM_BASE + '/media-library/v0/asset/thumb/' + asset.id + '.png', { method: 'PUT', headers: headers(), credentials: 'include', body: thumbFd });
-    if (!tr.ok) console.warn('  [' + label + '] thumbnail upload failed (non-fatal): HTTP ' + tr.status, await tr.text());
-
-    return asset;
+    return uploadToMediaLibrary(file, label, headers);
   }
 
   // Creates the marketing-email content (create -> save -> publish), wiring in
@@ -269,7 +256,7 @@ JS_TEMPLATE = r"""// GOW combined console script (campaign + comms) — generate
     let r = await fetch(CONTENT_BASE, { method: 'POST', headers: { ...headers(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(content) });
     let resp = await r.text();
     if (!r.ok) throw new Error('Email content create failed: HTTP ' + r.status + ' ' + resp);
-    const cseId = JSON.parse(resp).id;
+    const cseId = parseJsonText(resp, 'email content create', r.status).id;
     console.log('  created email content', cseId);
 
     r = await fetch(CONTENT_BASE + '/' + cseId, { method: 'POST', headers: { ...headers(), 'content-type': 'application/json' }, credentials: 'include', body: JSON.stringify(content) });
@@ -511,9 +498,8 @@ JS_TEMPLATE = r"""// GOW combined console script (campaign + comms) — generate
   const campaignBody = JSON.parse(campaignRegen.text);
 
   console.log('Creating campaign journey draft', campaignJourneyId, ':', campaignBody.journeyName);
-  let r = await fetch(BASE + '/journey-drafts', { method: 'POST', headers: headers('application/json'), credentials: 'include', body: JSON.stringify(campaignBody) });
-  let resp = await r.text();
-  if (!r.ok) { console.error('FAILED HTTP ' + r.status, resp); throw new Error('Campaign journey draft not created.'); }
+  let r, resp;
+  await createAndSaveDraft(campaignBody, 'Campaign journey', headers);
   console.log('%cCampaign journey draft created: ' + campaignJourneyId, 'color:#22c55e;font-weight:bold');
 
   console.log('Cloning visual bundles and uploading the campaign photo (5 placements, in parallel)...');
@@ -617,9 +603,7 @@ JS_TEMPLATE = r"""// GOW combined console script (campaign + comms) — generate
   const commsBody = JSON.parse(commsText);
 
   console.log('Creating comms journey draft', commsJourneyId, ':', commsBody.journeyName);
-  r = await fetch(BASE + '/journey-drafts', { method: 'POST', headers: headers('application/json'), credentials: 'include', body: JSON.stringify(commsBody) });
-  resp = await r.text();
-  if (!r.ok) { console.error('FAILED HTTP ' + r.status, resp); throw new Error('Comms journey draft not created.'); }
+  await createAndSaveDraft(commsBody, 'Comms journey (CS&SP)', headers);
 
   let csCommsId = null;
   if (COMMS_PAYLOAD_CS) {
@@ -634,9 +618,7 @@ JS_TEMPLATE = r"""// GOW combined console script (campaign + comms) — generate
     t2 = regen(t2).text;
     const csBody = JSON.parse(t2);
     console.log('Creating CS comms journey draft', csCommsId, ':', csBody.journeyName);
-    const rcs = await fetch(BASE + '/journey-drafts', { method: 'POST', headers: headers('application/json'), credentials: 'include', body: JSON.stringify(csBody) });
-    const respcs = await rcs.text();
-    if (!rcs.ok) { console.error('FAILED HTTP ' + rcs.status, respcs); throw new Error('CS comms journey draft not created.'); }
+    await createAndSaveDraft(csBody, 'CS comms journey', headers);
   }
 
   console.log('%cDONE.', 'color:#22c55e;font-weight:bold;font-size:14px');
@@ -648,6 +630,8 @@ JS_TEMPLATE = r"""// GOW combined console script (campaign + comms) — generate
   else console.log('  Email activity left untouched — edit it by hand in the backoffice.');
 })();
 """
+
+JS_TEMPLATE = inject(JS_TEMPLATE)
 
 
 def build_js(

@@ -53,6 +53,7 @@ from create_journeys import (
     strip_promotion_display_ids,
     walk_dicts,
 )
+from console_js import inject
 
 DEFAULT_BASE_URL = (
     "https://pmi.rea-backoffice.gr8.tech/api/ubo/api/v0/crm/journey-builder/v0"
@@ -339,6 +340,8 @@ JS_TEMPLATE = """\
   }
   const auth = await obtainAuth();
   const headers = (ct) => ({ accept: 'application/json, text/plain, */*', authorization: auth, 'content-type': ct, 'x-brand': BRAND });
+@JSON_GUARD_JS@
+@DRAFT_SAVE_JS@
 
   const newUuid = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID()
     : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const r = Math.random()*16|0; return (c === 'x' ? r : (r&0x3)|0x8).toString(16); });
@@ -361,12 +364,12 @@ JS_TEMPLATE = """\
   const body = JSON.parse(text);
 
   console.log('Creating draft', realId, ':', body.journeyName);
-  const r = await fetch(BASE + '/journey-drafts', { method: 'POST', headers: headers('application/json'), credentials: 'include', body: JSON.stringify(body) });
-  const resp = await r.text();
-  if (!r.ok) { console.error('FAILED HTTP ' + r.status, resp); throw new Error('Draft not created.'); }
-  console.log('%cDONE. Created ' + realId, 'color:#22c55e;font-weight:bold', resp);
+  const numId = await createAndSaveDraft(body, 'Draft', headers);
+  console.log('%cDONE. Created ' + realId + ' (draft ' + numId + ')', 'color:#22c55e;font-weight:bold');
 })();
 """
+
+JS_TEMPLATE = inject(JS_TEMPLATE)
 
 
 def build_js(body: dict) -> str:

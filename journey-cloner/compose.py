@@ -29,6 +29,7 @@ import sys
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
+from console_js import inject
 
 HERE = Path(__file__).resolve().parent
 TEMPLATES = HERE / "templates"
@@ -1429,6 +1430,8 @@ JS_TEMPLATE = r'''// Composed journey — generated @GENERATED_AT@
 
   const auth = await obtainAuth();
   const headers=(ct)=>({ accept:'application/json, text/plain, */*', authorization:auth, 'content-type':ct, 'x-brand':BRAND });
+@JSON_GUARD_JS@
+@DRAFT_SAVE_JS@
   const newUuid=()=> (crypto&&crypto.randomUUID)? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,(c)=>{ const r=(Math.random()*16)|0; return (c==='x'?r:(r&0x3)|0x8).toString(16); });
   const UUID_RE=/"(?:activityId|id)"\s*:\s*"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"/g;
   const regen=(txt)=>{ const olds=new Set(); let m; UUID_RE.lastIndex=0; while((m=UUID_RE.exec(txt))!==null) olds.add(m[1]); let t=txt; for(const o of olds) t=t.split(o).join(newUuid()); return t; };
@@ -1448,13 +1451,15 @@ JS_TEMPLATE = r'''// Composed journey — generated @GENERATED_AT@
   text = regen(text);
   const body = JSON.parse(text);
   console.log('Creating draft', rid, ':', body.journeyName);
-  const r = await fetch(BASE+'/journey-drafts',{ method:'POST', headers:headers('application/json'), credentials:'include', body:JSON.stringify(body) });
-  const respText = await r.text();
-  if(!r.ok){ console.error('%cFAILED HTTP '+r.status,'color:#ef4444;font-weight:bold', respText); return; }
-  console.log('%cDRAFT CREATED: '+rid,'color:#22c55e;font-weight:bold');
-  console.log('Open it in the editor and check the nodes are wired. Response:', respText);
+  let numId;
+  try { numId = await createAndSaveDraft(body, 'Composed journey', headers); }
+  catch (e) { console.error('%c'+e.message,'color:#ef4444;font-weight:bold'); return; }
+  console.log('%cDRAFT CREATED: '+rid+' (draft '+numId+')','color:#22c55e;font-weight:bold');
+  console.log('Open it in the editor and check the nodes are wired.');
 })();
 '''
+
+JS_TEMPLATE = inject(JS_TEMPLATE)
 
 
 BATCH_JS_TEMPLATE = r'''// Composed CAMPAIGN — @COUNT@ journeys, generated @GENERATED_AT@
@@ -1483,6 +1488,8 @@ BATCH_JS_TEMPLATE = r'''// Composed CAMPAIGN — @COUNT@ journeys, generated @GE
 
   const auth = await obtainAuth();
   const headers=(ct)=>({ accept:'application/json, text/plain, */*', authorization:auth, 'content-type':ct, 'x-brand':BRAND });
+@JSON_GUARD_JS@
+@DRAFT_SAVE_JS@
   const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
   const newUuid=()=> (crypto&&crypto.randomUUID)? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,(c)=>{ const r=(Math.random()*16)|0; return (c==='x'?r:(r&0x3)|0x8).toString(16); });
   const UUID_RE=/"(?:activityId|id)"\s*:\s*"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"/g;
@@ -1507,20 +1514,13 @@ BATCH_JS_TEMPLATE = r'''// Composed CAMPAIGN — @COUNT@ journeys, generated @GE
       let text = JSON.stringify(item.body).split('DRY-RUN-JOURNEY').join(rid);
       text = regen(text);
       const body = JSON.parse(text);
-      const r = await fetch(BASE+'/journey-drafts',{ method:'POST', headers:headers('application/json'), credentials:'include', body:JSON.stringify(body) });
-      const respText = await r.text();
-      if(!r.ok){
-        console.error('%c'+label+' FAILED HTTP '+r.status,'color:#ef4444;font-weight:bold', respText);
-        console.log('%cStopped. Already created: '+(created.map(c=>c.id).join(', ')||'none'),'color:#eab308');
-        console.log('Fix the cause, then re-run with the first '+created.length+' entries removed from BODIES.');
-        window.__createdJourneys = created;
-        return;
-      }
+      await createAndSaveDraft(body, label, headers);
       created.push({ id: rid, name: item.name });
       console.log('%c'+label+' -> '+rid,'color:#22c55e');
     } catch (e) {
       console.error('%c'+label+' ERROR','color:#ef4444;font-weight:bold', e.message);
       console.log('%cStopped. Already created: '+(created.map(c=>c.id).join(', ')||'none'),'color:#eab308');
+      console.log('Fix the cause, then re-run with the first '+created.length+' entries removed from BODIES.');
       window.__createdJourneys = created;
       return;
     }
@@ -1591,6 +1591,8 @@ BATCH_JS_TEMPLATE = r'''// Composed CAMPAIGN — @COUNT@ journeys, generated @GE
   console.log('%cCAMPAIGN DONE','color:#22c55e;font-weight:bold;font-size:14px');
 })();
 '''
+
+BATCH_JS_TEMPLATE = inject(BATCH_JS_TEMPLATE)
 
 
 def prepare_randomizers(spec: dict) -> list[dict]:

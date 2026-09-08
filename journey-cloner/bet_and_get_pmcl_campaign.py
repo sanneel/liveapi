@@ -396,6 +396,9 @@ JS_TEMPLATE = r"""// PMCL Bet & Get weekend promotion — generated @GENERATED_A
   console.log('Creating journey draft', journeyId, ':', journeyBody.journeyName);
   const draft = await call('POST', JB + '/journey-drafts', journeyBody, 'journey draft create');
   const draftId = (draft && (draft.id || draft.draftId)) || draft;
+  // The POST only half makes the draft: the builder finalises the canvas on
+  // the save that follows, and without it the nodes open unconnected.
+  await call('PUT', JB + '/journey-drafts/' + draftId, journeyBody, 'journey draft save');
   console.log('  journey draft', draftId);
 
   // 5. promo page draft, pointing at this run's journey entry activity

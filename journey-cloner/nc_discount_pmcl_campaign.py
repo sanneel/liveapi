@@ -25,6 +25,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from create_journeys import LOCAL_TZ, UTC, utc_api
+from console_js import inject
 
 HERE = Path(__file__).resolve().parent
 TEMPLATE_PATH = HERE / "templates" / "casino" / "nc_discount_pmcl.json"
@@ -274,19 +275,13 @@ JS_TEMPLATE = r"""// NC For Discount — PMCL — @COUNT@ notification journeys 
   async function reserveId() {
     const r = await fetch(BASE + '/journeys/identifier', { method: 'POST', headers: H('application/json'), credentials: 'include', body: '' });
     const t = await r.text(); if (!r.ok) throw new Error('reserve id failed HTTP ' + r.status + ' ' + t);
-    const id = JSON.parse(t).journeyId; if (!id) throw new Error('no journeyId in reserve response: ' + t); return id;
+    const id = parseJsonText(t, 'reserve id', r.status).journeyId; if (!id) throw new Error('no journeyId in reserve response: ' + t); return id;
   }
+@JSON_GUARD_JS@
+@MEDIA_UPLOAD_JS@
+@DRAFT_SAVE_JS@
   async function uploadIcon(file, label) {
-    const dims = await imageDims(file);
-    const base = (file.name || 'icon').replace(/\.[^./]+$/, '');
-    const url = CRM_BASE + '/media-library/v0/folder/' + FOLDER_ID + '/upload/' + encodeURIComponent(base) + '.png?height=' + dims.height + '&width=' + dims.width;
-    const fd = new FormData(); fd.append('file', file, file.name);
-    const r = await fetch(url, { method: 'PUT', headers: H(), credentials: 'include', body: fd });
-    const t = await r.text(); if (!r.ok) throw new Error(label + ' icon upload failed HTTP ' + r.status + ' ' + t);
-    const asset = JSON.parse(t);
-    const tfd = new FormData(); tfd.append('file', file, file.name);
-    await fetch(CRM_BASE + '/media-library/v0/asset/thumb/' + asset.id + '.png', { method: 'PUT', headers: H(), credentials: 'include', body: tfd }).catch(() => {});
-    return asset.absolute_link;
+    return (await uploadToMediaLibrary(file, label, H)).absolute_link;
   }
   async function createOne(G) {
     const jid = await reserveId();
@@ -297,11 +292,7 @@ JS_TEMPLATE = r"""// NC For Discount — PMCL — @COUNT@ notification journeys 
     let bodyStr = G.body.split('%%RESERVED%%').join(jid).split('%%ICON%%').join(iconUrl);
     bodyStr = regenIds(bodyStr);
     const body = JSON.parse(bodyStr);
-    let r = await fetch(BASE + '/journey-drafts', { method: 'POST', headers: H('application/json'), credentials: 'include', body: JSON.stringify(body) });
-    let t = await r.text(); if (!r.ok) throw new Error('create HTTP ' + r.status + ' ' + t);
-    const numId = JSON.parse(t).id; if (!numId) throw new Error('no draft id in create response: ' + t);
-    r = await fetch(BASE + '/journey-drafts/' + numId, { method: 'PUT', headers: H('application/json'), credentials: 'include', body: JSON.stringify(body) });
-    t = await r.text(); if (!r.ok) throw new Error('draft ' + jid + ' created but save failed HTTP ' + r.status + ' ' + t);
+    const numId = await createAndSaveDraft(body, G.name, H);
     return { jid, numId };
   }
 
@@ -318,6 +309,8 @@ JS_TEMPLATE = r"""// NC For Discount — PMCL — @COUNT@ notification journeys 
   console.log('Drafts are unpublished — review + publish them in the Journeys UI.');
 })();
 """
+
+JS_TEMPLATE = inject(JS_TEMPLATE)
 
 
 def build_js(games: list[dict], folder_id: str) -> str:
