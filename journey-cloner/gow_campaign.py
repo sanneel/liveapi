@@ -223,7 +223,8 @@ JS_TEMPLATE = r"""// Game-of-Week campaign console script — generated @GENERAT
 (async () => {
   'use strict';
   const MANUAL_TOKEN = '';
-  const BASE = @BASE_URL@;
+@API_BASE_JS@
+  const BASE = apiBase(@BASE_URL@);
   const BRAND = @BRAND@;
   const PAYLOAD = @PAYLOAD@;
   const PLACEMENTS = @PLACEMENTS@;

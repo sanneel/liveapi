@@ -132,7 +132,8 @@ JS_TEMPLATE = r"""// GOW combined console script (campaign + comms) — generate
 (async () => {
   'use strict';
   const MANUAL_TOKEN = '';
-  const BASE = @BASE_URL@;
+@API_BASE_JS@
+  const BASE = apiBase(@BASE_URL@);
   const BRAND = @BRAND@;
   const CAMPAIGN_PAYLOAD = @CAMPAIGN_PAYLOAD@;
   const COMMS_PAYLOAD = @COMMS_PAYLOAD@;

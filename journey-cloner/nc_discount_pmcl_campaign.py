@@ -210,7 +210,8 @@ JS_TEMPLATE = r"""// NC For Discount — PMCL — @COUNT@ notification journeys 
 (async () => {
   'use strict';
   const MANUAL_TOKEN = '';
-  const BASE = @BASE_URL@;
+@API_BASE_JS@
+  const BASE = apiBase(@BASE_URL@);
   const BRAND = @BRAND@;
   const FOLDER_ID = @FOLDER_ID@;
   const GAMES = @GAMES@;   // [{date, name, slug, body}]

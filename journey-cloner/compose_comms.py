@@ -234,7 +234,8 @@ JS_TEMPLATE = r'''// Composed comms journey — CANVAS EXPERIMENT — generated 
 //   5. Report back: did it create (JRN id + HTTP 201)? Does the draft OPEN in
 //      the editor with the 5 nodes wired source->NC->NC->SMS->Email->end?
 (async () => {
-  const BASE = @BASE@;
+@API_BASE_JS@
+  const BASE = apiBase(@BASE@);
   const BRAND = @BRAND@;
   const BODY = @BODY@;
 

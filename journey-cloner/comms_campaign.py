@@ -589,7 +589,8 @@ JS_TEMPLATE = r"""// GOW Communications console script — generated @GENERATED_
 (async () => {
   'use strict';
   const MANUAL_TOKEN = '';
-  const BASE = @BASE_URL@;
+@API_BASE_JS@
+  const BASE = apiBase(@BASE_URL@);
   const BRAND = @BRAND@;
   const PAYLOAD = @PAYLOAD@;
   const PAYLOAD_CS = @PAYLOAD_CS@;            // null when only the CS&SP journey is made

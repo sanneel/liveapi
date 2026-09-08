@@ -1412,7 +1412,8 @@ JS_TEMPLATE = r'''// Composed journey — generated @GENERATED_AT@
 // Paste into a logged-in Journey Builder backoffice console (F12). It captures
 // the token, reserves a JRN id, freshens ids, and POSTs one draft.
 (async () => {
-  const BASE = @BASE@;
+@API_BASE_JS@
+  const BASE = apiBase(@BASE@);
   const BRAND = @BRAND@;
   const BODY = @BODY@;
 
@@ -1469,7 +1470,8 @@ BATCH_JS_TEMPLATE = r'''// Composed CAMPAIGN — @COUNT@ journeys, generated @GE
 // journey in order, pausing between them. A failure stops the run and reports
 // which journeys were already created, so a re-run can start from there.
 (async () => {
-  const BASE = @BASE@;
+@API_BASE_JS@
+  const BASE = apiBase(@BASE@);
   const BRAND = @BRAND@;
   const BODIES = @BODIES@;          // [{name, body}, ...] in creation order
   const PAUSE_MS = 600;             // be kind to the backoffice between POSTs

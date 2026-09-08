@@ -21,6 +21,37 @@ argument, so they drop in under either naming.
 
 from __future__ import annotations
 
+# The backoffice moved its CRM gateway: the page now calls /api/core/..., while
+# every generator here has hard-coded /api/ubo/... since the first capture. The
+# prefix is no longer ours to bake in, so each run reads it off the page's own
+# traffic (the resource-timing buffer the browser already keeps) and only falls
+# back to the baked-in value when the buffer says nothing.
+API_BASE_JS = r"""  const CRM_ROOT_RE = /^(https?:\/\/[^/]+\/api\/[A-Za-z0-9_-]+\/api\/v0\/crm)(\/|$)/;
+
+  function apiBase(fallback) {
+    const marker = '/api/v0/crm';
+    const cut = fallback.indexOf(marker);
+    if (cut < 0) return fallback;
+    const tail = fallback.slice(cut + marker.length);
+    const counts = new Map();
+    try {
+      for (const e of performance.getEntriesByType('resource')) {
+        const m = CRM_ROOT_RE.exec(e.name);
+        if (m) counts.set(m[1], (counts.get(m[1]) || 0) + 1);
+      }
+    } catch (e) {}
+    if (!counts.size) {
+      console.warn('%cNo backoffice API calls in the page history yet, using the baked-in ' + fallback + '. If a call 404s or 405s, click around the UI once and rerun.', 'color:#eab308');
+      return fallback;
+    }
+    const live = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0] + tail;
+    if (live !== fallback) {
+      console.warn('%cThis page calls ' + live + ', not ' + fallback + '. Following the page.', 'color:#eab308');
+    }
+    return live;
+  }
+"""
+
 JSON_GUARD_JS = r"""  function parseJsonText(text, label, status) {
     const t = (text || '').trim();
     if (!t) throw new Error(label + ' returned an empty body (HTTP ' + status + ').');
@@ -58,8 +89,10 @@ MEDIA_UPLOAD_JS = r"""  function assetName(file, fallback) {
     const name = assetName(file, 'image');
     const query = '?height=' + dims.height + '&width=' + dims.width;
     const bases = [CRM_BASE];
-    const altBase = CRM_BASE.replace('/api/ubo/', '/api/core/');
-    if (altBase !== CRM_BASE) bases.push(altBase);
+    for (const prefix of ['/api/core/', '/api/ubo/']) {
+      const alt = CRM_BASE.replace(/\/api\/[A-Za-z0-9_-]+\/api\/v0\/crm/, prefix + 'api/v0/crm');
+      if (!bases.includes(alt)) bases.push(alt);
+    }
     const tried = [];
     for (const base of bases) {
       for (const method of ['PUT', 'POST']) {
@@ -118,6 +151,7 @@ DRAFT_SAVE_JS = r"""  async function createAndSaveDraft(body, label, hdrs) {
 def inject(js: str) -> str:
     """Substitute whichever shared blocks a JS_TEMPLATE asks for."""
     for token, block in (
+        ("@API_BASE_JS@", API_BASE_JS),
         ("@JSON_GUARD_JS@", JSON_GUARD_JS),
         ("@MEDIA_UPLOAD_JS@", MEDIA_UPLOAD_JS),
         ("@DRAFT_SAVE_JS@", DRAFT_SAVE_JS),

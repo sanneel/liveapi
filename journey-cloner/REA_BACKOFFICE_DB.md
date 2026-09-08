@@ -37,14 +37,22 @@ quick reference and the other is the "why".
 
 ## 1. API endpoint catalog
 
-Base for CRM APIs: `…/api/ubo/api/v0/crm`. Journey base appends `/journey-builder/v0`.
+Base for CRM APIs: `…/api/<gateway>/api/v0/crm`. Journey base appends
+`/journey-builder/v0`.
+
+> **The gateway segment moved.** Every capture here was taken under `api/ubo`;
+> the backoffice page now calls `api/core` (visible in its own
+> `GET /api/core/api/v0/crm/journey-builder/v0/journey-drafts`). A console
+> script therefore reads the prefix off the page's resource timing at paste
+> time (`apiBase()` in `console_js.py`) and only falls back to the baked-in
+> `api/ubo` when the page has made no CRM calls yet.
 
 | Purpose | Method + path (relative to CRM base) | Notes |
 |---|---|---|
 | Reserve journey id | `POST /journey-builder/v0/journeys/identifier` | returns `JRN-0-######` (form-urlencoded) |
 | Create journey draft | `POST /journey-builder/v0/journey-drafts` | body = full journey object. **Always follow with the PUT below, same body**: the POST alone leaves the canvas unfinalised and the draft opens with its nodes unconnected |
 | Update journey draft / save | `PUT /journey-builder/v0/journey-drafts/<numericId>` | full body; the save every create must be followed by, and what manual edits use |
-| Media upload | `PUT /media-library/v0/folder/<folderId>/upload/<name>.png?height=H&width=W` | multipart `file`; returns asset w/ `absolute_link` + `relative_link`. `<name>` must be a plain slug: `360x330 (33).png` came back **405**, `360x330-33.png` uploads. `console_js.py` slugs it and, if the route still refuses, tries POST and the `/api/core/` prefix once each and prints which worked |
+| Media upload | `PUT /media-library/v0/folder/<folderId>/upload/<name>.png?height=H&width=W` | multipart `file`; returns asset w/ `absolute_link` + `relative_link`. A **405** here was traced to the gateway move above; the name is also slugged (`360x330 (33).png` has a space and brackets, `360x330-33.png` is safe), and the upload retries POST and the other gateway prefix once each, printing which worked |
 | Media thumb | `PUT /media-library/v0/asset/thumb/<assetId>.png` | multipart; non-fatal if it fails |
 | Email content create | `POST /content-studio/v0/eb-backoffice/email/contents` | returns `{"id":"CSE-0-#####"}` |
 | Email content save | `POST /content-studio/v0/eb-backoffice/email/contents/<CSE>` | same body shape |

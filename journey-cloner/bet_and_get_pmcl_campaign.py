@@ -56,6 +56,7 @@ from datetime import datetime, time, timedelta
 from pathlib import Path
 
 from create_journeys import LOCAL_TZ, UTC
+from console_js import inject
 
 TEMPLATE_DIR = Path(__file__).resolve().parent / "templates" / "pmcl_betandget"
 JOURNEY_PATH = TEMPLATE_DIR / "journey.json"
@@ -296,7 +297,8 @@ JS_TEMPLATE = r"""// PMCL Bet & Get weekend promotion — generated @GENERATED_A
 (async () => {
   'use strict';
   const MANUAL_TOKEN = '';
-  const BASE = @BASE_URL@;
+@API_BASE_JS@
+  const BASE = apiBase(@BASE_URL@);
   const BRAND = @BRAND@;
   const JOURNEY = @JOURNEY@;
   const PROMO = @PROMO@;
@@ -430,6 +432,8 @@ JS_TEMPLATE = r"""// PMCL Bet & Get weekend promotion — generated @GENERATED_A
   console.log('  Promo window  : @WINDOW@');
 })();
 """
+
+JS_TEMPLATE = inject(JS_TEMPLATE)
 
 
 def build_js(journey: dict, promo: dict, email: dict, uploads: list,

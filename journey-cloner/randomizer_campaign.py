@@ -48,6 +48,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from casino_journey import DEFAULT_BASE_URL, utc_dotnet
+from console_js import inject
 
 UTC = timezone.utc
 HERE = Path(__file__).resolve().parent
@@ -190,7 +191,8 @@ JS_TEMPLATE = r"""// Randomizer console script — @LABEL@ — generated @GENERA
   'use strict';
   const PREVIEW = false;
   const MANUAL_TOKEN = '';
-  const BASE = @BASE_URL@;
+@API_BASE_JS@
+  const BASE = apiBase(@BASE_URL@);
   const BRAND = @BRAND@;
   const FLOW = @FLOW@;             // 'create_put' | 'draftid_post'
   const PAYLOADS = @PAYLOADS@;     // one randomizer body per date
@@ -271,6 +273,8 @@ JS_TEMPLATE = r"""// Randomizer console script — @LABEL@ — generated @GENERA
   fail.forEach((f) => console.log('  ✗ ' + f.name + ' — ' + f.err));
 })();
 """
+
+JS_TEMPLATE = inject(JS_TEMPLATE)
 
 FLOW_DESC = {
     "create_put": "PUT /promo/v2/randomizer/<id>",

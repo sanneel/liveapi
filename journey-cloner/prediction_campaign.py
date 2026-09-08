@@ -70,6 +70,7 @@ from typing import Any
 from uuid import uuid4
 
 from dotenv import load_dotenv
+from console_js import inject
 
 load_dotenv()
 
@@ -506,7 +507,8 @@ JS_TEMPLATE = r"""// Multi Number Prediction console script — @LABEL@ — gene
   'use strict';
   const PREVIEW = false;
   const MANUAL_TOKEN = '';
-  const BASE = @BASE_URL@;
+@API_BASE_JS@
+  const BASE = apiBase(@BASE_URL@);
   const BRAND = @BRAND@;
   const DRAFT_ID = @DRAFT_ID@;
   const CRM_BASE = BASE.replace(/\/journey-builder\/v0$/, '');
@@ -585,6 +587,8 @@ JS_TEMPLATE = r"""// Multi Number Prediction console script — @LABEL@ — gene
   console.log('%c✓ Draft ' + DRAFT_ID + ' saved.', 'color:#22c55e;font-weight:bold');
 })().catch((e) => console.error('%cFAILED: ' + e.message, 'color:#ef4444;font-weight:bold'));
 """
+
+JS_TEMPLATE = inject(JS_TEMPLATE)
 
 
 def build_js(b: PreparedBodies, cfg: Config) -> str:

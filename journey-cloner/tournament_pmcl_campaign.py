@@ -648,7 +648,8 @@ JS_TEMPLATE = r"""// PMCL Tournament Communications console script — generated
 (async () => {
   'use strict';
   const MANUAL_TOKEN = '';
-  const BASE = @BASE_URL@;
+@API_BASE_JS@
+  const BASE = apiBase(@BASE_URL@);
   const BRAND = @BRAND@;
   const PAYLOAD = @PAYLOAD@;
   const FOLDER_ID = @FOLDER_ID@;              // '' -> no photo upload, keep template images

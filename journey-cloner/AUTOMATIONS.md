@@ -37,11 +37,16 @@ that only the browser has. So every generator follows the same five steps.
                 save that finalises the canvas.
 ```
 
-The paste-time pieces every emitted script shares — the JSON response guard,
-the media-library photo upload and that create-then-save — live once in
-`console_js.py`. A generator drops them in with the `@JSON_GUARD_JS@`,
-`@MEDIA_UPLOAD_JS@` and `@DRAFT_SAVE_JS@` tokens and one `inject(JS_TEMPLATE)`
-call, so a fix there reaches every script.
+The paste-time pieces every emitted script shares — resolving the API base,
+the JSON response guard, the media-library photo upload and that
+create-then-save — live once in `console_js.py`. A generator drops them in with
+the `@API_BASE_JS@`, `@JSON_GUARD_JS@`, `@MEDIA_UPLOAD_JS@` and
+`@DRAFT_SAVE_JS@` tokens and one `inject(JS_TEMPLATE)` call, so a fix there
+reaches every script.
+
+The API base is the reason that matters: the backoffice moved its CRM gateway
+from `api/ubo` to `api/core`, and a hard-coded prefix is what a script cannot
+know. `apiBase()` reads the prefix the page is actually calling and follows it.
 
 Two consequences worth internalising:
 
