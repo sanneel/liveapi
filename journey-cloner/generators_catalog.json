@@ -156,6 +156,28 @@
       }
     },
     {
+      "key": "sorry_bonus_pmcl",
+      "label": "Sorry Bonus",
+      "group": "Casino",
+      "brand": "PMCL",
+      "what": "One goodwill casino-bonus journey per player, from a pasted player/amount list",
+      "script": "sorry_bonus_pmcl_campaign.py",
+      "driven_from": "shell only",
+      "summary": "Build the PMCL (Fortunazo) \"Sorry Bonus\" drafts — one journey per player.",
+      "cli": {
+        "flags": [
+          "--list",
+          "--stop-date",
+          "--include-captured",
+          "--name",
+          "--dry-run"
+        ],
+        "required": [
+          "--list"
+        ]
+      }
+    },
+    {
       "key": "promo_codes",
       "label": "Promo Codes",
       "group": "Sport",

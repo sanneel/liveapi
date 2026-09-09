@@ -171,6 +171,10 @@ GENERATORS: List[dict] = [
      "label": "Bet & Get",
      "what": "Journey + promo page + email from the captured PMCL flow",
      "script": "bet_and_get_pmcl_campaign.py", "tab": "bet_and_get"},
+    {"key": "sorry_bonus_pmcl", "group": "Casino", "brand": "PMCL",
+     "label": "Sorry Bonus",
+     "what": "One goodwill casino-bonus journey per player, from a pasted player/amount list",
+     "script": "sorry_bonus_pmcl_campaign.py", "tab": None},
 
     # ── Sport ─────────────────────────────────────────────────────────────
     {"key": "promo_codes", "group": "Sport", "brand": "JBCL",
@@ -245,6 +249,8 @@ _NOT_GENERATORS = {
     "nc_discount_campaign.py",
     "nc_discount_pmcl_campaign.py",
     "comms_engine.py", "tournament_comms_base.py", "har_analyse.py",
+    # Shared paste-time JS the emitted console scripts embed, not a campaign.
+    "console_js.py",
 }
 
 

@@ -349,8 +349,11 @@ check("the script carries the clone calls",
 check("the copy is scoped by fileFilters, never unfiltered",
       "fileFilters" in js and "JSON_FILTERS" in js,
       "an unfiltered copy of an old bundle stalls")
+# The endpoint string now also appears in the shared createAndSaveDraft helper
+# defined near the top of every script, so the ordering is checked against the
+# CALL that creates the draft, not the first mention of the path.
 check("the clone runs before the draft is POSTed",
-      js.index("PLACEMENT_CLONES") < js.index("journey-drafts"))
+      js.index("PLACEMENT_CLONES") < js.index("await createAndSaveDraft("))
 # /contents/v1/copy copies bytes, so content-<lang>.json keeps the OLD bundle id in
 # its absolute self-paths and the new page renders its media out of the captured
 # campaign's tree — the exact sharing the minting step exists to stop. The first

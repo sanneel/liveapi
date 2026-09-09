@@ -1,0 +1,2150 @@
+{
+ "journeyName": "PMCL | CS | Sorry Bonus | $%%AMOUNT_MAJOR%% Casino Bonus",
+ "brand": "PMCL",
+ "currencyCodes": [
+  "CLP"
+ ],
+ "activities": [
+  {
+   "activityId": "525236d3-921a-47db-9b5e-050b4bf47bad",
+   "activityName": "end_of_journey",
+   "events": [],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "isEditable": true,
+   "changedAt": "2026-09-08T14:23:59.6932950Z",
+   "version": 1,
+   "initializationData": {
+    "placements": []
+   }
+  },
+  {
+   "activityId": "865583a2-3980-40c5-b940-e120554921dc",
+   "activityName": "end_of_journey",
+   "events": [],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "isEditable": true,
+   "changedAt": "2026-09-08T14:23:59.6932960Z",
+   "version": 1,
+   "initializationData": {
+    "placements": []
+   }
+  },
+  {
+   "activityId": "e386b549-f6c2-4754-9a9f-371296b01b55",
+   "activityName": "casino_bonus_v2",
+   "activityDisplayName": "Casino Bonus",
+   "events": [
+    {
+     "eventName": "WageringBonusStarted",
+     "eventDisplayName": "Wagering started",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 1,
+     "version": 1
+    },
+    {
+     "eventName": "WageringBonusCancelledByWithdrawalConfirmed",
+     "eventDisplayName": "Canceled by withdrawal",
+     "eventType": "Completion",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "nextActivityId": "8e6c736a-f119-4929-8898-040c1a1dda4b",
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "WageringBonusExpirationFailed",
+     "eventDisplayName": "Expiration error",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "WageringBonusExpired",
+     "eventType": "Completion",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "nextActivityId": "83210fbf-ef03-4a73-88df-27773e4e649b",
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "WageringBonusFinished",
+     "eventType": "Completion",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "nextActivityId": "525236d3-921a-47db-9b5e-050b4bf47bad",
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "WageringBonusFinishFailed",
+     "eventDisplayName": "Wagering error",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "WageringBonusForfeited",
+     "eventType": "Completion",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "nextActivityId": "f50efa44-9087-4559-9439-3a72a5f34f67",
+     "count": 1,
+     "version": 1
+    },
+    {
+     "eventName": "WageringBonusLoseFailed",
+     "eventDisplayName": "Lost error",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "WageringBonusLost",
+     "eventType": "Completion",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "nextActivityId": "865583a2-3980-40c5-b940-e120554921dc",
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "WageringBonusRejectConfirmed",
+     "eventType": "Completion",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "nextActivityId": "c5de868f-8b5d-4866-8e6f-2504e308607c",
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "WageringBonusRejected",
+     "eventDisplayName": "Cancelation initiated",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "WageringBonusRejectFailed",
+     "eventDisplayName": "Cancelation error",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "WageringBonusAwardAborted",
+     "eventType": "Completion",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "nextActivityId": "f8eb3f67-3143-4ac2-83ef-4d1b6ffaf07a",
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "WageringBonusAwardConfirmed",
+     "eventDisplayName": "Issued",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 1,
+     "version": 1
+    },
+    {
+     "eventName": "WageringBonusAwarded",
+     "eventDisplayName": "Issuing initiated",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 1,
+     "version": 1
+    },
+    {
+     "eventName": "WageringBonusAwardFailed",
+     "eventDisplayName": "Issuing retry",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "WageringBonusCancelConfirmed",
+     "eventType": "Completion",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "nextActivityId": "94483655-dbea-4071-afc2-ef645afe6448",
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "WageringBonusCancelFailed",
+     "eventDisplayName": "Termination error",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "WageringBonusCancelled",
+     "eventDisplayName": "Termination initiated",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 0,
+     "version": 1
+    }
+   ],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [
+    {
+     "journeyActivityId": "7647be08-e2fa-4ba7-8830-237c51ae1933",
+     "key": "CurrencyCode",
+     "isOptional": false
+    },
+    {
+     "journeyActivityId": "7af4d7ad-96b0-43ce-b66f-ace9adfe8709",
+     "key": "PromotionId",
+     "isOptional": false
+    }
+   ],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "initializationData": {
+    "limitType": "multiplier",
+    "allowReject": true,
+    "displayData": [
+     "Activity customized"
+    ],
+    "productType": "slots",
+    "activitySubtype": "no_deposit",
+    "currenciesConfig": {
+     "CLP": {
+      "fixedBonusAmount": 1020000,
+      "releaseLimitAmount": 0,
+      "fixedBonusAmount_majorUnits": 10200,
+      "releaseLimitAmount_majorUnits": 0
+     }
+    },
+    "wageringActivity": {
+     "limitType": "multiplier",
+     "allowReject": true,
+     "productType": "slots",
+     "activitySubtype": "no_deposit",
+     "currenciesConfig": {
+      "CLP": {
+       "fixedBonusAmount": 1020000,
+       "releaseLimitAmount": 0,
+       "fixedBonusAmount_majorUnits": 10200,
+       "releaseLimitAmount_majorUnits": 0
+      }
+     },
+     "dependencyMechanic": null,
+     "withoutLockBalance": false,
+     "bonusExpirationTime": 172800000,
+     "wageringRequirement": 30,
+     "releaseLimitMultiplier": 20
+    },
+    "withoutLockBalance": false,
+    "bonusExpirationTime": 172800000,
+    "wageringRequirement": 30,
+    "releaseLimitMultiplier": 20,
+    "placements": []
+   },
+   "isEditable": true,
+   "changedBy": {
+    "authorId": "ba719889-4868-445d-9f9f-d94ddbfcd67c",
+    "authorName": "Sandro S"
+   },
+   "changedAt": "2026-09-08T14:23:59.6933600Z",
+   "version": 1
+  },
+  {
+   "activityId": "94483655-dbea-4071-afc2-ef645afe6448",
+   "activityName": "end_of_journey",
+   "events": [],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "isEditable": true,
+   "changedAt": "2026-09-08T14:23:59.6932940Z",
+   "version": 1,
+   "initializationData": {
+    "placements": []
+   }
+  },
+  {
+   "activityId": "c5de868f-8b5d-4866-8e6f-2504e308607c",
+   "activityName": "end_of_journey",
+   "events": [],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "isEditable": true,
+   "changedAt": "2026-09-08T14:23:59.6933030Z",
+   "version": 1,
+   "initializationData": {
+    "placements": []
+   }
+  },
+  {
+   "activityId": "f8eb3f67-3143-4ac2-83ef-4d1b6ffaf07a",
+   "activityName": "end_of_journey",
+   "events": [],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "isEditable": true,
+   "changedAt": "2026-09-08T14:23:59.6933010Z",
+   "version": 1,
+   "initializationData": {
+    "placements": []
+   }
+  },
+  {
+   "activityId": "8e6c736a-f119-4929-8898-040c1a1dda4b",
+   "activityName": "end_of_journey",
+   "events": [],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "isEditable": true,
+   "changedAt": "2026-09-08T14:23:59.6933620Z",
+   "version": 1,
+   "initializationData": {
+    "placements": []
+   }
+  },
+  {
+   "activityId": "7647be08-e2fa-4ba7-8830-237c51ae1933",
+   "activityName": "dwh_source",
+   "activityDisplayName": "Custom Segment",
+   "events": [
+    {
+     "eventName": "PlayerAdded",
+     "eventDisplayName": "Players added to journey",
+     "eventType": "Activation",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "nextActivityId": "7af4d7ad-96b0-43ce-b66f-ace9adfe8709",
+     "count": 1,
+     "version": 1
+    }
+   ],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "initializationData": {
+    "displayData": [
+     "Activity customized"
+    ],
+    "filterDetails": {
+     "filtersTree": [
+      {
+       "nodeId": "07e005f6-e681-4f37-be28-e48a189ddfbc",
+       "children": [
+        "4463d109-0e0a-4ae1-83ad-f5ad0cce149d"
+       ],
+       "nodeType": "Operator",
+       "isDeprecated": true,
+       "parentNodeId": null,
+       "groupOperator": "And",
+       "filterConditionId": null
+      },
+      {
+       "name": "player_id",
+       "column": {
+        "name": "player_id",
+        "tableName": "agg_all_player_casino_and_sport_ngr_summary",
+        "filterName": "Text",
+        "isRequired": false,
+        "description": "Player account number",
+        "displayName": "player_id",
+        "valuesSource": null,
+        "filterConditions": [
+         {
+          "operator": "equal",
+          "conditionType": "MultiTextInput"
+         },
+         {
+          "operator": "notEqual",
+          "conditionType": "MultiTextInput"
+         },
+         {
+          "operator": "startWith",
+          "conditionType": "MultiTextInput"
+         },
+         {
+          "operator": "contain",
+          "conditionType": "MultiTextInput"
+         }
+        ],
+        "isPredefinedValuesAvailable": false
+       },
+       "height": 127,
+       "nodeId": "4463d109-0e0a-4ae1-83ad-f5ad0cce149d",
+       "children": [],
+       "nodeType": "Filter",
+       "operator": "equal",
+       "settings": {
+        "values": [
+         "%%PLAYER_ID%%"
+        ],
+        "dateType": "days",
+        "hasEmptyState": false
+       },
+       "showForm": true,
+       "tableName": "agg_all_player_casino_and_sport_ngr_summary",
+       "filterName": "Text",
+       "isRequired": false,
+       "description": "Player account number",
+       "displayName": "player_id",
+       "databaseName": "dv_marts",
+       "isDeprecated": false,
+       "parentNodeId": "07e005f6-e681-4f37-be28-e48a189ddfbc",
+       "valuesSource": null,
+       "conditionType": "MultiTextInput",
+       "groupOperator": null,
+       "filterConditions": [
+        {
+         "operator": "equal",
+         "conditionType": "MultiTextInput"
+        },
+        {
+         "operator": "notEqual",
+         "conditionType": "MultiTextInput"
+        },
+        {
+         "operator": "startWith",
+         "conditionType": "MultiTextInput"
+        },
+        {
+         "operator": "contain",
+         "conditionType": "MultiTextInput"
+        }
+       ],
+       "filterConditionId": "eee4f345-fa34-4667-a3a2-20e0b8701367",
+       "isPredefinedValuesAvailable": false
+      }
+     ],
+     "filterConditions": [
+      {
+       "id": "eee4f345-fa34-4667-a3a2-20e0b8701367",
+       "values": [
+        "%%PLAYER_ID%%"
+       ],
+       "nodeType": "Filter",
+       "operator": "equal",
+       "fieldName": "player_id",
+       "tableName": "agg_all_player_casino_and_sport_ngr_summary",
+       "columnName": "player_id",
+       "databaseName": "dv_marts",
+       "conditionType": "MultiTextInput",
+       "hasEmptyState": false
+      }
+     ]
+    },
+    "dataSourceName": "default",
+    "currentTemplate": null,
+    "placements": []
+   },
+   "isEditable": true,
+   "changedBy": {
+    "authorId": "ba719889-4868-445d-9f9f-d94ddbfcd67c",
+    "authorName": "Sandro S"
+   },
+   "changedAt": "2026-09-08T14:23:59.6932470Z",
+   "version": 1
+  },
+  {
+   "activityId": "83210fbf-ef03-4a73-88df-27773e4e649b",
+   "activityName": "end_of_journey",
+   "events": [],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "isEditable": true,
+   "changedAt": "2026-09-08T14:23:59.6933000Z",
+   "version": 1,
+   "initializationData": {
+    "placements": []
+   }
+  },
+  {
+   "activityId": "7af4d7ad-96b0-43ce-b66f-ace9adfe8709",
+   "activityName": "promotion",
+   "activityDisplayName": "Promotion",
+   "events": [
+    {
+     "eventName": "PromotionExpired",
+     "eventType": "Completion",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "nextActivityId": "d5569efd-d712-4ba7-905c-f22457af6738",
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "PromotionOffered",
+     "eventDisplayName": "Offered",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 1,
+     "version": 1
+    },
+    {
+     "eventName": "PromotionUpcoming",
+     "eventDisplayName": "Upcoming",
+     "eventType": "Boundary",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "count": 0,
+     "version": 1
+    },
+    {
+     "eventName": "PromotionAccepted",
+     "eventType": "Completion",
+     "checkExitCriteria": false,
+     "isUsedInChoosableFlow": false,
+     "nextActivityId": "e386b549-f6c2-4754-9a9f-371296b01b55",
+     "count": 1,
+     "version": 1
+    }
+   ],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [
+    {
+     "journeyActivityId": "7647be08-e2fa-4ba7-8830-237c51ae1933",
+     "key": "CurrencyCode",
+     "isOptional": true
+    },
+    {
+     "journeyActivityId": "7647be08-e2fa-4ba7-8830-237c51ae1933",
+     "key": "SelectedCurrencyCode",
+     "isOptional": true
+    }
+   ],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "initializationData": {
+    "languages": [
+     "es",
+     "en"
+    ],
+    "autoAccept": false,
+    "placements": [
+     {
+      "data": {
+       "FrontId": "%%FRONT_ID%%",
+       "ContentId": "%%CONTENT_ID%%",
+       "condition": "Deposit",
+       "campaignId": "e386b549-f6c2-4754-9a9f-371296b01b55",
+       "moduleType": "CasinoBonus",
+       "mechanicName": "Wagering",
+       "wageringActivity": {
+        "limitType": "multiplier",
+        "activityId": "e386b549-f6c2-4754-9a9f-371296b01b55",
+        "allowReject": true,
+        "productType": "slots",
+        "activitySubtype": "no_deposit",
+        "currenciesConfig": {
+         "CLP": {
+          "fixedBonusAmount": 1020000,
+          "releaseLimitAmount": 0,
+          "fixedBonusAmount_majorUnits": 10200,
+          "releaseLimitAmount_majorUnits": 0
+         }
+        },
+        "withoutLockBalance": false,
+        "bonusExpirationTime": 172800000,
+        "wageringRequirement": 30,
+        "releaseLimitMultiplier": 20
+       },
+       "isActivityCurrencies": false,
+       "cancelDuringWageringPeriodSettings": {
+        "isEnabled": true,
+        "defaultValue": true
+       }
+      },
+      "dataSources": [
+       {
+        "keys": [],
+        "type": "Sync",
+        "journeyActivityId": "e386b549-f6c2-4754-9a9f-371296b01b55"
+       }
+      ],
+      "placementType": "PromoLobby"
+     }
+    ],
+    "displayData": [
+     "Offered within 2d 0h 0m"
+    ],
+    "promotionId": "bb176e8d-2599-4b42-b444-dba4bd3c14b2",
+    "currencyMode": "automated",
+    "timeToAccept": "P0Y0M2DT0H0M0S",
+    "showAsUpcoming": false,
+    "promotionLinkId": "29724667-6710-48a5-aadb-954c76666591",
+    "promotionStatus": "Offered",
+    "channelsCondition": {
+     "values": [],
+     "isEnabled": false
+    },
+    "promotionDisplayId": "%%PROMO_DISPLAY_ID%%"
+   },
+   "isEditable": true,
+   "changedBy": {
+    "authorId": "ba719889-4868-445d-9f9f-d94ddbfcd67c",
+    "authorName": "Sandro S"
+   },
+   "changedAt": "2026-09-08T14:23:59.6932890Z",
+   "version": 1
+  },
+  {
+   "activityId": "f50efa44-9087-4559-9439-3a72a5f34f67",
+   "activityName": "end_of_journey",
+   "events": [],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "isEditable": true,
+   "changedAt": "2026-09-08T14:23:59.6932980Z",
+   "version": 1,
+   "initializationData": {
+    "placements": []
+   }
+  },
+  {
+   "activityId": "d5569efd-d712-4ba7-905c-f22457af6738",
+   "activityName": "end_of_journey",
+   "events": [],
+   "eventsHistory": [],
+   "tcGroupEvents": [],
+   "dependencies": [],
+   "dataDependencies": [],
+   "dataKeys": [],
+   "isEditable": true,
+   "changedAt": "2026-09-08T14:23:59.6932920Z",
+   "version": 1,
+   "initializationData": {
+    "placements": []
+   }
+  }
+ ],
+ "stopAt": "2026-09-10T03:00:00.0000000Z",
+ "changeHistory": {},
+ "metadata": {
+  "purpose": "Retention",
+  "category": "Marketing",
+  "priority": 2,
+  "productType": "Casino"
+ },
+ "reEntryRule": {
+  "reEntryMode": "Prohibited"
+ },
+ "timeZoneId": "Chile/Continental",
+ "testControlGroupParameters": {
+  "playersAddingStrategy": "IncludeAll",
+  "isEnabled": false
+ },
+ "activityEventConversionMetrics": [],
+ "areJourneyMetricsAvailable": true,
+ "allJourneyActivationsCount": 0,
+ "overJourneyActivationsCount": 0,
+ "journeySource": "UBO",
+ "isArchived": false,
+ "isUnlimited": false,
+ "isImmediatelyAfterPublish": true,
+ "rawJourneyData": {
+  "elements": [
+   {
+    "id": "7647be08-e2fa-4ba7-8830-237c51ae1933",
+    "data": {
+     "name": "dwh_source",
+     "type": "source",
+     "order": 0,
+     "ports": [
+      {
+       "id": "PlayerAdded-7647be08-e2fa-4ba7-8830-237c51ae1933"
+      }
+     ],
+     "events": [
+      {
+       "isHidden": false,
+       "eventName": "PlayerAdded",
+       "eventType": "Activation",
+       "eventDisplayName": "Players added to journey",
+       "canBeUsedInChoosableFlow": false
+      }
+     ],
+     "nodeType": "source",
+     "boundaryDefinition": false,
+     "activityDisplayName": "Players DWH"
+    },
+    "type": "source",
+    "style": {
+     "cursor": "pointer"
+    },
+    "width": 267,
+    "height": 64,
+    "zIndex": 5,
+    "position": {
+     "x": 0,
+     "y": 0
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false,
+    "positionAbsolute": {
+     "x": 0,
+     "y": 0
+    }
+   },
+   {
+    "id": "7af4d7ad-96b0-43ce-b66f-ace9adfe8709",
+    "data": {
+     "name": "promotion",
+     "ports": [
+      {
+       "id": "input-7af4d7ad-96b0-43ce-b66f-ace9adfe8709"
+      },
+      {
+       "id": "PromotionOffered-7af4d7ad-96b0-43ce-b66f-ace9adfe8709"
+      },
+      {
+       "id": "PromotionAccepted-7af4d7ad-96b0-43ce-b66f-ace9adfe8709"
+      },
+      {
+       "id": "PromotionExpired-7af4d7ad-96b0-43ce-b66f-ace9adfe8709"
+      }
+     ],
+     "events": [
+      {
+       "isHidden": false,
+       "eventName": "PromotionOffered",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "isLabelHidden": false,
+       "payloadKeysV2": [],
+       "localizationKey": "promotion.promotion_offered",
+       "eventDisplayName": "Offered",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": false,
+       "eventName": "PromotionAccepted",
+       "eventType": "Completion",
+       "payloadKeys": [
+        "CurrencyCode",
+        "PromotionId",
+        "PromotionAcceptedAt"
+       ],
+       "isLabelHidden": false,
+       "payloadKeysV2": [
+        {
+         "key": "CurrencyCode",
+         "isHidden": true,
+         "isOptional": false,
+         "optionalPolicies": []
+        },
+        {
+         "key": "PromotionId",
+         "isHidden": true,
+         "isOptional": false,
+         "optionalPolicies": []
+        },
+        {
+         "key": "PromotionAcceptedAt",
+         "isHidden": true,
+         "isOptional": false,
+         "optionalPolicies": []
+        }
+       ],
+       "localizationKey": "promotion.promotion_accepted",
+       "eventDisplayName": "Accepted",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": false,
+       "eventName": "PromotionExpired",
+       "eventType": "Completion",
+       "payloadKeys": [],
+       "isLabelHidden": false,
+       "payloadKeysV2": [],
+       "localizationKey": "promotion.promotion_expired",
+       "eventDisplayName": "Expired",
+       "canBeUsedInChoosableFlow": false
+      }
+     ],
+     "activityType": "promotion",
+     "activityDisplayName": "Promotion"
+    },
+    "type": "action",
+    "style": {
+     "cursor": "pointer"
+    },
+    "width": 267,
+    "height": 64,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+     "x": 0,
+     "y": 199
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false,
+    "positionAbsolute": {
+     "x": 0,
+     "y": 199
+    }
+   },
+   {
+    "id": "d5569efd-d712-4ba7-905c-f22457af6738",
+    "data": {
+     "name": "end_of_journey",
+     "ports": [
+      {
+       "id": "input-d5569efd-d712-4ba7-905c-f22457af6738"
+      }
+     ],
+     "width": 40,
+     "height": 40,
+     "isHidden": false,
+     "eventName": "PromotionExpired",
+     "eventType": "Completion",
+     "payloadKeys": [],
+     "isLabelHidden": false,
+     "payloadKeysV2": [],
+     "localizationKey": "promotion.promotion_expired",
+     "eventDisplayName": "Expired",
+     "canBeUsedInChoosableFlow": false
+    },
+    "type": "exit",
+    "style": {
+     "cursor": "default"
+    },
+    "width": 40,
+    "height": 40,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+     "x": 347,
+     "y": 463
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false,
+    "positionAbsolute": {
+     "x": 232.5,
+     "y": 463
+    }
+   },
+   {
+    "id": "19f99b42-1968-4b46-980d-50c23790524e",
+    "data": {
+     "eventName": "PromotionExpired",
+     "eventType": "Completion",
+     "activityName": "promotion",
+     "isReconnectable": false,
+     "isDisconnectable": false
+    },
+    "type": "dropEdge",
+    "style": {
+     "strokeDasharray": "3"
+    },
+    "hidden": false,
+    "source": "7af4d7ad-96b0-43ce-b66f-ace9adfe8709",
+    "target": "d5569efd-d712-4ba7-905c-f22457af6738",
+    "zIndex": 1,
+    "labelStyle": {
+     "color": "#000",
+     "fontSize": 14,
+     "fontWeight": 700
+    },
+    "labelBgStyle": {
+     "fill": "#D2D2D2"
+    },
+    "sourceHandle": "PromotionExpired-7af4d7ad-96b0-43ce-b66f-ace9adfe8709",
+    "targetHandle": "input-d5569efd-d712-4ba7-905c-f22457af6738",
+    "labelBgPadding": [
+     10,
+     3
+    ],
+    "labelBgBorderRadius": 4
+   },
+   {
+    "id": "5df1f9d4-024e-4315-b6e8-5db89484f0c0",
+    "data": {
+     "isHidden": false,
+     "eventName": "PlayerAdded",
+     "eventType": "Activation",
+     "activityName": "dwh_source",
+     "isLabelHidden": true,
+     "isReconnectable": false,
+     "eventDisplayName": "Players added to journey",
+     "isDisconnectable": false,
+     "canBeUsedInChoosableFlow": false
+    },
+    "type": "default",
+    "style": {
+     "strokeDasharray": "3"
+    },
+    "hidden": false,
+    "source": "7647be08-e2fa-4ba7-8830-237c51ae1933",
+    "target": "7af4d7ad-96b0-43ce-b66f-ace9adfe8709",
+    "zIndex": 1,
+    "labelStyle": {
+     "color": "#000",
+     "fontSize": 14,
+     "fontWeight": 700
+    },
+    "labelBgStyle": {
+     "fill": "#D2D2D2"
+    },
+    "sourceHandle": "PlayerAdded-7647be08-e2fa-4ba7-8830-237c51ae1933",
+    "targetHandle": "input-7af4d7ad-96b0-43ce-b66f-ace9adfe8709",
+    "labelBgPadding": [
+     10,
+     3
+    ],
+    "labelBgBorderRadius": 4
+   },
+   {
+    "id": "94483655-dbea-4071-afc2-ef645afe6448",
+    "data": {
+     "name": "end_of_journey",
+     "ports": [
+      {
+       "id": "input-94483655-dbea-4071-afc2-ef645afe6448"
+      }
+     ],
+     "width": 40,
+     "height": 40,
+     "isHidden": true,
+     "eventName": "WageringBonusCancelConfirmed",
+     "eventType": "Completion",
+     "payloadKeys": [],
+     "isLabelHidden": false,
+     "payloadKeysV2": [],
+     "localizationKey": "casino_bonus_v2.wagering_bonus_cancel_confirmed",
+     "eventDisplayName": "Terminated",
+     "canBeUsedInChoosableFlow": false
+    },
+    "type": "exit",
+    "style": {
+     "cursor": "default"
+    },
+    "width": 40,
+    "height": 40,
+    "hidden": true,
+    "zIndex": 5,
+    "position": {
+     "x": 0,
+     "y": 0
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false
+   },
+   {
+    "id": "525236d3-921a-47db-9b5e-050b4bf47bad",
+    "data": {
+     "name": "end_of_journey",
+     "ports": [
+      {
+       "id": "input-525236d3-921a-47db-9b5e-050b4bf47bad"
+      }
+     ],
+     "width": 40,
+     "height": 40,
+     "isHidden": false,
+     "eventName": "WageringBonusFinished",
+     "eventType": "Completion",
+     "payloadKeys": [],
+     "isLabelHidden": false,
+     "payloadKeysV2": [],
+     "localizationKey": "casino_bonus_v2.wagering_bonus_finished",
+     "eventDisplayName": "Wagered",
+     "canBeUsedInChoosableFlow": false
+    },
+    "type": "exit",
+    "style": {
+     "cursor": "default"
+    },
+    "width": 40,
+    "height": 40,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+     "x": -606.5,
+     "y": 727
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false
+   },
+   {
+    "id": "865583a2-3980-40c5-b940-e120554921dc",
+    "data": {
+     "name": "end_of_journey",
+     "ports": [
+      {
+       "id": "input-865583a2-3980-40c5-b940-e120554921dc"
+      }
+     ],
+     "width": 40,
+     "height": 40,
+     "isHidden": false,
+     "eventName": "WageringBonusLost",
+     "eventType": "Completion",
+     "payloadKeys": [],
+     "isLabelHidden": false,
+     "payloadKeysV2": [],
+     "localizationKey": "casino_bonus_v2.wagering_bonus_lost",
+     "eventDisplayName": "Lost",
+     "canBeUsedInChoosableFlow": false
+    },
+    "type": "exit",
+    "style": {
+     "cursor": "default"
+    },
+    "width": 40,
+    "height": 40,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+     "x": -366.5,
+     "y": 727
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false
+   },
+   {
+    "id": "f50efa44-9087-4559-9439-3a72a5f34f67",
+    "data": {
+     "name": "end_of_journey",
+     "ports": [
+      {
+       "id": "input-f50efa44-9087-4559-9439-3a72a5f34f67"
+      }
+     ],
+     "width": 40,
+     "height": 40,
+     "isHidden": false,
+     "eventName": "WageringBonusForfeited",
+     "eventType": "Completion",
+     "payloadKeys": [],
+     "isLabelHidden": false,
+     "payloadKeysV2": [],
+     "localizationKey": "casino_bonus_v2.wagering_bonus_forfeited",
+     "eventDisplayName": "Forfeited",
+     "canBeUsedInChoosableFlow": false
+    },
+    "type": "exit",
+    "style": {
+     "cursor": "default"
+    },
+    "width": 40,
+    "height": 40,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+     "x": -126.5,
+     "y": 727
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false
+   },
+   {
+    "id": "83210fbf-ef03-4a73-88df-27773e4e649b",
+    "data": {
+     "name": "end_of_journey",
+     "ports": [
+      {
+       "id": "input-83210fbf-ef03-4a73-88df-27773e4e649b"
+      }
+     ],
+     "width": 40,
+     "height": 40,
+     "isHidden": false,
+     "eventName": "WageringBonusExpired",
+     "eventType": "Completion",
+     "payloadKeys": [],
+     "isLabelHidden": false,
+     "payloadKeysV2": [],
+     "localizationKey": "casino_bonus_v2.wagering_bonus_expired",
+     "eventDisplayName": "Expired",
+     "canBeUsedInChoosableFlow": false
+    },
+    "type": "exit",
+    "style": {
+     "cursor": "default"
+    },
+    "width": 40,
+    "height": 40,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+     "x": 113.5,
+     "y": 727
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false
+   },
+   {
+    "id": "f8eb3f67-3143-4ac2-83ef-4d1b6ffaf07a",
+    "data": {
+     "name": "end_of_journey",
+     "ports": [
+      {
+       "id": "input-f8eb3f67-3143-4ac2-83ef-4d1b6ffaf07a"
+      }
+     ],
+     "width": 40,
+     "height": 40,
+     "isHidden": true,
+     "eventName": "WageringBonusAwardAborted",
+     "eventType": "Completion",
+     "payloadKeys": [],
+     "isLabelHidden": false,
+     "payloadKeysV2": [],
+     "localizationKey": "casino_bonus_v2.wagering_bonus_award_aborted",
+     "eventDisplayName": "Issuing error",
+     "canBeUsedInChoosableFlow": false
+    },
+    "type": "exit",
+    "style": {
+     "cursor": "default"
+    },
+    "width": 40,
+    "height": 40,
+    "hidden": true,
+    "zIndex": 5,
+    "position": {
+     "x": 0,
+     "y": 0
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false
+   },
+   {
+    "id": "c5de868f-8b5d-4866-8e6f-2504e308607c",
+    "data": {
+     "name": "end_of_journey",
+     "ports": [
+      {
+       "id": "input-c5de868f-8b5d-4866-8e6f-2504e308607c"
+      }
+     ],
+     "width": 40,
+     "height": 40,
+     "isHidden": false,
+     "eventName": "WageringBonusRejectConfirmed",
+     "eventType": "Completion",
+     "payloadKeys": [],
+     "isLabelHidden": false,
+     "payloadKeysV2": [],
+     "localizationKey": "casino_bonus_v2.wagering_bonus_reject_confirmed",
+     "eventDisplayName": "Canceled",
+     "canBeUsedInChoosableFlow": false
+    },
+    "type": "exit",
+    "style": {
+     "cursor": "default"
+    },
+    "width": 40,
+    "height": 40,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+     "x": 353.5,
+     "y": 727
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false
+   },
+   {
+    "id": "ce46a376-b5cf-4f69-88e4-c45f98258d81",
+    "data": {
+     "eventName": "WageringBonusCancelConfirmed",
+     "eventType": "Completion",
+     "activityName": "casino_bonus_v2",
+     "isReconnectable": false,
+     "isDisconnectable": false
+    },
+    "type": "dropEdge",
+    "style": {
+     "strokeDasharray": "3"
+    },
+    "hidden": true,
+    "source": "e386b549-f6c2-4754-9a9f-371296b01b55",
+    "target": "94483655-dbea-4071-afc2-ef645afe6448",
+    "zIndex": 1,
+    "labelStyle": {
+     "color": "#000",
+     "fontSize": 14,
+     "fontWeight": 700
+    },
+    "labelBgStyle": {
+     "fill": "#D2D2D2"
+    },
+    "sourceHandle": "WageringBonusCancelConfirmed-e386b549-f6c2-4754-9a9f-371296b01b55",
+    "targetHandle": "input-94483655-dbea-4071-afc2-ef645afe6448",
+    "labelBgPadding": [
+     10,
+     3
+    ],
+    "labelBgBorderRadius": 4
+   },
+   {
+    "id": "4aed34d4-f793-4966-9a57-877310f5f130",
+    "data": {
+     "eventName": "WageringBonusFinished",
+     "eventType": "Completion",
+     "activityName": "casino_bonus_v2",
+     "isReconnectable": false,
+     "isDisconnectable": false
+    },
+    "type": "dropEdge",
+    "style": {
+     "strokeDasharray": "3"
+    },
+    "hidden": false,
+    "source": "e386b549-f6c2-4754-9a9f-371296b01b55",
+    "target": "525236d3-921a-47db-9b5e-050b4bf47bad",
+    "zIndex": 1,
+    "labelStyle": {
+     "color": "#000",
+     "fontSize": 14,
+     "fontWeight": 700
+    },
+    "labelBgStyle": {
+     "fill": "#D2D2D2"
+    },
+    "sourceHandle": "WageringBonusFinished-e386b549-f6c2-4754-9a9f-371296b01b55",
+    "targetHandle": "input-525236d3-921a-47db-9b5e-050b4bf47bad",
+    "labelBgPadding": [
+     10,
+     3
+    ],
+    "labelBgBorderRadius": 4
+   },
+   {
+    "id": "9ec01b4c-430b-43e6-9883-d9464f19cd28",
+    "data": {
+     "eventName": "WageringBonusLost",
+     "eventType": "Completion",
+     "activityName": "casino_bonus_v2",
+     "isReconnectable": false,
+     "isDisconnectable": false
+    },
+    "type": "dropEdge",
+    "style": {
+     "strokeDasharray": "3"
+    },
+    "hidden": false,
+    "source": "e386b549-f6c2-4754-9a9f-371296b01b55",
+    "target": "865583a2-3980-40c5-b940-e120554921dc",
+    "zIndex": 1,
+    "labelStyle": {
+     "color": "#000",
+     "fontSize": 14,
+     "fontWeight": 700
+    },
+    "labelBgStyle": {
+     "fill": "#D2D2D2"
+    },
+    "sourceHandle": "WageringBonusLost-e386b549-f6c2-4754-9a9f-371296b01b55",
+    "targetHandle": "input-865583a2-3980-40c5-b940-e120554921dc",
+    "labelBgPadding": [
+     10,
+     3
+    ],
+    "labelBgBorderRadius": 4
+   },
+   {
+    "id": "d30febe7-3224-4df4-b9ac-2c140c8927f1",
+    "data": {
+     "eventName": "WageringBonusForfeited",
+     "eventType": "Completion",
+     "activityName": "casino_bonus_v2",
+     "isReconnectable": false,
+     "isDisconnectable": false
+    },
+    "type": "dropEdge",
+    "style": {
+     "strokeDasharray": "3"
+    },
+    "hidden": false,
+    "source": "e386b549-f6c2-4754-9a9f-371296b01b55",
+    "target": "f50efa44-9087-4559-9439-3a72a5f34f67",
+    "zIndex": 1,
+    "labelStyle": {
+     "color": "#000",
+     "fontSize": 14,
+     "fontWeight": 700
+    },
+    "labelBgStyle": {
+     "fill": "#D2D2D2"
+    },
+    "sourceHandle": "WageringBonusForfeited-e386b549-f6c2-4754-9a9f-371296b01b55",
+    "targetHandle": "input-f50efa44-9087-4559-9439-3a72a5f34f67",
+    "labelBgPadding": [
+     10,
+     3
+    ],
+    "labelBgBorderRadius": 4
+   },
+   {
+    "id": "f095ebed-60f7-44a0-b5d1-30235a860078",
+    "data": {
+     "eventName": "WageringBonusExpired",
+     "eventType": "Completion",
+     "activityName": "casino_bonus_v2",
+     "isReconnectable": false,
+     "isDisconnectable": false
+    },
+    "type": "dropEdge",
+    "style": {
+     "strokeDasharray": "3"
+    },
+    "hidden": false,
+    "source": "e386b549-f6c2-4754-9a9f-371296b01b55",
+    "target": "83210fbf-ef03-4a73-88df-27773e4e649b",
+    "zIndex": 1,
+    "labelStyle": {
+     "color": "#000",
+     "fontSize": 14,
+     "fontWeight": 700
+    },
+    "labelBgStyle": {
+     "fill": "#D2D2D2"
+    },
+    "sourceHandle": "WageringBonusExpired-e386b549-f6c2-4754-9a9f-371296b01b55",
+    "targetHandle": "input-83210fbf-ef03-4a73-88df-27773e4e649b",
+    "labelBgPadding": [
+     10,
+     3
+    ],
+    "labelBgBorderRadius": 4
+   },
+   {
+    "id": "42679300-913a-4be9-962b-30ec96a6041c",
+    "data": {
+     "eventName": "WageringBonusAwardAborted",
+     "eventType": "Completion",
+     "activityName": "casino_bonus_v2",
+     "isReconnectable": false,
+     "isDisconnectable": false
+    },
+    "type": "dropEdge",
+    "style": {
+     "strokeDasharray": "3"
+    },
+    "hidden": true,
+    "source": "e386b549-f6c2-4754-9a9f-371296b01b55",
+    "target": "f8eb3f67-3143-4ac2-83ef-4d1b6ffaf07a",
+    "zIndex": 1,
+    "labelStyle": {
+     "color": "#000",
+     "fontSize": 14,
+     "fontWeight": 700
+    },
+    "labelBgStyle": {
+     "fill": "#D2D2D2"
+    },
+    "sourceHandle": "WageringBonusAwardAborted-e386b549-f6c2-4754-9a9f-371296b01b55",
+    "targetHandle": "input-f8eb3f67-3143-4ac2-83ef-4d1b6ffaf07a",
+    "labelBgPadding": [
+     10,
+     3
+    ],
+    "labelBgBorderRadius": 4
+   },
+   {
+    "id": "21d3acb4-11e4-4d34-942c-00351ed7432d",
+    "data": {
+     "eventName": "WageringBonusRejectConfirmed",
+     "eventType": "Completion",
+     "activityName": "casino_bonus_v2",
+     "isReconnectable": false,
+     "isDisconnectable": false
+    },
+    "type": "dropEdge",
+    "style": {
+     "strokeDasharray": "3"
+    },
+    "hidden": false,
+    "source": "e386b549-f6c2-4754-9a9f-371296b01b55",
+    "target": "c5de868f-8b5d-4866-8e6f-2504e308607c",
+    "zIndex": 1,
+    "labelStyle": {
+     "color": "#000",
+     "fontSize": 14,
+     "fontWeight": 700
+    },
+    "labelBgStyle": {
+     "fill": "#D2D2D2"
+    },
+    "sourceHandle": "WageringBonusRejectConfirmed-e386b549-f6c2-4754-9a9f-371296b01b55",
+    "targetHandle": "input-c5de868f-8b5d-4866-8e6f-2504e308607c",
+    "labelBgPadding": [
+     10,
+     3
+    ],
+    "labelBgBorderRadius": 4
+   },
+   {
+    "id": "07d5e660-def0-432a-a06c-7e1e9d210be6",
+    "data": {
+     "eventName": "PromotionAccepted",
+     "eventType": "Completion",
+     "activityName": "promotion",
+     "isReconnectable": false,
+     "isDisconnectable": false
+    },
+    "type": "default",
+    "style": {
+     "strokeDasharray": "3"
+    },
+    "hidden": false,
+    "source": "7af4d7ad-96b0-43ce-b66f-ace9adfe8709",
+    "target": "e386b549-f6c2-4754-9a9f-371296b01b55",
+    "zIndex": 1,
+    "labelStyle": {
+     "color": "#000",
+     "fontSize": 14,
+     "fontWeight": 700
+    },
+    "labelBgStyle": {
+     "fill": "#D2D2D2"
+    },
+    "sourceHandle": "PromotionAccepted-7af4d7ad-96b0-43ce-b66f-ace9adfe8709",
+    "targetHandle": "input-e386b549-f6c2-4754-9a9f-371296b01b55",
+    "labelBgPadding": [
+     10,
+     3
+    ],
+    "labelBgBorderRadius": 4
+   },
+   {
+    "id": "e386b549-f6c2-4754-9a9f-371296b01b55",
+    "data": {
+     "name": "casino_bonus_v2",
+     "ports": [
+      {
+       "id": "input-e386b549-f6c2-4754-9a9f-371296b01b55"
+      },
+      {
+       "id": "WageringBonusAwarded-e386b549-f6c2-4754-9a9f-371296b01b55"
+      },
+      {
+       "id": "WageringBonusAwardConfirmed-e386b549-f6c2-4754-9a9f-371296b01b55"
+      },
+      {
+       "id": "WageringBonusAwardFailed-e386b549-f6c2-4754-9a9f-371296b01b55"
+      },
+      {
+       "id": "WageringBonusCancelled-e386b549-f6c2-4754-9a9f-371296b01b55"
+      },
+      {
+       "id": "WageringBonusCancelConfirmed-e386b549-f6c2-4754-9a9f-371296b01b55"
+      },
+      {
+       "id": "WageringBonusCancelFailed-e386b549-f6c2-4754-9a9f-371296b01b55"
+      },
+      {
+       "id": "WageringBonusRejected-e386b549-f6c2-4754-9a9f-371296b01b55"
+      },
+      {
+       "id": "WageringBonusRejectFailed-e386b549-f6c2-4754-9a9f-371296b01b55"
+      },
+      {
+       "id": "WageringBonusStarted-e386b549-f6c2-4754-9a9f-371296b01b55"
+      },
+      {
+       "id": "WageringBonusFinished-e386b549-f6c2-4754-9a9f-371296b01b55"
+      },
+      {
+       "id": "WageringBonusLost-e386b549-f6c2-4754-9a9f-371296b01b55"
+      },
+      {
+       "id": "WageringBonusForfeited-e386b549-f6c2-4754-9a9f-371296b01b55"
+      },
+      {
+       "id": "WageringBonusExpired-e386b549-f6c2-4754-9a9f-371296b01b55"
+      },
+      {
+       "id": "WageringBonusExpirationFailed-e386b549-f6c2-4754-9a9f-371296b01b55"
+      },
+      {
+       "id": "WageringBonusLoseFailed-e386b549-f6c2-4754-9a9f-371296b01b55"
+      },
+      {
+       "id": "WageringBonusFinishFailed-e386b549-f6c2-4754-9a9f-371296b01b55"
+      },
+      {
+       "id": "WageringBonusAwardAborted-e386b549-f6c2-4754-9a9f-371296b01b55"
+      },
+      {
+       "id": "WageringBonusRejectConfirmed-e386b549-f6c2-4754-9a9f-371296b01b55"
+      },
+      {
+       "id": "WageringBonusCancelledByWithdrawalConfirmed-e386b549-f6c2-4754-9a9f-371296b01b55"
+      }
+     ],
+     "events": [
+      {
+       "isHidden": false,
+       "eventName": "WageringBonusAwarded",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "isLabelHidden": false,
+       "payloadKeysV2": [],
+       "localizationKey": "casino_bonus_v2.wagering_bonus_awarded",
+       "eventDisplayName": "Issuing initiated",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": false,
+       "eventName": "WageringBonusAwardConfirmed",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "isLabelHidden": false,
+       "payloadKeysV2": [],
+       "localizationKey": "casino_bonus_v2.wagering_bonus_award_confirmed",
+       "eventDisplayName": "Issued",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": false,
+       "eventName": "WageringBonusAwardFailed",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "isLabelHidden": false,
+       "payloadKeysV2": [],
+       "localizationKey": "casino_bonus_v2.wagering_bonus_award_failed",
+       "eventDisplayName": "Issuing retry",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": true,
+       "eventName": "WageringBonusCancelled",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "isLabelHidden": false,
+       "payloadKeysV2": [],
+       "localizationKey": "casino_bonus_v2.wagering_bonus_cancelled",
+       "eventDisplayName": "Termination initiated",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": true,
+       "eventName": "WageringBonusCancelConfirmed",
+       "eventType": "Completion",
+       "payloadKeys": [],
+       "isLabelHidden": false,
+       "payloadKeysV2": [],
+       "localizationKey": "casino_bonus_v2.wagering_bonus_cancel_confirmed",
+       "eventDisplayName": "Terminated",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": false,
+       "eventName": "WageringBonusCancelFailed",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "isLabelHidden": false,
+       "payloadKeysV2": [],
+       "localizationKey": "casino_bonus_v2.wagering_bonus_cancel_failed",
+       "eventDisplayName": "Termination error",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": false,
+       "eventName": "WageringBonusRejected",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "isLabelHidden": false,
+       "payloadKeysV2": [],
+       "localizationKey": "casino_bonus_v2.wagering_bonus_rejected",
+       "eventDisplayName": "Cancelation initiated",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": false,
+       "eventName": "WageringBonusRejectFailed",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "isLabelHidden": false,
+       "payloadKeysV2": [],
+       "localizationKey": "casino_bonus_v2.wagering_bonus_reject_failed",
+       "eventDisplayName": "Cancelation error",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": false,
+       "eventName": "WageringBonusStarted",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "isLabelHidden": false,
+       "payloadKeysV2": [],
+       "localizationKey": "casino_bonus_v2.wagering_bonus_started",
+       "eventDisplayName": "Wagering started",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": false,
+       "eventName": "WageringBonusFinished",
+       "eventType": "Completion",
+       "payloadKeys": [],
+       "isLabelHidden": false,
+       "payloadKeysV2": [],
+       "localizationKey": "casino_bonus_v2.wagering_bonus_finished",
+       "eventDisplayName": "Wagered",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": false,
+       "eventName": "WageringBonusLost",
+       "eventType": "Completion",
+       "payloadKeys": [],
+       "isLabelHidden": false,
+       "payloadKeysV2": [],
+       "localizationKey": "casino_bonus_v2.wagering_bonus_lost",
+       "eventDisplayName": "Lost",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": false,
+       "eventName": "WageringBonusForfeited",
+       "eventType": "Completion",
+       "payloadKeys": [],
+       "isLabelHidden": false,
+       "payloadKeysV2": [],
+       "localizationKey": "casino_bonus_v2.wagering_bonus_forfeited",
+       "eventDisplayName": "Forfeited",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": false,
+       "eventName": "WageringBonusExpired",
+       "eventType": "Completion",
+       "payloadKeys": [],
+       "isLabelHidden": false,
+       "payloadKeysV2": [],
+       "localizationKey": "casino_bonus_v2.wagering_bonus_expired",
+       "eventDisplayName": "Expired",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": true,
+       "eventName": "WageringBonusExpirationFailed",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "isLabelHidden": false,
+       "payloadKeysV2": [],
+       "localizationKey": "casino_bonus_v2.wagering_bonus_expiration_failed",
+       "eventDisplayName": "Expiration error",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": true,
+       "eventName": "WageringBonusLoseFailed",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "isLabelHidden": false,
+       "payloadKeysV2": [],
+       "localizationKey": "casino_bonus_v2.wagering_bonus_lose_failed",
+       "eventDisplayName": "Lost error",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": true,
+       "eventName": "WageringBonusFinishFailed",
+       "eventType": "Boundary",
+       "payloadKeys": [],
+       "isLabelHidden": false,
+       "payloadKeysV2": [],
+       "localizationKey": "casino_bonus_v2.wagering_bonus_finish_failed",
+       "eventDisplayName": "Wagering error",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": true,
+       "eventName": "WageringBonusAwardAborted",
+       "eventType": "Completion",
+       "payloadKeys": [],
+       "isLabelHidden": false,
+       "payloadKeysV2": [],
+       "localizationKey": "casino_bonus_v2.wagering_bonus_award_aborted",
+       "eventDisplayName": "Issuing error",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": false,
+       "eventName": "WageringBonusRejectConfirmed",
+       "eventType": "Completion",
+       "payloadKeys": [],
+       "isLabelHidden": false,
+       "payloadKeysV2": [],
+       "localizationKey": "casino_bonus_v2.wagering_bonus_reject_confirmed",
+       "eventDisplayName": "Canceled",
+       "canBeUsedInChoosableFlow": false
+      },
+      {
+       "isHidden": false,
+       "eventName": "WageringBonusCancelledByWithdrawalConfirmed",
+       "eventType": "Completion",
+       "payloadKeys": [],
+       "isLabelHidden": false,
+       "payloadKeysV2": [],
+       "localizationKey": "casino_bonus_v2.wagering_bonus_cancelled_by_withdrawal_confirmed",
+       "eventDisplayName": "Canceled by withdrawal",
+       "canBeUsedInChoosableFlow": false
+      }
+     ],
+     "activityType": "mechanic",
+     "activityDisplayName": "Casino Bonus"
+    },
+    "type": "action",
+    "style": {
+     "cursor": "pointer"
+    },
+    "width": 267,
+    "height": 64,
+    "hidden": false,
+    "zIndex": 5,
+    "position": {
+     "x": -120,
+     "y": 463
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false
+   },
+   {
+    "id": "8e6c736a-f119-4929-8898-040c1a1dda4b",
+    "data": {
+     "name": "end_of_journey",
+     "ports": [
+      {
+       "id": "input-8e6c736a-f119-4929-8898-040c1a1dda4b"
+      }
+     ],
+     "width": 40,
+     "height": 40,
+     "isHidden": false,
+     "eventName": "WageringBonusCancelledByWithdrawalConfirmed",
+     "eventType": "Completion",
+     "payloadKeys": [],
+     "isLabelHidden": false,
+     "payloadKeysV2": [],
+     "localizationKey": "casino_bonus_v2.wagering_bonus_cancelled_by_withdrawal_confirmed",
+     "eventDisplayName": "Canceled by withdrawal",
+     "canBeUsedInChoosableFlow": false
+    },
+    "type": "exit",
+    "style": {
+     "cursor": "default"
+    },
+    "width": 40,
+    "height": 40,
+    "zIndex": 5,
+    "position": {
+     "x": 593.5,
+     "y": 727
+    },
+    "selected": false,
+    "draggable": false,
+    "connectable": false
+   },
+   {
+    "id": "450caabb-f99a-48d1-9eae-2057f25e93e7",
+    "data": {
+     "isHidden": false,
+     "eventName": "WageringBonusCancelledByWithdrawalConfirmed",
+     "eventType": "Completion",
+     "payloadKeys": [],
+     "activityName": "casino_bonus_v2",
+     "isLabelHidden": false,
+     "payloadKeysV2": [],
+     "isReconnectable": false,
+     "localizationKey": "casino_bonus_v2.wagering_bonus_cancelled_by_withdrawal_confirmed",
+     "eventDisplayName": "Canceled by withdrawal",
+     "isDisconnectable": false,
+     "canBeUsedInChoosableFlow": false
+    },
+    "type": "dropEdge",
+    "style": {
+     "strokeDasharray": "3"
+    },
+    "source": "e386b549-f6c2-4754-9a9f-371296b01b55",
+    "target": "8e6c736a-f119-4929-8898-040c1a1dda4b",
+    "zIndex": 1,
+    "labelStyle": {
+     "color": "#000",
+     "fontSize": 14,
+     "fontWeight": 700
+    },
+    "labelBgStyle": {
+     "fill": "#D2D2D2"
+    },
+    "sourceHandle": "WageringBonusCancelledByWithdrawalConfirmed-e386b549-f6c2-4754-9a9f-371296b01b55",
+    "targetHandle": "input-8e6c736a-f119-4929-8898-040c1a1dda4b",
+    "labelBgPadding": [
+     10,
+     3
+    ],
+    "labelBgBorderRadius": 4
+   }
+  ],
+  "infoValues": {
+   "brand": "PMCL",
+   "stopAt": "2026-09-10T03:00:00Z",
+   "metadata": {
+    "purpose": "Retention",
+    "category": "Marketing",
+    "priority": 2,
+    "productType": "Casino"
+   },
+   "timeZoneId": "Chile/Continental",
+   "isUnlimited": false,
+   "journeyName": "PMCL | CS | Sorry Bonus | $%%AMOUNT_MAJOR%% Casino Bonus",
+   "reEntryRule": {
+    "reEntryMode": "Prohibited",
+    "reEntryPeriod": null
+   },
+   "currencyCodes": [
+    "CLP"
+   ],
+   "isImmediatelyAfterPublish": true,
+   "testControlGroupParameters": {
+    "isEnabled": false,
+    "controlGroupPercent": null,
+    "playersAddingStrategy": "IncludeAll",
+    "daysToKeepInControlGroup": null
+   }
+  },
+  "pathesConfiguration": {
+   "556ec87c-bb34-4947-af18-8d1eda9ee9a3": [
+    {
+     "events": [
+      {
+       "eventName": "NCEngagementSplitPassedPath01",
+       "eventType": "Completion"
+      }
+     ],
+     "pathId": "path1",
+     "pathName": "Path 1",
+     "notificationCenterEngagementStatuses": [
+      "Clicked",
+      "Read"
+     ]
+    },
+    {
+     "events": [
+      {
+       "eventName": "NCEngagementSplitPassedPath02",
+       "eventType": "Completion"
+      },
+      {
+       "eventName": "NCEngagementSplitPassedPath03",
+       "eventType": "Completion"
+      },
+      {
+       "eventName": "NCEngagementSplitPassedPath04",
+       "eventType": "Completion"
+      },
+      {
+       "eventName": "NCEngagementSplitPassedPath05",
+       "eventType": "Completion"
+      }
+     ],
+     "pathId": "other",
+     "pathName": "Other"
+    }
+   ]
+  },
+  "exitCriteriaSettings": null,
+  "boundaryConfiguration": {},
+  "activitiesConfiguration": {
+   "e386b549-f6c2-4754-9a9f-371296b01b55": {
+    "data": {
+     "limitType": "multiplier",
+     "allowReject": true,
+     "productType": "slots",
+     "activitySubtype": "no_deposit",
+     "currenciesConfig": {
+      "CLP": {
+       "fixedBonusAmount": 1020000,
+       "releaseLimitAmount": 0,
+       "fixedBonusAmount_majorUnits": 10200,
+       "releaseLimitAmount_majorUnits": 0
+      }
+     },
+     "wageringActivity": {
+      "limitType": "multiplier",
+      "allowReject": true,
+      "productType": "slots",
+      "activitySubtype": "no_deposit",
+      "currenciesConfig": {
+       "CLP": {
+        "fixedBonusAmount": 1020000,
+        "releaseLimitAmount": 0,
+        "fixedBonusAmount_majorUnits": 10200,
+        "releaseLimitAmount_majorUnits": 0
+       }
+      },
+      "withoutLockBalance": false,
+      "bonusExpirationTime": 172800000,
+      "wageringRequirement": 30,
+      "releaseLimitMultiplier": 20
+     },
+     "withoutLockBalance": false,
+     "bonusExpirationTime": 172800000,
+     "wageringRequirement": 30,
+     "releaseLimitMultiplier": 20
+    },
+    "error": false,
+    "displayData": [
+     "Activity customized"
+    ],
+    "displayName": "Casino Bonus",
+    "promotionId": "7af4d7ad-96b0-43ce-b66f-ace9adfe8709"
+   },
+   "7647be08-e2fa-4ba7-8830-237c51ae1933": {
+    "data": {
+     "filterDetails": {
+      "filtersTree": [
+       {
+        "nodeId": "07e005f6-e681-4f37-be28-e48a189ddfbc",
+        "children": [
+         "4463d109-0e0a-4ae1-83ad-f5ad0cce149d"
+        ],
+        "nodeType": "Operator",
+        "isDeprecated": true,
+        "parentNodeId": null,
+        "groupOperator": "And",
+        "filterConditionId": null
+       },
+       {
+        "name": "player_id",
+        "column": {
+         "name": "player_id",
+         "tableName": "agg_all_player_casino_and_sport_ngr_summary",
+         "filterName": "Text",
+         "isRequired": false,
+         "description": "Player account number",
+         "displayName": "player_id",
+         "valuesSource": null,
+         "filterConditions": [
+          {
+           "operator": "equal",
+           "conditionType": "MultiTextInput"
+          },
+          {
+           "operator": "notEqual",
+           "conditionType": "MultiTextInput"
+          },
+          {
+           "operator": "startWith",
+           "conditionType": "MultiTextInput"
+          },
+          {
+           "operator": "contain",
+           "conditionType": "MultiTextInput"
+          }
+         ],
+         "isPredefinedValuesAvailable": false
+        },
+        "height": 127,
+        "nodeId": "4463d109-0e0a-4ae1-83ad-f5ad0cce149d",
+        "children": [],
+        "nodeType": "Filter",
+        "operator": "equal",
+        "settings": {
+         "values": [
+          "%%PLAYER_ID%%"
+         ],
+         "dateType": "days",
+         "hasEmptyState": false
+        },
+        "showForm": true,
+        "tableName": "agg_all_player_casino_and_sport_ngr_summary",
+        "filterName": "Text",
+        "isRequired": false,
+        "description": "Player account number",
+        "displayName": "player_id",
+        "databaseName": "dv_marts",
+        "isDeprecated": false,
+        "parentNodeId": "07e005f6-e681-4f37-be28-e48a189ddfbc",
+        "valuesSource": null,
+        "conditionType": "MultiTextInput",
+        "groupOperator": null,
+        "filterConditions": [
+         {
+          "operator": "equal",
+          "conditionType": "MultiTextInput"
+         },
+         {
+          "operator": "notEqual",
+          "conditionType": "MultiTextInput"
+         },
+         {
+          "operator": "startWith",
+          "conditionType": "MultiTextInput"
+         },
+         {
+          "operator": "contain",
+          "conditionType": "MultiTextInput"
+         }
+        ],
+        "filterConditionId": "eee4f345-fa34-4667-a3a2-20e0b8701367",
+        "isPredefinedValuesAvailable": false
+       }
+      ],
+      "filterConditions": [
+       {
+        "id": "eee4f345-fa34-4667-a3a2-20e0b8701367",
+        "values": [
+         "%%PLAYER_ID%%"
+        ],
+        "nodeType": "Filter",
+        "operator": "equal",
+        "fieldName": "player_id",
+        "tableName": "agg_all_player_casino_and_sport_ngr_summary",
+        "columnName": "player_id",
+        "databaseName": "dv_marts",
+        "conditionType": "MultiTextInput",
+        "hasEmptyState": false
+       }
+      ]
+     },
+     "dataSourceName": "default",
+     "currentTemplate": null
+    },
+    "error": false,
+    "displayData": [
+     "Activity customized"
+    ],
+    "displayName": "Custom Segment"
+   },
+   "7af4d7ad-96b0-43ce-b66f-ace9adfe8709": {
+    "data": {
+     "autoAccept": false,
+     "promotionId": "bb176e8d-2599-4b42-b444-dba4bd3c14b2",
+     "currencyMode": "automated",
+     "timeToAccept": "P0Y0M2DT0H0M0S",
+     "showAsUpcoming": false,
+     "promotionLinkId": "29724667-6710-48a5-aadb-954c76666591",
+     "promotionStatus": "Offered",
+     "channelsCondition": {
+      "values": [],
+      "isEnabled": false
+     },
+     "promotionDisplayId": "789208"
+    },
+    "error": false,
+    "metadata": {
+     "frontId": "%%FRONT_ID%%",
+     "contentId": "%%CONTENT_ID%%"
+    },
+    "properties": {
+     "placements": [
+      {
+       "data": {
+        "FrontId": "%%FRONT_ID%%",
+        "ContentId": "%%CONTENT_ID%%",
+        "condition": "Deposit",
+        "campaignId": "e386b549-f6c2-4754-9a9f-371296b01b55",
+        "moduleType": "CasinoBonus",
+        "mechanicName": "Wagering",
+        "wageringActivity": {
+         "limitType": "multiplier",
+         "activityId": "e386b549-f6c2-4754-9a9f-371296b01b55",
+         "allowReject": true,
+         "productType": "slots",
+         "activitySubtype": "no_deposit",
+         "currenciesConfig": {
+          "CLP": {
+           "fixedBonusAmount": 313500,
+           "releaseLimitAmount": 0,
+           "fixedBonusAmount_majorUnits": 3135,
+           "releaseLimitAmount_majorUnits": 0
+          }
+         },
+         "withoutLockBalance": false,
+         "bonusExpirationTime": 259200000,
+         "wageringRequirement": 30,
+         "releaseLimitMultiplier": 20
+        },
+        "isActivityCurrencies": false,
+        "cancelDuringWageringPeriodSettings": {
+         "isEnabled": true,
+         "defaultValue": true
+        }
+       },
+       "dataSources": [
+        {
+         "keys": [],
+         "type": "Sync",
+         "journeyActivityId": "e386b549-f6c2-4754-9a9f-371296b01b55"
+        }
+       ],
+       "placementType": "PromoLobby"
+      }
+     ],
+     "isBoundaryEventDisabled": false
+    },
+    "displayData": [
+     "Offered within 2d 0h 0m"
+    ],
+    "displayName": "Promotion"
+   }
+  }
+ },
+ "reservedJourneyId": "%%RESERVED%%"
+}

@@ -102,6 +102,25 @@ email`), and an email content created and saved, which the journey's email
 activity is then pointed at. Templates in `templates/pmcl_betandget/`, extracted
 from a HAR of one manual run.
 
+### Sorry Bonus — `sorry_bonus_pmcl_campaign.py` — shell only
+One goodwill casino bonus per player: segment (that one `player_id`) → promotion
+→ `casino_bonus_v2`, no deposit, 30x wagering, 48h to use. Paste the list the
+CRM team sends — `<player_id> - <amount> casino bonus`, the amount in major CLP —
+and it clones `templates/casino/sorry_bonus_pmcl.json` once per line, writing the
+player, the amount (both units, all six places it is stored) and the name
+`PMCL | CS | Sorry Bonus | $<amount> Casino Bonus`.
+
+The console script does per draft what the capture did: reserve a promotion
+display id, reserve a journey id, clone the promotion's two content trees into a
+fresh pair (six `/contents/v1/copy` calls), regenerate every id, create and save
+the draft. It stops there. The recorded run went on to publish and **start** the
+journey; this never does, and publishing one starts it immediately
+(`isImmediatelyAfterPublish`), so each draft is reviewed by hand.
+
+The player whose bonus the capture already granted is skipped by default
+(`--include-captured` overrides), because a second draft for the same player
+grants the bonus twice.
+
 ### Discount NC — `nc_discount_campaign.py` → Optimization ▸ Discount NC
 One notification journey per game per day (`segment → notification → end`),
 twice weekly on the baked calendar. Clones `templates/casino/nc_discount.json`
