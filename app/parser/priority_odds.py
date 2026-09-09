@@ -27,7 +27,7 @@ from ..logging_config import get_logger
 from ..models import Campaign, HotBoost, Match
 from ..models.campaign_match import CampaignMatch
 from ..repositories.match_repo import MatchRepository
-from .embedded_odds import fetch_embedded
+from .embedded_odds import fetch_embedded_full
 from .extra_feeds import load_extra_feeds
 
 logger = get_logger("app.parser.priority_odds")
@@ -163,30 +163,58 @@ def refresh_once() -> Tuple[int, int]:
     a fixture has no odds yet, so we bump their ``last_updated_at`` so the
     main parser's flaky browser discovery can't let them age out of the
     ``deactivate_not_seen`` window (the "World Cup match vanished" bug).
+
+    It also DISCOVERS. The embedded blob describes each fixture in full (teams
+    with slugs, kickoff, tournament, result odds), so a league whose Playwright
+    feed never succeeds no longer depends on the browser to get its matches
+    created: any event on the overlay with no row yet is inserted here. That was
+    the "parser is not parsing this link" case — a freshly-added tournament
+    overlay was fetched and parsed correctly every 45s, then discarded, because
+    both consumers (`touch_seen`, `update_result_odds`) refuse to create rows.
+
     Returns (matches_updated, leagues_fetched).
     """
     by_sport = collect_priority_tids()
     updated = 0
     leagues = 0
+    discovered = 0
     changed_sports: Set[str] = set()
     for sport, tids in by_sport.items():
         for tid in sorted(tids):
             if _tid_backoff_remaining(sport, tid) > 0:
                 continue
             leagues += 1
-            odds, event_tids = fetch_embedded(_overlay_url(sport, tid))
+            odds, event_tids, feed_events = fetch_embedded_full(_overlay_url(sport, tid))
             # event_tids maps every event on the page -> its tournament id,
             # so its keys are the full "seen on this overlay" set, including
             # oddsless upcoming fixtures that `odds` omits.
             seen_ids = list(event_tids.keys()) or list(odds.keys())
-            if not seen_ids:
+            if not seen_ids and not feed_events:
                 _set_tid_backoff(sport, tid, _EMPTY_BACKOFF_SECONDS)
                 continue
             try:
                 changed = 0
                 with db_session() as s:
                     repo = MatchRepository(s)
-                    repo.touch_seen(seen_ids)
+                    if seen_ids:
+                        repo.touch_seen(seen_ids)
+                    # Discovery: insert only the fixtures that have no row yet.
+                    # Existing rows deliberately keep the untouched path below —
+                    # this lane must not start overwriting teams, kickoff or
+                    # score on matches the browser/live lanes already own.
+                    if feed_events:
+                        ids = [e["event_id"] for e in feed_events]
+                        known = {m.event_id for m in repo.find_by_event_ids(ids)}
+                        missing = [e for e in feed_events
+                                   if e["event_id"] not in known]
+                        if missing:
+                            n_new = repo.bulk_upsert(missing, sport, "prematch")
+                            if n_new:
+                                discovered += n_new
+                                changed = 1
+                                logger.info(
+                                    "priority_odds: discovered %d new match(es) "
+                                    "for %s/%s over HTTP", n_new, sport, tid)
                     for eid, outcomes in odds.items():
                         if repo.update_result_odds(eid, outcomes):
                             changed += 1
@@ -197,6 +225,8 @@ def refresh_once() -> Tuple[int, int]:
                 logger.exception("priority_odds: persist failed for %s/%s", sport, tid)
     for sport in changed_sports:
         _invalidate_sport_caches(sport)
+    if discovered:
+        print(f"[PRIORITY] discovered {discovered} new match(es) over HTTP", flush=True)
     return updated, leagues
 
 

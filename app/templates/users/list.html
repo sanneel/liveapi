@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Users · Jugabet Admin{% endblock %}
+{% block content_theme %}content-light{% endblock %}
+{% block page_title %}Users{% endblock %}
+{% block page_subtitle %}{{ users|length }} account{{ '' if users|length == 1 else 's' }} · {{ active_admins }} active admin{{ '' if active_admins == 1 else 's' }}{% endblock %}
+
+{% block page_actions %}
+  <button type="button" onclick="document.getElementById('create-user-form').classList.toggle('hidden')" class="btn primary">
+    <i data-lucide="user-plus" style="width:15px;height:15px"></i> Create user
+  </button>
+{% endblock %}
+
+{% block content %}
+
+{% if error %}
+<div class="card card-pad" style="margin-bottom:18px;border-color:var(--live-t);background:var(--live-bg);color:var(--live-t)">
+  <b>Refused.</b> {{ error }}
+</div>
+{% endif %}
+
+{# The one-time password. Shown here and nowhere else, ever: it is not stored in
+   plain text, not written to the audit log, and not put in the URL. If this box
+   is dismissed before the password is copied, the fix is "Reset password", which
+   issues a new one. #}
+{% if issued %}
+<div class="card card-pad" id="otp-box"
+     style="margin-bottom:18px;border-color:var(--ac);background:var(--acw)">
+  <h2 class="card-title" style="margin-bottom:6px">
+    {% if issued.created %}Account created{% else %}New one-time password{% endif %} — <b>{{ issued.username }}</b>
+    {% if issued.role %} · role {{ issued.role }}{% endif %}
+  </h2>
+  <p class="help" style="margin:0 0 12px">
+    Copy this now — <b>it is shown only once</b> and is not recoverable. Send it to
+    {{ issued.username }} over a channel you trust. They must change it the first
+    time they sign in before they can reach any other page.
+  </p>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <code id="otp-value"
+          style="font:700 15px/1 'SFMono-Regular',Consolas,Menlo,monospace;letter-spacing:.04em;
+                 padding:12px 14px;border-radius:10px;background:var(--surface);
+                 border:1px solid var(--border);user-select:all">{{ issued.password }}</code>
+    <button type="button" class="btn" id="otp-copy">Copy</button>
+    <button type="button" class="btn" onclick="document.getElementById('otp-box').remove()">Dismiss</button>
+  </div>
+</div>
+<script>
+  (function(){
+    var btn = document.getElementById("otp-copy"), val = document.getElementById("otp-value");
+    if(!btn || !val) return;
+    var done = function(){
+      btn.textContent = "Copied";
+      setTimeout(function(){ btn.textContent = "Copy"; }, 1600);
+    };
+    // Fallback for the two cases the clipboard API is unavailable or refused: an
+    // http:// origin (it needs a secure context) and a permission denial. Select
+    // the password so the single keystroke actually has something to copy —
+    // telling the operator to press ⌘C without selecting anything is a dead end.
+    var selectIt = function(){
+      try {
+        var r = document.createRange(); r.selectNodeContents(val);
+        var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      } catch(e){}
+      btn.textContent = "Press ⌘C";
+    };
+    btn.onclick = function(){
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(val.textContent).then(done, selectIt);
+      } else {
+        selectIt();
+      }
+    };
+  })();
+</script>
+{% endif %}
+
+<p class="lede">
+  Accounts for the back office. Roles are a hierarchy — <b>admin</b> can do everything
+  including this page, <b>editor</b> can run the generators and the AI planner,
+  <b>viewer</b> is read-only. You never type a password here: the server issues a
+  one-time one and the user replaces it on first sign-in.
+</p>
+
+<form id="create-user-form" method="POST" action="/admin/users"
+      class="hidden card card-pad" style="margin-bottom:18px"
+      onsubmit="this.querySelector('button[type=submit]').disabled = true;">
+  <h2 class="card-title" style="margin-bottom:14px">Create a new user</h2>
+  <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px">
+    <div class="field">
+      <span class="lbl">Username</span>
+      <input class="input" type="text" name="username" required autocomplete="off"
+             pattern="^[a-z0-9][a-z0-9_.-]{2,63}$" placeholder="sandros7"/>
+      <span class="help">3–64 chars, lowercase letters, digits, dot, underscore, hyphen.</span>
+    </div>
+    <div class="field">
+      <span class="lbl">Role</span>
+      <select class="input" name="role">
+        {% for r in roles %}<option value="{{ r }}" {% if r == 'viewer' %}selected{% endif %}>{{ r }}</option>{% endfor %}
+      </select>
+      <span class="help">Start at the lowest role that works — you can raise it later.</span>
+    </div>
+  </div>
+  <div class="form-actions" style="margin-top:16px">
+    <button type="submit" class="btn primary">Create user</button>
+    <button type="button" onclick="document.getElementById('create-user-form').classList.add('hidden')" class="btn">Cancel</button>
+    <span class="help" style="margin:0 0 0 auto; max-width:360px">
+      A {{ otp_length }}-character one-time password is generated and shown once on the next screen.
+    </span>
+  </div>
+</form>
+
+<section class="card" style="overflow:hidden">
+  {% if users %}
+    <div class="dt-wrap">
+      <table class="dt">
+        <thead>
+          <tr><th>User</th><th>Role</th><th>Status</th><th>Last login</th><th class="right">Actions</th></tr>
+        </thead>
+        <tbody>
+        {% for u in users %}
+          {% set is_me = current_user and u.username == current_user.username %}
+          {% set last_admin = u.role == 'admin' and u.is_active and active_admins <= 1 %}
+          <tr>
+            <td>
+              <div style="display:flex; align-items:center; gap:10px">
+                <span style="width:26px;height:26px;border-radius:7px;background:var(--acw);color:var(--ac);
+                             display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800">
+                  {{ u.username[:1]|upper }}</span>
+                <span class="m-title">{{ u.username }}</span>
+                {% if is_me %}<span class="badge off">you</span>{% endif %}
+              </div>
+            </td>
+            <td>
+              <form method="POST" action="/admin/users/{{ u.username }}/role"
+                    style="display:flex;gap:6px;align-items:center">
+                <select class="input" name="role"
+                        style="padding:6px 8px;font-size:12px;min-width:94px;width:auto"
+                        {% if is_me or last_admin %}disabled{% endif %}>
+                  {% for r in roles %}<option value="{{ r }}" {% if r == u.role %}selected{% endif %}>{{ r }}</option>{% endfor %}
+                </select>
+                {% if not is_me and not last_admin %}
+                <button type="submit" class="btn sm">Set</button>
+                {% endif %}
+              </form>
+              {% if last_admin %}<span class="help" style="white-space:nowrap">only active admin</span>
+              {% elif is_me %}<span class="help">your own role</span>{% endif %}
+            </td>
+            <td>
+              {% if u.is_active %}<span class="badge ok">active</span>
+              {% else %}<span class="badge off">disabled</span>{% endif %}
+              {% if u.must_change_password %}
+                <div class="m-meta">must change password</div>
+              {% endif %}
+            </td>
+            <td>
+              {% if u.last_login_at %}
+                <span class="m-meta">{{ u.last_login_at.strftime('%Y-%m-%d %H:%M') }} UTC</span>
+              {% else %}<span class="m-meta" style="font-style:italic">never</span>{% endif %}
+            </td>
+            <td class="right">
+              <div class="row-actions" style="justify-content:flex-end">
+                <form method="POST" action="/admin/users/{{ u.username }}/password" style="display:inline"
+                      onsubmit="return confirm('Issue a new one-time password for {{ u.username }}? Their current password stops working immediately.')">
+                  <button type="submit" class="btn sm">Reset password</button>
+                </form>
+                {% if not is_me and not last_admin %}
+                  <form method="POST" action="/admin/users/{{ u.username }}/active" style="display:inline">
+                    <input type="hidden" name="active" value="{{ '0' if u.is_active else '1' }}"/>
+                    <button type="submit" class="btn sm">{{ 'Disable' if u.is_active else 'Enable' }}</button>
+                  </form>
+                  <form method="POST" action="/admin/users/{{ u.username }}/delete" style="display:inline"
+                        onsubmit="return confirm('Delete {{ u.username }} permanently? This cannot be undone.')">
+                    <button type="submit" class="btn sm danger">Delete</button>
+                  </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty" style="text-align:center; padding:48px 22px">
+      <div style="font-size:14px"><b>No users yet.</b></div>
+      <div style="margin-top:4px">Click "Create user" above to add the first account.</div>
+    </div>
+  {% endif %}
+</section>
+
+{% endblock %}

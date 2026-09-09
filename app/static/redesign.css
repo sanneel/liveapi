@@ -229,6 +229,10 @@ html.dark {
 .content-light .badge.live .dot { width:6px; height:6px; border-radius:50%; background:var(--live-dot); }
 .content-light .badge.pre  { background:var(--neu-bg); color:var(--neu-t); }
 .content-light .badge.pre .dot { width:6px; height:6px; border-radius:50%; background:var(--neu-dot); }
+/* Account status on /admin/users. `.badge` alone paints no background, so an
+   unqualified status pill came out invisible — these are the two it needs. */
+.content-light .badge.ok  { background:var(--pos-bg); color:var(--pos-t); }
+.content-light .badge.off { background:var(--neu-bg); color:var(--neu-t); }
 
 .content-light .slug { flex:none; font-size:12px; font-weight:700; padding:5px 8px; border-radius:7px; }
 .content-light .slug.r    { color:var(--ac); background:var(--acw); }

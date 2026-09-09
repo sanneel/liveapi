@@ -1,0 +1,2965 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Flick · CRM onboarding 01</title>
+
+<style>
+  /* ── tokens: cool petrol slate, complementary to the fox ── */
+  :root{
+    --void:#DDE5E9; --panel:#F5F8F9; --raise:#E8EFF2; --sink:#CBD8DE;
+    --ink:#112229; --body:#3A525E; --muted:#5C7583; --faint:#8399A5;
+    --line:#C1D0D7; --line-2:#A6BAC4;
+    --key:var(--h-teal); --key-ink:#FFFFFF;
+    --key-soft:color-mix(in srgb, var(--key) 14%, var(--panel));
+    --h-green:#2E7D4F; --h-amber:#A2631A; --h-blue:#1F6591; --h-olive:#68781E;
+    --h-salmon:#B54A2E; --h-pink:#A63C74; --h-purple:#6B46A8; --h-indigo:#3F4BA8;
+    --h-teal:#0D5D6C;
+
+    --ok:#2B7550; --ok-soft:#DCEEE4;
+    --flag:#C10021;
+    --w1:#1F6E7C; --w2:#7A4A8C; --w3:#9C6224; --w4:#4C6B2F; --wink:#FFFFFF;
+        --disp:ui-rounded,"SF Pro Rounded","Hiragino Maru Gothic ProN","Trebuchet MS",system-ui,sans-serif;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --r:14px; --lift:0 1px 2px rgba(17,34,41,.06), 0 18px 34px -26px rgba(17,34,41,.45);
+    --i-wave:url("/static/onboarding/j_wave.jpg");   --m-wave:url("/static/onboarding/m_wave.png");
+    --i-think:url("/static/onboarding/j_think.jpg");  --m-think:url("/static/onboarding/m_think.png");
+    --i-book:url("/static/onboarding/j_book.jpg");    --m-book:url("/static/onboarding/m_book.png");
+    --i-thumb:url("/static/onboarding/j_thumb.jpg");  --m-thumb:url("/static/onboarding/m_thumb.png");
+    --i-flag:url("/static/onboarding/j_flag.jpg");    --m-flag:url("/static/onboarding/m_flag.png");
+    --i-party:url("/static/onboarding/j_party.jpg");  --m-party:url("/static/onboarding/m_party.png");
+    --i-glass:url("/static/onboarding/j_glass.jpg");  --m-glass:url("/static/onboarding/m_glass.png");
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --void:#0E1D24; --panel:#152730; --raise:#1C333D; --sink:#0A171D;
+      --ink:#E7EFF2; --body:#B2C6CF; --muted:#89A2AE; --faint:#5E7885;
+      --line:#223944; --line-2:#2F4A57;
+      --key:var(--h-teal); --key-ink:#06222A;
+      --key-soft:color-mix(in srgb, var(--key) 22%, var(--panel));
+      --h-green:#63C88E; --h-amber:#E0A93F; --h-blue:#62B4E8; --h-olive:#AFC44F;
+      --h-salmon:#F0846A; --h-pink:#E884B4; --h-purple:#B69AEE; --h-indigo:#8E97F0;
+      --h-teal:#4FC0D6;
+
+      --ok:#5CC48C; --ok-soft:#0F2A20;
+      --flag:#FF4D63;
+      --w1:#4FB6C6; --w2:#B98FD0; --w3:#DDA05F; --w4:#93BE6A; --wink:#06222A;
+      --lift:0 1px 0 rgba(255,255,255,.03) inset, 0 20px 40px -28px #000;
+    }
+  }
+  :root[data-theme="dark"]{
+    --void:#0E1D24; --panel:#152730; --raise:#1C333D; --sink:#0A171D;
+    --ink:#E7EFF2; --body:#B2C6CF; --muted:#89A2AE; --faint:#5E7885;
+    --line:#223944; --line-2:#2F4A57;
+    --key:var(--h-teal); --key-ink:#06222A;
+    --key-soft:color-mix(in srgb, var(--key) 22%, var(--panel));
+    --h-green:#63C88E; --h-amber:#E0A93F; --h-blue:#62B4E8; --h-olive:#AFC44F;
+    --h-salmon:#F0846A; --h-pink:#E884B4; --h-purple:#B69AEE; --h-indigo:#8E97F0;
+    --h-teal:#4FC0D6;
+
+    --ok:#5CC48C; --ok-soft:#0F2A20;
+    --flag:#FF4D63;
+    --w1:#4FB6C6; --w2:#B98FD0; --w3:#DDA05F; --w4:#93BE6A; --wink:#06222A;
+    --lift:0 1px 0 rgba(255,255,255,.03) inset, 0 20px 40px -28px #000;
+  }
+  :root[data-theme="light"]{
+    --void:#DDE5E9; --panel:#F5F8F9; --raise:#E8EFF2; --sink:#CBD8DE;
+    --ink:#112229; --body:#3A525E; --muted:#5C7583; --faint:#8399A5;
+    --line:#C1D0D7; --line-2:#A6BAC4;
+    --key:var(--h-teal); --key-ink:#FFFFFF;
+    --key-soft:color-mix(in srgb, var(--key) 14%, var(--panel));
+    --h-green:#2E7D4F; --h-amber:#A2631A; --h-blue:#1F6591; --h-olive:#68781E;
+    --h-salmon:#B54A2E; --h-pink:#A63C74; --h-purple:#6B46A8; --h-indigo:#3F4BA8;
+    --h-teal:#0D5D6C;
+
+    --ok:#2B7550; --ok-soft:#DCEEE4;
+    --flag:#C10021;
+    --w1:#1F6E7C; --w2:#7A4A8C; --w3:#9C6224; --w4:#4C6B2F; --wink:#FFFFFF;
+    --lift:0 1px 2px rgba(17,34,41,.06), 0 18px 34px -26px rgba(17,34,41,.45);
+  }
+
+  /* the screen's node family sets the accent, so colour means something */
+  :root[data-hue="green"]{--key:var(--h-green)}
+  :root[data-hue="amber"]{--key:var(--h-amber)}
+  :root[data-hue="blue"]{--key:var(--h-blue)}
+  :root[data-hue="olive"]{--key:var(--h-olive)}
+  :root[data-hue="salmon"]{--key:var(--h-salmon)}
+  :root[data-hue="pink"]{--key:var(--h-pink)}
+  :root[data-hue="purple"]{--key:var(--h-purple)}
+  :root[data-hue="indigo"]{--key:var(--h-indigo)}
+  :root[data-hue="teal"]{--key:var(--h-teal)}
+
+  *,*::before,*::after{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{margin:0;background:var(--void);color:var(--body);font-family:var(--sans);
+    font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  img{max-width:100%;display:block}
+  button{font:inherit;color:inherit;cursor:pointer}
+
+  /* ── rail: brand, step pills, and the controls that never scroll away ── */
+  .rail{position:sticky;top:0;z-index:40;background:var(--panel);
+    border-bottom:1px solid var(--line)}
+  .rail::after{content:"";position:absolute;left:0;bottom:-1px;height:2px;width:var(--prog,0%);
+    background:var(--key);transition:width .32s cubic-bezier(.3,.8,.3,1),background-color .32s}
+  .rail-in{max-width:1280px;margin:0 auto;padding:9px 18px;display:flex;align-items:center;gap:14px}
+  .brand{display:flex;align-items:center;gap:9px;flex:none;text-decoration:none;
+    border-radius:10px;padding:2px 6px 2px 2px;transition:background .15s}
+  .brand:hover{background:var(--raise)}
+  .brand:focus-visible{outline:2px solid var(--key);outline-offset:2px}
+  .brand i{width:30px;height:32px;flex:none;background-image:var(--i-wave);
+    background-size:contain;background-position:center;background-repeat:no-repeat;
+    -webkit-mask-image:var(--m-wave);mask-image:var(--m-wave);
+    -webkit-mask-size:contain;mask-size:contain;
+    -webkit-mask-position:center;mask-position:center;
+    -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+  .brand span{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.13em;
+    text-transform:uppercase;color:var(--faint);line-height:1.35}
+  .brand b{display:block;color:var(--ink)}
+  /* the part you are in, and its pages by name */
+  .nav{display:flex;align-items:center;gap:12px;margin:0 auto;min-width:0}
+  .nav-part{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.13em;
+    text-transform:uppercase;color:var(--key);white-space:nowrap;flex:none}
+  .nav-tabs{display:flex;gap:2px;min-width:0;overflow:hidden}
+  .tab{border:0;background:none;padding:4px 9px;border-radius:99px;font-size:11.5px;
+    color:var(--muted);white-space:nowrap;font-family:var(--sans);
+    transition:background .15s,color .15s}
+  .tab:hover{color:var(--ink);background:var(--raise)}
+  .tab.done{color:var(--faint)}
+  .tab.now{background:var(--key-soft);color:var(--key);font-weight:700}
+  .tab:focus-visible{outline:2px solid var(--key);outline-offset:2px}
+  @media (max-width:980px){.nav-part{display:none}}
+  .ctrl{display:flex;align-items:center;gap:8px;flex:none}
+  .n{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--faint);
+    font-variant-numeric:tabular-nums;flex:none}
+  @media (max-width:820px){.nav-tabs{display:none}.brand span{display:none}}
+
+  .btn{border:1px solid transparent;border-radius:99px;padding:8px 17px;font-size:14px;font-weight:600;
+    background:var(--key);color:var(--key-ink);white-space:nowrap;
+    transition:transform .12s,opacity .15s,box-shadow .15s}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 8px 18px -12px var(--key)}
+  .btn[disabled]{opacity:.4;cursor:default;transform:none;box-shadow:none}
+  .btn.g{background:none;border-color:var(--line-2);color:var(--body)}
+  .btn.g:hover{border-color:var(--key);color:var(--ink);box-shadow:none}
+  .btn.s{padding:6px 13px;font-size:12.5px}
+  .btn:focus-visible{outline:2px solid var(--key);outline-offset:3px}
+
+  /* light or dark, the operator's call, remembered */
+  .theme{width:32px;height:32px;flex:none;display:grid;place-items:center;background:none;
+    border:1px solid var(--line-2);border-radius:99px;color:var(--muted);padding:0;
+    transition:border-color .15s,color .15s}
+  .theme:hover{border-color:var(--key);color:var(--ink)}
+  .theme:focus-visible{outline:2px solid var(--key);outline-offset:3px}
+  .theme svg{width:15px;height:15px;display:block}
+  .theme .moon{display:none}
+  :root[data-theme="dark"] .theme .moon{display:block}
+  :root[data-theme="dark"] .theme .sun{display:none}
+
+  /* ── deck ── */
+  .deck{max-width:1280px;margin:0 auto;padding:18px 18px 24px;display:grid;align-items:center;
+    min-height:560px}
+  /* on a tall screen the deck owns the space under the rail, so a screen's
+     content sits centred rather than hugging the top */
+  @supports (min-height:100dvh){.deck{min-height:calc(100dvh - 104px)}}
+  .step{display:none}
+  .step.on{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:26px;align-items:center}
+  .step.wide.on{grid-template-columns:minmax(0,1fr) 330px;gap:20px}
+  @media (max-width:1000px){.step.on,.step.wide.on{grid-template-columns:minmax(0,1fr);gap:18px}}
+  @media (prefers-reduced-motion:no-preference){
+    .step.on{animation:in .3s cubic-bezier(.2,.7,.3,1) both}
+    @keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  }
+
+  /* ── stage ── */
+  .stage{min-width:0;display:flex;justify-content:center}
+  .shot{position:relative;border:2px solid color-mix(in srgb, var(--key) 34%, var(--line));
+    border-radius:var(--r);overflow:hidden;background:var(--key-soft);box-shadow:var(--lift);
+    aspect-ratio:var(--ar);width:100%;max-width:var(--w,100%)}
+  .shot-in{position:absolute;top:0;left:0;width:100%;line-height:0}
+  .anno{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .anno .ink{fill:none;stroke:var(--flag);stroke-linecap:round}
+  .anno .halo{fill:none;stroke:#fff;stroke-linecap:round;opacity:.3}
+  .anno rect{fill:none;stroke:var(--flag)}
+  .anno polygon{fill:var(--flag)}
+  @media (prefers-reduced-motion:no-preference){
+    .step.on .anno path{stroke-dasharray:1;stroke-dashoffset:1;animation:draw .7s ease .2s forwards}
+    .step.on .anno rect,.step.on .anno polygon{opacity:0;animation:fade .35s ease .75s forwards}
+    @keyframes draw{to{stroke-dashoffset:0}}
+    @keyframes fade{to{opacity:1}}
+  }
+
+  /* ── mascot + speech ── */
+  .talk{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:end}
+  .mascot{height:238px;display:block;padding:0;border:0;background:none;box-shadow:none;
+    position:relative;transition:transform .25s}
+  .fox{display:block;height:100%;aspect-ratio:var(--fr,4/5);
+    background-repeat:no-repeat;background-size:100% 100%;
+    -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+    -webkit-mask-size:100% 100%;mask-size:100% 100%}
+  .fox.wave{--fr:161/193;background-image:var(--i-wave);
+    -webkit-mask-image:var(--m-wave);mask-image:var(--m-wave)}
+  .fox.think{--fr:138/181;background-image:var(--i-think);
+    -webkit-mask-image:var(--m-think);mask-image:var(--m-think)}
+  .fox.book{--fr:153/208;background-image:var(--i-book);
+    -webkit-mask-image:var(--m-book);mask-image:var(--m-book)}
+  .fox.thumb{--fr:138/192;background-image:var(--i-thumb);
+    -webkit-mask-image:var(--m-thumb);mask-image:var(--m-thumb)}
+  .fox.flag{--fr:223/235;background-image:var(--i-flag);
+    -webkit-mask-image:var(--m-flag);mask-image:var(--m-flag)}
+  .fox.party{--fr:192/232;background-image:var(--i-party);
+    -webkit-mask-image:var(--m-party);mask-image:var(--m-party)}
+  .fox.glass{--fr:140/234;background-image:var(--i-glass);
+    -webkit-mask-image:var(--m-glass);mask-image:var(--m-glass)}
+  .mascot:hover{transform:translateY(-5px) rotate(-1.5deg)}
+  .mascot:active{transform:translateY(-1px)}
+  .mascot:focus-visible{outline:2px solid var(--key);outline-offset:6px;border-radius:12px}
+  @media (prefers-reduced-motion:no-preference){
+    .mascot{animation:bob 4.2s ease-in-out infinite}
+    @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+    .mascot:hover{animation:none}
+    /* a tap earns a little hop, then the idle bob resumes */
+    .mascot.poked{animation:poke .5s cubic-bezier(.3,.7,.4,1.2)}
+    @keyframes poke{0%{transform:translateY(0) rotate(0)}30%{transform:translateY(-11px) rotate(-4deg)}
+      62%{transform:translateY(1px) rotate(2.5deg)}100%{transform:translateY(0) rotate(0)}}
+  }
+  .mascot::after{content:"tap me";position:absolute;bottom:-13px;left:50%;transform:translateX(-50%);
+    font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+    background:var(--key);color:var(--key-ink);padding:3px 8px;border-radius:99px;white-space:nowrap;
+    opacity:.85;transition:opacity .2s}
+  .mascot:hover::after{opacity:1}
+
+  /* on the playground the column is narrower, so Flick stands under his line */
+  .step.wide .talk{grid-template-columns:minmax(0,1fr);gap:8px;align-items:start}
+  .step.wide .talk #note{order:0}
+  .step.wide .talk .bubble{order:1}
+  .step.wide .talk .mascot{order:2;height:150px;justify-self:start;margin-left:10px}
+  .step.wide .talk .bubble::before{left:28px;bottom:-7px;top:auto}
+  .step.wide .talk .mascot::after{bottom:-11px}
+
+  .bubble{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:18px;
+    padding:16px 18px;box-shadow:var(--lift);font-family:var(--disp);font-size:16px;line-height:1.5;
+    color:var(--ink);min-width:0}
+  .bubble::before{content:"";position:absolute;left:-8px;bottom:26px;width:13px;height:13px;
+    background:var(--panel);border-left:1px solid var(--line);border-bottom:1px solid var(--line);
+    transform:rotate(45deg)}
+  .bubble p{margin:0 0 9px}
+  .bubble p:last-child{margin:0}
+  .bubble b{font-weight:700}
+  .bubble.tip{background:var(--key-soft);border-color:color-mix(in srgb,var(--key) 40%,transparent)}
+  .bubble.tip::before{background:var(--key-soft);border-color:color-mix(in srgb,var(--key) 40%,transparent)}
+  .id{font-family:var(--mono);font-size:.82em;background:var(--key-soft);
+    border:1px solid color-mix(in srgb, var(--key) 34%, transparent);
+    border-radius:5px;padding:1px 5px;white-space:nowrap;color:var(--ink)}
+  @media (max-width:1000px){
+    .talk{grid-template-columns:120px minmax(0,1fr);align-items:end}
+    .mascot{width:120px;height:150px;border-radius:60px 60px 20px 20px}
+    .bubble{font-size:15px;padding:13px 15px}
+  }
+  @media (max-width:560px){.mascot::after{display:none}}
+
+  /* ── the welcome ── */
+  .welcome{width:100%;max-width:560px}
+  .welcome h1{margin:0 0 12px;font-family:var(--disp);font-size:31px;line-height:1.15;
+    font-weight:800;color:var(--ink);letter-spacing:-.02em;text-wrap:balance}
+  .welcome p{margin:0 0 10px;font-size:15px;line-height:1.55;color:var(--body)}
+  .welcome .w-go{font-size:13.5px;color:var(--muted)}
+
+  /* ── the whole journey, drawn as the playground draws it ── */
+  .pgs{position:relative;width:100%;max-width:900px;display:grid;gap:10px}
+  .pgs-cv{position:relative;overflow:auto;height:474px;background:var(--sink);
+    border:1px solid var(--line);border-radius:11px;scrollbar-width:thin}
+  .pgs-in{position:relative}
+  .pgs-cv .nd{cursor:default}
+  .pgs-chip{position:absolute;top:11px;z-index:3;font-family:var(--mono);font-size:9px;
+    font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:var(--panel);
+    border:1px solid var(--line);border-radius:99px;padding:3px 9px;color:var(--muted);
+    box-shadow:var(--lift)}
+  .pgs-chip{left:11px}
+  .pgs-chip.ok{left:97px;color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent)}
+  .pgs-cfg{position:absolute;top:1px;right:1px;height:472px;width:250px;z-index:4;
+    background:var(--panel);border-left:1px solid var(--line);border-radius:0 10px 10px 0;
+    box-shadow:-20px 0 34px -26px rgba(0,0,0,.5);display:flex;flex-direction:column}
+  .pgs-cfg-h{display:flex;align-items:baseline;gap:8px;padding:9px 12px;
+    border-bottom:1px solid var(--line);font-family:var(--disp);font-size:12.5px;font-weight:800;
+    color:var(--ink)}
+  .pgs-cfg-h span{margin-left:auto;font-family:var(--mono);font-size:8.5px;letter-spacing:.09em;
+    text-transform:uppercase;color:var(--faint)}
+  .pgs-cfg-b{padding:10px 12px;display:grid;gap:7px;align-content:start;overflow-y:auto}
+  .pgs-hint{position:absolute;right:262px;bottom:11px;z-index:3;font-family:var(--mono);
+    font-size:8.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);
+    background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:3px 9px}
+  .pgs-note{margin:0;font-size:12.5px;color:var(--muted);line-height:1.5}
+  @media (max-width:900px){.pgs-cfg,.pgs-hint{display:none}}
+
+  /* ── the playground, shown before they get there ── */
+  .pgd{width:100%;max-width:900px;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px;
+    align-items:start}
+  .pgd-cv{background:var(--sink);border:1px solid var(--line);border-radius:11px;padding:14px 12px;
+    display:grid;justify-items:center;gap:0}
+  .pgd-cv .ndx{width:min(100%,268px)}
+  .pgd-w{font-style:normal;font-size:10.5px;color:var(--body);background:var(--raise);
+    border:1px solid var(--line);border-radius:5px;padding:1px 7px;margin:6px 0;position:relative}
+  .pgd-w::before,.pgd-w::after{content:"";position:absolute;left:50%;width:0;height:7px;
+    border-left:1px dashed var(--line-2)}
+  .pgd-w::before{top:-8px} .pgd-w::after{bottom:-8px}
+  .pgd-more{font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--faint);border:1px dashed var(--line-2);border-radius:99px;padding:3px 10px;
+    margin-top:9px}
+  .pgd-cfg{background:var(--panel);border:1px solid var(--line);border-radius:11px;
+    box-shadow:var(--lift);overflow:hidden}
+  .pgd-cfg-h{display:flex;align-items:baseline;gap:8px;padding:9px 12px;
+    border-bottom:1px solid var(--line);font-family:var(--disp);font-size:12.5px;font-weight:800;
+    color:var(--ink)}
+  .pgd-cfg-h span{margin-left:auto;font-family:var(--mono);font-size:9px;letter-spacing:.09em;
+    text-transform:uppercase;color:var(--faint)}
+  .pgd-cfg-b{padding:10px 12px 12px;display:grid;gap:7px}
+  .pgd-r{display:grid;gap:3px}
+  .pgd-r b{font-size:10px;color:var(--faint);font-weight:600}
+  .pgd-r span{font-size:12px;color:var(--ink);background:var(--raise);border:1px solid var(--line);
+    border-radius:7px;padding:5px 8px}
+  .pgd-note{grid-column:1/-1;margin:0;font-size:12px;color:var(--muted)}
+  @media (max-width:900px){.pgd{grid-template-columns:1fr}}
+
+  /* ── a node and its rules ── */
+  .ndoc{width:100%;max-width:900px;display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .ndoc.one{grid-template-columns:1fr;max-width:560px}
+  .ndoc-i{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+    box-shadow:var(--lift);padding:11px 13px 12px;display:grid;gap:8px;align-content:start}
+  .ndx{display:grid;grid-template-columns:50px minmax(0,1fr);border:1px solid var(--line);
+    border-radius:9px;overflow:hidden;--wash:transparent;
+    background-color:var(--raise);background-image:linear-gradient(var(--wash),var(--wash))}
+  .ndx em{width:50px;display:grid;place-items:center;font-style:normal;align-self:stretch}
+  .ndx em svg{width:20px;height:20px}
+  .ndx > span{padding:7px 11px;min-width:0}
+  .ndx b{display:block;font-family:var(--disp);font-size:12.5px;font-weight:700;color:var(--ink)}
+  .ndx s{display:block;text-decoration:none;font-size:11px;color:var(--muted);margin-top:1px}
+  .ndx.t-src{--wash:#CBE3C21F} .ndx.t-flow{--wash:#FBE6BE2E} .ndx.t-comm{--wash:#CDE2F42E}
+  .ndx.t-delay{--wash:#EEF3C62E} .ndx.t-conn{--wash:#FBDCD12E} .ndx.t-flows{--wash:#FAD8E42E}
+  .ndx.t-promo{--wash:#D5E9DB2E} .ndx.t-cond{--wash:#E8DBF62E} .ndx.t-rew{--wash:#DBDDF42E}
+  .ndx.t-fin{--wash:#DFE3E62E}
+  .ndoc ul{margin:0;padding:0;list-style:none;display:grid;gap:4px}
+  .ndoc li{display:grid;grid-template-columns:54px minmax(0,1fr);gap:9px;align-items:baseline;
+    font-size:12.5px;color:var(--body);line-height:1.4}
+  .ndoc li b{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);font-weight:700}
+  .ndoc li.w{color:var(--ink)}
+  .ndoc li.w b{color:var(--flag)}
+  .ndoc code{font-family:var(--mono);font-size:11px;color:var(--ink);background:var(--raise);
+    border-radius:4px;padding:1px 5px}
+  .ndoc-h{grid-column:1/-1;margin:0;font-size:13px;color:var(--muted)}
+  .ndoc-h b{color:var(--ink);font-weight:600}
+  @media (max-width:900px){.ndoc{grid-template-columns:1fr}}
+
+  /* ── a round of ten, one question at a time ── */
+  .quiz2{width:100%;max-width:580px;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--r);box-shadow:var(--lift);overflow:hidden}
+  .qz-h{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--line)}
+  .qz-h b{font-family:var(--disp);font-size:14px;font-weight:800;color:var(--ink)}
+  .qz-h .qz-n{margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.09em;
+    color:var(--faint);font-variant-numeric:tabular-nums}
+  .qz-h .qz-s{font-family:var(--mono);font-size:10px;letter-spacing:.09em;color:var(--ok)}
+  .qz-b{padding:14px 16px 6px;min-height:210px}
+  .qz-q{font-size:15px;font-weight:600;color:var(--ink);margin:0 0 11px;line-height:1.35}
+  .qz-o{display:flex;flex-direction:column;gap:6px}
+  .qz-o button{text-align:left;background:var(--raise);border:1px solid var(--line);border-radius:9px;
+    padding:9px 12px;font-size:13.5px;color:var(--body);transition:border-color .15s,background .15s}
+  .qz-o button:hover:not([disabled]){border-color:var(--key);color:var(--ink)}
+  .qz-o button.ok{border-color:var(--ok);background:var(--ok-soft);color:var(--ink);font-weight:600}
+  .qz-o button.no{border-color:var(--flag);background:color-mix(in srgb,var(--flag) 10%,transparent)}
+  .qz-o button[disabled]{cursor:default}
+  /* the option Flick struck out for you */
+  .qz-o button.cut{opacity:.42;text-decoration:line-through}
+  .qz-why{margin:10px 0 0;font-size:12.5px;color:var(--muted);min-height:34px;line-height:1.45}
+  .qz-why b{color:var(--ink);font-weight:600}
+  .qz-f{display:flex;align-items:center;gap:8px;padding:10px 16px 13px;border-top:1px solid var(--line)}
+  .qz-dots{display:flex;gap:4px;flex-wrap:wrap}
+  .qz-dots i{width:9px;height:9px;border-radius:50%;border:1px solid var(--line-2);font-style:normal}
+  .qz-dots i.ok{background:var(--ok);border-color:var(--ok)}
+  .qz-dots i.no{background:var(--flag);border-color:var(--flag)}
+  .qz-dots i.now{border-color:var(--key);border-width:2px}
+  .qz-f .btn{margin-left:auto}
+  .qz-done{text-align:center;padding:26px 16px 20px}
+  .qz-done b{display:block;font-family:var(--disp);font-size:30px;font-weight:800;color:var(--ink);
+    font-variant-numeric:tabular-nums}
+  .qz-done span{display:block;font-size:13px;color:var(--muted);margin-top:5px}
+
+  /* ── click a capture to see all of it ── */
+  .shot{cursor:zoom-in}
+  .shot::after{content:"open";position:absolute;right:8px;bottom:8px;z-index:3;
+    font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;
+    background:var(--key);color:var(--key-ink);padding:3px 8px;border-radius:99px;opacity:0;
+    transition:opacity .16s;pointer-events:none}
+  .shot:hover::after,.shot:focus-visible::after{opacity:.95}
+  .shot:focus-visible{outline:2px solid var(--key);outline-offset:3px}
+  .lb{position:fixed;inset:0;z-index:80;display:none;place-items:center;padding:26px;
+    background:rgba(8,14,18,.86)}
+  .lb.on{display:grid}
+  .lb-in{position:relative;line-height:0}
+  .lb-in img{display:block;border-radius:8px;box-shadow:0 30px 70px -30px #000}
+  .lb-in .anno{position:absolute;inset:0;width:100%;height:100%}
+  .lb-x{position:absolute;top:-34px;right:0;background:none;border:1px solid rgba(255,255,255,.38);
+    color:#EDF3F5;border-radius:99px;padding:4px 12px;font-family:var(--mono);font-size:10px;
+    letter-spacing:.1em;text-transform:uppercase}
+  .lb-x:hover{border-color:#fff}
+  @media (prefers-reduced-motion:no-preference){.lb.on .lb-in{animation:in .2s ease both}}
+
+  /* ── two captures on one screen: player on the left, ours on the right ── */
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;width:100%}
+  .duo .shot{max-width:100%}
+  @media (max-width:820px){.duo{grid-template-columns:1fr}}
+
+  /* ── where an object lives ── */
+  .linkcard{width:100%;max-width:560px;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--r);box-shadow:var(--lift);overflow:hidden}
+  .lk-h{display:flex;align-items:baseline;gap:8px;padding:12px 15px 10px;
+    border-bottom:1px solid var(--line);font-family:var(--disp);font-size:15px;font-weight:800;
+    color:var(--ink)}
+  .lk-h span{font-family:var(--mono);font-size:9px;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--faint);margin-left:auto}
+  .lk-row{display:grid;grid-template-columns:52px minmax(0,1fr);gap:10px;align-items:baseline;
+    padding:9px 15px;border-top:1px solid var(--line)}
+  .lk-row:first-of-type{border-top:0}
+  .lk-row b{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);font-weight:700}
+  .lk-row code{font-family:var(--mono);font-size:12px;color:var(--ink);background:var(--key-soft);
+    border:1px solid color-mix(in srgb, var(--key) 30%, transparent);border-radius:5px;
+    padding:2px 7px;overflow-wrap:anywhere}
+
+  /* ── the builder, as the back office lays it out ──
+     The page becomes a flex column that owns the viewport, the palette is a
+     plain column and the canvas runs to the edges. Everything else floats over
+     the canvas rather than stealing height from it. */
+  body.pg-view{height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+  body.pg-view .rail{flex:none}
+  body.pg-view .deck{flex:1;min-height:0;max-width:none;margin:0;padding:0}
+  .step.pg-full.on{display:block;position:relative;height:100%;min-height:0;padding:0;gap:0}
+  .step.pg-full.on .stage{display:block;height:100%;min-height:0}
+  .step.pg-full.on .pg{display:grid;grid-template-columns:272px minmax(0,1fr);height:100%;gap:0;
+    align-items:stretch}
+
+  .pg-pal{display:flex;flex-direction:column;min-height:0;background:var(--panel);
+    border-right:1px solid var(--line)}
+  .pg-pal-h{display:flex;align-items:center;gap:8px;padding:11px 14px;
+    border-bottom:1px solid var(--line);font-family:var(--mono);font-size:9.5px;font-weight:700;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+  .pg-pal-h b{color:var(--ink);letter-spacing:.06em}
+  .pg-pal .plist{max-height:none;flex:1;min-height:0;padding:4px 12px 16px;
+    -webkit-mask-image:linear-gradient(#000 calc(100% - 26px), transparent);
+    mask-image:linear-gradient(#000 calc(100% - 26px), transparent)}
+  .pg-pal .pgrp{position:sticky;top:0;z-index:2;background:var(--panel);margin:0 -12px;
+    padding:10px 14px 6px}
+  .step.pg-full.folded .pg{grid-template-columns:0 minmax(0,1fr)}
+  .step.pg-full.folded .pg-pal{overflow:hidden;border-right:0}
+
+  /* the sheet: the canvas fills it, everything else floats on top */
+  .pg-sheet{position:relative;min-width:0;min-height:0;overflow:hidden}
+  .step.pg-full .cvwrap{position:absolute;inset:0;height:auto;border:0;border-radius:0}
+  .ovl{position:absolute;z-index:4}
+  .ovl-tl{top:12px;left:52px;display:flex;align-items:center;gap:8px}
+  .cvcount:empty{display:none}
+  .ovl-bl{bottom:12px;left:12px;display:grid;gap:8px;justify-items:start;max-width:min(560px,60%)}
+  .ovl-br{bottom:12px;right:12px}
+  .cvcount{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--muted);background:var(--panel);
+    border:1px solid var(--line);border-radius:99px;padding:4px 10px;box-shadow:var(--lift)}
+  .ovl-btn{position:absolute;z-index:5;background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;width:30px;height:30px;display:grid;place-items:center;color:var(--muted);
+    font-size:13px;padding:0;line-height:1;box-shadow:var(--lift)}
+  .ovl-btn:hover{border-color:var(--key);color:var(--ink)}
+  .ovl-btn.fold{top:12px;left:12px}
+
+  /* zoom, stacked at the bottom right corner, as in the back office */
+  .zoomstack{display:grid;gap:1px;background:var(--panel);border:1px solid var(--line);
+    border-radius:9px;overflow:hidden;box-shadow:var(--lift);justify-items:stretch}
+  .zoomstack button{background:none;border:0;width:34px;height:30px;display:grid;place-items:center;
+    color:var(--muted);font-size:15px;padding:0;line-height:1;font-family:var(--sans)}
+  .zoomstack button:hover{background:var(--raise);color:var(--ink)}
+  .zoomstack b{font-family:var(--mono);font-size:9px;color:var(--faint);text-align:center;
+    padding:2px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+    letter-spacing:.04em}
+
+  /* the strip that says what the next node hangs off, and the buttons */
+  .step.pg-full .attach{margin:0;padding:7px 11px;border:1px solid var(--line);border-radius:9px;
+    background:var(--panel);box-shadow:var(--lift);min-height:36px;display:flex;align-items:center}
+  .step.pg-full .pgbar{padding:0;border:0;background:none;gap:7px}
+  .step.pg-full .btn{box-shadow:var(--lift)}
+  .attach:empty::before{content:"pick a node on the canvas to hang the next one off it";
+    font-family:var(--sans);font-size:11.5px;color:var(--faint)}
+
+  /* the settings of the node you picked, as the back office asks for them */
+  .cfg{position:absolute;top:0;right:0;bottom:0;width:334px;z-index:7;background:var(--panel);
+    border-left:1px solid var(--line);display:flex;flex-direction:column;
+    box-shadow:-18px 0 34px -28px rgba(0,0,0,.5)}
+  .cfg.quiet{display:none}
+  .cfg-h{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid var(--line)}
+  .cfg-h b{font-family:var(--disp);font-size:13.5px;font-weight:800;color:var(--ink)}
+  .cfg-b{flex:1;min-height:0;overflow-y:auto;padding:12px 14px 18px;display:grid;gap:10px;
+    align-content:start;scrollbar-width:thin}
+  .cfg-f{display:grid;gap:4px}
+  .cfg-f label{font-size:11px;color:var(--faint);font-weight:600}
+  .cfg-f input,.cfg-f select,.cfg-f textarea{font:inherit;font-family:var(--sans);font-size:12.5px;
+    color:var(--ink);background:var(--raise);border:1px solid var(--line);border-radius:8px;
+    padding:6px 9px;width:100%}
+  .cfg-f textarea{min-height:52px;resize:vertical;line-height:1.4}
+  .cfg-f input:focus,.cfg-f select:focus,.cfg-f textarea:focus{outline:none;border-color:var(--key);
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--key) 20%,transparent)}
+  .cfg-none{font-size:12.5px;color:var(--muted);line-height:1.5}
+  @media (max-width:1180px){.cfg{position:static;width:auto;border-left:0;border-top:1px solid var(--line)}}
+
+  /* the validator floats in when it has something to report */
+  .vsheet{bottom:104px;left:12px;width:min(560px,54%);background:var(--panel);
+    border:1px solid var(--line);border-radius:11px;box-shadow:var(--lift);overflow:hidden;
+    display:flex;flex-direction:column;max-height:min(34%,236px)}
+  .vsheet.mini .vr{display:none}
+  .vsheet.mini .vsheet-h{border-bottom:0}
+  .vsheet.quiet{display:none}
+  .vsheet-h{display:flex;align-items:center;gap:8px;padding:9px 12px;
+    border-bottom:1px solid var(--line);font-family:var(--mono);font-size:9.5px;font-weight:700;
+    letter-spacing:.11em;text-transform:uppercase;color:var(--faint)}
+  .vsheet-h b{color:var(--ink);letter-spacing:.05em}
+  .vfold{background:none;border:0;padding:0;font:inherit;color:inherit;display:flex;
+    align-items:center;gap:6px;letter-spacing:inherit;text-transform:inherit}
+  .vfold::before{content:"\25BE";font-size:8px;opacity:.7}
+  .vsheet.mini .vfold::before{content:"\25B8"}
+  .ovl-x{margin-left:auto;background:none;border:0;color:var(--faint);font-size:15px;padding:0 2px;
+    line-height:1}
+  .ovl-x:hover{color:var(--ink)}
+  .step.pg-full .vr{max-height:none;flex:1;min-height:0;overflow-y:auto;padding:9px 12px 11px}
+
+  /* the note and Flick sit on the sheet, so the canvas keeps the whole width */
+  .step.pg-full .talk{position:absolute;top:12px;right:12px;width:320px;z-index:6;display:grid;
+    gap:9px;align-content:start;max-height:calc(100% - 150px);overflow:auto;scrollbar-width:thin;
+    padding-right:2px}
+  .step.pg-full .talk .note-pad{margin-top:0}
+  .step.pg-full .talk .mascot{height:132px;justify-self:end;margin-right:4px}
+
+  @media (max-width:1180px){
+    body.pg-view{height:auto;overflow:auto;display:block}
+    .step.pg-full.on{height:auto}
+    .step.pg-full.on .pg{grid-template-columns:minmax(0,1fr);height:auto}
+    .pg-sheet{height:62vh}
+    .step.pg-full .talk{position:static;width:auto;max-height:none;margin-top:12px}
+    .step.pg-full .talk .note-pad{margin-top:0}
+  }
+
+  /* ── playground: the palette, canvas and validator ── */
+  .pg{display:grid;grid-template-columns:264px minmax(0,1fr);gap:14px;width:100%;align-items:start}
+  @media (max-width:1180px){.pg{grid-template-columns:1fr}}
+
+  .pgp{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+    box-shadow:var(--lift);overflow:hidden}
+  .pgp-h{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);
+    font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--faint)}
+  .pgp-h b{color:var(--ink);letter-spacing:.06em}
+  .pgp-b{padding:10px 12px}
+
+  /* palette, four across like the real sidebar, scrolls on its own */
+  .plist{max-height:376px;overflow-y:auto;padding:4px 10px 12px;scrollbar-width:thin}
+  .pgrp{font-size:12px;color:var(--muted);padding:11px 2px 7px;display:flex;align-items:center;gap:6px}
+  .pgrp i{font-style:normal;color:var(--faint);font-size:9px}
+  .pgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}
+  .ptile{background:none;border:0;padding:4px 1px 6px;display:flex;flex-direction:column;align-items:center;
+    gap:4px;border-radius:8px;text-align:center}
+  .ptile span{font-size:8.5px;line-height:1.2;color:var(--ink);font-weight:600}
+  .ptile em{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;font-style:normal}
+  .ptile em svg{width:19px;height:19px}
+  .ptile.round em{border-radius:50%}
+  .ptile:hover:not(.off){background:var(--raise)}
+  .ptile:hover:not(.off) em{transform:translateY(-1px)}
+  .ptile.off{cursor:default}
+  .ptile.off span{color:var(--faint);font-weight:400}
+  .ptile.off em{opacity:.45}
+  .ptile.off em svg{opacity:.5}
+  .ptile:focus-visible{outline:2px solid var(--key);outline-offset:2px}
+  .ptile em{transition:transform .12s}
+  /* the card carries a wash of its family colour, and its border agrees */
+  .nd.t-src{--wash:#CBE3C21F;border-color:#8FBF8455}
+  .nd.t-flow{--wash:#FBE6BE2E;border-color:#D6A94F55}
+  .nd.t-comm{--wash:#CDE2F42E;border-color:#7FB0DB55}
+  .nd.t-delay{--wash:#EEF3C62E;border-color:#AEBE5E55}
+  .nd.t-conn{--wash:#FBDCD12E;border-color:#E0906F55}
+  .nd.t-flows{--wash:#FAD8E42E;border-color:#E28BAE55}
+  .nd.t-promo{--wash:#D5E9DB2E;border-color:#77B58F55}
+  .nd.t-cond{--wash:#E8DBF62E;border-color:#A98BD855}
+  .nd.t-rew{--wash:#DBDDF42E;border-color:#8D93D855}
+  .nd.t-fin{--wash:#DFE3E62E;border-color:#9BAAB255}
+
+  /* group tints, taken off the real palette */
+  .t-src em{background:#CBE3C2;color:#4C7A44}
+  .nd em svg{display:block}
+  .t-flow em{background:#FBE6BE;color:#C98A26}
+  .t-comm em{background:#CDE2F4;color:#4C86BE}
+  .t-delay em{background:#EEF3C6;color:#7E8F2C}
+  .t-conn em{background:#FBDCD1;color:#D8552F}
+  .t-flows em{background:#FAD8E4;color:#D24C86}
+  .t-promo em{background:#D5E9DB;color:#42906A}
+  .t-cond em{background:#E8DBF6;color:#7E52C0}
+  .t-rew em{background:#DBDDF4;color:#4F58AF}
+  .t-fin em{background:#DFE3E6;color:#5E7280}
+  .cap-no{position:relative}
+  .cap-no span::after{content:" ?";color:var(--flag);font-weight:700}
+
+  /* canvas: node cards and connectors, laid out like the real one */
+  /* a plain sheet you pan, like the real one */
+  .cvwrap{position:relative;height:272px;overflow:auto;border:1px solid var(--line);
+    border-radius:10px;background:var(--sink)}
+  .cvwrap.empty{display:grid;place-items:center}
+  .cv-empty{font-family:var(--mono);font-size:11.5px;color:var(--faint);text-align:center;line-height:1.8}
+  .cvin{position:relative;padding:0;transform-origin:0 0;min-width:100%;min-height:100%}
+  .cvwrap.empty .cvin{display:grid;place-items:center}
+  .cvsvg{position:absolute;top:0;left:0;overflow:visible;pointer-events:none}
+  .nd{position:absolute;width:292px;min-height:62px;background:var(--panel);
+    border:1px solid var(--line);border-radius:9px;padding:0;display:grid;
+    --wash:transparent;background-image:linear-gradient(var(--wash),var(--wash));
+    grid-template-columns:62px minmax(0,1fr);text-align:left;
+    box-shadow:0 1px 2px rgba(17,34,41,.10),0 6px 14px -10px rgba(17,34,41,.35)}
+  button.nd:hover{border-color:var(--key)}
+  span.nd{cursor:default}
+  .nd.sel{border-color:var(--key);box-shadow:0 0 0 2px color-mix(in srgb,var(--key) 32%,transparent),
+    0 6px 14px -10px rgba(17,34,41,.35)}
+  .nd em{width:62px;border-radius:8px 0 0 8px;display:grid;place-items:center;font-style:normal;
+    align-self:stretch}
+  .nd em svg{width:24px;height:24px}
+  .nd span{display:block;padding:9px 12px 10px;min-width:0;position:relative}
+  .nd b{display:block;font-size:13px;font-weight:700;color:var(--ink);line-height:1.25;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:44px}
+  .nd s{display:block;font-size:11.5px;color:var(--muted);text-decoration:none;line-height:1.3;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+  .nd u{position:absolute;top:8px;right:12px;font-family:var(--mono);font-size:9.5px;
+    color:var(--faint);text-decoration:none}
+  /* an entry source prints its own outgoing label inside the card */
+  .nd-foot{grid-column:1/-1;font-style:normal;font-size:11.5px;color:var(--muted);
+    border-top:1px solid var(--line);background:var(--raise);padding:5px 12px;
+    border-radius:0 0 8px 8px}
+  .nd-plus{position:absolute;right:-11px;top:50%;transform:translateY(-50%);width:22px;height:22px;
+    border-radius:50%;background:var(--ink);color:var(--panel);font-style:normal;font-size:14px;
+    font-weight:600;display:grid;place-items:center;line-height:1;opacity:0;transition:opacity .12s}
+  .nd:hover .nd-plus,.nd.sel .nd-plus{opacity:1}
+
+  .nd.term{width:44px;min-height:44px;height:44px;border:0;border-radius:50%;padding:0;
+    grid-template-columns:1fr;place-items:center;background:var(--ink);
+    box-shadow:0 2px 6px -2px rgba(0,0,0,.5)}
+  .nd.term em{width:44px;height:44px;border-radius:50%;background:none!important;
+    color:var(--panel)!important}
+  .nd.term em svg{width:20px;height:20px}
+  .nd.term.sel{box-shadow:0 0 0 3px color-mix(in srgb,var(--key) 40%,transparent)}
+  /* the branch label sits on the line, the way the back office prints it */
+  .ev{position:absolute;font-family:var(--sans);font-size:11.5px;background:var(--raise);
+    border:1px solid var(--line);border-radius:5px;padding:2px 8px;color:var(--body);
+    white-space:nowrap;transform:translate(-50%,-50%);z-index:2}
+  .ev.unseen{border-color:color-mix(in srgb,var(--flag) 45%,transparent);color:var(--flag)}
+  /* a branch nothing hangs off yet: dashed, and a drop target */
+  .ev.ghost{border-style:dashed;background:var(--panel);color:var(--faint);cursor:pointer;
+    z-index:3}
+  .ev.ghost:hover,.ev.ghost.on{border-color:var(--key);color:var(--key);border-style:solid}
+  .ev.drop{border-color:var(--key);color:var(--key);border-style:solid;
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--key) 30%,transparent)}
+  .flowchip{position:absolute;font-family:var(--sans);font-size:11px;font-weight:600;
+    background:var(--key-soft);border:1px solid color-mix(in srgb,var(--key) 35%,transparent);
+    border-radius:5px;padding:2px 8px;color:var(--key);transform:translate(-50%,-50%);
+    white-space:nowrap;z-index:2}
+  .ptile[draggable="true"]{cursor:grab}
+  .ptile[draggable="true"]:active{cursor:grabbing}
+  .ptile.dragging{opacity:.4}
+  .cvwrap.dragover{outline:2px dashed var(--key);outline-offset:-4px}
+  .nd.drop{border-color:var(--key);box-shadow:0 0 0 3px color-mix(in srgb,var(--key) 30%,transparent)}
+  .nd.drop::after{content:"drop here";position:absolute;left:50%;bottom:-15px;transform:translateX(-50%);
+    font-family:var(--mono);font-size:7.5px;letter-spacing:.06em;text-transform:uppercase;
+    background:var(--key);color:var(--key-ink);padding:1px 6px;border-radius:99px;white-space:nowrap}
+
+  /* the task list lives on a note, and it remembers what you finished */
+  .note-pad{background:#F5E7A8;color:#4A3C10;border-radius:3px;padding:12px 14px 13px;
+    box-shadow:0 10px 22px -14px rgba(20,20,10,.7),0 1px 0 rgba(0,0,0,.05);
+    transform:rotate(-1.2deg);font-family:var(--sans)}
+  .note-pad h4{margin:0 0 8px;font-family:var(--disp);font-size:14px;font-weight:800;letter-spacing:-.01em;
+    display:flex;align-items:center;gap:7px}
+  .note-pad h4 span{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
+    text-transform:uppercase;opacity:.6;margin-left:auto}
+  .note-pad ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px}
+  .note-pad li button{display:grid;grid-template-columns:16px minmax(0,1fr);gap:8px;align-items:start;
+    width:100%;text-align:left;background:none;border:0;padding:2px 0;font-size:12.5px;line-height:1.35;
+    color:#4A3C10;border-radius:4px}
+  .note-pad li button:hover{background:rgba(0,0,0,.05)}
+  .note-pad li i{width:15px;height:15px;border:1.4px solid #A8913C;border-radius:4px;font-style:normal;
+    display:grid;place-items:center;font-size:10px;margin-top:1px}
+  .note-pad li.done i{background:#4A3C10;border-color:#4A3C10;color:#F5E7A8}
+  .note-pad li.done button{opacity:.62;text-decoration:line-through}
+  .note-pad li.now button{font-weight:700}
+  .note-pad li.now i{border-color:#4A3C10;border-width:2px}
+  .note-pad p{margin:9px 0 0;font-size:11.5px;line-height:1.4;opacity:.75}
+  .note-fold{background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;
+    display:flex;align-items:center;gap:6px}
+  .note-fold::before{content:"\25BE";font-size:9px;opacity:.6}
+  .note-pad.mini .note-fold::before{content:"\25B8"}
+  .note-pad.mini #noteBody{display:none}
+  .note-pad.mini h4{margin:0}
+
+  .attach{display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:7px 0 0;font-size:11px;
+    color:var(--faint)}
+  .attach span.lbl{font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;text-transform:uppercase}
+  .port{font-family:var(--mono);font-size:8.5px;border:1px dashed var(--line-2);border-radius:99px;
+    padding:2px 7px;color:var(--muted);background:none}
+  .port:hover{border-color:var(--key);color:var(--ink)}
+  .port.on{border-style:solid;border-color:var(--key);background:var(--key-soft);color:var(--ink)}
+
+  /* validator */
+  .vr{max-height:116px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+  .vsum{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:9px}
+  .vs{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.09em;
+    text-transform:uppercase;border:1px solid var(--line);border-radius:99px;padding:3px 9px;
+    background:var(--raise);color:var(--muted)}
+  .vs.fine{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent)}
+  .vs.bad{color:var(--flag);border-color:color-mix(in srgb,var(--flag) 45%,transparent)}
+  button.vs.warn{color:var(--body);cursor:pointer;font-family:var(--mono)}
+  button.vs.warn:hover{border-color:var(--key);color:var(--ink)}
+  .vwarns{display:grid;gap:4px;margin-top:5px;padding-top:7px;border-top:1px solid var(--line)}
+  .vrow i{width:6px;height:6px;border-radius:50%;margin-top:5px;font-style:normal;flex:none;
+    background:var(--line-2)}
+  .vrow.err i,.vrow.blocked i{background:var(--flag)}
+  .vrow.warn i{background:var(--h-amber)}
+  .vrow.task i{background:var(--flag)}
+  .vrow.done i{background:var(--ok)}
+  .vrow.done span,.vrow.task span{font-weight:600;color:var(--ink)}
+  .vrow u{font-family:var(--mono);font-size:10px;color:var(--faint);text-decoration:none}
+  .vrow{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:start;font-size:12px;
+    color:var(--muted);line-height:1.45}
+  .vrow b{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.06em;padding:2px 6px;
+    border-radius:4px;white-space:nowrap;margin-top:1px}
+  .vrow.ok b{background:var(--ok-soft);color:var(--ok)}
+  .vrow.warn b{background:color-mix(in srgb, var(--h-amber) 18%, transparent);color:var(--h-amber)}
+  .vrow.err b,.vrow.blocked b{background:color-mix(in srgb,var(--flag) 16%,transparent);color:var(--flag)}
+  .vrow code{font-family:var(--mono);font-size:11px;color:var(--ink)}
+  .verdict{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;padding:4px 10px;border-radius:99px;margin-left:auto}
+  .verdict.yes{background:var(--ok-soft);color:var(--ok);
+    border:1px solid color-mix(in srgb,var(--ok) 40%,transparent)}
+  .verdict.no{background:color-mix(in srgb,var(--flag) 12%,transparent);color:var(--flag);
+    border:1px solid color-mix(in srgb,var(--flag) 35%,transparent)}
+  .pgbar{display:flex;gap:6px;align-items:center;padding:9px 12px;border-top:1px solid var(--line)}
+  .task{font-size:12px;color:var(--muted);padding:7px 12px;border-top:1px solid var(--line);
+    background:var(--raise);display:none}
+  .task.on{display:block}
+  .task b{color:var(--ink)}
+</style>
+</head>
+<body>
+
+<nav class="rail">
+  <div class="rail-in">
+    <a class="brand" href="/admin" title="Back to the admin portal">
+      <i></i><span>Flick<b>CRM 01</b></span></a>
+    <span class="nav" id="nav">
+      <b class="nav-part" id="navPart"></b>
+      <span class="nav-tabs" id="navTabs" role="tablist" aria-label="Pages in this part"></span>
+    </span>
+    <span class="ctrl">
+      <button class="theme" id="theme" type="button" aria-label="Switch between light and dark">
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/>
+          <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5Z"/></svg>
+      </button>
+      <span class="n" id="num"></span>
+      <button class="btn g s" id="back">Back</button>
+      <button class="btn" id="fwd">Continue</button>
+    </span>
+  </div>
+</nav>
+
+<main class="deck" id="deck">
+<section class="step" data-hue="green" data-t="Start" data-part="Welcome" data-tab="Welcome" data-pose="wave"
+    data-tip="Arrow keys move you as well as the buttons, and the names up top jump you around inside a part.">
+    <div class="stage">
+      <div class="welcome">
+        <h1>Hello, and welcome aboard.</h1>
+        <p>Here you will see how our promotions actually work, from the card a player taps to the
+          journey behind it. Two of the real ones, the nodes they are built from, and a place to
+          build one yourself.</p>
+        <p class="w-go">Press Continue and we start with the Casino Wheel of Fortune.</p>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox wave"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Hi, I'm Flick, and I will be with you the whole way.</p>
+        <p>Tap me on any screen for the thing people get wrong there. In a check round, a tap
+          strikes out one wrong answer for you.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 -->
+    <section class="step" data-hue="green" data-t="Promotions" data-part="Casino Wheel of Fortune" data-tab="Promotions" data-pose="glass"
+    data-tip="A promotion the player cannot see in this list is not live for them, whatever the back office says.">
+    <div class="stage">
+      <div class="duo">
+        <figure class="shot" tabindex="0" style="--ar:1470/1010;--w:470px;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/p1.jpg" alt="Player promotions list with the Casino Wheel of Fortune card">
+          <svg class="anno" viewBox="0 0 1470 1404" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="36" y="474" width="692" height="400" rx="18" stroke-width="6"/>
+            <path class="halo" pathLength="1" d="M1100 240 Q 930 320 757 467" stroke-width="16"/>
+            <path class="ink" pathLength="1" d="M1100 240 Q 930 320 757 467" stroke-width="8"/>
+            <polygon points="725,490 748.8,454.6 766.2,479"/>
+          </svg>
+        </div>
+      </figure>
+        <figure class="shot" tabindex="0" style="--ar:2814/1200;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/p2.jpg" alt="Back office promo list with the randomizer row RND-0-17731">
+          <svg class="anno" viewBox="0 0 2814 1460" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="78" y="566" width="1010" height="106" rx="14" stroke-width="8"/>
+            <path class="halo" pathLength="1" d="M1450 1080 Q 1010 1010 641 711" stroke-width="22"/>
+            <path class="ink" pathLength="1" d="M1450 1080 Q 1010 1010 641 711" stroke-width="11"/>
+            <polygon points="600,690 648.7,695.9 633.3,726.1"/>
+          </svg>
+        </div>
+      </figure>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox glass"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Players see their active promotions here, one card with a clock.</p>
+        <p>On the right the same promotion on our side, active in the Promo list.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="amber" data-t="The wheel" data-part="Casino Wheel of Fortune" data-tab="The wheel" data-pose="flag"
+    data-tip="The four percentages have to total 100. How the rim is arranged never changes the odds. And a rare physical prize is capped by a quantity set on the prize itself — three hampers means three, however the percentages fall.">
+    <div class="stage">
+      <div class="duo">
+        <figure class="shot" tabindex="0" style="--ar:1520/1396;--w:400px;margin:0">
+          <div class="shot-in"><img src="/static/onboarding/p3_wheel.jpg" alt=""></div>
+        </figure>
+        <figure class="shot" tabindex="0" style="--ar:2188/1080;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/p4.jpg" alt="Randomizer prizes table with four journey ids and probabilities">
+          <svg class="anno" viewBox="0 0 2188 1306" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="145" y="742" width="750" height="298" rx="12" stroke-width="7"/>
+          </svg>
+        </div>
+      </figure>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox flag"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Twelve wedges, four prizes, and we set a percentage for each one.</p>
+        <p>A prize is always a journey, so every prize connects the player to one.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="indigo" data-t="Randomizer logs" data-part="Casino Wheel of Fortune" data-tab="Randomizer logs" data-pose="thumb"
+    data-tip="If the player never spun, they are not in the logs at all. No spin, no row.">
+    <div class="stage">
+      <div class="duo">
+        <figure class="shot" tabindex="0" style="--ar:1562/1100;--w:430px;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/p5.jpg" alt="Tu recompensa modal showing 50 GG con deposito">
+        </div>
+      </figure>
+        <figure class="shot" tabindex="0" style="--ar:2810/640;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/p6.jpg" alt="Randomizer players list with one account and bonus campaign id JRN-0-572381">
+          <svg class="anno" viewBox="0 0 2810 1508" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="575" y="382" width="240" height="62" rx="10" stroke-width="8"/>
+            <rect x="1735" y="380" width="205" height="66" rx="10" stroke-width="8"/>
+          </svg>
+        </div>
+      </figure>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox thumb"></i></button>
+      <div class="bubble" data-bubble>
+        <p>The player sees what they won.</p>
+        <p>In the randomizer logs we see what they won and which journey they were added to.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="pink" data-t="Their choice" data-part="Casino Wheel of Fortune" data-tab="Their choice" data-pose="book"
+    data-tip="The Multipurpose Promotion gives nothing by itself. Everything a player can spend comes from the promotion inside the flow they picked.">
+    <div class="stage">
+      <figure class="shot" tabindex="0" style="--ar:1454/1404;--w:370px;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/p8.jpg" alt="Journey page asking the player to select one of three bonuses">
+          <svg class="anno" viewBox="0 0 1454 1404" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="18" y="420" width="1386" height="940" rx="18" stroke-width="6"/>
+            <path class="halo" pathLength="1" d="M1270 115 Q 1080 190 938 274" stroke-width="16"/>
+            <path class="ink" pathLength="1" d="M1270 115 Q 1080 190 938 274" stroke-width="8"/>
+            <polygon points="900,292 930.8,259.2 944.8,288"/>
+          </svg>
+        </div>
+      </figure>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox book"></i></button>
+      <div class="bubble" data-bubble>
+        <p>The flow is choosable. The player decides which one they want before they claim.</p>
+        <p>The Multipurpose Promotion only puts them into that flow. It gives nothing itself.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="blue" data-t="Journey logs" data-part="Casino Wheel of Fortune" data-tab="Journey logs" data-pose="think"
+    data-tip="The top row is where the player stands right now, not the first thing that happened to them.">
+    <div class="stage">
+      <div class="duo">
+        <figure class="shot" tabindex="0" style="--ar:2784/1060;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/p7.jpg" alt="Journey log rows for the player">
+          <svg class="anno" viewBox="0 0 2784 1508" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="300" y="500" width="1820" height="235" rx="12" stroke-width="8"/>
+          </svg>
+        </div>
+      </figure>
+        <figure class="shot" tabindex="0" style="--ar:2704/1388;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/p9.jpg" alt="Journey canvas with one multipurpose promotion node and three flows">
+          <svg class="anno" viewBox="0 0 2704 1388" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="1506" y="76" width="236" height="68" rx="10" stroke-width="8"/>
+            <path class="halo" pathLength="1" d="M700 250 Q 1050 210 1452 116" stroke-width="22"/>
+            <path class="ink" pathLength="1" d="M700 250 Q 1050 210 1452 116" stroke-width="10"/>
+            <polygon points="1500,107 1456,133.3 1449.6,97.9"/>
+            <rect x="375" y="458" width="232" height="68" rx="10" stroke-width="7"/>
+            <rect x="1344" y="458" width="232" height="68" rx="10" stroke-width="7"/>
+            <rect x="2315" y="458" width="232" height="68" rx="10" stroke-width="7"/>
+          </svg>
+        </div>
+      </figure>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox think"></i></button>
+      <div class="bubble" data-bubble>
+        <p>What is happening inside journey logs? Read it from the bottom up.</p>
+        <p>The player is added into the journey and can see it. On the right, the journey they
+          are in.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="purple" data-t="Their bonus" data-part="Casino Wheel of Fortune" data-tab="Their bonus" data-pose="thumb"
+    data-tip="Open the promotion the player took, not the one that offered the list. The terms live on the one they picked.">
+    <div class="stage">
+      <figure class="shot" tabindex="0" style="--ar:1478/1118;--w:430px;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/p10.jpg" alt="Player promotions page with one active chosen bonus">
+          <svg class="anno" viewBox="0 0 1478 1118" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="32" y="614" width="696" height="412" rx="18" stroke-width="6"/>
+            <path class="halo" pathLength="1" d="M1340 760 Q 1000 800 786 800" stroke-width="16"/>
+            <path class="ink" pathLength="1" d="M1340 760 Q 1000 800 786 800" stroke-width="8"/>
+            <polygon points="740,800 786,784 786,816"/>
+          </svg>
+        </div>
+      </figure>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox thumb"></i></button>
+      <div class="bubble" data-bubble>
+        <p>The promotion the player chose appears on its own, as we see here.</p>
+        <p>Its own id, <span class="id">672078</span>, and the deposit hangs off this one.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="teal" data-t="Where it lives" data-part="Casino Wheel of Fortune" data-tab="Where it lives" data-pose="flag"
+    data-tip="You can open and read these freely. Looking at an object damages nothing, so go and surf them.">
+    <div class="stage">
+      <div class="linkcard">
+        <div class="lk-h">Casino Wheel of Fortune <span>randomizer</span></div>
+        <div class="lk-row"><b>id</b><code>RND-0-17731</code></div>
+        <div class="lk-row"><b>spin</b><code>once per player, and only logged in</code></div>
+        <div class="lk-row"><b>open</b><code>pmi.rea-backoffice.gr8.tech/promo/campaign/JBCL/Randomizer/view/RND-0-17731</code></div>
+        <div class="lk-row"><b>next</b><code>Game of the Week, every Wednesday</code></div>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox flag"></i></button>
+      <div class="bubble" data-bubble>
+        <p>That was the Casino Wheel of Fortune, and this is where the object lives.</p>
+        <p>Open it and read it. Nothing you look at can break.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="olive" data-t="Wheel check" data-part="Casino Wheel of Fortune" data-tab="Check" data-pose="party"
+    data-tip="Nothing here touches a real object. Get one wrong and I will tell you why, then you carry on.">
+    <div class="stage">
+      <div class="quiz2" data-quiz="wheel">
+        <div class="qz-h"><b>Casino Wheel of Fortune</b><span class="qz-s" data-score></span>
+          <span class="qz-n" data-num></span></div>
+        <div class="qz-b" data-body></div>
+        <div class="qz-f"><span class="qz-dots" data-dots></span>
+          <button class="btn s" data-next hidden>Next</button></div>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox party"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Ten questions on the wheel. Answer one and I tell you why, then Next.</p>
+        <p>Stuck? Tap me and I strike out a wrong answer, once per question.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="green" data-t="Game of the Week" data-part="Game of the Week" data-tab="What it is" data-pose="flag"
+    data-tip="The ladder is fixed. The one thing that changes on a Wednesday is which game the spins are on.">
+    <div class="stage">
+      <div class="linkcard">
+        <div class="lk-h">Game of the Week <span>our regular promotion</span></div>
+        <div class="lk-row"><b>runs</b><code>every Wednesday</code></div>
+        <div class="lk-row"><b>changes</b><code>the game, week to week</code></div>
+        <div class="lk-row"><b>stays</b><code>four tiers, by deposit and bet value</code></div>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox flag"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Now our regular promotion, the Game of the Week.</p>
+        <p>It runs every Wednesday, with a different game each week.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="green" data-t="Week game" data-part="Game of the Week" data-tab="The card" data-pose="book"
+    data-tip="Participa only opens the promo page. It is Activar, on the page itself, that joins the player to the journey.">
+    <div class="stage">
+      <figure class="shot" tabindex="0" style="--ar:734/472;--w:470px;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/g1_card.jpg" alt="The Game of the Week card in the player's bonus list">
+        </div>
+      </figure>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox book"></i></button>
+      <div class="bubble" data-bubble>
+        <p>This card sits in the player's promotions list.</p>
+        <p>Participa only forwards them to the promo page, where they read the short description
+          first. Nothing is activated yet.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="green" data-t="Promo page" data-part="Game of the Week" data-tab="Promo page" data-pose="glass"
+    data-tip="A promo page carries no prizes of its own. One field points it at a journey, so check that journey dates cover the page.">
+    <div class="stage">
+      <div class="duo">
+        <figure class="shot" tabindex="0" style="--ar:2000/965;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/g2_page.jpg" alt="The Game of the Week promo page with four bet rows and an Activar button">
+          <svg class="anno" viewBox="0 0 2000 965" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="645" y="540" width="712" height="240" rx="12" stroke-width="5"/>
+          </svg>
+        </div>
+      </figure>
+        <figure class="shot" tabindex="0" style="--ar:1986/1486;--w:560px;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/g6_config.jpg" alt="Promo page setup showing the Journey Builder connection and the journey id">
+          <svg class="anno" viewBox="0 0 1986 1486" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="660" y="1178" width="836" height="80" rx="12" stroke-width="6"/>
+          </svg>
+        </div>
+      </figure>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox glass"></i></button>
+      <div class="bubble" data-bubble>
+        <p>This is the promo page visual. Clicking Activar joins them to a journey that holds four
+          choosable flows.</p>
+        <p>On the right, the setting that points this page at that journey.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="pink" data-t="Four flows" data-part="Game of the Week" data-tab="Four flows" data-pose="glass"
+    data-tip="Every flow is the same shape. Only the deposit and the spin value differ, which is why one journey can serve four tiers.">
+    <div class="stage">
+      <div class="duo">
+        <figure class="shot" tabindex="0" style="--ar:962/1432;--w:400px;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/g3_choose.jpg" alt="Journey page asking the player to select one of four Game of the Week bonuses">
+          <svg class="anno" viewBox="0 0 962 1432" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="16" y="428" width="124" height="40" rx="10" stroke-width="5"/>
+            <rect x="16" y="488" width="930" height="66" rx="10" stroke-width="5"/>
+          </svg>
+        </div>
+      </figure>
+        <figure class="shot" tabindex="0" style="--ar:2000/716;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/g5_canvas.jpg" alt="The Game of the Week journey canvas with one multipurpose promotion and four flows">
+          <svg class="anno" viewBox="0 0 2000 716" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="1312" y="142" width="106" height="30" rx="7" stroke-width="4"/>
+            <rect x="126" y="303" width="106" height="28" rx="7" stroke-width="4"/>
+            <rect x="730" y="303" width="106" height="28" rx="7" stroke-width="4"/>
+            <rect x="1222" y="303" width="106" height="28" rx="7" stroke-width="4"/>
+            <rect x="1838" y="303" width="106" height="28" rx="7" stroke-width="4"/>
+          </svg>
+        </div>
+      </figure>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox glass"></i></button>
+      <div class="bubble" data-bubble>
+        <p>On the left the journey they have already been forwarded into, where they pick the flow
+          they want.</p>
+        <p>The flows differ by deposit and by the bet value of the spins. On the right, the same
+          journey on our side, <span class="id">JRN-0-639700</span>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="purple" data-t="Their bonus" data-part="Game of the Week" data-tab="Their bonus" data-pose="thumb"
+    data-tip="Every tier is the same four steps. Only the deposit and the spin value change.">
+    <div class="stage">
+      <figure class="shot" tabindex="0" style="--ar:936/808;--w:470px;margin:0">
+        <div class="shot-in">
+          <img src="/static/onboarding/g4_bonus.jpg" alt="The chosen Game of the Week bonus showing spin value, minimum deposit and rollover">
+          <svg class="anno" viewBox="0 0 936 808" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="10" y="320" width="916" height="262" rx="12" stroke-width="6"/>
+          </svg>
+        </div>
+      </figure>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox thumb"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Once they pick a flow, the terms are written out for them by number.</p>
+        <p>Spin value, minimum deposit and rollover, for the tier they took,
+          id <span class="id">711837</span>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14 · PLAYGROUND -->
+  <section class="step" data-hue="teal" data-t="In the builder" data-part="Game of the Week" data-tab="In the builder" data-pose="flag"
+    data-tip="Nothing you build in the playground is published and nothing reaches a player. It is a sandbox with the real rules in it.">
+    <div class="stage">
+      <div class="pgs">
+        <div class="pgs-cv">
+        <div class="pgs-in" style="width:1330px;height:1094px">
+          <svg class="cvsvg" width="1330" height="1094"><path d="M665 142V206" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M665 268V304 Q665 311 658 311 H183 Q176 311 176 318V354" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M176 416V502" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M176 564V650" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M176 712V798" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M176 860V946" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M665 268V304 Q665 311 658 311 H509 Q502 311 502 318V354" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M502 416V502" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M502 564V650" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M502 712V798" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M502 860V946" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M665 268V304 Q665 311 672 311 H821 Q828 311 828 318V354" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M828 416V502" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M828 564V650" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M828 712V798" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M828 860V946" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M665 268V304 Q665 311 672 311 H1147 Q1154 311 1154 318V354" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M1154 416V502" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M1154 564V650" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M1154 712V798" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/><path d="M1154 860V946" fill="none" stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/></svg>
+          <span class="ev" style="left:176px;top:328px">Accepted</span>
+          <span class="flowchip" style="left:176px;top:304px">Flow 1</span>
+          <span class="ev" style="left:176px;top:476px">Accepted</span>
+          <span class="ev" style="left:176px;top:624px">Deposited</span>
+          <span class="ev" style="left:176px;top:772px">Collected</span>
+          <span class="ev" style="left:176px;top:920px">Wagered</span>
+          <span class="ev" style="left:502px;top:328px">Accepted</span>
+          <span class="flowchip" style="left:502px;top:304px">Flow 2</span>
+          <span class="ev" style="left:502px;top:476px">Accepted</span>
+          <span class="ev" style="left:502px;top:624px">Deposited</span>
+          <span class="ev" style="left:502px;top:772px">Collected</span>
+          <span class="ev" style="left:502px;top:920px">Wagered</span>
+          <span class="ev" style="left:828px;top:328px">Accepted</span>
+          <span class="flowchip" style="left:828px;top:304px">Flow 3</span>
+          <span class="ev" style="left:828px;top:476px">Accepted</span>
+          <span class="ev" style="left:828px;top:624px">Deposited</span>
+          <span class="ev" style="left:828px;top:772px">Collected</span>
+          <span class="ev" style="left:828px;top:920px">Wagered</span>
+          <span class="ev" style="left:1154px;top:328px">Accepted</span>
+          <span class="flowchip" style="left:1154px;top:304px">Flow 4</span>
+          <span class="ev" style="left:1154px;top:476px">Accepted</span>
+          <span class="ev" style="left:1154px;top:624px">Deposited</span>
+          <span class="ev" style="left:1154px;top:772px">Collected</span>
+          <span class="ev" style="left:1154px;top:920px">Wagered</span>
+          <span class="nd t-src" style="left:519px;top:58px"><em class="t-src" data-ic="api"></em><span><u>…1000</u><b>API</b><s>Promo page</s></span><i class="nd-foot">Players added to journey</i></span>
+          <span class="nd t-flows" style="left:519px;top:206px"><em class="t-flows" data-ic="star"></em><span><u>…19ad</u><b>Multipurpose Promotion</b><s>4 to choose from</s></span></span>
+          <span class="nd t-promo" style="left:30px;top:354px"><em class="t-promo" data-ic="mon"></em><span><u>…235a</u><b>Promotion</b><s>50 GG | Juego de la Semana</s></span></span>
+          <span class="nd t-cond" style="left:30px;top:502px"><em class="t-cond" data-ic="dol"></em><span><u>…2d07</u><b>Deposit</b><s>min 10000 CLP</s></span></span>
+          <span class="nd t-rew" style="left:30px;top:650px"><em class="t-rew" data-ic="slot"></em><span><u>…36b4</u><b>Casino FreeSpin</b><s>50 spins at 100, Super Hotfire Diamonds</s></span></span>
+          <span class="nd t-rew" style="left:30px;top:798px"><em class="t-rew" data-ic="chip"></em><span><u>…4061</u><b>Casino Bonus</b><s>rollover x20, 7 days</s></span></span>
+          <span class="nd term" style="left:154px;top:946px"><em data-ic="end"></em></span>
+          <span class="nd t-promo" style="left:356px;top:354px"><em class="t-promo" data-ic="mon"></em><span><u>…53bb</u><b>Promotion</b><s>50 GG | Juego de la Semana</s></span></span>
+          <span class="nd t-cond" style="left:356px;top:502px"><em class="t-cond" data-ic="dol"></em><span><u>…5d68</u><b>Deposit</b><s>min 20000 CLP</s></span></span>
+          <span class="nd t-rew" style="left:356px;top:650px"><em class="t-rew" data-ic="slot"></em><span><u>…6715</u><b>Casino FreeSpin</b><s>50 spins at 200, Super Hotfire Diamonds</s></span></span>
+          <span class="nd t-rew" style="left:356px;top:798px"><em class="t-rew" data-ic="chip"></em><span><u>…70c2</u><b>Casino Bonus</b><s>rollover x20, 7 days</s></span></span>
+          <span class="nd term" style="left:480px;top:946px"><em data-ic="end"></em></span>
+          <span class="nd t-promo" style="left:682px;top:354px"><em class="t-promo" data-ic="mon"></em><span><u>…841c</u><b>Promotion</b><s>50 GG | Juego de la Semana</s></span></span>
+          <span class="nd t-cond" style="left:682px;top:502px"><em class="t-cond" data-ic="dol"></em><span><u>…8dc9</u><b>Deposit</b><s>min 30000 CLP</s></span></span>
+          <span class="nd t-rew" style="left:682px;top:650px"><em class="t-rew" data-ic="slot"></em><span><u>…9776</u><b>Casino FreeSpin</b><s>50 spins at 400, Super Hotfire Diamonds</s></span></span>
+          <span class="nd t-rew" style="left:682px;top:798px"><em class="t-rew" data-ic="chip"></em><span><u>…a123</u><b>Casino Bonus</b><s>rollover x20, 7 days</s></span></span>
+          <span class="nd term" style="left:806px;top:946px"><em data-ic="end"></em></span>
+          <span class="nd t-promo" style="left:1008px;top:354px"><em class="t-promo" data-ic="mon"></em><span><u>…b47d</u><b>Promotion</b><s>50 GG | Juego de la Semana</s></span></span>
+          <span class="nd t-cond" style="left:1008px;top:502px"><em class="t-cond" data-ic="dol"></em><span><u>…be2a</u><b>Deposit</b><s>min 50000 CLP</s></span></span>
+          <span class="nd t-rew" style="left:1008px;top:650px"><em class="t-rew" data-ic="slot"></em><span><u>…c7d7</u><b>Casino FreeSpin</b><s>50 spins at 750, Super Hotfire Diamonds</s></span></span>
+          <span class="nd t-rew" style="left:1008px;top:798px"><em class="t-rew" data-ic="chip"></em><span><u>…d184</u><b>Casino Bonus</b><s>rollover x20, 7 days</s></span></span>
+          <span class="nd term" style="left:1132px;top:946px"><em data-ic="end"></em></span>
+        </div>
+        </div>
+        <span class="pgs-chip">22 nodes</span>
+        <span class="pgs-chip ok">approvable</span>
+        <span class="pgs-hint">scroll to see all four flows</span>
+        <aside class="pgs-cfg">
+            <div class="pgs-cfg-h">Casino FreeSpin <span>settings</span></div>
+            <div class="pgs-cfg-b">
+              <div class="pgd-r"><b>Provider</b><span>3 Oaks</span></div>
+              <div class="pgd-r"><b>Game</b><span>Super Hotfire Diamonds</span></div>
+              <div class="pgd-r"><b>How many spins</b><span>50</span></div>
+              <div class="pgd-r"><b>Bet per spin</b><span>100 CLP</span></div>
+              <div class="pgd-r"><b>Valid for</b><span>7 days</span></div>
+            </div>
+          </aside>
+        <p class="pgs-note">The whole Game of the Week, four flows, as the playground draws it. Click
+          any node there and its settings open on the right, and the line under the node's name is
+          whatever you set in them.</p>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox flag"></i></button>
+      <div class="bubble" data-bubble>
+        <p>This is the journey you have just been read through, built.</p>
+        <p>You will build one yourself at the end, and the validator will tell you if it would work.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="indigo" data-t="Nodes" data-part="Nodes and their rules" data-tab="The rules" data-pose="book"
+    data-tip="Nothing travels sideways. A node can only use what a node above it in the same path produced.">
+    <div class="stage">
+      <div class="ndoc one">
+      <p class="ndoc-h">One rule covers most of it: <b>everything a node needs comes from a node
+        above it</b>, in its own path. And every path has to finish with an ending.</p>
+      <article class="ndoc-i">
+        <span class="ndx t-src"><em data-ic="api"></em><span><b>Input source</b><s>how players get into the journey</s></span></span>
+        <ul>
+        <li><b>does</b><span>puts the player into the journey, and tells everything below it which
+          currency the player is in</span></li>
+        <li><b>rule</b><span>one per journey</span></li>
+        <li class="w"><b>watch</b><span>a journey has to start with an input source, always, with no
+          exceptions</span></li>
+        </ul>
+      </article>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox book"></i></button>
+      <div class="bubble" data-bubble>
+        <p>A journey is nodes in a line, and each one reads what the one above it left.</p>
+        <p>Two screens on the ones you will actually place.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="green" data-t="The offer" data-part="Nodes and their rules" data-tab="The offer" data-pose="glass"
+    data-tip="Hang free spins straight off a Multipurpose Promotion and there is no promotion above them, so there is nothing to attach the bonus to.">
+    <div class="stage">
+      <div class="ndoc">
+      <article class="ndoc-i">
+        <span class="ndx t-promo"><em data-ic="mon"></em><span><b>Promotion</b><s>one offer, made to the player</s></span></span>
+        <ul>
+        <li><b>does</b><span>offers the bonus to the player and waits. When they accept it, the rest
+          of the path runs</span></li>
+        <li class="w"><b>watch</b><span>the terms of the bonus are set here, so this is the object to
+          open when a player argues about them</span></li>
+        </ul>
+      </article>
+      <article class="ndoc-i">
+        <span class="ndx t-flows"><em data-ic="star"></em><span><b>Multipurpose Promotion</b><s>offers more than one promotion at once</s></span></span>
+        <ul>
+        <li><b>does</b><span>shows the player several promotions so they can look at them and pick
+          one. Whichever they pick, they carry on down that flow</span></li>
+        <li class="w"><b>watch</b><span>it gives the player nothing by itself. Every option under it
+          needs its own promotion</span></li>
+        </ul>
+      </article>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox glass"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Two nodes that look alike and are not.</p>
+        <p>A plain Promotion is one offer. A Multipurpose Promotion is several, and the player picks.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="purple" data-t="What pays out" data-part="Nodes and their rules" data-tab="What pays out" data-pose="think"
+    data-tip="A free spin with no deposit above it is a real shape. The deposit values are then set on the node itself.">
+    <div class="stage">
+      <div class="ndoc">
+      <article class="ndoc-i">
+        <span class="ndx t-cond"><em data-ic="dol"></em><span><b>Deposit</b><s>waits for the player to pay in</s></span></span>
+        <ul>
+        <li><b>does</b><span>holds the player until they deposit the minimum, then lets the path
+          carry on. It gives nothing itself</span></li>
+        <li class="w"><b>watch</b><span>it has to come after a promotion. Anywhere else and it has
+          nothing to attach the deposit to</span></li>
+        </ul>
+      </article>
+      <article class="ndoc-i">
+        <span class="ndx t-rew"><em data-ic="slot"></em><span><b>Casino FreeSpin</b><s>gives the free spins</s></span></span>
+        <ul>
+        <li><b>does</b><span>hands the player their free spins, and carries on once they have played
+          them</span></li>
+        <li class="w"><b>watch</b><span>the game and the value of each spin are set on this node</span></li>
+        </ul>
+      </article>
+      <article class="ndoc-i">
+        <span class="ndx t-rew"><em data-ic="chip"></em><span><b>Casino Bonus</b><s>the wagering on what they won</s></span></span>
+        <ul>
+        <li><b>does</b><span>takes what the spins won and holds it as bonus money. The player has to
+          bet it through a set number of times, the wagering, before it becomes real money they can
+          take out</span></li>
+        <li class="w"><b>watch</b><span>without it the winnings are paid straight out with no wagering
+          at all, which is almost never the offer we agreed</span></li>
+        </ul>
+      </article>
+      <article class="ndoc-i">
+        <span class="ndx t-delay"><em data-ic="hrg"></em><span><b>Wait</b><s>holds the player for a while</s></span></span>
+        <ul>
+        <li><b>does</b><span>stops the player here until the wait time is up, then carries on with
+          the next node</span></li>
+        <li class="w"><b>watch</b><span>the clock starts when the player arrives at it, not when the
+          journey starts</span></li>
+        </ul>
+      </article>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox think"></i></button>
+      <div class="bubble" data-bubble>
+        <p>The chain that actually pays: a condition, then the spins, then the wagering.</p>
+        <p>Each one reads the promotion above it.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="amber" data-t="Splitting and telling" data-part="Nodes and their rules" data-tab="Splitting and telling" data-pose="flag"
+    data-tip="A message node reports sent or not sent. Sent means we handed it over, not that anybody read it.">
+    <div class="stage">
+      <div class="ndoc">
+      <article class="ndoc-i">
+        <span class="ndx t-flow"><em data-ic="dsp"></em><span><b>Decision split</b><s>sorts players by a rule you set</s></span></span>
+        <ul>
+        <li><b>does</b><span>checks each player against your rule and sends them down the matching
+          path. Everyone who matches nothing goes down the last one</span></li>
+        <li class="w"><b>watch</b><span>that last path counts as a path, so it needs an ending like
+          every other one</span></li>
+        </ul>
+      </article>
+      <article class="ndoc-i">
+        <span class="ndx t-comm"><em data-ic="mon"></em><span><b>On-site messaging, email, SMS</b><s>tells the player something</s></span></span>
+        <ul>
+        <li><b>does</b><span>sends the content you wrote to the player</span></li>
+        <li class="w"><b>watch</b><span>after a message lands, the next node is a wait, a split
+          or an ending, never another send. Only a failed send goes straight to the next
+          channel — that is the fallback</span></li>
+        </ul>
+      </article>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox flag"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Splits choose a path. Message nodes only talk.</p>
+        <p>Neither of them gives a player anything.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" data-hue="olive" data-t="Week check" data-part="Nodes and their rules" data-tab="Check" data-pose="party"
+    data-tip="Same rules as the first round. Nothing here reaches a player.">
+    <div class="stage">
+      <div class="quiz2" data-quiz="gow">
+        <div class="qz-h"><b>Game of the Week</b><span class="qz-s" data-score></span>
+          <span class="qz-n" data-num></span></div>
+        <div class="qz-b" data-body></div>
+        <div class="qz-f"><span class="qz-dots" data-dots></span>
+          <button class="btn s" data-next hidden>Next</button></div>
+      </div>
+    </div>
+    <div class="talk">
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox party"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Ten on the Game of the Week, the last stop before the playground.</p>
+        <p>The strike-out still works: tap me once per question.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step wide pg-full" data-hue="teal" data-t="Playground" data-part="Playground" data-tab="Playground" data-pose="flag"
+    data-tip="Drag onto a node and it hangs off that node. Drop on empty canvas and it starts the journey. A question mark on a tile means we have never captured that node from a real journey, so no generator may build it yet.">
+    <div class="stage">
+      <div class="pg">
+        <aside class="pg-pal" id="palette">
+          <div class="pg-pal-h">Nodes <b>drag onto the canvas</b></div>
+          <div class="plist" id="plist"></div>
+        </aside>
+        <div class="pg-sheet">
+          <div class="cvwrap empty" id="cvwrap"><div class="cvin" id="cv"></div></div>
+
+          <button class="ovl-btn fold" id="pgFold" type="button" aria-label="Hide the node list"
+            title="Hide the node list">&#8676;</button>
+
+          <div class="ovl ovl-tl">
+            <span class="cvcount" id="cvCount"></span>
+            <span class="verdict no" id="verdict" hidden>not approvable</span>
+          </div>
+
+          <div class="ovl ovl-br zoomstack">
+            <button id="zIn" type="button" aria-label="Zoom in">+</button>
+            <b id="zLbl">100%</b>
+            <button id="zOut" type="button" aria-label="Zoom out">&#8722;</button>
+            <button id="zFit" type="button" aria-label="Fit the journey">&#9974;</button>
+          </div>
+
+          <div class="ovl ovl-bl">
+            <div class="attach" id="attach"></div>
+            <div class="pgbar">
+              <button class="btn s" id="pgCheck">Validate</button>
+              <button class="btn g s" id="pgUndo">Undo</button>
+              <button class="btn g s" id="pgClear">Clear</button>
+            </div>
+          </div>
+
+          <aside class="cfg quiet" id="cfg">
+            <div class="cfg-h"><b id="cfgTitle"></b>
+              <button class="ovl-x" id="cfgClose" type="button" aria-label="Close the settings">&#215;</button>
+            </div>
+            <div class="cfg-b" id="cfgBody"></div>
+          </aside>
+
+          <div class="ovl vsheet quiet" id="vsheet">
+            <div class="vsheet-h"><button class="vfold" id="vFold" type="button">Validator</button>
+              <b>catalog grammar + capture status</b>
+              <button class="ovl-x" id="vClose" type="button" aria-label="Hide the validator">&#215;</button>
+            </div>
+            <div class="vr" id="vr"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="talk">
+      <div class="note-pad" id="note">
+        <h4><button class="note-fold" id="noteFold" type="button" aria-expanded="true"
+          aria-controls="noteBody">Practice tasks</button><span id="noteCount"></span></h4>
+        <div id="noteBody">
+          <ol id="noteList"></ol>
+          <p id="noteHint">Pick one and I will read it out. Ticks are saved on this machine.</p>
+        </div>
+      </div>
+      <button class="mascot" data-buddy aria-label="Ask Flick"><i class="fox flag"></i></button>
+      <div class="bubble" data-bubble>
+        <p>Your turn. Drag nodes onto the canvas, or onto the node they follow.</p>
+        <p>Press Validate and I will tell you if it would build. Once a task is picked, tap me
+          any time and I read back what is still missing.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Full screen capture"></div>
+
+<script>
+'use strict';
+(function(){
+  var steps = [].slice.call(document.querySelectorAll('.step'));
+  var navPart = document.getElementById('navPart'), navTabs = document.getElementById('navTabs');
+  var back = document.getElementById('back'), fwd = document.getElementById('fwd');
+  var num = document.getElementById('num');
+  var cur = 0;
+
+  /* the top of the page shows the part you are in and its own pages, so a
+     new joiner sees where they are rather than twenty anonymous dots */
+  function drawNav(){
+    var part = steps[cur].dataset.part || '';
+    navPart.textContent = part;
+    navTabs.innerHTML = '';
+    if (part === 'Welcome') return;
+    steps.forEach(function(s, i){
+      if ((s.dataset.part || '') !== part) return;
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tab' + (i === cur ? ' now' : i < cur ? ' done' : '');
+      b.textContent = s.dataset.tab || s.dataset.t;
+      b.title = s.dataset.t;
+      if (i === cur) b.setAttribute('aria-current', 'page');
+      b.onclick = function(){ go(i); };
+      navTabs.appendChild(b);
+    });
+  }
+
+  function go(i){
+    cur = Math.max(0, Math.min(steps.length - 1, i));
+    steps.forEach(function(s, n){ s.classList.toggle('on', n === cur); });
+    drawNav();
+    back.disabled = cur === 0;
+    fwd.disabled = cur === steps.length - 1;
+    num.textContent = String(cur + 1).padStart(2, '0') + ' / ' + steps.length;
+    document.documentElement.dataset.hue = steps[cur].dataset.hue || 'teal';
+    document.documentElement.style.setProperty('--prog',
+      Math.round((cur + 1) / steps.length * 100) + '%');
+    if (location.hash !== '#s' + (cur + 1)) history.replaceState(null, '', '#s' + (cur + 1));
+    document.body.classList.toggle('pg-view', steps[cur].classList.contains('pg-full'));
+    window.scrollTo(0, 0);
+  }
+  back.onclick = function(){ go(cur - 1); };
+  fwd.onclick = function(){ go(cur + 1); };
+  document.addEventListener('keydown', function(e){
+    var open = document.getElementById('lb');
+    if (open && open.classList.contains('on')) return;
+    /* a screen can carry real fields, so typing in one wins over the deck */
+    var t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' ||
+              t.isContentEditable)) return;
+    if (e.key === 'ArrowRight') go(cur + 1);
+    if (e.key === 'ArrowLeft') go(cur - 1);
+  });
+
+  /* mascot: pose swap + the tip for this step */
+  var POSES = ['wave','think','book','thumb','flag','party','glass'];
+  function pose(el, p){
+    var f = el.classList.contains('fox') ? el : el.querySelector('.fox');
+    if (!f) return;
+    POSES.forEach(function(x){ f.classList.remove(x); });
+    f.classList.add(p);
+  }
+  function say(step, html, isTip){
+    var b = step.querySelector('[data-bubble]');
+    if (!b.dataset.keep) b.dataset.keep = b.innerHTML;
+    /* a tip is an aside; anything else becomes the line a tap returns you to,
+       so on a busy screen Flick picks up where he left off, not at the start */
+    if (!isTip) b.dataset.keep = html;
+    b.innerHTML = html;
+    b.classList.toggle('tip', !!isTip);
+  }
+  function poke(m){
+    m.classList.remove('poked');
+    void m.offsetWidth;
+    m.classList.add('poked');
+  }
+  document.addEventListener('click', function(e){
+    var m = e.target.closest('[data-buddy]');
+    if (!m) return;
+    poke(m);
+    var step = m.closest('.step');
+    var b = step.querySelector('[data-bubble]');
+    if (b.classList.contains('tip')){
+      b.innerHTML = b.dataset.keep;
+      b.classList.remove('tip');
+      pose(m, step.dataset.pose);
+    } else {
+      /* a screen can put its own answer in Flick's mouth; the canned tip is
+         what he says everywhere else */
+      var custom = typeof step._ask === 'function' ? step._ask() : null;
+      if (custom){
+        say(step, custom.html, true);
+        pose(m, custom.pose || 'think');
+      } else {
+        say(step, '<p><b>Careful here.</b> ' + step.dataset.tip + '</p>', true);
+        pose(m, 'think');
+      }
+    }
+  });
+
+  /* check */
+  /* ── playground ───────────────────────────────────────────
+     Grammar is the real one: activities, the events each emits, the
+     transitions seen in captured journeys (library/mined_catalog.json), and
+     the data each node needs from upstream. Capture status follows the
+     fragment library (journey-cloner/library/fragments/), which the backlog
+     checklist itself names as the truth; anything not captured must be
+     refused rather than generated. */
+  var GRAM = {"acts":{"ams_decision_split":{"ev":["DecisionSplitPassedPath01","DecisionSplitPassedPath02","DecisionSplitPassedPath03","DecisionSplitPassedPath04","DecisionSplitPassedPath05","DecisionSplitPassedPath06","DecisionSplitPassedPath07","DecisionSplitPassedPath08","DecisionSplitPassedPath09","DecisionSplitPassedPath10","DecisionSplitPassedPath11","DecisionSplitPassedPath12","DecisionSplitPassedPath13","DecisionSplitPassedPath14","DecisionSplitPassedPath15","DecisionSplitPassedPath16","DecisionSplitPassedPath17","DecisionSplitPassedPath18","DecisionSplitPassedPath19","DecisionSplitPassedPath20","DecisionSplitPassedRemainderPath"],"dep":[["CurrencyCode","dwh_source"]]},"campaign_connector":{"ev":["PlayerAddedToCampaign","PlayerNotAddedToCampaign"],"dep":[]},"casino_bonus_v2":{"ev":["WageringBonusAwardAborted","WageringBonusCancelConfirmed","WageringBonusCancelledByWithdrawalConfirmed","WageringBonusExpired","WageringBonusFinished","WageringBonusForfeited","WageringBonusLost","WageringBonusRejectConfirmed"],"dep":[["CurrencyCode","external_system_source"],["DepositAmount","deposit"],["DepositPaidAmount","deposit"],["PromotionId","promotion"],["bonusAmountCollected","freespin_bonus"]]},"deposit":{"ev":["DepositConditionCanceled","DepositConditionSatisfied","DepositConditionUnsatisfied"],"dep":[["CurrencyCode","external_system_source"],["PromotionAcceptedAt","promotion"],["PromotionId","promotion"]]},"dextra_email":{"ev":["FailedEmailSend","SuccessEmailSend"],"dep":[]},"dextra_sms":{"ev":["FailedSmsSend","SuccessSmsSend"],"dep":[]},"dwh_source":{"ev":["PlayerAdded"],"dep":[]},"email_engagement_split":{"ev":["Path1","Path2","Path3","Path4","Path5","Path6"],"dep":[["CommunicationId","dextra_email"]]},"end_of_journey":{"ev":[],"dep":[]},"end_of_path":{"ev":[],"dep":[]},"event_detector":{"ev":["DetectorFailed","DetectorSuccess"],"dep":[]},"external_system_source":{"ev":["PlayerAdded"],"dep":[]},"freebet":{"ev":["PlayerFreebetUsed","FreebetIssued","PlayerFreebetExpired","PlayerFreebetCanceled","FreebetNotIssued"],"dep":[["CurrencyCode","external_system_source"],["PromotionId","promotion"],["PromotionAcceptedAt","promotion"],["DepositAmount","deposit"],["DepositPaidAmount","deposit"]]},"freespin_bonus":{"ev":["FreeSpinsBonusTermsNotComplied","FreespinBonusAwardAborted","FreespinBonusCancelConfirmed","FreespinBonusCancelledByWithdrawalConfirmed","FreespinBonusCollectingFinished","FreespinBonusNotUsed","FreespinBonusRejectConfirmed"],"dep":[["CurrencyCode","external_system_source"],["DepositAmount","deposit"],["DepositPaidAmount","deposit"],["PromotionId","promotion"]]},"multipurpose_promotion":{"ev":["PromotionAccepted","PromotionExpired"],"dep":[["CurrencyCode","external_system_source"],["PromotionLinkId","external_system_source"]]},"notification_center#contract1":{"ev":["NotificationNotSent","NotificationSent"],"dep":[]},"notification_center#contract5":{"ev":["NotificationNotSent","NotificationSent"],"dep":[]},"notification_center_engagement_split":{"ev":["NCEngagementSplitPassedPath01","NCEngagementSplitPassedPath02","NCEngagementSplitPassedPath03","NCEngagementSplitPassedPath04","NCEngagementSplitPassedPath05"],"dep":[]},"promotion":{"ev":["PromotionAccepted","PromotionExpired"],"dep":[["CurrencyCode","external_system_source"],["PromotionLinkId","external_system_source"],["SelectedCurrencyCode","external_system_source"]]},"random_split":{"ev":["RandomSplitPassedPath1","RandomSplitPassedPath2","RandomSplitPassedPath3","RandomSplitPassedPath4"],"dep":[]},"registration":{"ev":["PlayerAdded"],"dep":[]},"sport_bonus":{"ev":["Completed","Lost","Expired","Canceled","Terminated","NotIssued"],"dep":[["CurrencyCode","external_system_source"],["PromotionId","promotion"],["PromotionAcceptedAt","promotion"]]},"wait_interval":{"ev":["WaitTimeCompleted"],"dep":[]}},"tr":[["ams_decision_split","DecisionSplitPassedPath01","dextra_email"],["ams_decision_split","DecisionSplitPassedPath02","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath03","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath04","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath05","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath06","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath07","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath08","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath09","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath10","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath11","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath12","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath13","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath14","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath15","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath16","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath17","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath18","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath19","end_of_journey"],["ams_decision_split","DecisionSplitPassedPath20","end_of_journey"],["ams_decision_split","DecisionSplitPassedRemainderPath","wait_interval"],["casino_bonus_v2","WageringBonusAwardAborted","end_of_journey"],["casino_bonus_v2","WageringBonusAwardAborted","end_of_path"],["casino_bonus_v2","WageringBonusCancelConfirmed","end_of_path"],["casino_bonus_v2","WageringBonusCancelledByWithdrawalConfirmed","end_of_path"],["casino_bonus_v2","WageringBonusExpired","end_of_path"],["casino_bonus_v2","WageringBonusFinished","end_of_path"],["casino_bonus_v2","WageringBonusForfeited","end_of_path"],["casino_bonus_v2","WageringBonusLost","end_of_path"],["casino_bonus_v2","WageringBonusRejectConfirmed","end_of_path"],["deposit","DepositConditionCanceled","end_of_journey"],["deposit","DepositConditionCanceled","end_of_path"],["deposit","DepositConditionSatisfied","freespin_bonus"],["deposit","DepositConditionUnsatisfied","end_of_path"],["dextra_email","FailedEmailSend","dextra_sms"],["dextra_email","SuccessEmailSend","wait_interval"],["dextra_sms","FailedSmsSend","end_of_path"],["dextra_sms","SuccessSmsSend","end_of_path"],["email_engagement_split","Path1","end_of_path"],["email_engagement_split","Path2","dextra_sms"],["email_engagement_split","Path3","dextra_sms"],["email_engagement_split","Path4","dextra_sms"],["email_engagement_split","Path5","dextra_sms"],["email_engagement_split","Path6","dextra_sms"],["event_detector","DetectorFailed","end_of_path"],["event_detector","DetectorSuccess","end_of_path"],["external_system_source","PlayerAdded","multipurpose_promotion"],["freespin_bonus","FreeSpinsBonusTermsNotComplied","end_of_path"],["freespin_bonus","FreespinBonusAwardAborted","end_of_journey"],["freespin_bonus","FreespinBonusCancelConfirmed","end_of_journey"],["freespin_bonus","FreespinBonusCancelledByWithdrawalConfirmed","end_of_journey"],["freespin_bonus","FreespinBonusCollectingFinished","casino_bonus_v2"],["freespin_bonus","FreespinBonusNotUsed","end_of_path"],["freespin_bonus","FreespinBonusRejectConfirmed","end_of_path"],["notification_center#contract1","NotificationNotSent","notification_center#contract5"],["notification_center#contract1","NotificationSent","wait_interval"],["notification_center#contract5","NotificationNotSent","dextra_email"],["notification_center#contract5","NotificationSent","wait_interval"],["notification_center_engagement_split","NCEngagementSplitPassedPath01","end_of_path"],["notification_center_engagement_split","NCEngagementSplitPassedPath02","ams_decision_split"],["notification_center_engagement_split","NCEngagementSplitPassedPath02","notification_center#contract5"],["notification_center_engagement_split","NCEngagementSplitPassedPath03","ams_decision_split"],["notification_center_engagement_split","NCEngagementSplitPassedPath03","notification_center#contract5"],["notification_center_engagement_split","NCEngagementSplitPassedPath04","ams_decision_split"],["notification_center_engagement_split","NCEngagementSplitPassedPath04","notification_center#contract5"],["notification_center_engagement_split","NCEngagementSplitPassedPath05","ams_decision_split"],["notification_center_engagement_split","NCEngagementSplitPassedPath05","notification_center#contract5"],["promotion","PromotionAccepted","deposit"],["promotion","PromotionExpired","end_of_path"],["wait_interval","WaitTimeCompleted","email_engagement_split"],["wait_interval","WaitTimeCompleted","notification_center_engagement_split"],["registration","PlayerAdded","notification_center#contract1"],["registration","PlayerAdded","ams_decision_split"],["dwh_source","PlayerAdded","notification_center#contract1"],["ams_decision_split","DecisionSplitPassedPath01","random_split"],["ams_decision_split","DecisionSplitPassedRemainderPath","random_split"],["random_split","RandomSplitPassedPath1","promotion"],["random_split","RandomSplitPassedPath2","promotion"],["random_split","RandomSplitPassedPath3","promotion"],["random_split","RandomSplitPassedPath4","end_of_journey"],["promotion","PromotionAccepted","freebet"],["promotion","PromotionAccepted","sport_bonus"],["deposit","DepositConditionSatisfied","freebet"],["freebet","PlayerFreebetUsed","campaign_connector"],["freebet","PlayerFreebetUsed","end_of_path"],["freebet","FreebetIssued","notification_center#contract1"],["freebet","PlayerFreebetExpired","end_of_path"],["freebet","PlayerFreebetExpired","end_of_journey"],["freebet","PlayerFreebetCanceled","end_of_path"],["freebet","PlayerFreebetCanceled","end_of_journey"],["freebet","FreebetNotIssued","end_of_path"],["freebet","FreebetNotIssued","end_of_journey"],["sport_bonus","Completed","end_of_journey"],["sport_bonus","Lost","end_of_journey"],["sport_bonus","Expired","end_of_journey"],["sport_bonus","Canceled","end_of_journey"],["sport_bonus","Terminated","end_of_journey"],["sport_bonus","NotIssued","end_of_journey"],["campaign_connector","PlayerAddedToCampaign","end_of_journey"],["campaign_connector","PlayerNotAddedToCampaign","end_of_journey"],["external_system_source","PlayerAdded","end_of_journey"],["dwh_source","PlayerAdded","end_of_journey"],["freebet","PlayerFreebetUsed","end_of_journey"]]};
+
+  var IC = {
+    seg:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="8" r="3.4"/><path d="M3 19c0-3.2 2.7-5 6-5s6 1.8 6 5z"/><ellipse cx="18.5" cy="8" rx="3" ry="1.3"/><path d="M15.5 10v3c0 .7 1.3 1.3 3 1.3s3-.6 3-1.3v-3c0 .7-1.3 1.3-3 1.3s-3-.6-3-1.3z"/></svg>',
+    ref:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="8" r="3.4"/><path d="M3 19c0-3.2 2.7-5 6-5s6 1.8 6 5z"/><path d="M16 9.6l1.7 1.7 3.4-3.4-1.2-1.2-2.2 2.2-.5-.5z"/></svg>',
+    csv:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8.5" cy="8" r="3.4"/><path d="M2.5 19c0-3.2 2.7-5 6-5s6 1.8 6 5z"/><rect x="14" y="12" width="8" height="6" rx="1.2"/><text x="18" y="16.6" font-size="4.2" text-anchor="middle" fill="#fff" font-family="monospace">CSV</text></svg>',
+    api:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8.5" cy="8" r="3.4"/><path d="M2.5 19c0-3.2 2.7-5 6-5s6 1.8 6 5z"/><path d="M18 10.5l3.4 1.9v3.9L18 18.2l-3.4-1.9v-3.9z" opacity=".85"/></svg>',
+    pre:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8.5" cy="8" r="3.4"/><path d="M2.5 19c0-3.2 2.7-5 6-5s6 1.8 6 5z"/><circle cx="18.3" cy="13.6" r="3.6"/><circle cx="18.3" cy="13.6" r="1.4" fill="#fff"/></svg>',
+    evt:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="3.5" width="16" height="17" rx="2.4"/><path d="M8 9h3M8 13h3M8 17h3" stroke-linecap="round"/><path d="M14 8.4l1.4 1.4 2.4-2.4M14 12.4l1.4 1.4 2.4-2.4" stroke-linecap="round"/></svg>',
+    mon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2.5" y="4.5" width="14" height="10" rx="1.8"/><path d="M7 18h6" stroke-linecap="round"/><rect x="18" y="8" width="4" height="8" rx="1.2"/><path d="M9.5 7.2l.9 1.9 2 .3-1.5 1.4.4 2-1.8-1-1.8 1 .4-2L6.6 9.4l2-.3z" fill="currentColor" stroke="none"/></svg>',
+    dsp:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 4v6M12 10l-6 5M12 10l6 5"/><path d="M9 4l3-2 3 2M3 14l3 2 3-2M15 14l3 2 3-2"/></svg>',
+    rsp:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8" cy="6.5" r="2.6"/><circle cx="16" cy="6.5" r="2.6"/><path d="M3.5 13.5c0-2.3 2-3.6 4.5-3.6s4.5 1.3 4.5 3.6zM11.5 13.5c0-2.3 2-3.6 4.5-3.6s4.5 1.3 4.5 3.6z" opacity=".9"/><path d="M6 18h5l-1.6-1.6L10.5 15 7 18l3.5 3-1.1-1.4H6z" opacity=".8"/><path d="M18 18h-5l1.6-1.6L13.5 15 17 18l-3.5 3 1.1-1.4H18z" opacity=".8"/></svg>',
+    chs:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="4" y="6" width="11" height="8" rx="1.6"/><path d="M17 9h4M17 12h4"/><path d="M7 18h9"/></svg>',
+    env:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3.6 7l8.4 6 8.4-6" stroke-linecap="round"/></svg>',
+    envs:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="10.5" rx="1.8"/><path d="M4.6 5.2L12 10.6l7.4-5.4" stroke-linecap="round"/><path d="M6 19h4M6 19l1.6-1.5M6 19l1.6 1.5M18 19h-4M18 19l-1.6-1.5M18 19l-1.6 1.5" stroke-linecap="round"/></svg>',
+    sms:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4.5h16a1.5 1.5 0 011.5 1.5v8A1.5 1.5 0 0120 15.5h-7l-4.5 4v-4H4A1.5 1.5 0 012.5 14V6A1.5 1.5 0 014 4.5z"/></svg>',
+    smss:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4.5 5h15a1 1 0 011 1v7a1 1 0 01-1 1h-6l-3.5 3v-3h-5.5a1 1 0 01-1-1V6a1 1 0 011-1z"/><path d="M6 20h3.5M6 20l1.4-1.3M6 20l1.4 1.3M18 20h-3.5M18 20l-1.4-1.3M18 20l-1.4 1.3" stroke-linecap="round"/></svg>',
+    phn:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="7" y="2.5" width="10" height="19" rx="2.4"/><path d="M10.5 5.5h3" stroke-linecap="round"/></svg>',
+    phns:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="8.5" y="2.5" width="7" height="13" rx="1.8"/><path d="M6 19h3.5M6 19l1.4-1.3M6 19l1.4 1.3M18 19h-3.5M18 19l-1.4-1.3M18 19l-1.4 1.3" stroke-linecap="round"/></svg>',
+    web:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2.5" y="5" width="13" height="9.5" rx="1.8"/><rect x="16.5" y="9" width="5" height="10" rx="1.4"/><path d="M6.5 18h5" stroke-linecap="round"/></svg>',
+    wap:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 00-7.7 13.6L3 21l4.5-1.2A9 9 0 1012 3zm0 2a7 7 0 11-3.6 13l-.4-.2-2.3.6.6-2.2-.2-.4A7 7 0 0112 5z"/><path d="M9.2 8.3c.2-.4.5-.4.8-.4h.5c.2 0 .4.1.5.4l.6 1.3c.1.2 0 .4-.1.6l-.4.4c-.1.2-.2.3 0 .5.4.7 1.2 1.4 1.9 1.7.2.1.4.1.5-.1l.4-.5c.2-.2.4-.2.6-.1l1.3.7c.2.1.3.3.3.5 0 .5-.3 1-.7 1.2-.4.2-.9.3-1.4.2-1.6-.4-3.5-2-4.3-3.5-.4-.7-.5-1.5-.3-2.2z"/></svg>',
+    det:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="3.5" width="16" height="17" rx="2.4"/><path d="M8 8.5h8M8 12h8M8 15.5h5" stroke-linecap="round"/></svg>',
+    cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3.5" y="5" width="17" height="15" rx="2.2"/><path d="M3.5 9.5h17M8 3.5v3M16 3.5v3" stroke-linecap="round"/></svg>',
+    hrg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M7 3.5h10M7 20.5h10M8 3.5v3.2c0 2 4 3.6 4 5.3s-4 3.3-4 5.3v3.2M16 3.5v3.2c0 2-4 3.6-4 5.3s4 3.3 4 5.3v3.2"/></svg>',
+    hook:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 7.5a3 3 0 10-2.6 3l-2.7 4.7"/><path d="M8.4 18.5a3 3 0 101.5-3.6"/><path d="M16.5 18.5a3 3 0 10-1.2-5.7l-2.6-4.6"/></svg>',
+    plug:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M8 4v6a4 4 0 004 4h0a4 4 0 014 4v2"/><path d="M16 4v4M8 20v-4"/><path d="M6 8h4M14 16h4"/></svg>',
+    par:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 4v13M15 4v13"/><path d="M6.5 14.5L9 17l2.5-2.5M12.5 14.5L15 17l2.5-2.5"/></svg>',
+    tree:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="5" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="12" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M12 7v4M6 16v-2h12v2M12 14v-3" stroke-linecap="round"/></svg>',
+    star:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4.5" width="16" height="15" rx="2.4"/><path d="M12 8l1.3 2.7 3 .4-2.2 2.1.5 3-2.6-1.4-2.6 1.4.5-3-2.2-2.1 3-.4z" fill="currentColor" stroke="none"/></svg>',
+    dol:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12.8 6.5v1.2c1.3.2 2.2 1 2.3 2.2h-1.7c-.1-.5-.5-.9-1.4-.9-.8 0-1.3.4-1.3.9 0 .6.5.8 1.8 1.1 1.8.4 2.8 1 2.8 2.5 0 1.3-.9 2.2-2.5 2.4v1.2h-1.4v-1.2c-1.5-.2-2.5-1.1-2.6-2.4h1.8c.1.6.6 1 1.5 1 .9 0 1.4-.4 1.4-1 0-.6-.5-.8-1.9-1.1-1.7-.4-2.7-1-2.7-2.4 0-1.3.9-2.1 2.4-2.3V6.5z" fill="#fff"/></svg>',
+    undol:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 12a8 8 0 10-3 6.2"/><path d="M20 5v5h-5"/><path d="M12 9v6M13.6 10.4c-.3-.6-1-.9-1.8-.9-1 0-1.7.5-1.7 1.3 0 .8.7 1 1.7 1.2 1 .2 1.9.5 1.9 1.4 0 .8-.8 1.4-1.9 1.4-.9 0-1.6-.4-1.8-1"/></svg>',
+    shld:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l7 2.6v6c0 4.3-2.9 8-7 10.4-4.1-2.4-7-6.1-7-10.4v-6z"/><rect x="8" y="9.5" width="8" height="6" rx="1.4" fill="#fff"/><circle cx="10.4" cy="12.5" r=".9"/><circle cx="13.6" cy="12.5" r=".9"/></svg>',
+    tkt:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 8.5h18v2.1a1.4 1.4 0 000 2.8v2.1H3v-2.1a1.4 1.4 0 000-2.8z"/></svg>',
+    tktu:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9h13v1.8a1.2 1.2 0 000 2.4V15H3v-1.8a1.2 1.2 0 000-2.4z"/><path d="M18.6 5.4l2.9 2.9-2.9 2.9-1.1-1.1 1-1h-2.6V7.5h2.6l-1-1z"/></svg>',
+    chipu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="13" cy="13" r="6.4"/><circle cx="13" cy="13" r="2.3"/><path d="M13 6.6v2M13 17.4v2M6.6 13h2M17.4 13h2"/><path d="M6.5 4.5v3.5h3.5" stroke-linecap="round"/></svg>',
+    ball:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7.6l2.8 2-1 3.3h-3.6l-1-3.3z" fill="currentColor" stroke="none"/><path d="M12 3v4.6M4.2 9.4l5.9 3.5M19.8 9.4l-5.9 3.5M7.6 20.4l2.5-7.5M16.4 20.4l-2.5-7.5"/></svg>',
+    chip:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3.4M12 17.6V21M3 12h3.4M17.6 12H21M5.6 5.6l2.4 2.4M16 16l2.4 2.4M18.4 5.6L16 8M8 16l-2.4 2.4"/></svg>',
+    slot:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4.5" y="4" width="15" height="16" rx="2.2"/><text x="11" y="16" font-size="10" font-family="monospace" font-weight="700" fill="currentColor" stroke="none">7</text></svg>',
+    free:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 8h18v2.1a1.4 1.4 0 000 2.8V15H3v-2.1a1.4 1.4 0 000-2.8z"/><text x="12" y="14" font-size="5.4" text-anchor="middle" font-family="monospace" font-weight="700" fill="#fff">FREE</text></svg>',
+    wal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2.5" y="7" width="15" height="10.5" rx="2"/><path d="M13 12.2h4.5" stroke-linecap="round"/><path d="M20 9v6M17 12h6" stroke-linecap="round"/></svg>',
+    coin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.4"/><path d="M14.4 10.2A3 3 0 1014.4 13.8" stroke-linecap="round"/></svg>',
+    end:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 12h11M11 8l4 4-4 4M19 5v14"/></svg>'
+  };
+
+  /* the palette exactly as the back office lists it: same groups, same order,
+     same greyed-out tiles. key = catalog wire name, cap = captured example. */
+  var PAL = [
+    ['Input Source','t-src',0,[
+      ['Custom Segment','seg','dwh_source',1,1],
+      ['Reference codes','ref','registration',1,1],
+      ['CSV','csv','',0,1],
+      ['API','api','external_system_source',1,0],
+      ['Predefined Segment','pre','dwh_source',1,0],
+      ['Events','evt','',0,1],
+      ['Promotion','mon','',1,1]]],
+    ['Flow control','t-flow',0,[
+      ['Decision split','dsp','ams_decision_split',1,0],
+      ['Random split','rsp','random_split',1,1],
+      ['Sms engagement split','smss','',0,1],
+      ['Email engagement split','envs','email_engagement_split',0,1],
+      ['Native push engagement split','phns','',0,1],
+      ['On-site messaging engagement split','chs','notification_center_engagement_split',1,1]]],
+    ['Communication','t-comm',0,[
+      ['Native push','phn','',0,1],
+      ['Web push','web','',0,1],
+      ['SMS','sms','dextra_sms',1,0],
+      ['Email','env','dextra_email',1,0],
+      ['On-site messaging','mon','notification_center#contract1',1,0],
+      ['WhatsApp','wap','',0,1]]],
+    ['Delays','t-delay',1,[
+      ['Event Detector','det','event_detector',1,1],
+      ['Date','cal','',1,1],
+      ['Wait','hrg','wait_interval',1,0]]],
+    ['Connectors','t-conn',0,[
+      ['Outgoing API request','hook','',0,1],
+      ['Campaign Connector','plug','campaign_connector',1,1]]],
+    ['Multiple flows','t-flows',0,[
+      ['Parallel flows','par','',1,1],
+      ['Choosable flows','tree','multipurpose_promotion',1,0]]],
+    ['Promotion type','t-promo',0,[
+      ['Promotion','mon','promotion',1,0],
+      ['Multipurpose Promotion','star','multipurpose_promotion',1,0]]],
+    ['Conditions','t-cond',0,[
+      ['Deposit','dol','deposit',1,0],
+      ['Deposit Collection','undol','',0,1],
+      ['Bet Insurance','shld','',0,1],
+      ['Bet','tkt','',1,1],
+      ['Bet Collection','tktu','',0,1],
+      ['Casino Bet Collection','chipu','',0,1]]],
+    ['Reward type','t-rew',0,[
+      ['Sport Bonus','ball','sport_bonus',1,1],
+      ['Casino Bonus','chip','casino_bonus_v2',1,0],
+      ['Casino FreeSpin','slot','freespin_bonus',1,0],
+      ['Sport FreeBet','free','freebet',1,0],
+      ['Money Bonus','wal','',0,1],
+      ['Coins Bonus','coin','',0,1]]],
+    ['Finish','t-fin',0,[
+      ['End of journey','end','end_of_journey',1,0]]]
+  ];
+
+  /* what the real canvas prints under each node title */
+  var SUB = {
+    external_system_source:'PromoPage', dwh_source:'Segment',
+    multipurpose_promotion:'Offered within 1d 0h 0m',
+    promotion:'Accepted by default', deposit:'1 days',
+    freespin_bonus:'Activity customized', casino_bonus_v2:'Activity customized',
+    wait_interval:'2 hours', event_detector:'Waiting for event',
+    ams_decision_split:'2 paths', 'notification_center#contract1':'On-site',
+    dextra_email:'Email content', dextra_sms:'SMS text',
+    registration:'Promo codes', random_split:'2 paths',
+    freebet:'Activity customized', sport_bonus:'Activity customized',
+    campaign_connector:'Links a journey',
+    end_of_journey:'', end_of_path:''
+  };
+  /* the branch words the back office prints on a connector, not the wire name */
+  var EVW = {
+    PlayerAdded:'Players added to journey', PromotionAccepted:'Accepted',
+    PromotionExpired:'Expired', PromotionCanceled:'Canceled',
+    DepositConditionSatisfied:'Deposited', DepositConditionCanceled:'Canceled',
+    DepositConditionExpired:'Expired',
+    FreespinBonusCollectingFinished:'Collected', FreespinBonusExpired:'Expired',
+    FreespinBonusCanceled:'Canceled', FreespinBonusLost:'Lost',
+    WageringBonusFinished:'Wagered', WageringBonusLost:'Lost',
+    WageringBonusForfeited:'Forfeited', WageringBonusExpired:'Expired',
+    WageringBonusCanceled:'Canceled', IntervalFinished:'Waited',
+    EventDetected:'Event seen', MessageSent:'Sent', MessageDelivered:'Delivered',
+    PlayerFreebetUsed:'Used', PlayerFreebetExpired:'Expired',
+    PlayerFreebetCanceled:'Canceled', FreebetIssued:'Issued',
+    FreebetNotIssued:'Not issued', NotIssued:'Not issued',
+    PlayerAddedToCampaign:'Added', PlayerNotAddedToCampaign:'Not added',
+    RandomSplitPassedPath1:'Path 1', RandomSplitPassedPath2:'Path 2',
+    RandomSplitPassedPath3:'Path 3', RandomSplitPassedPath4:'Path 4',
+    DecisionSplitPassedPath01:'Path 1', DecisionSplitPassedPath02:'Path 2',
+    DecisionSplitPassedPath03:'Path 3',
+    DecisionSplitPassedRemainderPath:'Everyone else'
+  };
+  function evWord(ev){
+    if (!ev) return '';
+    if (EVW[ev]) return EVW[ev];
+    /* fall back to the tail of the name, spaced out: FooBarBaz -> Baz */
+    var parts = ev.replace(/([a-z0-9])([A-Z])/g, '$1 $2').split(' ');
+    return parts.length > 1 ? parts.slice(-1)[0] : ev;
+  }
+  /* a label can say more than the activity it maps to */
+  var SUBL = { 'Choosable flows':'4 flows', 'Predefined Segment':'Segment' };
+  /* What the back office asks for on each node. Fields are grouped so the panel
+     reads in the order an operator fills them, and the summary line is what the
+     card shows once the node is configured. */
+  var CFG = {
+    external_system_source: { sum:['entry'], f:[
+      ['Activity name','name','text','Players added'],
+      ['Where they come from','entry','sel','Promo page|Randomizer prize|API call'],
+      ['Currency','ccy','sel','CLP|PEN|USD']] },
+    dwh_source: { sum:['segment'], f:[
+      ['Activity name','name','text','Segment'],
+      ['Segment','segment','text','VIP casino, last 30 days'],
+      ['Currency','ccy','sel','CLP|PEN|USD']] },
+    promotion: { sum:['nameEs','window'], f:[
+      ['Activity name','name','text','Promotion'],
+      ['Promotion link','link','text','PRM-0-…'],
+      ['Name ES','nameEs','text','50 GG con depósito'],
+      ['Name EN','nameEn','text','50 free spins with deposit'],
+      ['Offered within','window','text','1d 0h 0m'],
+      ['Accepted by default','auto','sel','yes|no'],
+      ['Terms link','terms','text','/promociones/terminos']] },
+    multipurpose_promotion: { sum:['options','window'], f:[
+      ['Activity name','name','text','Multipurpose Promotion'],
+      ['Promotion link','link','text','PRM-0-…'],
+      ['Name ES','nameEs','text','Elige tu bono'],
+      ['Name EN','nameEn','text','Choose your bonus'],
+      ['How many to offer','options','sel','2|3|4'],
+      ['Offered within','window','text','1d 0h 0m']] },
+    deposit: { sum:['min','ccy'], f:[
+      ['Activity name','name','text','Deposit'],
+      ['Minimum amount','min','num','10000'],
+      ['Currency','ccy','sel','CLP|PEN|USD'],
+      ['Wait for the deposit','window','text','1 day'],
+      ['Which deposit counts','which','sel','first after accepting|any in the window']] },
+    freespin_bonus: { sum:['spins','bet','game'], f:[
+      ['Activity name','name','text','Casino FreeSpin'],
+      ['Provider','provider','sel','3 Oaks|Pragmatic Play|Relax Gaming|Evolution'],
+      ['Game','game','text','Super Hotfire Diamonds'],
+      ['How many spins','spins','num','50'],
+      ['Bet per spin','bet','num','100'],
+      ['Currency','ccy','sel','CLP|PEN|USD'],
+      ['Valid for','valid','text','7 days'],
+      ['Maximum win','maxwin','num','500000'],
+      ['Name ES','nameEs','text','50 giros gratis'],
+      ['Name EN','nameEn','text','50 free spins']] },
+    casino_bonus_v2: { sum:['rollover','valid'], f:[
+      ['Activity name','name','text','Casino Bonus'],
+      ['What it wagers','source','sel','the free spin winnings|a fixed amount'],
+      ['Rollover','rollover','num','20'],
+      ['Valid for','valid','text','7 days'],
+      ['Maximum bet','maxbet','num','5000'],
+      ['Games that count','games','sel','all casino|selected games'],
+      ['Name ES','nameEs','text','Bono con rollover'],
+      ['Name EN','nameEn','text','Wagering bonus']] },
+    freebet: { sum:['amount','odds'], f:[
+      ['Activity name','name','text','Sport FreeBet'],
+      ['Amount','amount','num','5000'],
+      ['Currency','ccy','sel','CLP|PEN|USD'],
+      ['Minimum odds','odds','num','1.5'],
+      ['Valid for','valid','text','7 days'],
+      ['Sport','sport','sel','all|football|tennis|basketball'],
+      ['Name ES','nameEs','text','Apuesta gratis'],
+      ['Name EN','nameEn','text','Free bet']] },
+    'notification_center#contract1': { sum:['titleEs'], f:[
+      ['Activity name','name','text','On-site messaging'],
+      ['Title ES','titleEs','text','¡Tu bono está listo!'],
+      ['Title EN','titleEn','text','Your bonus is ready'],
+      ['Content ES','bodyEs','area','Entra y activa tus giros gratis del Juego de la Semana.'],
+      ['Content EN','bodyEn','area','Come in and activate your Game of the Week free spins.'],
+      ['Button ES','ctaEs','text','Activar'],
+      ['Button EN','ctaEn','text','Activate'],
+      ['Link','link','text','/promociones/juego-de-la-semana']] },
+    dextra_email: { sum:['subjEs'], f:[
+      ['Activity name','name','text','Email'],
+      ['Subject ES','subjEs','text','Tus giros gratis te esperan'],
+      ['Subject EN','subjEn','text','Your free spins are waiting'],
+      ['Content ES','bodyEs','area','Hola, tienes 50 giros gratis en el Juego de la Semana.'],
+      ['Content EN','bodyEn','area','Hi, you have 50 free spins on the Game of the Week.'],
+      ['Sender','from','sel','Jugabet promos|Jugabet support'],
+      ['Link','link','text','/promociones/juego-de-la-semana']] },
+    dextra_sms: { sum:['bodyEs'], f:[
+      ['Activity name','name','text','SMS'],
+      ['Content ES','bodyEs','area','Jugabet: tienes 50 giros gratis, actívalos hoy.'],
+      ['Content EN','bodyEn','area','Jugabet: you have 50 free spins, activate them today.'],
+      ['Sender ID','sender','text','JUGABET'],
+      ['Link','link','text','/promociones']] },
+    wait_interval: { sum:['wait'], f:[
+      ['Activity name','name','text','Wait'],
+      ['Wait for','wait','text','2 days'],
+      ['Then carry on','then','sel','at once|at 09:00 local time']] },
+    ams_decision_split: { sum:['paths'], f:[
+      ['Activity name','name','text','Decision split'],
+      ['How many paths','paths','sel','2|3|4|5'],
+      ['Path 1 takes','rule1','text','deposited in the last 7 days'],
+      ['Path 2 takes','rule2','text','everyone else']] },
+    end_of_journey: { sum:[], f:[] }
+  };
+
+  var SOURCES = ['dwh_source','external_system_source','registration'];
+  var TERMINALS = ['end_of_journey','end_of_path'];
+  var CHANNELS = ['dextra_sms','dextra_email','notification_center#contract1','notification_center#contract5'];
+
+  var TASKS = [
+    { k:'chooser-two-prizes', t:'Two promotions to choose from',
+      b:'Players arrive by API and land on a page where they choose one of two promotions. One gives a deposit and free spins, the other gives free spins and a wagering bonus.',
+      need:[['external_system_source|dwh_source','an input source'],['fork2','a multipurpose promotion with two flows'],
+            ['promotion*2','a promotion in each flow'],['deposit','a deposit in one flow'],
+            ['freespin_bonus*2','free spins in both flows'],
+            ['casino_bonus_v2','a wagering bonus in the other flow']] },
+    { k:'sport-freebet', t:'A freebet for a deposit',
+      b:'The sport side. One promotion, a deposit gate, then a Sport FreeBet. This is the exact shape of our captured sport follow-up: the freebet reads the promotion and the deposit above it.',
+      need:[['external_system_source|dwh_source|registration','an input source'],
+            ['promotion','a promotion'],['deposit','a deposit after it'],
+            ['freebet','a Sport FreeBet after the deposit'],
+            ['allterm','an ending on every path']] },
+    { k:'comms-only', t:'A comms only journey',
+      b:'No bonus at all. An entry source, an on-site message, a wait, then an email, then out. This is the shape our comms halves use.',
+      need:[['external_system_source|dwh_source','an entry source'],
+            ['notification_center#contract1','an on-site message'],
+            ['wait_interval','a wait'],['dextra_email','an email'],['term','a terminal on the end']] },
+  ];
+
+  var tree = [], nid = 0, sel = null, selPort = null, taskIx = -1, checked = false, drag = null;
+
+  var plist = document.getElementById('plist');
+  if (plist) {
+    var cv = document.getElementById('cv'), vr = document.getElementById('vr');
+    var verdict = document.getElementById('verdict'), cvCount = document.getElementById('cvCount');
+    var pgStep = plist.closest('.step');
+    var byLabel = {}, LBL = {};
+    function nice(k){ return LBL[k] || k; }
+
+    PAL.forEach(function(grp){
+      var h = document.createElement('div');
+      h.className = 'pgrp';
+      h.innerHTML = '<i>&#94;</i>' + grp[0];
+      plist.appendChild(h);
+      var g = document.createElement('div');
+      g.className = 'pgrid';
+      grp[3].forEach(function(it){
+        byLabel[it[0]] = { label:it[0], key:it[2], cap:it[3], tint:grp[1], ic:it[1] };
+        if (it[2] && !LBL[it[2]]) LBL[it[2]] = it[0];
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'ptile ' + grp[1] + (grp[2] ? ' round' : '') + (it[4] ? ' off' : '') +
+          (!it[3] && !it[4] ? ' cap-no' : '');
+        b.innerHTML = '<em aria-hidden="true">' + (IC[it[1]] || '') + '</em><span>' + it[0] + '</span>';
+        if (it[4]) {
+          b.disabled = true;
+          b.title = 'Greyed out in the back office too';
+        } else {
+          b.title = it[3] ? '' : 'never captured from a real journey';
+          b.draggable = true;
+          b.addEventListener('dragstart', function(e){
+            drag = it[0];
+            b.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', it[0]);
+            e.dataTransfer.effectAllowed = 'copy';
+          });
+          b.addEventListener('dragend', function(){ drag = null; b.classList.remove('dragging'); clearDrop(); });
+          b.onclick = function(){ place(it[0]); };
+        }
+        g.appendChild(b);
+      });
+      plist.appendChild(g);
+    });
+
+    function talkPg(html, p){ say(pgStep, html, false); if (p) pose(pgStep.querySelector('[data-buddy]'), p); }
+    /* tap Flick with a task on the note and he reads the canvas against it,
+       live, without the ceremony of a full Validate */
+    pgStep._ask = function(){
+      if (taskIx < 0) return null;
+      var miss = taskCheck(TASKS[taskIx]);
+      if (!miss.length)
+        return { html:'<p><b>The shape is there.</b> Press Validate and let the checks have ' +
+                 'their say.</p>', pose:'thumb' };
+      return { html:'<p><b>Still missing:</b> ' + miss.join(', ') + '.</p>', pose:'think' };
+    };
+    function node(id){ for (var i=0;i<tree.length;i++) if (tree[i].id===id) return tree[i]; return null; }
+    function kids(id){ return tree.filter(function(n){ return n.parent===id; }); }
+    function ancestors(n){ var out=[], c=n; while (c && c.parent!==null){ c=node(c.parent); if(c) out.push(c); } return out; }
+    /* NB: never a bare Sent$ here — it also matches NotificationNotSent, and
+       then the FAILURE port becomes the default one a new node hangs off. */
+    var PREF = /Satisfied|CollectingFinished|Finished|Accepted|NotificationSent|Success|Completed|PassedPath01|PassedPath1$|PlayerAdded$|PlayerAddedToCampaign|FreebetUsed|DetectorSuccess/;
+    /* rule 7 of the composer rules: wire the PRIMARY completion event, not a
+       failure one. The primary is the event a capture uses to reach a node that
+       is not a terminal; otherwise the friendliest-named completion event. */
+    /* the values an operator would type, prefilled with what our own captures
+       show, so a new joiner sees a realistic node rather than empty boxes */
+    function cfgFor(key){
+      var def = CFG[key];
+      if (!def) return null;
+      var v = {};
+      def.f.forEach(function(f){
+        v[f[1]] = f[2] === 'sel' ? String(f[3]).split('|')[0] : f[3];
+      });
+      return v;
+    }
+    function cfgLine(n){
+      var def = CFG[n.key];
+      if (!def || !n.cfg || !def.sum.length) return null;
+      var bits = def.sum.map(function(k){ return n.cfg[k]; }).filter(Boolean);
+      if (!bits.length) return null;
+      if (n.key === 'freespin_bonus')
+        return n.cfg.spins + ' spins at ' + n.cfg.bet + ', ' + n.cfg.game;
+      if (n.key === 'casino_bonus_v2') return 'rollover x' + n.cfg.rollover + ', ' + n.cfg.valid;
+      if (n.key === 'deposit') return 'min ' + n.cfg.min + ' ' + n.cfg.ccy;
+      if (n.key === 'freebet') return n.cfg.amount + ' ' + n.cfg.ccy + ', min odds ' + n.cfg.odds;
+      if (n.key === 'multipurpose_promotion') return n.cfg.options + ' to choose from';
+      if (n.key === 'wait_interval') return n.cfg.wait;
+      if (n.key === 'ams_decision_split') return n.cfg.paths + ' paths';
+      return bits[0];
+    }
+
+    function primaryEv(key){
+      var a = GRAM.acts[key];
+      if (!a || !a.ev.length) return '';
+      var happy = GRAM.tr.filter(function(t){
+        return t[0] === key && TERMINALS.indexOf(t[2]) === -1;
+      }).map(function(t){ return t[1]; });
+      for (var i=0;i<happy.length;i++) if (PREF.test(happy[i])) return happy[i];
+      if (happy.length) return happy[0];
+      for (var j=0;j<a.ev.length;j++) if (PREF.test(a.ev[j])) return a.ev[j];
+      return a.ev[0];
+    }
+    function ports(n){
+      var a = GRAM.acts[n.key];
+      if (!a) return [];
+      var pri = primaryEv(n.key);
+      return a.ev.slice().sort(function(x, y){
+        return (x === pri ? -1 : 0) - (y === pri ? -1 : 0);
+      });
+    }
+    function isTerm(k){ return TERMINALS.indexOf(k) !== -1; }
+
+    /* two events can print the same word, and two identical buttons read as a bug */
+    function dedupeWords(list){
+      var seen = {}, out = [];
+      list.forEach(function(e){
+        var w = evWord(e);
+        if (seen[w]) return;
+        seen[w] = 1; out.push(e);
+      });
+      return out;
+    }
+
+    function place(label){
+      var it = byLabel[label];
+      if (!tree.length) {
+        if (SOURCES.indexOf(it.key) === -1 && !(it.key === '' && /segment|reference|csv|api|events|promotion/i.test(label))) {
+          talkPg('<p>A journey starts with an input source. Pick one from the top group first.</p>', 'think');
+          return;
+        }
+      } else if (sel === null) {
+        talkPg('<p>Select the node you want to hang this off first. Click it in your journey.</p>', 'think');
+        return;
+      } else {
+        var p = node(sel);
+        if (isTerm(p.key)) {
+          talkPg('<p>Nothing runs after a terminal. That path is finished, so select another node.</p>', 'think');
+          return;
+        }
+        if (SOURCES.indexOf(it.key) !== -1) {
+          talkPg('<p>One input source per journey, and it has to be the first node.</p>', 'think');
+          return;
+        }
+      }
+      var ev = '';
+      if (tree.length) {
+        var pn = node(sel);
+        ev = selPort || primaryEv(pn.key) || ports(pn)[0] || '';
+      }
+      var n = { id:++nid, key:it.key, label:it.label, tint:it.tint, cap:it.cap, ic:it.ic,
+                uid:'\u2026' + (0x1000 + (nid * 2477 % 0xefff)).toString(16),
+                parent: tree.length ? sel : null, via: ev, flow:'', cfg: cfgFor(it.key) };
+      if (n.parent !== null){
+        var par = node(n.parent);
+        if (par.key === 'multipurpose_promotion' || par.key === 'ams_decision_split' ||
+            par.label === 'Parallel flows')
+          n.flow = 'Flow ' + (kids(par.id).length + 1);
+      }
+      tree.push(n);
+      sel = n.id; selPort = null; checked = false;
+      draw();
+      talkPg('<p>Added ' + it.label + '.</p>' +
+             (tree.length === 1 ? '<p>Now hang the next node off it.</p>' : ''), 'book');
+    }
+
+    /* is this edge one a captured journey actually shows? */
+    function edgeSeen(n){
+      if (n.parent === null) return true;
+      var p = node(n.parent);
+      if (!p || !p.key || !n.key || !n.via) return true;
+      for (var i = 0; i < GRAM.tr.length; i++){
+        var t = GRAM.tr[i];
+        if (t[0] === p.key && t[1] === n.via && t[2] === n.key) return true;
+      }
+      return false;
+    }
+
+    /* the back office's own proportions, so what you build here looks like
+       what you will see there. Nothing is scaled down to fit. */
+    var CARD_W = 292, CARD_H = 62, TERM = 44, GAP_X = 34, ROW_H = 148, PAD = 30, PAD_T = 58;
+    var zoom = 1, userZoomed = false;
+
+    /* tidy tree: leaves take the next free column, parents centre over kids */
+    function layout(){
+      var pos = {}, cursor = 0, maxd = 0;
+      function walk(n, d){
+        maxd = Math.max(maxd, d);
+        var ch = kids(n.id), w = isTerm(n.key) ? TERM : CARD_W;
+        if (!ch.length){
+          pos[n.id] = { x:cursor + (CARD_W - w) / 2, y:d, w:w };
+          cursor += CARD_W + GAP_X;
+          return pos[n.id];
+        }
+        var boxes = ch.map(function(c){ return walk(c, d + 1); });
+        var a = boxes[0], z = boxes[boxes.length - 1];
+        pos[n.id] = { x:(a.x + z.x + z.w) / 2 - w / 2, y:d, w:w };
+        return pos[n.id];
+      }
+      tree.filter(function(n){ return n.parent === null; }).forEach(function(r){ walk(r, 0); });
+      var minx = 0, maxx = 0;
+      Object.keys(pos).forEach(function(k){
+        minx = Math.min(minx, pos[k].x);
+        maxx = Math.max(maxx, pos[k].x + pos[k].w);
+      });
+      Object.keys(pos).forEach(function(k){ pos[k].x -= minx; });
+      return { pos:pos, w:Math.max(maxx - minx, 180), h:(maxd + 1) * ROW_H };
+    }
+
+    function elbow(x1, y1, x2, y2){
+      var my = y1 + (y2 - y1) / 2, r = 7;
+      if (Math.abs(x1 - x2) < 1) return 'M' + x1 + ' ' + y1 + 'V' + y2;
+      var dir = x2 > x1 ? 1 : -1;
+      return 'M' + x1 + ' ' + y1 + 'V' + (my - r) +
+             'Q' + x1 + ' ' + my + ' ' + (x1 + dir * r) + ' ' + my +
+             'H' + (x2 - dir * r) +
+             'Q' + x2 + ' ' + my + ' ' + x2 + ' ' + (my + r) + 'V' + y2;
+    }
+
+    function draw(){
+      var wrap = document.getElementById('cvwrap');
+      var attach = document.getElementById('attach');
+      if (!tree.length){
+        wrap.classList.add('empty');
+        cv.innerHTML = '<span class="cv-empty">empty canvas<br>start with an input source</span>';
+        cvCount.textContent = '';
+        attach.innerHTML = '';
+        verdict.hidden = true; vr.innerHTML = '';
+        return;
+      }
+      wrap.classList.remove('empty');
+      var L = layout(), paths = [], pills = [], cards = [], midPad = 0;
+      var W = L.w + PAD * 2, H = L.h + PAD_T + PAD;
+      /* the zoom is settled first, because the centring depends on it. A journey
+         bigger than the sheet opens fitted, the way the back office opens one;
+         touch the zoom yourself and it stays where you put it. */
+      if (!userZoomed && wrap.clientWidth > 140){
+        var kx = (wrap.clientWidth - 14) / W, ky = (wrap.clientHeight - 14) / H;
+        zoom = Math.max(0.4, Math.min(1, kx, ky));
+      }
+      /* then centre it across the sheet while it is narrower than the sheet */
+      if (wrap.clientWidth > 140){
+        var room = (wrap.clientWidth - 4) / zoom;
+        if (room > W) { midPad = Math.round((room - W) / 2); W = Math.round(room); }
+      }
+      tree.forEach(function(n){
+        var p = L.pos[n.id];
+        var h = isTerm(n.key) ? TERM : CARD_H;
+        if (n.parent !== null){
+          var pp = L.pos[n.parent], ph = isTerm(node(n.parent).key) ? TERM : CARD_H;
+          var x1 = pp.x + pp.w / 2 + PAD + midPad, y1 = pp.y * ROW_H + ph + PAD_T;
+          var x2 = p.x + p.w / 2 + PAD + midPad, y2 = p.y * ROW_H + PAD_T;
+          var srcFoot = node(n.parent).tint === 't-src' ? 22 : 0;
+          paths.push('<path d="' + elbow(x1, y1 + srcFoot, x2, y2) + '" fill="none" ' +
+            'stroke="var(--line-2)" stroke-width="1.4" stroke-dasharray="3 4"/>');
+          if (n.via && !srcFoot)
+            pills.push('<span class="ev' + (edgeSeen(n) ? '' : ' unseen') + '" title="' + n.via +
+              '" data-parent="' + n.parent + '" data-ev="' + n.via + '" style="left:' + x2 +
+              'px;top:' + (y2 - 26) + 'px">' + evWord(n.via) + '</span>');
+          if (n.flow)
+            pills.push('<span class="flowchip" style="left:' + x2 + 'px;top:' + (y2 - 50) + 'px">' +
+              n.flow + '</span>');
+        }
+        var sub = cfgLine(n);
+        if (sub === null)
+          sub = SUBL[n.label] !== undefined ? SUBL[n.label]
+              : (SUB[n.key] === undefined ? '' : SUB[n.key]);
+        var isSrc = n.tint === 't-src';
+        cards.push('<button class="nd ' + (isTerm(n.key) ? 'term ' : n.tint + ' ') +
+          (sel === n.id ? 'sel' : '') +
+          '" data-id="' + n.id + '" type="button" style="left:' + (p.x + PAD + midPad) + 'px;top:' +
+          (p.y * ROW_H + PAD_T) + 'px">' +
+          (isTerm(n.key)
+            ? '<em aria-hidden="true">' + (IC.end || '') + '</em>'
+            : '<em class="' + n.tint + '" aria-hidden="true">' + (IC[n.ic] || '') + '</em>' +
+              '<span><u>' + n.uid + '</u><b>' + n.label + '</b><s>' + (sub || '') + '</s></span>' +
+              (isSrc ? '<i class="nd-foot">Players added to journey</i>' : '') +
+              '<i class="nd-plus" aria-hidden="true">+</i>') +
+          '</button>');
+      });
+
+      /* the free branches of the selected node, drawn under it as dashed labels.
+         Drop a node on one and it hangs off that branch: the operator went for
+         this first, and until now only an existing branch could be dropped on. */
+      if (sel !== null){
+        var sn = node(sel);
+        if (sn && !isTerm(sn.key)){
+          var sp = L.pos[sel];
+          var taken = kids(sn.id).map(function(k){ return k.via; });
+          var free = dedupeWords(ports(sn)).filter(function(e){ return taken.indexOf(e) === -1; });
+          free.slice(0, 3).forEach(function(e, i){
+            var gx = sp.x + sp.w / 2 + PAD + midPad;
+            var gy = sp.y * ROW_H + PAD_T + (isTerm(sn.key) ? TERM : CARD_H) + 20 + i * 22;
+            pills.push('<span class="ev ghost' + (selPort === e ? ' on' : '') + '" title="' + e +
+              '" data-parent="' + sel + '" data-ev="' + e + '" style="left:' + gx + 'px;top:' +
+              gy + 'px">' + evWord(e) + '</span>');
+          });
+        }
+      }
+      cv.style.transform = zoom === 1 ? 'none' : 'scale(' + zoom + ')';
+      cv.style.width = W + 'px';
+      cv.style.height = H + 'px';
+      cv.innerHTML = '<svg class="cvsvg" width="' + W + '" height="' + H + '">' +
+        paths.join('') + '</svg>' + pills.join('') + cards.join('');
+      if (zoom !== 1){
+        cv.style.width = Math.round(W * zoom) + 'px';
+        cv.style.height = Math.round(H * zoom) + 'px';
+      }
+      var zl = document.getElementById('zLbl');
+      if (zl) zl.textContent = Math.round(zoom * 100) + '%';
+      if (H * zoom <= wrap.clientHeight + 2) wrap.scrollTop = 0;
+      if (W * zoom <= wrap.clientWidth + 2) wrap.scrollLeft = 0;
+      var selp = sel === null ? null : L.pos[sel];
+      if (selp){
+        var sy = (selp.y * ROW_H + PAD_T) * zoom, sx = (selp.x + PAD + midPad) * zoom;
+        var ch = CARD_H * zoom, cw = CARD_W * zoom;
+        if (sy + ch + 30 > wrap.scrollTop + wrap.clientHeight)
+          wrap.scrollTop = sy + ch + 40 - wrap.clientHeight;
+        else if (sy < wrap.scrollTop) wrap.scrollTop = Math.max(0, sy - 24);
+        if (sx + cw + 30 > wrap.scrollLeft + wrap.clientWidth)
+          wrap.scrollLeft = sx + cw + 40 - wrap.clientWidth;
+        else if (sx < wrap.scrollLeft) wrap.scrollLeft = Math.max(0, sx - 24);
+      }
+      cvCount.textContent = tree.length + (tree.length === 1 ? ' node' : ' nodes');
+
+      var selN = sel === null ? null : node(sel);
+      if (selN && !isTerm(selN.key)){
+        var pl = ports(selN);
+        attach.innerHTML = '<span class="lbl">attach after</span><b style="color:var(--ink);' +
+          'font-size:11px">' + selN.label + '</b>' +
+          (pl.length ? '<span class="lbl">via</span>' + dedupeWords(pl).slice(0, 3).map(function(e){
+            return '<button class="port' + ((selPort || pl[0]) === e ? ' on' : '') +
+                   '" data-ev="' + e + '" title="' + e + '" type="button">' + evWord(e) + '</button>';
+          }).join('') + (pl.length > 3 ? '<span class="port" style="border:0">+' + (pl.length - 3) +
+          '</span>' : '')
+          : '');
+        if (kids(selN.id).length === 0 && tree.length > 1)
+          attach.innerHTML += '<button class="btn g s" data-drop="1" type="button">remove</button>';
+      } else {
+        attach.innerHTML = selN
+          ? '<span class="lbl">that path is finished</span>' +
+            (kids(selN.id).length === 0 && tree.length > 1
+              ? '<button class="btn g s" data-drop="1" type="button">remove</button>' : '')
+          : '';
+      }
+      if (!checked){ verdict.hidden = true; vr.innerHTML = ''; }
+      var vsheet = document.getElementById('vsheet');
+      if (vsheet) vsheet.classList.toggle('quiet', !vr.innerHTML);
+    }
+
+    document.getElementById('attach').addEventListener('click', function(e){
+      if (e.target.closest('[data-drop]')){
+        /* a leaf can be taken off, which is how you correct a duplicate */
+        var n = node(sel);
+        if (!n || kids(n.id).length) return;
+        tree = tree.filter(function(x){ return x.id !== n.id; });
+        sel = n.parent; selPort = null; checked = false; draw();
+        talkPg('<p>Taken off. That path needs a new ending.</p>', 'flag');
+        return;
+      }
+      var p = e.target.closest('.port');
+      if (!p || !p.dataset.ev) return;
+      selPort = p.dataset.ev; draw();
+    });
+    cv.addEventListener('click', function(e){
+      var g = e.target.closest('.ev.ghost');
+      if (g){
+        sel = Number(g.dataset.parent); selPort = g.dataset.ev || null; draw();
+        return;
+      }
+      var b = e.target.closest('.nd');
+      if (!b) return;
+      cfgOpen(Number(b.dataset.id));
+      /* selecting a node is not a cue for a lecture. The validator is where the
+         detail belongs, and it only speaks when you ask it to. */
+      sel = Number(b.dataset.id); selPort = null; draw();
+    });
+
+    function validate(){
+      var rows = [], errs = 0;
+      var roots = tree.filter(function(n){ return n.parent === null; });
+      if (!tree.length) { rows.push(['err','nothing on the canvas yet']); errs++; }
+      if (roots.length > 1) { rows.push(['err','more than one root node. A journey has one input source']); errs++; }
+      roots.forEach(function(r){
+        if (SOURCES.indexOf(r.key) === -1 && r.key !== '')
+          { rows.push(['err','the first node must be an input source, not ' + r.label]); errs++; }
+      });
+      tree.forEach(function(n){
+        if (!n.cap) { rows.push(['blocked', n.label + ': no captured example, cannot build safely']); errs++; }
+      });
+      tree.forEach(function(n){
+        var a = GRAM.acts[n.key];
+        if (!a || !a.dep.length) return;
+        var up = ancestors(n).map(function(x){ return x.key; });
+        var gone = {};
+        a.dep.forEach(function(d){
+          if (SOURCES.indexOf(d[1]) !== -1 && up.some(function(k){ return SOURCES.indexOf(k) !== -1; })) return;
+          if (up.indexOf(d[1]) !== -1) return;
+          (gone[d[1]] = gone[d[1]] || []).push(d[0]);
+        });
+        Object.keys(gone).forEach(function(from){
+          /* A deposit only feeds a reward when the flow has one. Our captures all
+             came from deposit journeys, so the catalog lists those fields as if
+             they were always required, and a free spin prize with no deposit is a
+             real shape. Say it, do not block it. Anything else missing is fatal:
+             a reward with no promotion above it cannot be built. */
+          if (from === 'deposit'){
+            rows.push(['warn', n.label + ': no Deposit above it, so set its amounts on the node']);
+            return;
+          }
+          rows.push(['err', n.label + ' needs a ' + nice(from) + ' above it']); errs++;
+        });
+      });
+      tree.forEach(function(n){
+        if (n.parent === null || !n.key) return;
+        var p = node(n.parent);
+        if (!p.key) return;
+        if (edgeSeen(n)) { rows.push(['ok', '']); return; }
+        var step = nice(p.key) + ' to ' + nice(n.key);
+        if (p.key === 'multipurpose_promotion' && n.key === 'promotion')
+          rows.push(['warn', step + ': not in our captures, but the live journeys do it']);
+        else
+          rows.push(['warn', step + ': never seen in a capture, check it is legal']);
+      });
+      /* the composer's own rule: a DELIVERED message is never wired straight to
+         another send. Success goes to a wait, a split or an ending; a FAILED
+         send is the one that goes straight to the fallback channel. */
+      var SENT_OK = ['NotificationSent','SuccessEmailSend','SuccessSmsSend'];
+      tree.forEach(function(n){
+        if (n.parent === null || CHANNELS.indexOf(n.key) === -1) return;
+        var pc = node(n.parent);
+        if (CHANNELS.indexOf(pc.key) !== -1 && SENT_OK.indexOf(n.via) !== -1){
+          rows.push(['err', pc.label + ' sent, then straight to ' + n.label +
+                     '. After a send comes a wait, a split or an ending']); errs++;
+        }
+      });
+      tree.forEach(function(n){
+        if (kids(n.id).length === 0 && !isTerm(n.key))
+          rows.push(['warn', n.label + ' has no ending under it']);
+        if (CHANNELS.indexOf(n.key) !== -1 && !(n.cfg && (n.cfg.bodyEs || n.cfg.titleEs || n.cfg.subjEs)))
+          rows.push(['warn', n.label + ' has no copy set']);
+      });
+      if (taskIx >= 0) {
+        var miss = taskCheck(TASKS[taskIx]);
+        if (miss.length) {
+          rows.push(['task', 'still missing: ' + miss.join(', ')]);
+          errs += miss.length;
+        }
+        else if (errs) rows.push(['task','the shape is right, fix the problems first']);
+        else {
+          rows.push(['done','task complete: ' + TASKS[taskIx].t]);
+          markDone(TASKS[taskIx].k);
+        }
+      }
+      checked = true;
+      verdict.hidden = false;
+      verdict.className = 'verdict ' + (errs ? 'no' : 'yes');
+      verdict.textContent = errs ? 'not approvable' : 'approvable';
+      var nWarn = rows.filter(function(r){ return r[0] === 'warn'; }).length;
+      vr.innerHTML = vrHtml(rows, errs, tree.filter(function(n){ return n.parent !== null; }).length);
+      if (!errs && !nWarn)
+        talkPg('<p>Clean. That would build.</p><p>Every edge here matches one we have seen in a real ' +
+               'journey, and every node has what it needs from above.</p>', 'party');
+      else if (!errs)
+        talkPg('<p>It would build, with ' + nWarn + (nWarn === 1 ? ' thing' : ' things') +
+               ' worth a look. Warnings mean I cannot confirm it from a capture, not that it is wrong.</p>', 'thumb');
+      else
+        talkPg('<p>Not approvable yet. ' + errs + (errs === 1 ? ' problem' : ' problems') +
+               ' in the list, and the red ones are the ones that stop a build.</p>', 'think');
+      if (allJustDone){
+        allJustDone = false;
+        talkPg('<p><b>That is all seven.</b> Every shape we actually ship, built by your own ' +
+               'hand. The playground stays here whenever you want to try one before drawing it ' +
+               'for real.</p>', 'party');
+      }
+      draw();
+      verdict.hidden = false;
+    }
+
+    /* One line of counts, the task, then the problems. Everything the operator
+       cannot act on is folded behind a button: twelve rows of prose was worse
+       than none, because the two that mattered were buried in it. */
+    function vrHtml(rows, errs, edges){
+      var seen = {}, order = [];
+      rows.forEach(function(r){
+        if (r[0] === 'ok') return;
+        var k = r[0] + '|' + r[1];
+        if (seen[k]) { seen[k].n++; return; }
+        seen[k] = { kind:r[0], text:r[1], n:1 };
+        order.push(k);
+      });
+      var list = order.map(function(k){ return seen[k]; });
+      var bad = list.filter(function(r){ return r.kind === 'err' || r.kind === 'blocked'; });
+      var warn = list.filter(function(r){ return r.kind === 'warn'; });
+      var task = list.filter(function(r){ return r.kind === 'task' || r.kind === 'done'; });
+
+      var row = function(r){
+        return '<div class="vrow ' + r.kind + '"><i></i><span>' + r.text +
+               (r.n > 1 ? ' <u>&#215;' + r.n + '</u>' : '') + '</span></div>';
+      };
+      var out = '<div class="vsum">' +
+        '<span class="vs ok">' + edges + (edges === 1 ? ' step' : ' steps') + ' checked</span>' +
+        (errs ? '<span class="vs bad">' + errs +
+          (errs === 1 ? ' problem' : ' problems') + '</span>' : '<span class="vs fine">no problems</span>') +
+        (warn.length ? '<button class="vs warn" type="button" data-vtoggle aria-expanded="false">' +
+          warn.length + ' worth a look</button>' : '') +
+        '</div>';
+      out += task.map(row).join('');
+      out += bad.map(row).join('');
+      if (warn.length) out += '<div class="vwarns" hidden>' + warn.map(row).join('') + '</div>';
+      return out;
+    }
+
+    vr.addEventListener('click', function(e){
+      var b = e.target.closest('[data-vtoggle]');
+      if (!b) return;
+      var box = vr.querySelector('.vwarns');
+      if (!box) return;
+      var open = box.hidden;
+      box.hidden = !open;
+      b.setAttribute('aria-expanded', open ? 'true' : 'false');
+      b.textContent = open ? 'hide the list' : box.children.length + ' worth a look';
+    });
+
+    function taskCheck(task){
+      var keys = tree.map(function(n){ return n.key || n.label; });
+      var count = function(k){ return keys.filter(function(x){ return x === k; }).length; };
+      var forks = tree.map(function(n){ return kids(n.id).length; });
+      var miss = [];
+      task.need.forEach(function(nd){
+        var spec = nd[0], what = nd[1], m;
+        if ((m = /^fork(\d+)$/.exec(spec))){
+          if (!forks.some(function(f){ return f >= Number(m[1]); })) miss.push(what);
+          return;
+        }
+        if (spec === 'allterm'){
+          var loose = tree.filter(function(n){
+            return kids(n.id).length === 0 && TERMINALS.indexOf(n.key) === -1;
+          });
+          if (loose.length) miss.push(what);
+          return;
+        }
+        if (spec === 'term'){
+          if (!keys.some(function(k){ return TERMINALS.indexOf(k) !== -1; })) miss.push(what);
+          return;
+        }
+        if (spec.charAt(0) === '!'){
+          m = /^!(.+)\*(\d+)$/.exec(spec);
+          if (m){ if (count(m[1]) >= Number(m[2])) miss.push(what); return; }
+          if (keys.indexOf(spec.slice(1)) !== -1) miss.push(what);
+          return;
+        }
+        if ((m = /^(.+)\*(\d+)$/.exec(spec))){
+          if (count(m[1]) < Number(m[2])) miss.push(what);
+          return;
+        }
+        if (!spec.split('|').some(function(k){ return keys.indexOf(k) !== -1; })) miss.push(what);
+      });
+      return miss;
+    }
+
+    /* ── drag and drop ── */
+    function clearDrop(){
+      wrapEl.classList.remove('dragover');
+      var d = cv.querySelector('.nd.drop, .ev.drop');
+      if (d) d.classList.remove('drop');
+    }
+    var wrapEl = document.getElementById('cvwrap');
+    wrapEl.addEventListener('dragover', function(e){
+      if (!drag) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      var card = e.target.closest ? e.target.closest('.nd') : null;
+      var pill = e.target.closest ? e.target.closest('.ev') : null;
+      var cur = cv.querySelector('.nd.drop, .ev.drop');
+      if (cur && cur !== card && cur !== pill) cur.classList.remove('drop');
+      if (card && !isTerm(node(Number(card.dataset.id)).key)) card.classList.add('drop');
+      else if (pill) pill.classList.add('drop');
+      wrapEl.classList.add('dragover');
+    });
+    wrapEl.addEventListener('dragleave', function(e){
+      if (e.target === wrapEl) clearDrop();
+    });
+    wrapEl.addEventListener('drop', function(e){
+      e.preventDefault();
+      /* the payload, not the drag variable: dragend can land first and used to
+         null it, which is why a drop sometimes did nothing at all */
+      var label = (e.dataTransfer && e.dataTransfer.getData('text/plain')) || drag;
+      if (!label || !byLabel[label]) { clearDrop(); drag = null; return; }
+      var t = e.target.closest ? e.target : null;
+      var card = t && t.closest ? t.closest('.nd') : null;
+      var pill = t && t.closest ? t.closest('.ev') : null;
+      if (card){
+        var id = Number(card.dataset.id);
+        if (id !== sel){ sel = id; selPort = null; }
+      } else if (pill && pill.dataset.parent){
+        /* dropped on a branch label: hang it off that node, through that event */
+        sel = Number(pill.dataset.parent);
+        selPort = pill.dataset.ev || null;
+      }
+      clearDrop();
+      drag = null;
+      place(label);
+    });
+
+    /* ── the note: tasks, and which ones this operator has finished ──
+       Progress is stored against the logged-in operator at
+       /api/admin/onboarding/progress, so it follows the person and not the
+       browser. The shared copy of this page has no server behind it, so it
+       falls back to this machine only when the endpoint is not there. */
+    var PROGRESS_URL = '/api/admin/onboarding/progress';
+    var LOCAL_KEY = 'flick.playground.done.v1';
+    var done = [];
+    var serverBacked = false;
+    var allJustDone = false;
+    var noteList = document.getElementById('noteList');
+    var noteCount = document.getElementById('noteCount');
+    var noteHint = document.getElementById('noteHint');
+
+    function localDone(){
+      var keys = TASKS.map(function(t){ return t.k; });
+      try {
+        var raw = JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]') || [];
+        return raw.filter(function(k){ return keys.indexOf(k) !== -1; });
+      } catch (e) { return []; }
+    }
+    function localSave(){
+      try { localStorage.setItem(LOCAL_KEY, JSON.stringify(done)); } catch (e) {}
+    }
+
+    function drawNote(){
+      noteList.innerHTML = TASKS.map(function(t, i){
+        var isDone = done.indexOf(t.k) !== -1;
+        return '<li class="' + (isDone ? 'done ' : '') + (taskIx === i ? 'now' : '') +
+          '"><button type="button" data-i="' + i + '"><i>' + (isDone ? '✓' : '') + '</i>' +
+          '<span>' + t.t + '</span></button></li>';
+      }).join('');
+      noteCount.textContent = done.length + ' / ' + TASKS.length;
+    }
+
+    function markDone(key){
+      if (done.indexOf(key) !== -1) return;
+      done.push(key);
+      if (done.length === TASKS.length) allJustDone = true;
+      drawNote();
+      if (!serverBacked){ localSave(); return; }
+      fetch(PROGRESS_URL, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        credentials:'same-origin',
+        body: JSON.stringify({ task:key, done:true })
+      }).then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(d){ if (d && d.done){ done = d.done; drawNote(); } })
+        .catch(function(){ localSave(); });
+    }
+
+    /* ask the server first; fall back to this machine when there is none */
+    fetch(PROGRESS_URL, { credentials:'same-origin', headers:{ 'Accept':'application/json' } })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        if (d && d.done){
+          serverBacked = true;
+          done = d.done;
+          noteHint.textContent = 'Ticks are saved to your operator account.';
+        } else {
+          done = localDone();
+        }
+        drawNote();
+      })
+      .catch(function(){ done = localDone(); drawNote(); });
+
+    function preload(rows){
+      tree = []; nid = 0; sel = null; selPort = null;
+      var ids = [];
+      rows.forEach(function(row){
+        var it = byLabel[row[0]];
+        var parent = row[1] === null ? null : ids[row[1]];
+        var par = parent === null ? null : node(parent);
+        var n = { id:++nid, key:it.key, label:it.label, tint:it.tint, cap:it.cap, ic:it.ic,
+                  uid:'\u2026' + (0x1000 + (nid * 2477 % 0xefff)).toString(16),
+                  parent:parent, via: par ? primaryEv(par.key) : '', flow:'',
+                  cfg: cfgFor(it.key) };
+        if (par && (par.key === 'multipurpose_promotion' || par.key === 'ams_decision_split'))
+          n.flow = 'Flow ' + (kids(par.id).length + 1);
+        tree.push(n);
+        ids.push(n.id);
+      });
+      sel = null; checked = false;
+    }
+
+    noteList.addEventListener('click', function(e){
+      var b = e.target.closest('button');
+      if (!b) return;
+      taskIx = Number(b.dataset.i);
+      checked = false;
+      if (TASKS[taskIx].pre) preload(TASKS[taskIx].pre);
+      drawNote(); draw();
+      var t = TASKS[taskIx];
+      talkPg('<p><b>' + t.t + '.</b> ' + t.b + '</p><p>Build it, then press Validate and I will say ' +
+             'what is missing.</p>', 'flag');
+    });
+    drawNote();
+
+    document.getElementById('pgCheck').onclick = validate;
+    document.getElementById('pgUndo').onclick = function(){
+      /* the newest leaf, not the last slot in the array: a task that preloads a
+         journey leaves the array in its own order, and undo did nothing at all. */
+      var leaves = tree.filter(function(n){ return kids(n.id).length === 0; });
+      if (!leaves.length) return;
+      var last = leaves.reduce(function(a, b){ return b.id > a.id ? b : a; });
+      tree = tree.filter(function(n){ return n.id !== last.id; });
+      sel = last.parent; selPort = null; checked = false; draw();
+      talkPg('<p>Took off the ' + last.label + '.</p>', 'flag');
+    };
+    document.getElementById('pgClear').onclick = function(){
+      /* the canvas clears, the chosen task stays on the note. A task that hands
+         you a duplicate hands it back rather than leaving you empty. */
+      tree = []; sel = null; selPort = null; checked = false;
+      cfgBox.classList.add('quiet');
+      if (taskIx >= 0 && TASKS[taskIx].pre) preload(TASKS[taskIx].pre);
+      draw();
+      talkPg('<p>Blank canvas. Start with an input source.</p>', 'flag');
+    };
+
+    var nFold = document.getElementById('noteFold');
+    if (nFold) nFold.onclick = function(){
+      var mini = document.getElementById('note').classList.toggle('mini');
+      nFold.setAttribute('aria-expanded', mini ? 'false' : 'true');
+    };
+
+    var vFold = document.getElementById('vFold');
+    if (vFold) vFold.onclick = function(){
+      document.getElementById('vsheet').classList.toggle('mini');
+    };
+    var vClose = document.getElementById('vClose');
+    if (vClose) vClose.onclick = function(){
+      document.getElementById('vsheet').classList.add('quiet');
+    };
+
+    /* the settings panel: click a node, fill in what the back office asks for */
+    var cfgBox = document.getElementById('cfg'), cfgTitle = document.getElementById('cfgTitle'),
+        cfgBody = document.getElementById('cfgBody');
+    document.getElementById('cfgClose').onclick = function(){ cfgBox.classList.add('quiet'); };
+
+    function cfgOpen(id){
+      var n = node(id);
+      if (!n) return;
+      var def = CFG[n.key];
+      cfgTitle.textContent = n.label;
+      cfgBody.innerHTML = '';
+      if (!def || !def.f.length){
+        cfgBody.innerHTML = '<p class="cfg-none">Nothing to set on this one. ' +
+          (isTerm(n.key) ? 'It finishes the path and that is all it does.'
+                         : 'We have no captured example of it, so the fields are unknown.') + '</p>';
+        cfgBox.classList.remove('quiet');
+        return;
+      }
+      if (!n.cfg) n.cfg = cfgFor(n.key) || {};
+      def.f.forEach(function(f){
+        var lbl = f[0], key = f[1], type = f[2], val = n.cfg[key];
+        var wrap = document.createElement('div');
+        wrap.className = 'cfg-f';
+        var id2 = 'cf_' + n.id + '_' + key;
+        var el;
+        if (type === 'sel'){
+          el = document.createElement('select');
+          String(f[3]).split('|').forEach(function(o){
+            var op = document.createElement('option');
+            op.value = o; op.textContent = o;
+            if (o === val) op.selected = true;
+            el.appendChild(op);
+          });
+        } else if (type === 'area'){
+          el = document.createElement('textarea');
+          el.value = val === undefined ? '' : val;
+        } else {
+          el = document.createElement('input');
+          el.type = type === 'num' ? 'number' : 'text';
+          el.value = val === undefined ? '' : val;
+        }
+        el.id = id2;
+        var l = document.createElement('label');
+        l.setAttribute('for', id2);
+        l.textContent = lbl;
+        el.addEventListener('change', function(){
+          n.cfg[key] = el.value;
+          var card = cv.querySelector('.nd[data-id="' + n.id + '"] s');
+          var line = cfgLine(n);
+          if (card && line) card.textContent = line;
+        });
+        wrap.appendChild(l); wrap.appendChild(el);
+        cfgBody.appendChild(wrap);
+      });
+      cfgBox.classList.remove('quiet');
+    }
+
+    /* zoom: 1:1 is the default, fit is there for a four tier journey */
+    var STEPS = [0.4, 0.5, 0.6, 0.75, 0.9, 1];
+    function setZoom(z){ zoom = Math.min(1, Math.max(0.4, z)); draw(); }
+    document.getElementById('zIn').onclick = function(){
+      userZoomed = true;
+      var up = STEPS.filter(function(v){ return v > zoom + 0.001; })[0];
+      setZoom(up || 1);
+    };
+    document.getElementById('zOut').onclick = function(){
+      userZoomed = true;
+      var down = STEPS.filter(function(v){ return v < zoom - 0.001; });
+      setZoom(down.length ? down[down.length - 1] : 0.4);
+    };
+    document.getElementById('zFit').onclick = function(){
+      userZoomed = false;
+      if (!tree.length) return setZoom(1);
+      var L2 = layout();
+      var kx = (wrapEl.clientWidth - 14) / (L2.w + PAD * 2);
+      var ky = (wrapEl.clientHeight - 14) / (L2.h + PAD_T + PAD);
+      wrapEl.scrollTop = 0; wrapEl.scrollLeft = 0;
+      setZoom(Math.min(1, kx, ky));
+    };
+
+    /* the fit is measured off the canvas box, and on first paint this screen is
+       still hidden, so there is nothing to measure yet. Redraw once the box has
+       a real size, and again whenever the window or the palette changes it. */
+    if (window.ResizeObserver){
+      var lastBox = '';
+      new ResizeObserver(function(){
+        var box = wrapEl.clientWidth + 'x' + wrapEl.clientHeight;
+        if (box === lastBox || wrapEl.clientWidth < 40) return;
+        lastBox = box; draw();
+      }).observe(wrapEl);
+    }
+
+    /* the node list folds away, and the canvas takes the room */
+    var fold = document.getElementById('pgFold');
+    if (fold) fold.addEventListener('click', function(){
+      var on = fold.closest('.step').classList.toggle('folded');
+      draw();
+      fold.innerHTML = on ? '&#8677;' : '&#8676;';
+      fold.title = on ? 'Show the node list' : 'Hide the node list';
+      fold.setAttribute('aria-label', fold.title);
+    });
+
+    draw();
+
+  }
+
+  /* ── full screen captures ── */
+  var lb = document.getElementById('lb');
+  document.addEventListener('click', function(e){
+    var fig = e.target.closest('.shot');
+    if (fig && !lb.classList.contains('on')){
+      var inner = fig.querySelector('.shot-in');
+      if (!inner) return;
+      lb.innerHTML = '<div class="lb-in">' + inner.innerHTML +
+        '<button class="lb-x" type="button">close</button></div>';
+      lb.classList.add('on');
+      /* size it to the viewport in js, so the overlay tracks the image exactly
+         and the red marks stay where they belong */
+      var im = lb.querySelector('img');
+      var box = lb.querySelector('.lb-in');
+      var fitImg = function(){
+        var nw = im.naturalWidth || im.width, nh = im.naturalHeight || im.height;
+        if (!nw || !nh) return;
+        var k = Math.min((innerWidth - 52) / nw, (innerHeight - 96) / nh);
+        box.style.width = Math.round(nw * k) + 'px';
+        im.style.width = '100%';
+        im.style.height = 'auto';
+      };
+      if (im.complete) fitImg(); else im.addEventListener('load', fitImg);
+      addEventListener('resize', fitImg);
+      var x = lb.querySelector('.lb-x');
+      if (x) x.focus();
+      return;
+    }
+    if (lb.classList.contains('on')) lb.classList.remove('on');
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && lb.classList.contains('on')) lb.classList.remove('on');
+  });
+  /* ── light or dark ──────────────────────────────────────────────
+     Unset means follow the operating system, which is also what the
+     surrounding page does, so we only stamp the root once someone picks. */
+  (function(){
+    var btn = document.getElementById('theme');
+    if (!btn) return;
+    var root = document.documentElement, KEY = 'flick-theme';
+    var sys = matchMedia('(prefers-color-scheme: dark)');
+    function stored(){
+      try { return localStorage.getItem(KEY); } catch (e) { return null; }
+    }
+    function effective(){
+      return root.dataset.theme || (sys.matches ? 'dark' : 'light');
+    }
+    function label(){
+      btn.setAttribute('title', effective() === 'dark' ? 'Switch to light' : 'Switch to dark');
+    }
+    var pick = stored();
+    if (pick === 'dark' || pick === 'light') root.dataset.theme = pick;
+    label();
+    btn.addEventListener('click', function(){
+      var next = effective() === 'dark' ? 'light' : 'dark';
+      root.dataset.theme = next;
+      try { localStorage.setItem(KEY, next); } catch (e) {}
+      label();
+    });
+    sys.addEventListener('change', label);
+    /* the page around us can stamp the root too; keep the icon honest */
+    new MutationObserver(label).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+  })();
+
+  /* the full screen builder needs to know how tall the rail is */
+  (function(){
+    var rail = document.querySelector('.rail');
+    if (!rail) return;
+    var set = function(){
+      document.documentElement.style.setProperty('--rail', rail.offsetHeight + 'px');
+    };
+    set();
+    addEventListener('resize', set);
+    if (window.ResizeObserver) new ResizeObserver(set).observe(rail);
+  })();
+
+  /* ── a round of ten: one question, then why, then Next ── */
+  var QUIZ = {
+    wheel: [
+      ['A player cannot see the wheel promotion in their list. What does that tell you?',
+       ['Their account is blocked', 'It is not live for them, whatever the back office says',
+        'The wheel has run out of prizes'], 1,
+       'If it is not in their list, it is not live for that player.'],
+      ['What is a prize on the wheel?',
+       ['Free spins or money, paid straight away', 'A journey the player is added to',
+        'A promo page with its own link'], 1,
+       'Every prize is a journey, and it starts with an entry source.'],
+      ['What decides how often a prize is drawn?',
+       ['How many wedges it has', 'The percentage we set on it', 'Where it sits on the rim'], 1,
+       'A percentage per prize, and the four have to total 100.'],
+      ['A player opened the wheel but never spun. Are they in the randomizer logs?',
+       ['Yes, opening it is enough', 'No, without a spin there is no row',
+        'Only if they had deposited'], 1,
+       'No spin, no row. Check that before you go looking for a bug.'],
+      ['Where do you see what a player won and which journey they joined?',
+       ['Journey logs', 'Randomizer logs', 'The promo page'], 1,
+       'One row per spin, with the JRN on it.'],
+      ['How do you read journey logs?',
+       ['Top to bottom', 'Bottom to top', 'In order of activity id'], 1,
+       'The bottom is where they joined, the top is where they stand now.'],
+      ['The same activity id appears twice in the log. What is it?',
+       ['Two nodes with the same name', 'One node reporting twice', 'A duplicated journey'], 1,
+       'One node, two events.'],
+      ['What does a Multipurpose Promotion give the player by itself?',
+       ['The spins', 'Nothing', 'The deposit'], 1,
+       'It only offers the list. Everything a player can spend comes from the promotion they picked.'],
+      ['A player argues about their terms. Which object do you open?',
+       ['The one that offered the list', 'The promotion they picked', 'The randomizer'], 1,
+       'The terms live on the tier they took.'],
+      ['The wheel has been spun. What carries on from there?',
+       ['The wheel keeps the player', 'The journey the prize pointed at',
+        'The promo page'], 1,
+       'The wheel is finished at the spin. The journey takes over.']
+    ],
+    gow: [
+      ['When does the Game of the Week run?',
+       ['Every day', 'Every Wednesday', 'Once a month'], 1,
+       'Every Wednesday.'],
+      ['What changes from one week to the next?',
+       ['The game', 'The number of tiers', 'The wagering'], 0,
+       'The ladder is fixed. The game is what changes.'],
+      ['What differs between the four tiers?',
+       ['The game', 'The deposit and the bet value of the spins', 'The wagering only'], 1,
+       'Same game, same shape, different deposit and spin value.'],
+      ['Which button puts the player into the journey?',
+       ['Participa', 'Activar', 'Seleccionar'], 1,
+       'Participa only opens the promo page. Activar joins them.'],
+      ['The promo page is live but Activar does nothing. What do you check first?',
+       ['The player balance', 'The journey the page points at, and its dates',
+        'The game provider'], 1,
+       'A promo page carries no prizes. One field points it at a journey.'],
+      ['Where does a Deposit node get what it needs?',
+       ['From the entry source', 'From the promotion above it in the same path',
+        'From the journey settings'], 1,
+       'It reads the id and the accepted time of the promotion above it.'],
+      ['You put a Casino FreeSpin straight under a Multipurpose Promotion. What is wrong?',
+       ['Nothing', 'There is no promotion above it', 'It cannot have anything under it'], 1,
+       'A Multipurpose Promotion only offers the list. Each flow needs its own promotion first.'],
+      ['A tier is missing its Casino Bonus. What happens?',
+       ['The journey will not save', 'That tier pays out with no wagering at all',
+        'The spins are never awarded'], 1,
+       'It saves happily, which is what makes it dangerous.'],
+      ['Where does every journey have to start?',
+       ['With a promotion', 'With an input source', 'With a wait'], 1,
+       'Always an input source, with no exceptions. It is what puts the player in.'],
+      ['A message node reports Sent. What does that mean?',
+       ['The player read it', 'We handed it over to be delivered',
+        'The player accepted the offer'], 1,
+       'Sent is not read, and a message node awards nothing either way.']
+    ]
+  };
+
+  [].slice.call(document.querySelectorAll('.quiz2')).forEach(function(box){
+    var set = QUIZ[box.dataset.quiz];
+    if (!set) return;
+    var body = box.querySelector('[data-body]'), dots = box.querySelector('[data-dots]'),
+        next = box.querySelector('[data-next]'), num = box.querySelector('[data-num]'),
+        score = box.querySelector('[data-score]'), step = box.closest('.step');
+    var at = 0, right = 0, marks = [], ansAt = 0, hinted = false;
+
+    function paintDots(){
+      dots.innerHTML = set.map(function(_, i){
+        return '<i class="' + (marks[i] || '') + (i === at && marks[i] === undefined ? ' now' : '') +
+               '"></i>';
+      }).join('');
+      num.textContent = Math.min(at + 1, set.length) + ' / ' + set.length;
+      score.textContent = right ? right + ' right' : '';
+    }
+
+    function ask(){
+      var q = set[at];
+      /* the right answer must not live in one slot, or the slot is what gets
+         learned. Shuffle the options every time the question is shown. */
+      var ord = q[1].map(function(_, i){ return i; });
+      for (var i = ord.length - 1; i > 0; i--){
+        var j = Math.floor(Math.random() * (i + 1)), t = ord[i];
+        ord[i] = ord[j]; ord[j] = t;
+      }
+      ansAt = ord.indexOf(q[2]);
+      body.innerHTML = '<p class="qz-q">' + q[0] + '</p><div class="qz-o">' +
+        ord.map(function(k){ return '<button type="button">' + q[1][k] + '</button>'; }).join('') +
+        '</div><p class="qz-why"></p>';
+      next.hidden = true;
+      hinted = false;
+      paintDots();
+    }
+
+    /* tap Flick before answering and he strikes out one wrong option — once
+       per question, and never down to a single answer left */
+    var buddy = step.querySelector('[data-buddy]');
+    if (buddy) buddy.addEventListener('click', function(e){
+      if (hinted) return;
+      if (body.querySelector('.qz-o button.ok')) return;
+      var btns = [].slice.call(body.querySelectorAll('.qz-o button'));
+      var wrong = btns.filter(function(x, i){ return i !== ansAt && !x.disabled; });
+      if (btns.length < 3 || wrong.length < 2) return;
+      var cut = wrong[Math.floor(Math.random() * wrong.length)];
+      cut.disabled = true;
+      cut.classList.add('cut');
+      hinted = true;
+      e.stopPropagation();
+      poke(buddy);
+      say(step, '<p><b>Not the crossed-out one.</b> The rest is yours to call.</p>', true);
+      pose(buddy, 'glass');
+    });
+
+    function finish(){
+      body.innerHTML = '<div class="qz-done"><b>' + right + ' / ' + set.length + '</b><span>' +
+        (right === set.length ? 'Every one of them.'
+         : right >= 7 ? 'Good enough to work with. Read back the ones you missed.'
+         : 'Worth another pass through the screens before the playground.') +
+        '</span></div>';
+      next.hidden = false;
+      next.textContent = 'Start again';
+      next.dataset.again = '1';
+      paintDots();
+      pose(step.querySelector('[data-buddy]'), right >= 7 ? 'party' : 'think');
+      say(step, '<p>' + right + ' out of ' + set.length + '.</p>' +
+        (right === set.length ? '<p>Nothing left to correct.</p>'
+         : '<p>The ones you missed are the ones that catch people. Have another go whenever.</p>'), false);
+    }
+
+    body.addEventListener('click', function(e){
+      var b = e.target.closest('.qz-o button');
+      if (!b || b.disabled) return;
+      var q = set[at], list = [].slice.call(body.querySelectorAll('.qz-o button'));
+      var ok = list.indexOf(b) === ansAt;
+      list.forEach(function(x, i){
+        x.disabled = true;
+        if (i === ansAt) x.classList.add('ok');
+      });
+      if (!ok) b.classList.add('no');
+      marks[at] = ok ? 'ok' : 'no';
+      if (ok) right++;
+      body.querySelector('.qz-why').innerHTML = (ok ? '<b>Right.</b> ' : '<b>Not that one.</b> ') + q[3];
+      next.hidden = false;
+      next.textContent = at === set.length - 1 ? 'See the score' : 'Next';
+      pose(step.querySelector('[data-buddy]'), ok ? 'thumb' : 'think');
+      paintDots();
+    });
+
+    next.addEventListener('click', function(){
+      if (next.dataset.again){
+        at = 0; right = 0; marks = [];
+        delete next.dataset.again;
+        next.textContent = 'Next';
+        ask();
+        return;
+      }
+      if (at === set.length - 1) { finish(); return; }
+      at++; ask();
+    });
+
+    ask();
+  });
+
+  /* the documented nodes borrow the builder's icons */
+  [].slice.call(document.querySelectorAll('[data-ic]')).forEach(function(el){
+    el.innerHTML = IC[el.dataset.ic] || '';
+  });
+
+  /* the worked example opens on the middle of the journey, not its left edge */
+  (function(){
+    var box = document.querySelector('.pgs-cv');
+    if (!box) return;
+    var centre = function(){
+      box.scrollLeft = Math.max(0, Math.round((box.scrollWidth - box.clientWidth) / 2));
+    };
+    centre();
+    if (window.ResizeObserver) new ResizeObserver(centre).observe(box);
+  })();
+
+  var h = /^#s(\d+)$/.exec(location.hash);
+  go(h ? Number(h[1]) - 1 : 0);
+})();
+</script>
+
+</body>
+</html>

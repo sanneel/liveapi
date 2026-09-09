@@ -34,9 +34,12 @@ class Settings(BaseSettings):
     figma_token: str = ""
 
     # ── Journey Planner ──────────────────────────────────────────────
-    # Which LLM backs the /admin/planner chat: "groq" (free tier, cheapest) or
-    # "gemini". Auto-resolved at request time: if planner_provider is unset it
-    # prefers Groq when GROQ_API_KEY is present, else Gemini.
+    # Which LLM backs the /admin/ai chat: "groq" (free tier, cheapest) or
+    # "gemini". Auto-resolved at request time by _resolve_provider(): if this is
+    # unset, GEMINI wins whenever GEMINI_API_KEY is set — it takes the full ~17K
+    # prompt with no per-minute wall — and Groq is used only as the fallback when
+    # no Gemini key exists. So adding GROQ_API_KEY alone does NOT switch the
+    # planner over; set PLANNER_PROVIDER=groq to choose it explicitly.
     planner_provider: str = ""          # "groq" | "gemini" | "" (auto)
 
     # Groq — free tier at console.groq.com; OpenAI-compatible chat API.
@@ -56,9 +59,21 @@ class Settings(BaseSettings):
 
     # Gemini (fallback). Server-side key, never shipped to the browser.
     gemini_api_key: str = ""
-    # flash-lite is the cheapest 2.5 tier — materially lower input/output price
-    # than 2.0/2.5-flash, enough for the planner's structured MODE 1/2/3 output.
-    gemini_model: str = "gemini-2.5-flash-lite"
+    # Model for the MECHANICAL calls (spec repairs, design-block extraction).
+    #
+    # Was "gemini-2.5-flash-lite", the cheapest 2.5 tier. Google retired the 2.5
+    # family for new keys ("no longer available to new users — please update to
+    # models/gemini-3.6-flash"), which surfaced as a hard 404 on every planner
+    # reply, so both models here moved to 3.6.
+    #
+    # If a cheaper 3.6 lite/mini tier exists, this is the setting that should use
+    # it — mechanical calls are "apply the refusal you were just handed", not
+    # reasoning. Check what your key can actually see before pinning one:
+    #   curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY" \
+    #     | python3 -c "import json,sys; [print(m['name']) for m in json.load(sys.stdin)['models']]"
+    # then set GEMINI_MODEL=<that id>. Note a lite tier may reject
+    # `thinkingConfig` with HTTP 400 — see gemini_thinking_budget below.
+    gemini_model: str = "gemini-3.6-flash"
     # Model for the PLANNING calls (the chat itself). Planning is the reasoning
     # step — read a spreadsheet brief, decide what is one journey vs thirty, count
     # prize slices — and flash-lite is measurably inconsistent at it: four runs of
@@ -66,9 +81,15 @@ class Settings(BaseSettings):
     # planning a 31-slice wheel (no captured template has more than 6). The
     # mechanical calls (repairs, design-block extraction) stay on gemini_model,
     # so the better tier is paid for roughly one call in six.
-    # Set GEMINI_PLANNING_MODEL=gemini-2.5-flash-lite to put everything back.
-    gemini_planning_model: str = "gemini-2.5-flash"
-    # 2.5 models run "thinking" by default. This was set to 0 to save cost, on the
+    # Set GEMINI_PLANNING_MODEL=<a cheaper id> to put everything back on one tier.
+    # The scores below were measured on 2.5; they are the REASON for splitting
+    # planning from mechanical calls, not a claim about 3.6's numbers. Re-run
+    # scripts/eval_planner.py after this bump to get 3.6's own baseline.
+    gemini_planning_model: str = "gemini-3.6-flash"
+    # Thinking budget. 2.5 and 3.x models run "thinking" by default; a lite tier
+    # may reject `thinkingConfig` outright with HTTP 400 invalid-argument, in
+    # which case set GEMINI_THINKING_BUDGET=0 (that omits the field entirely).
+    # This was set to 0 to save cost, on the
     # assumption the planner needs no chain-of-thought. Measured on the Ruletazo
     # brief (5 deposit tiers x 6 prize levels), that assumption was wrong and the
     # saving was imaginary:

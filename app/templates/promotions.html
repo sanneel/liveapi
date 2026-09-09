@@ -2,41 +2,25 @@
 {% block title %}Optimization · Jugabet Admin{% endblock %}
 {% block content_theme %}content-light{% endblock %}
 {% block page_title %}Optimization{% endblock %}
-{% block page_subtitle %}One place for every promo automation — GOW, Promo Codes, Prediction, Randomizers, Discount NC, AI and Slot Cards.{% endblock %}
+{% block page_subtitle %}Generate every promo campaign draft from one place — casino, sport, comms, wheels and cards.{% endblock %}
 
 {% block content %}
 
 <div class="tabs" id="promo-tabs" data-active="{{ active_tab or 'overview' }}">
-  <div class="tab-group">
-    <span class="tab-group-label">Plan</span>
-    <div class="tab-group-btns">
-      <button type="button" class="tab" data-tab="overview">Overview</button>
-    </div>
-  </div>
-  <div class="tab-group">
-    <span class="tab-group-label">Generate</span>
-    <div class="tab-group-btns">
-      <button type="button" class="tab" data-tab="gow">GOW</button>
-      <button type="button" class="tab" data-tab="tournament_pmcl">PMCL Tournament</button>
-      <button type="button" class="tab" data-tab="bet_and_get">PMCL Bet &amp; Get</button>
-      <button type="button" class="tab" data-tab="journey_cloner">Promo Codes</button>
-      <button type="button" class="tab" data-tab="prediction">Prediction</button>
-      <button type="button" class="tab" data-tab="randomizers">Randomizers</button>
-      <button type="button" class="tab" data-tab="nc_discount">Discount NC</button>
-    </div>
-  </div>
-  <div class="tab-group">
-    <span class="tab-group-label">Assets</span>
-    <div class="tab-group-btns">
-      <button type="button" class="tab" data-tab="slot_cards">Slot Cards</button>
-    </div>
-  </div>
-  <div class="tab-group tab-group-end">
-    <span class="tab-group-label">&nbsp;</span>
-    <div class="tab-group-btns">
-      <button type="button" class="tab" data-tab="scripts">All scripts</button>
-    </div>
-  </div>
+  <button type="button" class="tab" data-tab="overview">Overview</button>
+  <button type="button" class="tab" data-tab="gow">GOW</button>
+  <button type="button" class="tab" data-tab="tournament_pmcl">PMCL Tournament</button>
+  <button type="button" class="tab" data-tab="tournament_jbcl">JBCL Tournament</button>
+  <button type="button" class="tab" data-tab="bet_and_get">PMCL Bet &amp; Get</button>
+  <button type="button" class="tab" data-tab="journey_cloner">Promo Codes</button>
+  <button type="button" class="tab" data-tab="welcome_pack">Welcome Pack</button>
+  <button type="button" class="tab" data-tab="prediction">Prediction</button>
+  <button type="button" class="tab" data-tab="comms_builder">Comms builder</button>
+  <button type="button" class="tab" data-tab="sport_comms">Scratch Card Comms</button>
+  <button type="button" class="tab" data-tab="randomizers">Randomizers</button>
+  <button type="button" class="tab" data-tab="nc_discount">Discount NC</button>
+  <button type="button" class="tab" data-tab="slot_cards">Slot Cards</button>
+  <button type="button" class="tab tab-end" data-tab="scripts">All scripts</button>
 </div>
 
 {# ── OVERVIEW: what this page can build, then the automation graph ───── #}
@@ -86,77 +70,6 @@
       <span class="mono">promotions_catalog.GENERATORS</span> so they appear above.
     </div>
   {% endif %}
-
-  <h3 style="margin:26px 0 10px">Captured automations</h3>
-  {% if not automations %}
-    <div class="alert err">No catalog found. Run <span class="mono">journey-cloner/build_catalog.py</span> to generate <span class="mono">catalog.json</span>.</div>
-  {% endif %}
-  {% if meta %}
-    <p class="help" style="margin-bottom:14px">Catalog: brand <b>{{ meta.brand or 'JBCL' }}</b>{% if meta.operator %} · {{ meta.operator }}{% endif %}{% if meta.timezone %} · {{ meta.timezone }}{% endif %}.{% if meta.note %} {{ meta.note }}{% endif %}</p>
-  {% endif %}
-
-  <div style="display:grid; gap:16px">
-    {% for a in automations %}
-    <div class="card" style="padding:16px">
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap">
-        <div>
-          <h3 style="margin:0">{{ a.label }}</h3>
-          {% if a.creates %}<div class="help" style="margin-top:2px">Creates {{ a.creates }}.</div>{% endif %}
-        </div>
-        <div style="display:flex; gap:8px">
-          {% if a.tab %}<button type="button" class="btn primary tab-jump" data-tab="{{ a.tab }}">Open generator →</button>
-          {% elif a.link %}<a href="{{ a.link }}" class="btn primary">Open generator →</a>
-          {% else %}<span class="badge">Template-only</span>{% endif %}
-        </div>
-      </div>
-
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:12px">
-        <div>
-          {% if a.endpoint %}<div style="margin-bottom:8px"><span class="lbl">Endpoint</span><div class="mono" style="font-size:12px">{{ a.endpoint }}</div></div>{% endif %}
-          {% if a.compiler %}<div style="margin-bottom:8px"><span class="lbl">Compiler</span><div class="mono" style="font-size:12px">{{ a.compiler }}</div></div>{% endif %}
-          {% if a.template %}<div style="margin-bottom:8px"><span class="lbl">Template</span><div class="mono" style="font-size:12px">{{ a.template }}</div></div>{% endif %}
-          {% if a.segment %}<div style="margin-bottom:8px"><span class="lbl">Segment</span><div class="mono" style="font-size:12px">{{ a.segment }}</div></div>{% endif %}
-          {% if a.starts %}<div style="margin-bottom:8px"><span class="lbl">Starts</span> <span class="mono" style="font-size:12px">{{ a.starts }}</span></div>{% endif %}
-          {% if a.shot_policy %}<div style="margin-bottom:8px"><span class="lbl">Shot policy</span> <span class="mono" style="font-size:12px">{{ a.shot_policy }}</span></div>{% endif %}
-          {% if a.knobs %}
-            <span class="lbl">Knobs</span>
-            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px">
-              {% for k in a.knobs %}<span class="chip">{{ k }}</span>{% endfor %}
-            </div>
-          {% endif %}
-        </div>
-        <div>
-          {% if a.prizes %}
-            <span class="lbl">Prize slices → journeys</span>
-            <table class="mini-table" style="width:100%; margin-top:4px; font-size:12px">
-              <thead><tr><th style="text-align:left">weight</th><th style="text-align:left">routes to</th><th style="text-align:left">description</th></tr></thead>
-              <tbody>
-                {% for p in a.prizes %}
-                <tr><td class="mono">{{ p.weight }}</td><td class="mono">{{ p.routes_to_journey or '—' }}</td><td>{{ p.description or '' }}</td></tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          {% endif %}
-          {% if a.notes %}<p class="help" style="margin-top:8px">{{ a.notes }}</p>{% endif %}
-        </div>
-      </div>
-
-      {% if a.scripts %}
-        <div style="margin-top:12px">
-          <span class="lbl">Scripts &amp; templates</span>
-          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px">
-            {% for s in a.scripts %}
-              <span class="file-pill">
-                <a href="/admin/promotions/download?path={{ s.path | urlencode }}" target="_blank" class="mono" title="View {{ s.path }}">{{ s.name }}</a>
-                <a href="/admin/promotions/download?path={{ s.path | urlencode }}&amp;dl=1" title="Download {{ s.name }}" class="dl">↓</a>
-              </span>
-            {% endfor %}
-          </div>
-        </div>
-      {% endif %}
-    </div>
-    {% endfor %}
-  </div>
 </section>
 
 {# ── GOW generator ───────────────────────────────────────────────────── #}
@@ -168,8 +81,22 @@
 
 {# ── PMCL Tournament comms generator ─────────────────────────────────── #}
 <section data-panel="tournament_pmcl" hidden>
-  {% with form=tournament.form, error=tournament.error, result=tournament.result, console_script=tournament.console_script %}
-    {% include "partials/_tournament_pmcl_form.html" %}
+  {% with form=tournament.form, error=tournament.error, result=tournament.result, console_script=tournament.console_script,
+          brand="PMCL", brand_name="PMCL (Fortunazo)", action="/admin/promotions/tournament-pmcl",
+          domain="fortunazo.cl", sms_prefix="Fortunazo |", email_cse="CSE-0-15017",
+          name_example="FTCL | CS | Torneo Ola de Dinero 27.07-02.08",
+          folder_note="Uploads go to the PMCL comms media-library folder, which is baked into the generator." %}
+    {% include "partials/_tournament_form.html" %}
+  {% endwith %}
+</section>
+
+<section data-panel="tournament_jbcl" hidden>
+  {% with form=tournament_jbcl.form, error=tournament_jbcl.error, result=tournament_jbcl.result, console_script=tournament_jbcl.console_script,
+          brand="JBCL", brand_name="JBCL (JugaBet)", action="/admin/promotions/tournament-jbcl",
+          domain="jugabet.cl", sms_prefix="JugaBet |", email_cse="CSE-0-14726",
+          name_example="JBCL | CS&SP | Torneo Ola de Dinero 27.07-02.08",
+          folder_note="Uploads go to the JBCL comms media-library folder, which is baked into the generator." %}
+    {% include "partials/_tournament_form.html" %}
   {% endwith %}
 </section>
 
@@ -209,18 +136,12 @@
         <textarea class="input mono" name="sheet" rows="10" spellcheck="false" placeholder="internalName&#9;urlShortName&#9;brand&#9;currency&#9;languages&#9;showDate&#9;...&#10;JBCL|PR|... &#9;...&#10;&#10;order&#9;question_en&#9;question_es&#9;answer1_en&#9;...&#10;1&#9;Who scores first?&#9;...">{{ pred.sheet or '' }}</textarea>
       </div>
 
-      <div class="field">
-        <span class="lbl">Draft id</span>
-        <input class="input mono" name="draft_id" value="{{ pred.draft_id or '' }}" placeholder="35352" required/>
-      </div>
-      <div class="field">
-        <span class="lbl">Content id</span>
-        <input class="input mono" name="content_id" value="{{ pred.content_id or '' }}" placeholder="9b5b9fe4-abb8-44b3-bdb8-73355946508b" required/>
-      </div>
-      <div class="field">
-        <span class="lbl">Front id</span>
-        <input class="input mono" name="front_id" value="{{ pred.front_id or '' }}" placeholder="c7b5e12f-fea1-4320-b33d-c5c503c00154" required/>
-      </div>
+      {# Draft / Content / Front id are baked into prediction_campaign.py: they
+         belong to the promo, not to a run, and three GUIDs retyped from memory
+         every time was an easy way to write this campaign's content over another
+         promo's tree. Change them in the generator's DEFAULT_* constants. #}
+      <p class="help">Draft, content and front ids are built in — nothing to fill.
+        Just paste the sheet.</p>
       <div class="field">
         <span class="lbl">Base body path <span style="color:var(--t-faint); text-transform:none">(optional, advanced)</span></span>
         <input class="input mono" name="base_body" value="{{ pred.base_body or '' }}" placeholder="journey-cloner/out/some-capture.json"/>
@@ -237,39 +158,10 @@
     </form>
 
     <div class="col-main stack">
-      {% if pred.console_script %}
-        <section class="card" style="overflow:hidden">
-          <div class="card-head">
-            <div>
-              <h2 class="card-title">Console Script Ready</h2>
-              <p class="card-sub">{{ pred.console_script.name }}</p>
-            </div>
-            <button type="button" id="pred-copy" class="btn primary">Copy script</button>
-          </div>
-          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
-            <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
-              <li>Click <b>Copy script</b> above.</li>
-              <li>Open the backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
-              <li>Paste and press Enter. If it says "Waiting for a token", click anything in the UI.</li>
-              <li>Watch for the green confirmation that the draft was saved.</li>
-            </ol>
-            <textarea id="pred-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ pred.console_script.text }}</textarea>
-          </div>
-        </section>
-        <script>
-          (function () {
-            var btn = document.getElementById('pred-copy');
-            var area = document.getElementById('pred-script-text');
-            if (!btn || !area) return;
-            btn.addEventListener('click', function () {
-              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
-              if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); });
-              } else { area.select(); document.execCommand('copy'); done(); }
-            });
-          })();
-        </script>
-      {% endif %}
+      {% with console_script=pred.console_script,
+              final_step="Watch for the green confirmation that the draft was saved." %}
+        {% include "partials/_console_script.html" %}
+      {% endwith %}
 
       {% if pred.result %}
         <section class="card" style="overflow:hidden">
@@ -298,6 +190,123 @@
   </div>
 </section>
 
+<section data-panel="comms_builder" hidden>
+  {% include "partials/_comms_builder_form.html" %}
+</section>
+
+{# ── Scratch Card Comms (SMS + NC + pop-up + email, one journey) ─────── #}
+<section data-panel="sport_comms" hidden>
+  {% if scomms.error %}<div class="alert err">{{ scomms.error }}</div>{% endif %}
+  {% if scomms.result %}
+    <div class="alert {% if scomms.result.ok %}ok{% else %}err{% endif %}">
+      {% if scomms.result.ok %}{% if scomms.dry_run %}Dry run complete — the four bodies were written to out/.{% else %}Console script generated.{% endif %}{% else %}Refused with exit code {{ scomms.result.exit_code }} — see the output below.{% endif %}
+    </div>
+  {% endif %}
+
+  <div class="row-flex">
+    <form method="post" action="/admin/promotions/sport-comms" class="card card-pad col-rail" style="display:flex; flex-direction:column; gap:14px">
+      <div>
+        <h2 class="card-title">Build the comms journey</h2>
+        <p class="card-sub">One journey carrying SMS, Notification Center, Cat-fish pop-up and email for a fixture scratch-card promo. Two inputs: the campaign, and the content sheet.</p>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+        <div class="field">
+          <span class="lbl">Campaign (created in liveapi)</span>
+          {% if scomms.load_error %}
+            <p class="help" style="color:var(--danger,#b91c1c)">Could not read campaigns: {{ scomms.load_error }}</p>
+          {% elif not scomms.campaigns %}
+            <input class="input mono" name="campaign" value="{{ scomms.campaign or '' }}" placeholder="eng-arg-final" required/>
+            <p class="help" style="margin-top:6px">No enabled campaign found — type the slug, or <a href="/admin/campaigns/new">create one</a>.</p>
+          {% else %}
+            <select class="input mono" id="scomms-campaign" name="campaign" required>
+              <option value="">— pick a campaign —</option>
+              {% for c in scomms.campaigns %}
+                <option value="{{ c.slug }}" data-expires="{{ c.expires_at }}" {% if scomms.campaign == c.slug %}selected{% endif %}>{{ c.title }} — /{{ c.slug }} · {{ c.sport }} · {{ c.expires_label }}</option>
+              {% endfor %}
+            </select>
+            <p class="help" style="margin-top:6px">Gives the journey name, the default stop date, and the <b>email banner</b> — its copy link (<span class="mono">/r/&lt;slug&gt;.png</span>) goes into the email with per-player tracking, so the card renders live on every open.</p>
+          {% endif %}
+        </div>
+        <div class="field">
+          <span class="lbl">Stop date <span style="color:var(--t-faint)">(optional)</span></span>
+          <input class="input" id="scomms-stop-at" name="stop_at" type="datetime-local" value="{{ scomms.stop_at or '' }}"/>
+          <p class="help" style="margin-top:6px">Chile local. Defaults to the campaign's expiry — leave blank to use it.</p>
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="lbl">Link (randomizer promo page)</span>
+        <input class="input mono" name="promo_link" value="{{ scomms.promo_link or '' }}" placeholder="https://jugabet.cl/services/promo/offers/randomizer/arg-eng-sc"/>
+        <p class="help" style="margin-top:6px">Goes into <b>every</b> communication — SMS, notification, pop-up and email, in both languages. Paste the full URL or just the slug. Leave blank to use the sheet's <span class="mono">Link</span> row.</p>
+      </div>
+
+      <div class="field">
+        <span class="lbl">Content sheet (TSV pasted from Google Sheets)</span>
+        <textarea class="input mono" name="sheet" rows="12" spellcheck="false" placeholder="Link (Other)&#9;https://jugabet.cl/services/promo/offers/randomizer/&lt;slug&gt;&#10;Notification&#9;TRUE&#10;Notification Title&#9;&lt;EN&gt;&#9;&lt;ES&gt;&#10;Notification Description&#9;&lt;EN&gt;&#9;&lt;ES&gt;&#10;Notification Button&#9;&lt;EN&gt;&#9;&lt;ES&gt;&#10;Notification Pop-up (Cat-fish)&#9;TRUE&#10;...&#10;Sms&#9;TRUE&#10;Sms Text&#9;&lt;EN&gt;&#9;&lt;ES&gt;&#10;Email&#9;TRUE&#10;Email Tittle&#9;&lt;EN&gt;&#9;&lt;ES&gt;&#10;Email Pre-header&#9;&lt;EN&gt;&#9;&lt;ES&gt;">{{ scomms.sheet or '' }}</textarea>
+        <p class="help" style="margin-top:6px">Channel copy (EN/ES) for notification, pop-up, SMS and email. Its <span class="mono">Link</span> row is the fallback for the field above.</p>
+      </div>
+
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:2px">
+        <input type="checkbox" name="dry_run" {% if scomms.dry_run %}checked{% endif %}/>
+        <span class="lbl" style="margin:0">Dry run <span style="color:var(--t-faint)">(write the four request bodies to out/ instead of a console script)</span></span>
+      </label>
+
+      <button class="btn primary" style="justify-content:center">Generate console script</button>
+      <p class="help">Every check must pass before anything is written — a refusal names the field.</p>
+    </form>
+    <script>
+      (function () {
+        // Picking a campaign prefills its expiry as the stop date. Only when
+        // the operator has not typed one -- their value always wins.
+        var sel = document.getElementById('scomms-campaign');
+        var stop = document.getElementById('scomms-stop-at');
+        if (!sel || !stop) return;
+        var touched = stop.value !== '';
+        stop.addEventListener('input', function () { touched = true; });
+        sel.addEventListener('change', function () {
+          if (touched) return;
+          var opt = sel.options[sel.selectedIndex];
+          stop.value = (opt && opt.getAttribute('data-expires')) || '';
+        });
+      })();
+    </script>
+
+    <div class="col-main stack">
+      {% with console_script=scomms.console_script,
+              steps=["It asks for three images — the <b>email hero</b> (promo artwork), the <b>notification icon</b> and the <b>pop-up background</b>. The campaign's live card is already linked inside the email banner; nothing to upload for it."],
+              final_step="Watch for the green line naming the journey id and the email content id." %}
+        {% include "partials/_console_script.html" %}
+      {% endwith %}
+
+      {% if scomms.result %}
+        <section class="card" style="overflow:hidden">
+          <div class="card-head"><h2 class="card-title">Run Output</h2></div>
+          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+            <div>
+              <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Command</div>
+              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0">{{ scomms.result.command }}</pre>
+            </div>
+            <div>
+              <div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Output</div>
+              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:32rem; margin:0">{{ scomms.result.output }}</pre>
+            </div>
+          </div>
+        </section>
+      {% else %}
+        <section class="card card-pad">
+          <h2 class="card-title" style="margin-bottom:8px">How it works</h2>
+          <div class="help" style="line-height:1.7">
+            <p style="margin:0 0 8px">Wraps <span class="mono">journey-cloner/sport_comms_campaign.py</span>, built from a HAR of the 15.07 ENG vs ARG run. The campaign gives the journey name, the stop date (its expiry) and the <b>email banner</b> — its copy link with <span class="mono">v={{'{{'}}JourneyActivityId{{'}}'}}&amp;u={{'{{'}}playerID{{'}}'}}</span> tracking; the sheet gives every channel's EN/ES copy and the promo slug.</p>
+            <p style="margin:0 0 8px">The email content is created <b>first</b>, and its id substituted into the journey. The recorded run skipped that step and left the journey pointing at the previous campaign's email — replayed as captured, every draft would have sent the wrong one.</p>
+            <p style="margin:0">Drafts are left unpublished. A failed check writes nothing: an unreplaced link, a surviving captured id or artwork still shared with the capture is a refusal, not a warning.</p>
+          </div>
+        </section>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
 {# ── Randomizers (Sport WOF / Casino WOF / Scratch card) ─────────────── #}
 <section data-panel="randomizers" hidden>
   {% if rnd.error %}<div class="alert err">{{ rnd.error }}</div>{% endif %}
@@ -311,7 +320,7 @@
     <form method="post" action="/admin/promotions/randomizer" class="card card-pad col-rail" style="display:flex; flex-direction:column; gap:14px">
       <div>
         <h2 class="card-title">Create randomizer</h2>
-        <p class="card-sub">Prize slices, routed journeys, segment and the visual bundle come from the captured template — only the dates &amp; name change. Optionally override the weights and the routed journeys.</p>
+        <p class="card-sub">Prize slices, copy, routed journeys and segment all come from the captured template &mdash; only the date changes per run. <b>Sport Wheel of Fortune</b> clones its own visual content per wheel, so editing one wheel&#39;s artwork never rewrites another. Weights, journeys and prize copy can still be overridden under Advanced.</p>
       </div>
 
       <div class="field">
@@ -335,11 +344,11 @@
       </div>
 
       <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:2px">
-        <input type="checkbox" id="rnd-adv" {% if rnd.days or rnd.weights or rnd.journeys %}checked{% endif %}/>
-        <span class="lbl" style="margin:0">Advanced options <span style="color:var(--t-faint)">(days, weights, journeys)</span></span>
+        <input type="checkbox" id="rnd-adv" {% if rnd.days or rnd.weights or rnd.journeys or rnd.prize_text %}checked{% endif %}/>
+        <span class="lbl" style="margin:0">Advanced options <span style="color:var(--t-faint)">(days, weights, journeys, prize copy)</span></span>
       </label>
 
-      <div id="rnd-adv-fields" style="display:{% if rnd.days or rnd.weights or rnd.journeys %}flex{% else %}none{% endif %}; flex-direction:column; gap:14px">
+      <div id="rnd-adv-fields" style="display:{% if rnd.days or rnd.weights or rnd.journeys or rnd.prize_text %}flex{% else %}none{% endif %}; flex-direction:column; gap:14px">
         <div class="field">
           <span class="lbl">Days</span>
           <input class="input" name="days" type="number" min="1" value="{{ rnd.days or '' }}"/>
@@ -354,6 +363,12 @@
           <span class="lbl">Journeys</span>
           <input class="input mono" name="journeys" value="{{ rnd.journeys or '' }}" placeholder="JRN-0-572381 JRN-0-572307 ..."/>
           <p class="help" style="margin-top:6px">Space-separated routed journey ids, in prize order. Leave blank to keep the template's.</p>
+        </div>
+        <div class="field">
+          <span class="lbl">Prize copy override <span style="color:var(--t-faint)">(Sport WOF only &mdash; rarely needed)</span></span>
+          <textarea class="input mono" name="prize_text" rows="4" spellcheck="false" style="font-size:12px"
+                    placeholder="7&#9;10% extra free bet&#9;Apuesta gratis 10% extra">{{ rnd.prize_text or '' }}</textarea>
+          <p class="help" style="margin-top:6px">All seven slices ship their baked copy by default &mdash; leave blank. To rewrite a slice, add a line <span class="mono">N&#9;English&#9;Spanish</span> (tab-separated, wheel order); for all seven, paste seven lines with no numbers. A build where any slice would show its journey&#39;s internal name to players is <b>refused</b>.</p>
         </div>
       </div>
 
@@ -403,39 +418,10 @@
     </script>
 
     <div class="col-main stack">
-      {% if rnd.console_script %}
-        <section class="card" style="overflow:hidden">
-          <div class="card-head">
-            <div>
-              <h2 class="card-title">Console Script Ready</h2>
-              <p class="card-sub">{{ rnd.console_script.name }}</p>
-            </div>
-            <button type="button" id="rnd-copy" class="btn primary">Copy script</button>
-          </div>
-          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
-            <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
-              <li>Click <b>Copy script</b> above.</li>
-              <li>Open the backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
-              <li>Paste and press Enter. If it says "Waiting for a token", click anything in the UI.</li>
-              <li>Watch for the green <b>DONE</b> with the created randomizer draft id.</li>
-            </ol>
-            <textarea id="rnd-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ rnd.console_script.text }}</textarea>
-          </div>
-        </section>
-        <script>
-          (function () {
-            var btn = document.getElementById('rnd-copy');
-            var area = document.getElementById('rnd-script-text');
-            if (!btn || !area) return;
-            btn.addEventListener('click', function () {
-              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
-              if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); });
-              } else { area.select(); document.execCommand('copy'); done(); }
-            });
-          })();
-        </script>
-      {% endif %}
+      {% with console_script=rnd.console_script,
+              final_step="Watch for the green <b>DONE</b> with the created randomizer draft id." %}
+        {% include "partials/_console_script.html" %}
+      {% endwith %}
 
       {% if rnd.result %}
         <section class="card" style="overflow:hidden">
@@ -465,6 +451,114 @@
 </section>
 
 {# ── Discount NC (game-of-the-day notification journeys) ─────────────── #}
+<section data-panel="welcome_pack" hidden>
+
+  {% if wp.error %}<div class="alert err">{{ wp.error }}</div>{% endif %}
+  {% if wp.result %}
+    <div class="alert {% if wp.result.ok %}ok{% else %}err{% endif %}">
+      {% if wp.result.ok %}Console script generated.{% else %}Generation exited with code {{ wp.result.exit_code }}.{% endif %}
+    </div>
+  {% endif %}
+
+  <div class="row-flex">
+    <div class="col-rail stack">
+
+      <form method="post" action="/admin/promotions/welcome-pack" class="card card-pad" style="display:flex; flex-direction:column; gap:14px">
+        <div>
+          <h2 class="card-title">Welcome Pack — 1st Deposit / Aff</h2>
+          <p class="card-sub">One affiliate promo code → up to four drafts: JBCL and FTCL (PMCL), each normal and boosted.</p>
+        </div>
+
+        <div>
+          <label class="lbl" for="wp-code">Promo code</label>
+          <input id="wp-code" name="code" class="input" type="text" required
+                 value="{{ wp.form.code }}" placeholder="JUGAWELCOME"
+                 style="margin-top:4px; font-family:monospace; font-size:13px; text-transform:uppercase">
+          <p class="help" style="margin-top:4px">A–Z, 0–9, <span class="mono">-</span> and <span class="mono">_</span>, 3–32 characters. Several codes: separate with commas (the JBCL source carries two).</p>
+        </div>
+
+        <div>
+          <label class="lbl" for="wp-brand">Brand</label>
+          <select id="wp-brand" name="brand" class="input" required style="margin-top:4px">
+            <option value="" {% if not wp.form.brand %}selected{% endif %}>— pick a brand —</option>
+            <option value="jbcl" {% if wp.form.brand == 'jbcl' %}selected{% endif %}>JBCL (JugaBet)</option>
+            <option value="pmcl" {% if wp.form.brand == 'pmcl' %}selected{% endif %}>FTCL (Fortunazo / PMCL)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="lbl" for="wp-mode">Mode</label>
+          <select id="wp-mode" name="mode" class="input" required style="margin-top:4px">
+            <option value="" {% if not wp.form.mode %}selected{% endif %}>— pick a mode —</option>
+            <option value="normal" {% if wp.form.mode == 'normal' %}selected{% endif %}>Normal</option>
+            <option value="boosted" {% if wp.form.mode == 'boosted' %}selected{% endif %}>Boosted — adds the extra Sport FreeBet</option>
+          </select>
+          <p class="help" style="margin-top:4px">Boosted is the same journey plus the extra freebet after the deposit detector — 1.000 CLP on FTCL, 1.500 CLP on JBCL. <b>One run builds one draft</b>: each inherits its own source's promotion, so pick the one you are actually publishing.</p>
+        </div>
+
+        <button class="btn primary" style="justify-content:center">Generate console script</button>
+        <p class="help">Clones the four hand-maintained source drafts (FTCL 657225/657226, JBCL 657229/657230) live at paste time, swaps the promo code in both storages and regenerates every id. Creates drafts only.</p>
+      </form>
+
+      <div class="card card-pad">
+        <h2 class="card-title" style="margin-bottom:6px">Before you publish</h2>
+        <p class="card-sub" style="margin:0 0 8px">This script cannot duplicate a promotion — the backoffice mints a new one per copy through calls we have never captured.</p>
+        <p class="help" style="margin:0">So every draft it creates points at its <b>source's</b> promotion, and therefore at the source's <span class="mono">/services/promo/promotion/&lt;id&gt;</span> link in each SMS, notification and pop-up. The script lists the inherited promotion per draft when it finishes. Re-point them by hand before anything goes live.</p>
+      </div>
+
+    </div>
+
+    <div class="col-main stack">
+      {% if wp.console_script %}
+        <section class="card" style="overflow:hidden">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Console Script Ready</h2>
+              <p class="card-sub">{{ wp.console_script.name }}</p>
+            </div>
+            <button type="button" id="wp-copy" class="btn primary">Copy script</button>
+          </div>
+          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+            <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
+              <li>Click <b>Copy script</b> above.</li>
+              <li>Open the backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
+              <li>Paste and press Enter. Every source draft is fetched and checked first — if any check fails, nothing is created.</li>
+              <li>Read the red <b>BEFORE PUBLISHING</b> block at the end: it names the promotion each new draft inherited from its source.</li>
+            </ol>
+            <textarea id="wp-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ wp.console_script.text }}</textarea>
+          </div>
+        </section>
+        <script>
+          (function () {
+            var btn = document.getElementById('wp-copy'), area = document.getElementById('wp-script-text');
+            if (!btn || !area) return;
+            btn.addEventListener('click', function () {
+              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
+              if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); }); }
+              else { area.select(); document.execCommand('copy'); done(); }
+            });
+          })();
+        </script>
+      {% endif %}
+
+      {% if wp.result %}
+        <section class="card" style="overflow:hidden">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Run output</h2>
+              <p class="card-sub mono" style="font-size:12px">{{ wp.result.command }}</p>
+            </div>
+          </div>
+          <div class="card-pad">
+            <pre class="mono" style="font-size:12px; white-space:pre-wrap; margin:0">{{ wp.result.output }}</pre>
+          </div>
+        </section>
+      {% endif %}
+    </div>
+  </div>
+
+</section>
+
 <section data-panel="nc_discount" hidden>
 
   {# Git pull banner #}
@@ -490,6 +584,14 @@
     </div>
   {% endif %}
 
+  {# Brief-driven PMCL alerts #}
+  {% if nc.brief_error %}<div class="alert err">{{ nc.brief_error }}</div>{% endif %}
+  {% if nc.brief_result %}
+    <div class="alert {% if nc.brief_result.ok %}ok{% else %}err{% endif %}">
+      {% if nc.brief_result.ok %}PMCL console script generated from brief.{% else %}Brief-driven PMCL generation exited with code {{ nc.brief_result.exit_code }}.{% endif %}
+    </div>
+  {% endif %}
+
   {# Git pull card #}
   <div style="margin-bottom:18px">
     <form method="post" action="/admin/promotions/git-pull" class="card card-pad" style="display:flex; align-items:center; gap:18px; flex-wrap:wrap">
@@ -502,118 +604,86 @@
   </div>
 
   <div class="row-flex">
-    {# Left rail: two generate forms #}
+    {# Left rail: paste-brief form + two baked-calendar forms #}
     <div class="col-rail stack">
 
-      {# JBCL form #}
-      <form method="post" action="/admin/promotions/nc-discount" class="card card-pad" style="display:flex; flex-direction:column; gap:14px">
-        <div>
-          <h2 class="card-title">NC For Discount — JBCL</h2>
-          <p class="card-sub">jugabet.cl · Mon 20:00 / Fri 21:00 Chile. July calendar baked in.</p>
-        </div>
-        <ul class="help" style="margin:0; padding-left:18px; line-height:1.7">
-          <li>10.07 Fri — The Racaroon</li>
-          <li>13.07 Mon — Gold Trio</li>
-          <li>17.07 Fri — Tornado</li>
-          <li>20.07 Mon — 1000 Olympus Rivals</li>
-          <li>24.07 Fri — Sweet Bonanza 1000</li>
-          <li>27.07 Mon — Egypt Fire</li>
-          <li>31.07 Fri — Coin Win 2</li>
-        </ul>
-        <button class="btn primary" style="justify-content:center">Generate console script</button>
-        <p class="help">Reserves an id, pops a file picker per game image, uploads it, then creates + saves each draft (unpublished for review).</p>
-      </form>
-
-      {# PMCL form #}
-      <form method="post" action="/admin/promotions/nc-discount-pmcl" class="card card-pad" style="display:flex; flex-direction:column; gap:14px">
+      {# PMCL from-brief form — paste the ops brief, get a console script back.
+         Media-library folder is baked into the generator; year defaults to
+         the current year — one input, one button. #}
+      <form method="post" action="/admin/promotions/nc-discount-pmcl-brief" class="card card-pad" style="display:flex; flex-direction:column; gap:12px">
         <div>
           <h2 class="card-title">NC For Discount — PMCL</h2>
-          <p class="card-sub">fortunazo.cl · Sat 12:00 / Sun 13:00 Chile. July calendar baked in.</p>
+          <p class="card-sub">fortunazo.cl · paste the ops brief and get one notification journey per date. Calendar + copy come from what you paste; the PMCL media-library folder is baked into the generator.</p>
         </div>
-        <ul class="help" style="margin:0; padding-left:18px; line-height:1.7">
-          <li>18.07 Sat — Jackpot Joker</li>
-          <li>19.07 Sun — 3 Coin Golden Ox</li>
-          <li>25.07 Sat — Fortune Garuda 500</li>
-          <li>26.07 Sun — Fortune Gems 500</li>
-        </ul>
         <div>
-          <label class="lbl" for="pmcl-folder-id">Media Library Folder ID</label>
-          <input id="pmcl-folder-id" name="folder_id" class="input" type="text"
-                 placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                 style="margin-top:4px; font-family:monospace; font-size:13px">
-          <p class="help" style="margin-top:4px">Open Media Library in the PMCL backoffice → copy the UUID from the URL <span class="mono">/media-library/folders/&lt;uuid&gt;</span></p>
+          <label class="lbl" for="brief-text">Ops brief</label>
+          <textarea id="brief-text" name="brief" class="input mono" rows="16"
+                    spellcheck="false"
+                    placeholder="Day 1: Saturday&#10;Time: 12.00 (Chile time)&#10;Message: + image of the game&#10;&#10;⭐ La elección de miles de jugadores&#10;[game name] sigue conquistando a nuevos jugadores cada día.&#10;&#10;CTA (button): ¡Juega ahora!&#10;&#10;... (more Day N: blocks) ...&#10;&#10;Games calendar:&#10;&#10;01.08 Saturday - https://fortunazo.cl/services/slots/game/fazi-winning-clover-5&#10;02.08 Sunday - https://fortunazo.cl/services/slots/game/champion-fruit-party-deluxe&#10;..."
+                    style="margin-top:4px; font-size:12.5px; min-height:22rem">{{ nc.brief_text }}</textarea>
         </div>
         <button class="btn primary" style="justify-content:center">Generate console script</button>
-        <p class="help">Pops a file picker per game image, creates + saves each draft unpublished.</p>
+        <p class="help">One <b>Day N:</b> block per date + a <b>Games calendar</b> block (<span class="mono">DD.MM &lt;weekday&gt; - &lt;URL&gt;</span>). Row count must match Day count. <span class="mono">[game name]</span> in copy is swapped for the game name. Refuses on any missing piece — the parse error prints in the run output.</p>
+      </form>
+
+      {# JBCL form #}
+      <form method="post" action="/admin/promotions/nc-discount" class="card card-pad" style="display:flex; flex-direction:column; gap:12px">
+        <div>
+          <h2 class="card-title">NC For Discount — JBCL</h2>
+          <p class="card-sub">jugabet.cl · Mon 20:00 / Fri 21:00 Chile. Calendar baked into the script.</p>
+        </div>
+        {# Read from nc_discount_campaign.py's CALENDAR at render time — do not
+           hard-code these rows again, they went stale the first time the
+           calendar changed. #}
+        {% if nc.calendar %}
+          <ul class="help" style="margin:0; padding-left:18px; line-height:1.7">
+            {% for g in nc.calendar %}
+              <li>{{ g.date }} {{ g.weekday }} — {{ g.name }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+        <button class="btn primary" style="justify-content:center">Generate console script</button>
+        <p class="help">Reserves an id, pops a file picker per game image, uploads it, then creates + saves each draft (unpublished for review).</p>
       </form>
 
     </div>
 
     <div class="col-main stack">
+      {# Brief-driven PMCL script output #}
+      {% with title="PMCL (from brief) console script ready", console_script=nc.brief_console_script,
+              steps=["Open the <b>PMCL</b> backoffice — Chrome, logged in — before pasting.",
+                     "Paste and press Enter. A file picker pops up per game — select that game's 200×200 image, in calendar order."],
+              final_step="Watch for the green <b>DONE</b> with the created JRN ids. Drafts are unpublished — review + publish in the Journeys UI." %}
+        {% include "partials/_console_script.html" %}
+      {% endwith %}
+
       {# JBCL script output #}
-      {% if nc.console_script %}
-        <section class="card" style="overflow:hidden">
-          <div class="card-head">
-            <div>
-              <h2 class="card-title">JBCL Console Script Ready</h2>
-              <p class="card-sub">{{ nc.console_script.name }}</p>
-            </div>
-            <button type="button" id="nc-copy" class="btn primary">Copy script</button>
-          </div>
-          <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
-            <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
-              <li>Click <b>Copy script</b> above.</li>
-              <li>Open the JBCL backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
-              <li>Paste and press Enter. A file picker pops up per game — select that game's 200×200 image.</li>
-              <li>Watch for the green <b>DONE</b> with the created JRN ids. Drafts are unpublished — review + publish in the Journeys UI.</li>
-            </ol>
-            <textarea id="nc-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ nc.console_script.text }}</textarea>
-          </div>
-        </section>
-        <script>
-          (function () {
-            var btn = document.getElementById('nc-copy'), area = document.getElementById('nc-script-text');
-            if (!btn || !area) return;
-            btn.addEventListener('click', function () {
-              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
-              if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); }); }
-              else { area.select(); document.execCommand('copy'); done(); }
-            });
-          })();
-        </script>
-      {% endif %}
+      {% with title="JBCL console script ready", console_script=nc.console_script,
+              steps=["Open the <b>JBCL</b> backoffice — Chrome, logged in — before pasting.",
+                     "Paste and press Enter. A file picker pops up per game — select that game's 200×200 image."],
+              final_step="Watch for the green <b>DONE</b> with the created JRN ids. Drafts are unpublished — review + publish in the Journeys UI." %}
+        {% include "partials/_console_script.html" %}
+      {% endwith %}
 
       {# PMCL script output #}
-      {% if nc.pmcl_console_script %}
+      {% with title="PMCL console script ready", console_script=nc.pmcl_console_script,
+              steps=["Open the <b>PMCL</b> backoffice — Chrome, logged in — before pasting.",
+                     "Paste and press Enter. A file picker pops up per game — select that game's 200×200 image."],
+              final_step="Watch for the green <b>DONE</b> with the created JRN ids. Drafts are unpublished — review + publish in the Journeys UI." %}
+        {% include "partials/_console_script.html" %}
+      {% endwith %}
+
+      {# Brief-driven PMCL run output #}
+      {% if nc.brief_result %}
         <section class="card" style="overflow:hidden">
-          <div class="card-head">
-            <div>
-              <h2 class="card-title">PMCL Console Script Ready</h2>
-              <p class="card-sub">{{ nc.pmcl_console_script.name }}</p>
-            </div>
-            <button type="button" id="nc-pmcl-copy" class="btn primary">Copy script</button>
-          </div>
+          <div class="card-head"><h2 class="card-title">PMCL (from brief) Run Output</h2></div>
           <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
-            <ol class="help" style="margin:0; padding-left:18px; line-height:1.7">
-              <li>Click <b>Copy script</b> above.</li>
-              <li>Open the PMCL backoffice in Chrome (logged in), press <span class="mono">F12</span> → <b>Console</b> (type <span class="mono">allow pasting</span> if warned).</li>
-              <li>Paste and press Enter. A file picker pops up per game — select that game's 200×200 image.</li>
-              <li>Watch for the green <b>DONE</b> with the created JRN ids. Drafts are unpublished — review + publish in the Journeys UI.</li>
-            </ol>
-            <textarea id="nc-pmcl-script-text" class="input mono" readonly rows="10" spellcheck="false" style="font-size:12px">{{ nc.pmcl_console_script.text }}</textarea>
+            <div><div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Command</div>
+              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; margin:0">{{ nc.brief_result.command }}</pre></div>
+            <div><div class="lbl" style="margin-bottom:5px; color:var(--t-faint); font-size:11.5px; font-weight:600">Output</div>
+              <pre class="input mono" style="font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:32rem; margin:0">{{ nc.brief_result.output }}</pre></div>
           </div>
         </section>
-        <script>
-          (function () {
-            var btn = document.getElementById('nc-pmcl-copy'), area = document.getElementById('nc-pmcl-script-text');
-            if (!btn || !area) return;
-            btn.addEventListener('click', function () {
-              var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = 'Copy script'; }, 2000); };
-              if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(area.value).then(done, function () { area.select(); document.execCommand('copy'); done(); }); }
-              else { area.select(); document.execCommand('copy'); done(); }
-            });
-          })();
-        </script>
       {% endif %}
 
       {# JBCL run output #}
@@ -642,12 +712,12 @@
         </section>
       {% endif %}
 
-      {% if not nc.result and not nc.pmcl_result %}
+      {% if not nc.result and not nc.pmcl_result and not nc.brief_result %}
         <section class="card card-pad">
           <h2 class="card-title" style="margin-bottom:8px">How it works</h2>
           <div class="help" style="line-height:1.7">
             <p style="margin:0 0 8px">Each game is a separate journey cloned from the captured NC template — same segment (active players), with the game name, message, CTA, deep link and send time swapped in.</p>
-            <p style="margin:0">The calendar is baked from the brief. To run a different month, tell me the dates/games and I'll add a form for it.</p>
+            <p style="margin:0">Paste an ops brief into the top card to drive the calendar + copy directly, or use the JBCL/PMCL cards below for the baked-in calendar.</p>
           </div>
         </section>
       {% endif %}
@@ -701,29 +771,33 @@
   .gen-brand { font-size:10px; font-weight:800; padding:3px 7px; border-radius:6px;
                background:var(--neu-bg,#f1f2f5); color:var(--neu-t,#6b7280); white-space:nowrap; }
   .gen-cli { font-size:10.5px; color:var(--t-faint,#98a1b3); white-space:nowrap; }
-  .tabs { display:flex; align-items:flex-end; gap:0; border-bottom:2px solid var(--border-in,#e6e6ee); margin-bottom:18px; flex-wrap:wrap; }
-  .tab-group { display:flex; flex-direction:column; gap:5px; padding:0 14px; position:relative; }
-  .tab-group + .tab-group::before { content:""; position:absolute; left:0; top:6px; bottom:8px; width:1px; background:var(--border-in,#e6e6ee); }
-  .tab-group:first-child { padding-left:0; }
-  .tab-group-end { margin-left:auto; }
-  .tab-group-end::before { display:none; }
-  .tab-group-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--t-faint,#98a1b3); padding-left:14px; }
-  .tab-group-btns { display:flex; gap:2px; flex-wrap:wrap; }
-  .tabs .tab { background:none; border:none; padding:9px 14px; font-size:14px; font-weight:600; color:var(--t-faint,#889); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; border-radius:6px 6px 0 0; white-space:nowrap; }
-  .tabs .tab:hover { color:var(--t,#223); background:var(--bg-faint,#f5f6fa); }
-  .tabs .tab.active { color:var(--t,#223); border-bottom-color:#4a6cf7; }
+  /* One flat row: every tab is a sibling, so Overview lines up with the rest
+     instead of sitting in its own labelled column above them. The PLAN /
+     GENERATE / ASSETS group labels are gone with it — they cost a line of
+     height and pushed the shorter groups out of alignment once Generate grew
+     past one row. */
+  .tabs { display:flex; align-items:stretch; gap:2px; row-gap:4px; border-bottom:2px solid var(--border-in,#e6e6ee); margin-bottom:18px; flex-wrap:wrap; }
+  .tabs .tab { background:none; border:none; padding:9px 14px; font-size:14px; font-weight:600; color:var(--t-faint,#889); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; border-radius:6px 6px 0 0; white-space:nowrap; transition:color .12s ease, background-color .12s ease; }
+  /* The accent tint marks the SELECTED tab. Hover is a neutral wash — when hover
+     carried the tint, whatever the cursor sat on looked as chosen as the real
+     one, and louder. */
+  .tabs .tab:hover { color:var(--t-strong,#15171d); background:rgba(120,130,150,.10); }
+  .tabs .tab.active { color:var(--ac,#F0613C); font-weight:700; border-bottom-color:var(--ac,#F0613C); background:var(--acw,rgba(240,97,60,.10)); }
+  .tabs .tab.active:hover { background:var(--acw,rgba(240,97,60,.10)); }
+  .tabs .tab:focus-visible { outline:2px solid var(--ac,#F0613C); outline-offset:-2px; }
+  /* All scripts is a utility, not a generator — keep it off to the right. */
+  .tabs .tab-end { margin-left:auto; }
   @media(max-width:900px){
-    .tab-group { padding:0 8px; }
-    .tab-group + .tab-group::before { display:none; }
-    .tab-group-end { margin-left:0; }
+    .tabs .tab { padding:9px 10px; font-size:13px; }
+    .tabs .tab-end { margin-left:0; }
   }
-  .chip { display:inline-block; padding:2px 8px; border:1px solid var(--border,#dcdce4); border-radius:999px; font-size:11px; background:#f6f6fa; }
-  .badge { display:inline-block; padding:4px 10px; border-radius:6px; font-size:12px; background:#eef; color:#446; }
-  .file-pill { display:inline-flex; align-items:center; gap:8px; padding:4px 10px; border:1px solid var(--border,#dcdce4); border-radius:6px; background:#fafafe; }
-  .file-pill .dl { text-decoration:none; font-weight:700; color:#4a6; }
+  .chip { display:inline-block; padding:2px 8px; border:1px solid var(--border,#ECEDF1); border-radius:999px; font-size:11px; color:var(--neu-t,#5B6472); background:var(--neu-bg,#EEF1F6); }
+  .badge { display:inline-block; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:600; background:var(--neu-bg,#EEF1F6); color:var(--neu-t,#5B6472); }
+  .file-pill { display:inline-flex; align-items:center; gap:8px; padding:4px 10px; border:1px solid var(--border,#ECEDF1); border-radius:6px; background:var(--surface,#fff); }
+  .file-pill .dl { text-decoration:none; font-weight:700; color:var(--ac,#F0613C); }
   .file-pill a.mono { text-decoration:none; }
   .file-pill a.mono:hover { text-decoration:underline; }
-  .mini-table th, .mini-table td { padding:2px 6px; border-bottom:1px solid #eee; vertical-align:top; }
+  .mini-table th, .mini-table td { padding:2px 6px; border-bottom:1px solid var(--border,#ECEDF1); vertical-align:top; }
   .lbl { display:block; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--t-faint,#889); margin-bottom:2px; }
 </style>
 

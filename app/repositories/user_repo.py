@@ -90,8 +90,31 @@ class UserRepository:
             f"must_change_password={must_change_password}"
         )
 
+    def set_role(self, user: User, role: str) -> None:
+        user.role = role
+        logger.info(f"user.set_role username={user.username} role={role}")
+
+    def set_active(self, user: User, is_active: bool) -> None:
+        user.is_active = bool(is_active)
+        logger.info(f"user.set_active username={user.username} active={is_active}")
+
     def all(self) -> List[User]:
         return self.session.query(User).order_by(User.username).all()
+
+    def count_active_admins(self, excluding: Optional[str] = None) -> int:
+        """Active admins, optionally ignoring one username.
+
+        The guard behind "you cannot demote/disable/delete the last admin".
+        Locking every administrator out of the back office is only fixable by
+        someone with shell access to `scripts/create_admin.py`, so the UI
+        refuses rather than warns.
+        """
+        q = self.session.query(User).filter(
+            User.role == "admin", User.is_active.is_(True)
+        )
+        if excluding:
+            q = q.filter(User.username != excluding.strip().lower())
+        return q.count()
 
     def delete(self, username: str) -> bool:
         user = self.find(username)

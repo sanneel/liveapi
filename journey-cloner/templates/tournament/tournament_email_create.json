@@ -1,0 +1,53 @@
+{
+ "brand": "JBCL",
+ "name": "%%EMAIL_NAME%%",
+ "type": "template",
+ "parameters": [
+  {
+   "name": "cdn_hostname",
+   "required": false,
+   "type": "string"
+  },
+  {
+   "name": "FirstName",
+   "required": false,
+   "type": "string"
+  },
+  {
+   "name": "JourneyActivityId",
+   "required": false,
+   "type": "string"
+  },
+  {
+   "name": "playerID",
+   "required": false,
+   "type": "string"
+  }
+ ],
+ "translations": {
+  "es": {
+   "composition": {
+    "body": {
+     "type": "html",
+     "source": "<div>\n      <div align=\"center\" style=\"padding:0 0;margin:0;\">\n        <table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" bgcolor=\"\" background=\"http://dextra-pm.com/i/038ab59740854999b9a952db2212317c/timg_655b1b9a8c3c0.png\" style=\" background-position: top center; background-size: cover; background-repeat: no-repeat;;line-height: normal; margin:0 auto; padding: 0\">\n          <tbody>\n            <tr>\n              <td align=\"center\">\n                <div>\n                  <table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" style=\"background: #EDEBEB; max-width: 600px; min-width:300px; width:100%; margin:0 auto;\">\n                    <tbody>\n                      <tr>\n                        <td>\n                          <table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\" background=\"http://dextra-pm.com/i/038ab59740854999b9a952db2212317c/timg_6555fbd5eaa20.png\" style=\"width:100%;margin:0;padding: 0; background-position: top center; background-size: cover; background-repeat: no-repeat; padding-bottom: 15px;\">\n                            <tbody>\n                              <!--logo start -->\n                              <tr><td><table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" style=\"box-sizing: border-box; width: 100%; padding: 5px 20px 0; text-align: center;\"><tbody><tr><td>\n                                <a autologin href=\"https://jugabet.cl/es/\"><img src=\"http://dextra-pm.com/i/038ab59740854999b9a952db2212317c/timg_655b26966d131.png\" alt=\"header logo\" style=\"display: inline-block; width: 135px; height: auto; padding: 8px 0 8px 0;\"></a>\n                              </td></tr></tbody></table></td></tr>\n                              <!--logo end -->\n                              <!--nav start -->\n                              <tr><td style=\"width: 100%; padding: 10px 15px 5px 15px;\"><table cellpadding=\"0\" cellspacing=\"0\" border=\"0\" width=\"100%\" style=\"background: rgba(0, 0, 0, 0.40); border-radius: 10px; padding: 5px; text-align: center;\"><tbody><tr>\n                                <td align=\"center\" style=\"text-align: center; display: inline-block; vertical-align: middle; width: 33%;\"><a autologin href=\"https://jugabet.cl/es/football/live\" style=\"color: #fff; box-sizing: border-box; display: inline-block;vertical-align: middle; width: 95%; min-width: 95%; padding: 10px 0; font-family: Verdana, sans-serif; font-style: italic; font-size: 10px; font-weight: 700; text-transform: uppercase; text-align: center; border-radius: 8px;\">Casino en vivo</a></td>\n                                <td align=\"center\" style=\"text-align: center; display: inline-block; vertical-align: middle; width: 33%;\"><a autologin href=\"https://new.jugabet.cl/services/live-casino\" style=\"color: #fff; box-sizing: border-box; display: inline-block;vertical-align: middle; width: 95%; min-width: 95%; padding: 10px 0; font-family: Verdana, sans-serif; font-style: italic; font-size: 10px; font-weight: 700; text-transform: uppercase; text-align: center; border-radius: 8px;\">Tragamonedas</a></td>\n                                <td align=\"center\" style=\"text-align: center; display: inline-block; vertical-align: middle; width: 33%;\"><a autologin href=\"https://new.jugabet.cl/services/slots\" style=\"color: #fff; box-sizing: border-box; display: inline-block;vertical-align: middle; width: 95%; min-width: 95%; padding: 10px 0; font-family: Verdana, sans-serif; font-style: italic; font-size: 10px; font-weight: 700; text-transform: uppercase; text-align: center; border-radius: 8px;\">Promoción</a></td>\n                              </tr></tbody></table></td></tr>\n                              <!--nav end -->\n                              <!--topimg start -->\n                              <tr><td style=\"padding: 10px 17px 10px 17px; border: 0;\"><table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\" style=\"margin:0; padding:0;\"><tbody><tr><td align=\"center\" width=\"100%\" style=\"margin:0;padding:0;\">\n                                <a autologin class=\"image-link\" href=\"https://jugabet.cl/launch/slots/iframe/pragmatic-jugabet-leyendas-del-olympus-1000\" target=\"_blank\" style=\"margin:0; padding:0;\"><img src=\"https://{{cdn_hostname}}/c93ad623-44ae-40f6-9aa5-b1aef7fd931a/f4323497-5894-43ae-935c-0be3ef5c5056.png\" alt=\"\" style=\"border-radius: 10px; border: none; width: 100%; max-width: 100%; height: auto; outline: none; text-decoration: none;display:block;\" width=\"100%\"></a>\n                              </td></tr></tbody></table></td></tr>\n                              <!--topimg end -->\n                              <tr><td style=\"padding: 0 17px;\"><table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\" style=\"box-sizing: border-box; padding: 0; margin: 0; border-radius: 10px; padding-bottom: 30px; background: rgba(0, 0, 0, 0.6) url('http://dextra-pm.com/i/038ab59740854999b9a952db2212317c/timg_65b0e9e9c680c.png') center center / cover no-repeat;\"><tbody>\n                                <tr><td align=\"center\" valign=\"top\" style=\"padding: 15px 20px 30px;\"><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"padding: 0; margin: 0;\"><tbody><tr style=\"padding:0; margin: 0;\"><td align=\"left\" valign=\"top\" style=\"padding: 0 10px; margin: 0 auto;\">\n                                  <span style=\"color: #FAF9F8; padding: 0; margin: 0; display: block; font-family: Verdana, sans-serif; font-size: 16px; font-weight: 400; line-height: 140%; text-align: left;\">\n<p style=\"margin:0 0 20px 0; font-size:16px;\">EMAIL_BODY_COPY_PLACEHOLDER</p>\n                                  </span>\n                                </td></tr></tbody></table></td></tr>\n                                <tr><td><table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\" style=\"margin:0; padding:0;\"><tbody><tr><td align=\"center\" width=\"100%\" style=\"margin:0;padding:0;\">\n                                  <a autologin class=\"image-link\" href=\"https://jugabet.cl/launch/slots/iframe/pragmatic-jugabet-leyendas-del-olympus-1000\" target=\"_blank\" style=\"margin:0; padding:0;\"><img src=\"https://{{cdn_hostname}}/6b2e4cbf-bc46-4bce-bc89-54a84c15372a/d5134044-486f-49cc-8f02-109fb9ab8428.png\" alt=\"\" style=\"\" width=\"65%\" /></a>\n                                </td></tr></tbody></table></td></tr>\n                              </tbody></table></td></tr>\n                              <!--footer start -->\n                              <table role=\"presentation\" width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" style=\"width:100%;\"><tr><td align=\"center\" style=\"padding:0;margin:0;\">[[block(CSE-0-6615)]]</td></tr></table>\n                              <!--footer end-->\n                            </tbody>\n                          </table>\n                        </td>\n                      </tr>\n                    </tbody>\n                  </table>\n                </div>\n              </td>\n            </tr>\n          </tbody>\n        </table>\n      </div>\n    </div>\n"
+    },
+    "subject": "",
+    "preHeader": ""
+   },
+   "defaults": {
+    "playerID": null,
+    "FirstName": null,
+    "cdn_hostname": null,
+    "JourneyActivityId": null
+   }
+  }
+ },
+ "unsubscribeSettings": {
+  "default": {
+   "id": 56,
+   "allowedAgreements": [],
+   "defaultSelectedAgreements": []
+  },
+  "langSpecific": []
+ }
+}

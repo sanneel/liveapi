@@ -80,7 +80,7 @@ activity. [VERIFIED]
 |---|---|---|
 | Decision split | `ams_decision_split` [VERIFIED] | rules-based audience split; used in the birthday freespin prize for value-based routing |
 | Random split | *(uncaptured)* [UNKNOWN] | |
-| SMS / Email / Native push / On-site engagement split | `notification_center_engagement_split` [VERIFIED], `email_engagement_split` / `*_engagement_split` [GR8-DOC] | branch on Sent/Read/Clicked; must follow the matching comms + Wait/Date |
+| SMS / Email / Native push / On-site engagement split | `notification_center_engagement_split` [VERIFIED] (`NCEngagementSplitPassedPath01`..`05`), `email_engagement_split` [VERIFIED — gow_comms.json] (`Path1`..`Path6`) | branch on how the player engaged. Measured over all 18 captures: a DELIVERED message is followed by a wait, a split or an end — never straight to another send (0 occurrences). A FAILED one goes straight to the next channel (7 occurrences) |
 
 ### Communication
 | UI label | wire | notes |

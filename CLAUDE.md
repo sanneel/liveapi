@@ -40,7 +40,10 @@ the script. `AUTOMATIONS.md` has the detail.
 
 ## Environment
 
-- Python: **`.venv/bin/python`** (not bare `python`).
+- Python: **`.venv/bin/python`** (not bare `python`) — **but only on the deploy
+  server.** A fresh clone (any web session) has no `.venv`; there, use `python3`
+  and `pip install` deps on demand. `journey-cloner/har_analyse.py` is pure
+  stdlib and runs on either. See `HAR_TO_AUTOMATION.md` Step 0.
 - The service is `jugabet.service`; it runs from this working tree, so
   **do not `git checkout` another branch here** — merge into the current one
   instead. Restart with `sudo systemctl restart jugabet`.
@@ -55,8 +58,14 @@ Offline, no key, safe to run any time:
 
 ```bash
 .venv/bin/python scripts/test_composer_contract.py   # planner -> composer contract
+.venv/bin/python scripts/test_generators_catalog.py  # what the planner knows about the generators
+.venv/bin/python scripts/test_comms_chain.py         # comms chain: languages, links, artwork pickers
+.venv/bin/python scripts/test_comms_builder.py       # pick channels + paste sheet -> spec
 .venv/bin/python scripts/test_journey_design.py      # design-board renderer
 .venv/bin/python scripts/test_har_analyse.py         # HAR analyser + secret scrubbing
+.venv/bin/python scripts/test_sport_comms.py         # sport scratch-card comms generator
+.venv/bin/python scripts/test_tournament_comms.py    # tournament comms, both brands
+.venv/bin/python scripts/test_sport_wof.py           # Sport Wheel of Fortune randomizer
 .venv/bin/python -m compileall -q app server.py journey-cloner journey-planner
 ```
 

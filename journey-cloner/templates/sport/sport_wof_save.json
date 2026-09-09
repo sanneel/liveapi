@@ -1,0 +1,179 @@
+{
+ "playerVisibility": "Authorized",
+ "hideDate": "@HIDE_DATE@",
+ "showDate": "@SHOW_DATE@",
+ "urlShortName": "@URL_SHORT_NAME@",
+ "randomizerShotPolicy": "Once",
+ "randomizationType": "FortuneWheel",
+ "isExternalVisualSettings": false,
+ "isUsedInJourney": false,
+ "daysToAccept": null,
+ "prizes": [
+  {
+   "weight": 0.1,
+   "type": "JourneyPrize",
+   "isEmptyPrize": false,
+   "isLimitedPrize": true,
+   "prizeQuantity": 3,
+   "journeyPrizeSettings": {
+    "journeyId": "JRN-0-222277",
+    "activityId": "73371e55-46e1-47c6-be64-0271db68583f",
+    "activityDescription": "JBCL | SP | RB - Wheel of fortune | Free | Money\n",
+    "isEmptyPrize": false
+   }
+  },
+  {
+   "weight": 2.5,
+   "type": "JourneyPrize",
+   "isEmptyPrize": false,
+   "isLimitedPrize": false,
+   "prizeQuantity": null,
+   "journeyPrizeSettings": {
+    "journeyId": "JRN-0-632390",
+    "activityId": "2226976c-110a-4f2b-b440-e96ee736c43a",
+    "activityDescription": "JBCL | SP | RB - Wheel of fortune | Free | Bonuses",
+    "isEmptyPrize": false
+   }
+  },
+  {
+   "weight": 10,
+   "type": "JourneyPrize",
+   "isEmptyPrize": false,
+   "isLimitedPrize": false,
+   "prizeQuantity": null,
+   "journeyPrizeSettings": {
+    "journeyId": "JRN-0-632272",
+    "activityId": "1415c53b-f14f-4e1d-a21b-07d6975f4a08",
+    "activityDescription": "JBCL | SP | RB - Wheel of fortune | Dep | Bonus\n",
+    "isEmptyPrize": false
+   }
+  },
+  {
+   "weight": 10,
+   "type": "JourneyPrize",
+   "isEmptyPrize": false,
+   "isLimitedPrize": false,
+   "prizeQuantity": null,
+   "journeyPrizeSettings": {
+    "journeyId": "JRN-0-253218",
+    "activityId": "b6148588-a5c8-4cf9-ace8-1af8574f7deb",
+    "activityDescription": "JBCL | SP | RB - Wheel of fortune | Bet | Insurance\n",
+    "isEmptyPrize": false
+   }
+  },
+  {
+   "weight": 14,
+   "type": "JourneyPrize",
+   "isEmptyPrize": false,
+   "isLimitedPrize": false,
+   "prizeQuantity": null,
+   "journeyPrizeSettings": {
+    "journeyId": "JRN-0-632364",
+    "activityId": "5e0fafd0-bd8d-4dfa-9b42-1d7798c30bc7",
+    "activityDescription": "JBCL | SP | RB - Wheel of fortune | Dep | Freebet\n",
+    "isEmptyPrize": false
+   }
+  },
+  {
+   "weight": 13.5,
+   "type": "JourneyPrize",
+   "isEmptyPrize": false,
+   "isLimitedPrize": false,
+   "prizeQuantity": null,
+   "journeyPrizeSettings": {
+    "journeyId": "JRN-0-222271",
+    "activityId": "62b2f5c3-d12f-4a17-bbb0-a8d9a328cd41",
+    "activityDescription": "JBCL | SP | RB - Wheel of fortune | Bet | Freebet",
+    "isEmptyPrize": false
+   }
+  },
+  {
+   "weight": 49.9,
+   "type": "JourneyPrize",
+   "isEmptyPrize": false,
+   "isLimitedPrize": false,
+   "prizeQuantity": null,
+   "journeyPrizeSettings": {
+    "journeyId": "JRN-0-632418",
+    "activityId": "7005e59e-9e0d-420f-829b-1db6d4131997",
+    "activityDescription": "JBCL | SP | 10%- Wheel of fortune | Dep | Freebet",
+    "isEmptyPrize": false
+   }
+  }
+ ],
+ "internalName": "@INTERNAL_NAME@",
+ "type": "Randomizer",
+ "subType": null,
+ "languages": [
+  "en",
+  "es"
+ ],
+ "filterConditions": [
+  {
+   "values": [
+    {
+     "id": 40,
+     "name": "VIP-Platinum"
+    },
+    {
+     "id": 42,
+     "name": "VIP-Silver"
+    },
+    {
+     "id": 41,
+     "name": "VIP-Gold"
+    },
+    {
+     "id": 36,
+     "name": "Suspicious"
+    },
+    {
+     "id": 51,
+     "name": "Scammer"
+    },
+    {
+     "id": 39,
+     "name": "No status"
+    },
+    {
+     "id": 48,
+     "name": "Monitoring"
+    },
+    {
+     "id": 47,
+     "name": "Dangerous"
+    },
+    {
+     "id": 49,
+     "name": "Arbitrageur"
+    },
+    {
+     "id": 45,
+     "name": "Good guys-X"
+    }
+   ],
+   "conditionType": "MultiSelect",
+   "key": "Sport",
+   "filterType": "fairplay_sport_segment",
+   "displayName": "fairplay_sport_segment",
+   "operator": "notIn"
+  }
+ ],
+ "entrySourceRules": null,
+ "hasCsv": false,
+ "startDate": "@START_DATE@",
+ "endDate": "@END_DATE@",
+ "promoCode": null,
+ "redirect": null,
+ "initialShowDate": "@SHOW_DATE@",
+ "initialEndDate": "@END_DATE@",
+ "riskLevels": null,
+ "currencies": [
+  {
+   "brand": "JBCL",
+   "currency": "CLP"
+  }
+ ],
+ "contentId": "%%CONTENT_ID%%",
+ "frontId": "%%FRONT_ID%%"
+}

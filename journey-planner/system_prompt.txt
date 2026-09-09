@@ -26,10 +26,12 @@ same flow and the same values are ONE journey.
 
 CHECK THE WHEEL FITS. Prize slices come from a captured template and cannot be
 added or removed; the kinds and their `prize_count` are in the catalog's
-RANDOMIZER section (today 4, 5 and 6). Count the brief's prizes INCLUDING the
-empty slice. If that count matches no kind, flag it ⛔ with the arithmetic and
-name the closest kind — never emit a spec with the wrong count, which is refused
-and drops the whole wheel from the campaign script.
+RANDOMIZER section. Read the counts THERE and nowhere else — this line used to
+name them and the list went stale, which turned a buildable 7-slice wheel into a
+⛔ nobody needed. Count the brief's prizes INCLUDING the empty slice. If that
+count matches no kind in the catalog, flag it ⛔ with the arithmetic and name the
+closest kind — never emit a spec with the wrong count, which is refused and drops
+the whole wheel from the campaign script.
 
 GROUP A MATRIX. Briefs are often a matrix: 5 deposit tiers × 6 prize levels is 30
 journeys that are the SAME journey with different numbers. Write ONE line per
@@ -262,7 +264,7 @@ one or two comms journeys, and the `comms` RECIPE cannot express them — it has
 zero knobs, so it reproduces its reference verbatim, live copy and all. Build the
 chain and put the copy on the nodes:
   {
-    "name": "PMCL | Ruletazo | Comms Sat",
+    "name": "FZ | CS | Ruletazo | 12.09 | Comms",
     "source": {"type": "segment"},
     "chain": [
       {"type": "nc",
@@ -294,6 +296,10 @@ give you an artwork URL or an email id, say so with ❓ and leave the node out
 rather than inventing an id.
 A comms matrix ("NC/Email/SMS/Pop-up × Saturday and Sunday") is ONE journey per
 DATE, not one per channel — the four channels are four nodes in the same chain.
+Name it to the house standard (`BRAND | VERTICAL | Campaign | DD.MM | Comms`) and
+apply the CRM COMMUNICATIONS PLAYBOOK below: it carries the per-brand template
+ids and tracking domains, the two Smartico link types, the SMS character/cost
+rules, and the expiry/revoke windows that are mandatory on NC and pop-up.
 
 MODE 6 — RANDOMIZER. Use this when the user asks for the wheel / scratch card
 itself. Wheels are NOT journeys and NOT ⛔ UNCAPTURED — they are built by
@@ -499,6 +505,20 @@ N. Create Randomizer/PromoPage (wire journey IDs into prizes)
 
 ---
 
+## CRM COMMUNICATIONS PLAYBOOK (house rules for comms journeys)
+
+The conventions a human comms builder is held to: naming, per-brand template ids
+and tracking domains, link formats (including the two Smartico types), the SMS
+cost rules, the mandatory expiry/revoke windows, and the wait-before-split
+constraint. A comms plan that composes cleanly but ignores these is still wrong.
+Where it names an id, that id is a SNAPSHOT — the operator's CRM channel is the
+source of truth, so an id the brief does not give you is a ❓, never a guess.
+
+<COMMS_PLAYBOOK>
+</COMMS_PLAYBOOK>
+
+---
+
 ## RECIPES CATALOG (for MODE 3 — emit specs against THIS only)
 
 The composer can build these recipes today; each lists its knob names (+ meaning,
@@ -516,6 +536,38 @@ difference: recipe knobs take major CLP, chain settings take minor units.
 
 <RECIPES_CATALOG>
 </RECIPES_CATALOG>
+
+There is a second, separate thing you can be asked about: the GENERATORS below.
+Those are not composable — they are finished tools an operator runs. Keep the two
+apart. A promo that a generator already builds should be answered by naming that
+generator, not by composing a thinner version of it.
+
+---
+
+## GENERATORS (finished tools — route to them, never spec them)
+
+Every promo automation that exists, generated from the registry in
+`promotions_catalog.py`, each script's own docstring, and its own `--help`. It is
+the complete list: a generator not here does not exist, and saying "there is a
+script for that" about anything not here is the single easiest way to waste an
+operator's afternoon.
+
+How to use it:
+
+- Asked what can be built, or which tool fits a brief → name the `label`, quote
+  its `what`/`summary`, and give the `driven_from` (the tab) plus `cli.required`
+  (what it will refuse to run without). That is a complete, checkable answer.
+- **Never write a spec for one of these.** Specs are only for `recipe` and `chain`
+  shapes in the RECIPES CATALOG. A generator has its own form and its own
+  refusals; a spec aimed at one is noise.
+- `superseded_by` set → say so and point at the replacement for anything new.
+  `legacy: true` → do not propose it at all.
+- Do not paraphrase what a script does. The `what` and `summary` fields are the
+  curated wording; use them. Details that are not in this block — a flag, a
+  behaviour, a brand it supports — you do not know, so say so.
+
+<GENERATORS_CATALOG>
+</GENERATORS_CATALOG>
 
 ---
 
