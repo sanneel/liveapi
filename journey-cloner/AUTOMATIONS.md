@@ -123,9 +123,16 @@ edges and dependencies still resolve; the script refuses if a `player_id` filter
 survives. Give it a casino source that already starts with the API node and no
 transplant happens.
 
-Two things it cannot do: every draft shares its source's promotion content tree
-(the backoffice's own copy calls were never captured), and nothing is published
-— and publishing one starts it immediately.
+Each draft also gets its own copy of the promotion's two artwork trees (the six
+`/contents/v1/copy` calls the UI makes), is re-pointed at that copy, and has the
+prize's photo written into every image slot its card names — the widget image,
+the box on each part, the spa header. The slots are read out of the copied
+content rather than listed, so the money card and the casino card each get what
+they have; a copied file's own media paths are rewritten to the new tree first,
+or the card would read its images out of the campaign it was cloned from.
+`--no-photos` keeps the copied artwork.
+
+Nothing is published, and publishing one starts it immediately.
 
 ### Sorry Bonus — `sorry_bonus_pmcl_campaign.py` — shell only
 One goodwill casino bonus per player: segment (that one `player_id`) → promotion

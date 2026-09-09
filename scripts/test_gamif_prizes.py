@@ -98,6 +98,29 @@ check("KEEP_WEBHOOK_ID = true" in G.build_js(drafts, "1", "2", keep_webhook=True
 check("Only STRING values are rewritten" in js, "the copy substitution is documented as string-only")
 check(json.dumps(drafts, ensure_ascii=False) in js, "the prize table travels with the script")
 
+section("the prize photo")
+check("contents/v1/copy" in js, "each draft copies the promotion's artwork trees")
+check(len(G.CONTENT_COPIES) == 6, "six copies, the set the UI makes")
+check([c["part"] for c in G.CONTENT_COPIES if c["tree"] == "front"] == ["spa", "widget"],
+      "the front tree copies spa and widget unfiltered")
+check(all(c["files"] and "manifest.json" in c["files"] for c in G.CONTENT_COPIES if c["tree"] == "content"),
+      "every content part copies its manifest and both languages")
+check("s3/upload-content" in js, "the photo is uploaded as file content")
+check("s3/upload" in js and "retreeContent" in js, "the content files are rewritten and put back")
+check("the journey still points at the source content tree" in js,
+      "it refuses a draft that never left the source card")
+check("not one content part copied" in js, "it refuses when no part of the tree copied")
+check("names no image slot" in js, "it refuses a photo with nowhere to go")
+check("aws-get" in js, "it reads the copied files back before rewriting them")
+check("?t=" in js, "the rewritten media paths carry a cache-buster")
+no_photo = G.build_js(drafts, "1", "2", keep_webhook=False, with_photos=False)
+check("WITH_PHOTOS = false" in no_photo and "WITH_PHOTOS = true" in js,
+      "--no-photos is wired through and photos are the default")
+check(js.index("contents/v1/copy") < js.index("await createDraft("),
+      "the artwork is cloned before the draft is created, as the capture did")
+check(js.index("await createDraft(") < js.index("await saveDraft("),
+      "the photo lands between the create and the save, as the capture did")
+
 print()
 if failures:
     print(f"{len(failures)} check(s) failed:")

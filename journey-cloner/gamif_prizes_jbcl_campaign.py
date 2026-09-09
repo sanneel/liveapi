@@ -45,13 +45,19 @@ activity id so every dependency and edge still resolves, and refuses if a
 player_id filter survives. Hand-make one casino draft that already starts with
 the API node, pass its id as --casino-source, and no transplant happens.
 
-WHAT IT DOES NOT DO
--------------------
-Each draft points at the SAME promotion content tree as its source draft: the
-backoffice copies that tree when you duplicate a journey in the UI, and those
-copy calls were not captured here. For a set of prizes sharing one card that is
-usually what you want; if a prize needs its own card, copy the tree by hand and
-re-point that draft before publishing.
+THE PRIZE PHOTO
+---------------
+Each draft gets its own copy of the promotion's two artwork trees (the six
+/contents/v1/copy calls the UI makes) and is re-pointed at that copy, so no two
+prizes share a card. A copied content file still spells its own media paths
+against the tree it came from, so every one is rewritten to this draft's tree
+with a fresh cache-buster, and the photo picked for that prize is written into
+every image slot the card names: the widget image, the box on each part, and
+the spa's header. --no-photos keeps whatever artwork the copy came with.
+
+The slots are discovered from the content itself rather than listed here, so
+the money bonus card and the casino bonus card each get what they actually
+have.
 
 Nothing is published. Both sources publish immediately when published
 (isImmediatelyAfterPublish), so review each draft first.
@@ -86,6 +92,30 @@ POST_KEYS = [
     "isArchived", "isUnlimited", "isImmediatelyAfterPublish", "rawJourneyData",
     "stopAt", "startAt", "exitCriteriaId",
 ]
+
+# The promotion's artwork lives in two S3 trees: a "front" (how it is rendered)
+# and a "content" (the copy and the images). Duplicating a journey in the UI
+# copies both, part by part, with these filters, captured from the run that set
+# the $15 000 photo.
+CONTENT_COPIES = [
+    {"tree": "front", "part": "spa", "files": None},
+    {"tree": "front", "part": "widget", "files": None},
+    {"tree": "content", "part": "widgetModulor",
+     "files": ["manifest.json", "content/content-es.json", "content/content-en.json"]},
+    {"tree": "content", "part": "spa",
+     "files": ["manifest.json", "content/content-es.json", "content/content-en.json",
+               "media/box.png", "media/bonusHeaderImage.png"]},
+    {"tree": "content", "part": "widget",
+     "files": ["manifest.json", "content/content-es.json", "content/content-en.json",
+               "media/box.png", "media/widgetImgKey.png"]},
+    {"tree": "content", "part": "cashier",
+     "files": ["manifest.json", "content/content-es.json", "content/content-en.json"]},
+]
+
+# The parts whose content-<lang>.json name the images. A copied file keeps the
+# OLD tree in its own absolute paths, so every one of them is rewritten to the
+# new tree before the card can render its own artwork.
+CONTENT_PARTS = ["spa", "widget", "widgetModulor", "cashier"]
 
 # The prize table from the brief. "kind" picks the source draft; "wagering" is
 # the casino bonus's rollover and is meaningless for a money bonus.
@@ -162,7 +192,11 @@ JS_TEMPLATE = r"""// JBCL gamification prizes — @COUNT@ API-triggered draft(s)
   const PRIZES = @PRIZES@;               // [{group, kind, amount, wagering, name, amountText}]
   const POST_KEYS = @POST_KEYS@;
   const KEEP_WEBHOOK_ID = @KEEP_WEBHOOK_ID@;
+  const COPIES = @COPIES@;               // the six content-tree copies the UI makes
+  const CONTENT_PARTS = @CONTENT_PARTS@; // the parts whose content-<lang>.json name images
+  const WITH_PHOTOS = @WITH_PHOTOS@;     // one file picker per prize
   const CRM_BASE = BASE.replace(/\/journey-builder\/v0$/, '');
+  const AWS_BASE = new URL(BASE).origin + '/api/aws-get';
 
   const decodeJwt = (t) => { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); } catch (e) { return null; } };
   const usableAuth = (v) => {
@@ -188,6 +222,19 @@ JS_TEMPLATE = r"""// JBCL gamification prizes — @COUNT@ API-triggered draft(s)
   const H = (ct) => { const h = { accept: 'application/json, text/plain, */*', authorization: auth, 'x-brand': BRAND }; if (ct) h['content-type'] = ct; return h; };
 @JSON_GUARD_JS@
 @DRAFT_SAVE_JS@
+  // The capture creates the draft, writes the artwork, then saves. Same order
+  // here, so createAndSaveDraft's single step is split in two.
+  async function createDraft(body, label) {
+    const r = await fetch(BASE + '/journey-drafts', { method: 'POST', headers: H('application/json'), credentials: 'include', body: JSON.stringify(body) });
+    const t = await r.text(); if (!r.ok) throw new Error(label + ' draft not created: HTTP ' + r.status + ' ' + t);
+    const numId = parseJsonText(t, label + ' draft create', r.status).id;
+    if (!numId) throw new Error(label + ' draft create returned no id: ' + t);
+    return numId;
+  }
+  async function saveDraft(numId, body, label) {
+    const r = await fetch(BASE + '/journey-drafts/' + numId, { method: 'PUT', headers: H('application/json'), credentials: 'include', body: JSON.stringify(body) });
+    if (!r.ok) throw new Error(label + ' draft ' + numId + ' was created but the save failed: HTTP ' + r.status + ' ' + (await r.text()) + '. Delete that half-made draft before rerunning.');
+  }
   const newUuid = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID()
     : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const r = Math.random()*16|0; return (c === 'x' ? r : (r&0x3)|0x8).toString(16); });
   // Same alphabet and length as the webhookId the backoffice minted for the
@@ -314,6 +361,78 @@ JS_TEMPLATE = r"""// JBCL gamification prizes — @COUNT@ API-triggered draft(s)
     return hits;
   }
 
+  function pickFile(label) {
+    return new Promise((resolve, reject) => {
+      const input = document.createElement('input');
+      input.type = 'file'; input.accept = 'image/*';
+      Object.assign(input.style, { position: 'fixed', top: '12px', left: '12px', zIndex: 999999, background: '#fff', padding: '8px', border: '3px solid #22c55e', borderRadius: '6px' });
+      document.body.appendChild(input);
+      console.log('%cSelect the photo for ' + label + ' (top-left).', 'color:#eab308;font-weight:bold');
+      input.addEventListener('change', () => { const f = input.files && input.files[0]; input.remove(); if (!f) { reject(new Error('no photo chosen for ' + label)); return; } resolve(f); });
+    });
+  }
+
+  // The two ids in a promotion placement: FrontId is how the card renders,
+  // ContentId is its copy and images. Both are found in the body rather than
+  // assumed, so a source with a different pair still works.
+  function placementIds(body) {
+    let front = null, content = null;
+    walk(body, (o) => { if (o.FrontId && o.ContentId) { front = o.FrontId; content = o.ContentId; } });
+    return { front, content };
+  }
+
+  async function copyTree(oldId, newId, part, files) {
+    const payload = { sourcePath: 'mf/v1/' + oldId + '/' + part, destinationPath: 'mf/v1/' + newId + '/' + part };
+    if (files) payload.fileFilters = files;
+    const r = await fetch(CRM_BASE + '/contents/v1/copy', { method: 'POST', headers: H('application/json'), credentials: 'include', body: JSON.stringify(payload) });
+    if (!r.ok) { console.warn('    copy ' + part + ' skipped: HTTP ' + r.status); return false; }
+    return true;
+  }
+  async function awsGet(path) {
+    const r = await fetch(AWS_BASE + '/' + path + '?t=' + Date.now(), { credentials: 'include' });
+    if (!r.ok) return null;
+    const t = await r.text();
+    try { return JSON.parse(t); } catch (e) { return null; }
+  }
+  async function s3Put(path, data) {
+    const r = await fetch(CRM_BASE + '/promo/v2/s3/upload', { method: 'POST', headers: H('application/json'), credentials: 'include', body: JSON.stringify({ path: path, data: data }) });
+    if (!r.ok) throw new Error('write ' + path + ' HTTP ' + r.status + ' ' + (await r.text()));
+  }
+  async function s3PutFile(path, file) {
+    const fd = new FormData();
+    fd.append(path, file, file.name);
+    const r = await fetch(CRM_BASE + '/promo/v2/s3/upload-content', { method: 'POST', headers: H(), credentials: 'include', body: fd });
+    if (!r.ok) throw new Error('upload ' + path + ' HTTP ' + r.status + ' ' + (await r.text()));
+  }
+
+  // A copied content file still points at the tree it came from, so the card
+  // would read its media out of the campaign it was cloned from. Rewrite every
+  // self-path to this draft's own tree, refresh the cache-buster, and report
+  // the media paths so the prize photo can be written to each of them.
+  const MEDIA_RE = /^([0-9a-fA-F-]{36})\/(spa|widget|widgetModulor|cashier)\/media\/([^?]+)(\?.*)?$/;
+  async function retreeContent(newContent, stamp) {
+    const mediaPaths = new Set();
+    let files = 0;
+    for (const part of CONTENT_PARTS) {
+      for (const lang of ['es', 'en']) {
+        const path = 'mf/v1/' + newContent + '/' + part + '/content/content-' + lang + '.json';
+        const data = await awsGet(path);
+        if (!data || typeof data !== 'object') continue;
+        let touched = false;
+        for (const [k, v] of Object.entries(data)) {
+          if (typeof v !== 'string') continue;
+          const m = MEDIA_RE.exec(v);
+          if (!m) continue;
+          data[k] = newContent + '/' + m[2] + '/media/' + m[3] + '?t=' + stamp;
+          mediaPaths.add('mf/v1/' + newContent + '/' + m[2] + '/media/' + m[3]);
+          touched = true;
+        }
+        if (touched) { await s3Put(path, data); files++; }
+      }
+    }
+    return { mediaPaths: [...mediaPaths], files };
+  }
+
   console.log('%cJBCL gamification prizes — ' + PRIZES.length + ' draft(s)', 'color:#3b82f6;font-weight:bold;font-size:14px');
   const ok = [], fail = [];
   try {
@@ -332,6 +451,7 @@ JS_TEMPLATE = r"""// JBCL gamification prizes — @COUNT@ API-triggered draft(s)
     for (const P of PRIZES) {
       console.log('%c' + P.group + '  $' + P.amountText + ' ...', 'color:#3b82f6;font-weight:bold');
       try {
+        const photo = WITH_PHOTOS ? await pickFile(P.group + ' $' + P.amountText) : null;
         const src = sources[P.kind];
         const sourceName = String(src.journeyName || '');
         const body = {};
@@ -383,9 +503,38 @@ JS_TEMPLATE = r"""// JBCL gamification prizes — @COUNT@ API-triggered draft(s)
         if (P.wagering && [...rollovers].some((r) => r !== P.wagering)) problems.push('mixed rollovers in the body: ' + [...rollovers].join(', '));
         if (problems.length) throw new Error(problems.join('; '));
 
-        const numId = await createAndSaveDraft(out, P.name, H);
-        ok.push({ prize: P.group, amount: P.amountText, journey: out.reservedJourneyId, draft: numId, webhook: webhookId });
-        console.log('%c    ✓ ' + out.reservedJourneyId + ' (draft ' + numId + ')  webhook ' + webhookId, 'color:#22c55e');
+        // Its own artwork tree, or twelve prizes share one card. The pair is
+        // cloned from whatever the source points at, then the journey is
+        // re-pointed at the clone before it is created.
+        const ids = placementIds(out);
+        if (!ids.front || !ids.content) throw new Error('no FrontId/ContentId in the promotion placement — refusing');
+        const newFront = newUuid(), newContent = newUuid();
+        let copied = 0;
+        for (const c of COPIES) {
+          const from = c.tree === 'front' ? ids.front : ids.content;
+          const to = c.tree === 'front' ? newFront : newContent;
+          if (await copyTree(from, to, c.part, c.files)) copied++;
+        }
+        if (!copied) throw new Error('not one content part copied — refusing rather than sharing the source card');
+        let outText = JSON.stringify(out).split(ids.front).join(newFront).split(ids.content).join(newContent);
+        const wired = JSON.parse(outText);
+        if (JSON.stringify(wired).includes(ids.content)) throw new Error('the journey still points at the source content tree');
+
+        const numId = await createDraft(wired, P.name);
+
+        const stamp = Date.now();
+        const art = await retreeContent(newContent, stamp);
+        if (!art.files) throw new Error('draft ' + numId + ' created but its content tree has no content-<lang>.json to re-point');
+        if (photo) {
+          if (!art.mediaPaths.length) throw new Error('draft ' + numId + ' created but its card names no image slot to put the photo in');
+          for (const mp of art.mediaPaths) await s3PutFile(mp, photo);
+          console.log('    photo -> ' + art.mediaPaths.length + ' slot(s): ' + art.mediaPaths.map((m) => m.split('/').slice(-2).join('/')).join(', '));
+        }
+        await saveDraft(numId, wired, P.name);
+
+        ok.push({ prize: P.group, amount: P.amountText, journey: wired.reservedJourneyId, draft: numId,
+                  webhook: webhookId, photo: photo ? photo.name : 'kept the source card', slots: art.mediaPaths.length });
+        console.log('%c    ✓ ' + wired.reservedJourneyId + ' (draft ' + numId + ')  webhook ' + webhookId, 'color:#22c55e');
       } catch (e) {
         const msg = String((e && e.message) || e);
         fail.push({ prize: P.group, amount: P.amountText, error: msg });
@@ -398,7 +547,7 @@ JS_TEMPLATE = r"""// JBCL gamification prizes — @COUNT@ API-triggered draft(s)
   console.log('%cDONE — ' + ok.length + ' created, ' + fail.length + ' failed.', 'color:' + (fail.length ? '#f59e0b' : '#22c55e') + ';font-weight:bold;font-size:14px');
   if (ok.length) console.table(ok);
   if (fail.length) console.table(fail);
-  console.log('Every draft points at its source draft\'s promotion content, so they share one card.');
+  console.log('Each draft has its own promotion content tree, carrying its own prize photo.');
   console.log('Open one, check the API node\'s URL and the amount, then publish — publishing starts it immediately.');
 })();
 """
@@ -406,7 +555,8 @@ JS_TEMPLATE = r"""// JBCL gamification prizes — @COUNT@ API-triggered draft(s)
 JS_TEMPLATE = inject(JS_TEMPLATE)
 
 
-def build_js(drafts: list[dict], money_source: str, casino_source: str, keep_webhook: bool) -> str:
+def build_js(drafts: list[dict], money_source: str, casino_source: str, keep_webhook: bool,
+              with_photos: bool = True) -> str:
     js = JS_TEMPLATE
     js = js.replace("@GENERATED_AT@", datetime.now(LOCAL_TZ).strftime("%Y-%m-%d %H:%M %Z"))
     js = js.replace("@COUNT@", str(len(drafts)))
@@ -416,6 +566,9 @@ def build_js(drafts: list[dict], money_source: str, casino_source: str, keep_web
     js = js.replace("@CASINO_SOURCE@", json.dumps(casino_source))
     js = js.replace("@POST_KEYS@", json.dumps(POST_KEYS))
     js = js.replace("@KEEP_WEBHOOK_ID@", "true" if keep_webhook else "false")
+    js = js.replace("@COPIES@", json.dumps(CONTENT_COPIES, ensure_ascii=False))
+    js = js.replace("@CONTENT_PARTS@", json.dumps(CONTENT_PARTS))
+    js = js.replace("@WITH_PHOTOS@", "true" if with_photos else "false")
     js = js.replace("@PRIZES@", json.dumps(drafts, ensure_ascii=False))
     return js
 
@@ -427,6 +580,8 @@ def main() -> int:
     p.add_argument("--only", default="", help=f"comma-separated prize groups to build ({', '.join(GROUPS)}); default all")
     p.add_argument("--keep-webhook-id", action="store_true",
                    help="reuse the source's webhookId instead of minting one per journey (twelve journeys then share one URL)")
+    p.add_argument("--no-photos", action="store_true",
+                   help="skip the per-prize file pickers and keep the artwork the copied card came with")
     p.add_argument("--name", default="gamif_prizes_jbcl", help="output basename")
     args = p.parse_args()
 
@@ -456,7 +611,7 @@ def main() -> int:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     path = OUT_DIR / f"{args.name}_console.js"
     path.write_text(build_js(drafts, args.money_source.strip(), args.casino_source.strip(),
-                             args.keep_webhook_id), encoding="utf-8")
+                             args.keep_webhook_id, not args.no_photos), encoding="utf-8")
     print(f"\nConsole script written: {path}  ({len(drafts)} draft(s) in one paste)")
     print("Paste it into the DevTools console on a logged-in JBCL backoffice tab.")
     print("Nothing is published: review each draft, then publish it yourself.")
