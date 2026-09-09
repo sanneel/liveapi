@@ -1,0 +1,121 @@
+[33m53e8be3[m[33m ([m[1;36mHEAD -> [m[1;32mclaude/har-automation-liveapi-ujl76c[m[33m)[m Merge branch 'feat/onboarding-tour-live' of github.com:sanneel/liveapi into claude/har-automation-liveapi-ujl76c
+[33m77c62fa[m[33m ([m[1;31morigin/feat/onboarding-tour-live[m[33m)[m Say less in the validator
+[33m3b57a87[m Merge remote-tracking branch 'origin/claude/discount-games-notifications-f7181f' into claude/har-automation-liveapi-ujl76c
+[33mf2d533f[m[33m ([m[1;31morigin/claude/discount-games-notifications-f7181f[m[33m)[m Discount NC: render the panel calendar from the generator
+[33m1cd91a1[m rMerge remote-tracking branch 'origin/claude/discount-games-notifications-f7181f' into claude/har-automation-liveapi-ujl76c
+[33m0c56bd3[m Discount NC: August calendar + games-registry guard
+[33me1bc409[m cd /home/admin/staging_html && git pull --no-rebase origin feat/onboarding-tour-live && sudo systemctl restart jugabetcMerge branch 'feat/onboarding-tour-live' of github.com:sanneel/liveapi into claude/har-automation-liveapi-ujl76c
+[33m2d1dafe[m Parse the FA Community Shield, declared in code
+[33mbbd9700[m Draw the whole four flow journey in the worked example
+[33m9695406[m Merge branch 'feat/onboarding-tour-live' of github.com:sanneel/liveapi into claude/har-automation-liveapi-ujl76c
+[33mc3da127[m Show the builder once, before they are asked to use it
+[33m594812c[m Merge branch 'feat/onboarding-tour-live' of github.com:sanneel/liveapi into claude/har-automation-liveapi-ujl76c
+[33mf2e30bc[m Give every node its settings, and grey what we never place
+[33m649ffe2[m Centre the nodes screen now that it holds one card
+[33mc2712c2[m Merge branch 'feat/onboarding-tour-live' of github.com:sanneel/liveapi into claude/har-automation-liveapi-ujl76c
+[33m7d203ec[m Keep three practice tasks
+[33md530aa5[m Merge branch 'feat/onboarding-tour-live' of github.com:sanneel/liveapi into claude/har-automation-liveapi-ujl76c
+[33m00d257f[m Take the End of journey card off the nodes screen
+[33m8394a36[m Merge branch 'feat/onboarding-tour-live' of github.com:sanneel/liveapi into claude/har-automation-liveapi-ujl76c
+[33m4f766e6[m Let the planner be read aloud, and reached without a mouse
+[33m19cc384[m Teach the wheel's fine print, and warn what a clone keeps
+[33m4bdb357[m Make Flick worth tapping, and let the player be anyone
+[33m304d5ea[m Teach the playground what the library has since captured
+[33mead61c1[m Divide the tour into parts, and put them along the top
+[33m77905fa[m Say what a node does, in words an operator uses
+[33m90f6d5d[m Teach the nodes, and ask about them
+[33ma8ddacc[m Merge remote-tracking branch 'origin/feat/onboarding-tour-live' into claude/har-automation-liveapi-ujl76c
+[33me4b837c[m Rewrite the tips, open the weekly promotion, and check twice
+[33me4b9bc6[m[33m ([m[1;31morigin/claude/har-automation-liveapi-ujl76c[m[33m)[m Ship the onboarding captures at their real capture resolution
+[33mfcff33b[m Merge remote-tracking branch 'origin/feat/onboarding-tour-live' into claude/har-automation-liveapi-ujl76c
+[33m841bb02[m His choice comes before the journey logs
+[33mb84bb2e[m Merge remote-tracking branch 'origin/feat/onboarding-tour-live' into claude/har-automation-liveapi-ujl76c
+[33mffbd9fb[m Ship the captures at full resolution
+[33mfaac56d[m Fix the builder against what an operator actually did with it
+[33m87da79a[m Merge remote-tracking branch 'origin/feat/onboarding-tour-live' into claude/har-automation-liveapi-ujl76c
+[33mb1c7d6c[m Merge branch 'claude/photo-generation-420x380-90d313' into claude/har-automation-liveapi-ujl76c
+[33md3ebc25[m[33m ([m[1;32mclaude/photo-generation-420x380-90d313[m[33m)[m Serve the 420x380 campaign promo photo on a stable URL
+[33m22141a4[m The builder takes the whole screen, not a panel inside one
+[33m167c9ad[m Build the canvas like the back office builds it
+[33ma0ef163[m Merge remote-tracking branch 'origin/feat/onboarding-tour-live' into claude/har-automation-liveapi-ujl76c
+[33m5d94cf1[m Merge remote-tracking branch 'origin/claude/journey-slack-notifier-setup-98a263' into claude/har-automation-liveapi-ujl76c
+[33mda69962[m[33m ([m[1;31morigin/claude/journey-slack-notifier-setup-98a263[m[33m)[m Journey -> Telegram/Slack notifier: poll Tableau for finished journeys
+[33m2ab618b[m Full screen builder, a plotted canvas, and a light or dark switch
+[33m39606d4[m Serve the tour at /admin/onboarding instead of redirecting there
+[33mb491a5a[m Make the duplication on the tour hands on
+[33m881f8ee[m Retire the onboarding SPA, /admin/onboarding serves the tour
+[33m270e95c[m Add the operator onboarding tour at /onboarding
+[33md4febd3[m Onboarding: Flick moves right of the content, bigger, and clickable
+[33mf6696fd[m Onboarding: Flick stands in the rail, full body
+[33m92a549c[m Onboarding: your words, red pointers, and Flick
+[33m863fb53[m Onboarding: one repeatable template per promotion, and a way back
+[33m32f4a12[m Onboarding: a prize is a journey, the choosable flow from our side, no bars
+[33m376e5bf[m Onboarding: purple accent, and screenshots you can actually read
+[33m7ed792d[m Onboarding: rail, step dots, two columns, and a smaller type scale
+[33mb4aac26[m Onboarding: pin Continue, pair the photos, shrink the images
+[33m748de80[m Onboarding: fit each step in the viewport, and show where the odds come from
+[33m9a6b1fe[m Onboarding: the real spin, eight captures, player and operator interleaved
+[33mda0684f[m Planner: correct the chooser rule — it fronts a promotion, not replaces it
+[33m95f5f40[m Deploy: build the onboarding SPA when its source changes
+[33m6d8103b[m Onboarding: put the SPA behind the login cloak, assets included
+[33ma8bc643[m Planner: teach promotion-node semantics and prefer breadth over more journeys
+[33m1b93032[m Onboarding: open with a welcome and one real promo, and track the course
+[33m735cb11[m Planner: bind Send again — the brand mark left, its lookup stayed
+[33mab82cef[m Placement cards, not the promo page — and finish the copy
+[33m554206f[m AI page: the input and the answer, nothing in front of them
+[33m1314775[m The composer can build the promo page, not just warn that it is missing
+[33m8642519[m Audit corrections.md: 60% smaller, same rules, plus what the scripts enforce
+[33mcdeb99e[m The AI page never got the generators block — and could not have told you
+[33m08e1551[m Teach the planner the generators, from the code rather than from prose
+[33mb76db6f[m Optimization: one flat tab row, and one comms-builder variant
+[33m33607a7[m Optimization tabs: stop hover looking like the selected tab
+[33mc2fb94e[m Welcome Pack: remove "both" — one run, one draft
+[33m3d42ade[m Merge claude/journey-automation-762dee: the Welcome Pack tab
+[33mcb480dc[m[33m ([m[1;31morigin/claude/journey-automation-762dee[m[33m, [m[1;32mclaude/journey-automation-762dee[m[33m)[m Welcome Pack: a tab, not just a CLI
+[33m819a47e[m Cap how many matches each league contributes
+[33m6c6b30d[m Commit the onboarding SPA and the two WIP fixes left in the tree
+[33mb3d07a0[m Merge claude/ai-planner-chain-composer: keep both sides of six conflicts
+[33me382761[m Auto campaigns can name more than one league
+[33m415b600[m Merge remote-tracking branch 'origin/claude/journey-automation-021fe1' into claude/har-automation-liveapi-ujl76c
+[33m3567bbd[m[33m ([m[1;31morigin/claude/journey-automation-021fe1[m[33m, [m[1;32mclaude/journey-automation-021fe1[m[33m)[m Capture step: pull journey draft bodies a GET fetch never gives you
+[33m682b8e6[m CHANGELOG: record the composer refusals, prompt rework, caching and prediction sheet
+[33m620dfaa[m AI page: the conversation IS the page
+[33m699df56[m Prediction: accept the sheet ops actually writes, and bake in the promo's ids
+[33mdf2bb1b[m Planner: cache the system prompt, collapse six modes into three, drop the backlog
+[33m8001388[m Composer: enforce the reward-order rules, and stop asking the model for ids we hold
+[33mcc65b41[m Composer: enforce the wiring rules the captures actually prove
+[33m9656694[m AI page: rebuild the planner panel as a workbench
+[33m5c6510b[m Composer: stop emitting canvases parented to a node that is not there
+[33m5591512[m Sport WOF: inherit the previous wheel's prize copy instead of demanding it
+[33me790654[m Sport WOF: every wheel gets its own visual content, and its own copy
+[33mee5e4c2[m Fix swapped Wait/Date gates and their stale canvas labels
+[33m42d9cf8[m Tournament comms: split PMCL from JBCL, any link, no Smartico id
+[33m2eecbba[m Fix test_sport_comms: pin stop_at to 10:00 local to avoid UTC midnight rollover
+[33m597179a[m Tournament comms: build + publish the email, like GOW/sport_comms
+[33mca65fc2[m Rebuild the tournament comms generator from a fresh HAR (JBCL)
+[33m440f939[m Docs: teach the HAR runbook everything the sport_comms build cost us
+[33mfccae17[m Drop the redundant "GOW comms" generator entry
+[33m475a4e8[m UI: one shared "paste & run" component for every generator tab
+[33m7084de2[m[33m ([m[1;32mclaude/ai-planner-chain-composer[m[33m)[m Merge remote-tracking branch 'origin/claude/har-automation-liveapi-ujl76c' into claude/ai-planner-chain-composer
+[33m7a5c428[m Email banner: write the campaign's copy link into the email HTML
+[33m7319037[m Merge remote-tracking branch 'origin/claude/har-automation-liveapi-ujl76c' into claude/ai-planner-chain-composer
+[33mb8e1a78[m Fix two content leaks and three false refusals found on a real run
+[33m4152e66[m Fix channel copy landing in the wrong language and the wrong node
+[33m649c010[m Fix channel copy landing in the wrong language and the wrong node
+[33mccddb25[m Move Scratch Card Comms into the Comms group
+[33m4e17917[m[33m ([m[1;31morigin/claude/ai-planner-chain-composer[m[33m)[m A blank row further down a section no longer wipes the copy above it
+[33m36c849e[m Scratch Card Comms: run it under the venv that has the app's deps
+[33m44767a5[m Fix the blank canvas: de-nest lifted nodes, and check for it
+[33m8a59c9d[m Name the email content something Content Studio will accept
+[33maae1c8e[m Don't lose the console script to a stale file nobody asked about
+[33ma42f00c[m Drop two console scripts committed by accident while testing the tab
+[33m080f37b[m Comms builder gets its tab: tick channels, paste the sheet, no shell
+[33m7b8e274[m One comms entry point with a switcher, and one dead script fewer
+[33m6841b95[m A second email creative: the one with a text body
+[33m76ac195[m Comms builder: pick channels, paste the sheet, get the script — no model
+[33mcd0d264[m Composer: author the email content instead of borrowing one
+[33m43dd05c[m Comms chain: each language in its own slot, no link left pointing at the capture
+[33m3b061ac[m Sport comms: give the promo link its own input
+[33maac9f1c[m Sport comms tab: stop date is a field, not an eligibility rule
+[33mffcc255[m Drive the sport comms generator from a browser tab
+[33m592882c[m Automate the sport scratch-card comms campaign from a HAR
