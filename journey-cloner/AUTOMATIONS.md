@@ -102,6 +102,31 @@ email`), and an email content created and saved, which the journey's email
 activity is then pointed at. Templates in `templates/pmcl_betandget/`, extracted
 from a HAR of one manual run.
 
+### Gamification prizes — `gamif_prizes_jbcl_campaign.py` — shell only
+Twelve JBCL prize journeys, all entered through the **API (webhook)** node so
+Smartico can push a winner into the one matching their prize: cash 90 000 /
+120 000 / 150 000 as a **money bonus**, and casino bonuses at 45 000 / 60 000
+(1x), 20 000 / 30 000 (3x), 1 000 / 4 000 / 7 000 / 10 000 / 15 000 (5x).
+
+Like `welcome_pack_campaign.py` it stores no template: the console script GETs
+the two source drafts at paste time and clones them, so shape is whatever those
+drafts are on the day you paste. Per prize it writes the amount (major units for
+a money bonus, minor plus a `_majorUnits` twin for a casino bonus), the rollover,
+the name, the webhook description, the transaction title and the notification's
+`%money-amount%`, then reserves a journey id and a promotion display id, mints a
+fresh `webhookId` so twelve prizes are twelve URLs, and creates and saves the
+draft.
+
+When the casino source still starts from a DWH segment, the API node is lifted
+out of the money source and put in its place, keeping the activity id so the
+edges and dependencies still resolve; the script refuses if a `player_id` filter
+survives. Give it a casino source that already starts with the API node and no
+transplant happens.
+
+Two things it cannot do: every draft shares its source's promotion content tree
+(the backoffice's own copy calls were never captured), and nothing is published
+— and publishing one starts it immediately.
+
 ### Sorry Bonus — `sorry_bonus_pmcl_campaign.py` — shell only
 One goodwill casino bonus per player: segment (that one `player_id`) → promotion
 → `casino_bonus_v2`, no deposit, 30x wagering, 48h to use. Paste the list the

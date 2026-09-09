@@ -175,6 +175,10 @@ GENERATORS: List[dict] = [
      "label": "Sorry Bonus",
      "what": "One goodwill casino-bonus journey per player, from a pasted player/amount list",
      "script": "sorry_bonus_pmcl_campaign.py", "tab": None},
+    {"key": "gamif_prizes_jbcl", "group": "Casino", "brand": "JBCL",
+     "label": "Gamification prizes",
+     "what": "One API-triggered draft per prize amount: money bonus for cash, casino bonus at 1x/3x/5x",
+     "script": "gamif_prizes_jbcl_campaign.py", "tab": None},
 
     # ── Sport ─────────────────────────────────────────────────────────────
     {"key": "promo_codes", "group": "Sport", "brand": "JBCL",

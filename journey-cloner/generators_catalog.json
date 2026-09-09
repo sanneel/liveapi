@@ -168,12 +168,37 @@
         "flags": [
           "--list",
           "--stop-date",
-          "--include-captured",
+          "--skip",
           "--name",
           "--dry-run"
         ],
         "required": [
           "--list"
+        ]
+      }
+    },
+    {
+      "key": "gamif_prizes_jbcl",
+      "label": "Gamification prizes",
+      "group": "Casino",
+      "brand": "JBCL",
+      "what": "One API-triggered draft per prize amount: money bonus for cash, casino bonus at 1x/3x/5x",
+      "script": "gamif_prizes_jbcl_campaign.py",
+      "driven_from": "shell only",
+      "summary": "JBCL gamification prizes: one API-triggered journey per prize amount.",
+      "cli": {
+        "flags": [
+          "-----------------------------------",
+          "------------------------------",
+          "-------------------",
+          "--money-source",
+          "--casino-source",
+          "--only",
+          "--keep-webhook-id",
+          "--name"
+        ],
+        "required": [
+          "--money-source"
         ]
       }
     },
