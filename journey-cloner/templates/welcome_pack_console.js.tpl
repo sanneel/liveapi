@@ -19,7 +19,8 @@
   // Optional: paste an access token here to skip auto-capture.
   const MANUAL_TOKEN = '';
 
-  const BASE = /*__BASE__*/null;
+@API_BASE_JS@
+  const BASE = apiBase(/*__BASE__*/null);
   const CODES = /*__CODES__*/null;
   const TARGETS = /*__TARGETS__*/null;
   const POST_KEYS = /*__POST_KEYS__*/null;
@@ -303,19 +304,16 @@
   }
   console.log('%cAll checks passed. Creating drafts...', 'color:#22c55e;font-weight:bold');
 
+@JSON_GUARD_JS@
+@DRAFT_SAVE_JS@
   // ---- create
   const created = [];
   for (const b of built) {
     b.body.reservedJourneyId = await reserveId(b.target.brand);
-    const r = await fetch(BASE + '/journey-drafts', {
-      method: 'POST',
-      headers: headers(b.target.brand, 'application/json'),
-      credentials: 'include',
-      body: JSON.stringify(b.body),
-    });
-    const respText = await r.text();
-    if (!r.ok) {
-      console.error(`[${b.target.key}] FAILED: HTTP ${r.status}`, respText);
+    try {
+      await createAndSaveDraft(b.body, `[${b.target.key}] journey`, () => headers(b.target.brand));
+    } catch (e) {
+      console.error(`[${b.target.key}] FAILED:`, e.message);
       throw new Error(`Stopped at ${b.target.key}. Drafts created before it were NOT rolled back: ` +
         (created.map((c) => c.id).join(', ') || 'none'));
     }

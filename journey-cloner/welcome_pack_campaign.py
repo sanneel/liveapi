@@ -49,6 +49,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from console_js import inject
 
 HERE = Path(__file__).resolve().parent
 OUT_DIR = HERE / "console_scripts"
@@ -138,7 +139,7 @@ def verify(plan: dict) -> list[tuple[bool, str]]:
 
 
 def _render_js(plan: dict) -> str:
-    tpl = (HERE / "templates" / "welcome_pack_console.js.tpl").read_text(encoding="utf-8")
+    tpl = inject((HERE / "templates" / "welcome_pack_console.js.tpl").read_text(encoding="utf-8"))
     return (tpl
             .replace("/*__BASE__*/null", json.dumps(plan["baseUrl"]))
             .replace("/*__CODES__*/null", json.dumps(plan["codes"]))

@@ -67,6 +67,7 @@ from casino_journey import DEFAULT_BASE_URL  # noqa: E402
 from comms_campaign import DEFAULT_FOLDER_ID  # noqa: E402
 from compose import audit_inherited_content  # noqa: E402
 from spec_parser import parse_spec, _PROMO_SLUG_RE  # noqa: E402
+from console_js import inject
 
 TEMPLATE_DIR = HERE / "templates" / "sportcomms"
 TPL_CREATE = TEMPLATE_DIR / "scratch_card_comms_create.json"
@@ -809,7 +810,8 @@ JS_TEMPLATE = r"""// Sport scratch-card comms — @JOURNEY_NAME@ — generated @
 (async () => {
   'use strict';
   const MANUAL_TOKEN = '';
-  const BASE = @BASE_URL@;
+@API_BASE_JS@
+  const BASE = apiBase(@BASE_URL@);
   const BRAND = @BRAND@;
   const FOLDER_ID = @FOLDER_ID@;
   const CAMPAIGN = @CAMPAIGN@;
@@ -861,24 +863,19 @@ JS_TEMPLATE = r"""// Sport scratch-card comms — @JOURNEY_NAME@ — generated @
   const auth = await obtainAuth();
   const H = (ct) => { const h = { accept: 'application/json, text/plain, */*', authorization: auth, 'x-brand': BRAND }; if (ct) h['content-type'] = ct; return h; };
 
-  async function upload(file, label) {
-    const dims = await imageDims(file);
-    const base = (file.name || 'image').replace(/\.[^./]+$/, '');
-    const url = CRM_BASE + '/media-library/v0/folder/' + FOLDER_ID + '/upload/' + encodeURIComponent(base) + '.png?height=' + dims.height + '&width=' + dims.width;
-    const fd = new FormData(); fd.append('file', file, file.name);
-    const r = await fetch(url, { method: 'PUT', headers: H(), credentials: 'include', body: fd });
-    const t = await r.text(); if (!r.ok) throw new Error(label + ' upload failed HTTP ' + r.status + ' ' + t);
-    const asset = JSON.parse(t);
-    const tfd = new FormData(); tfd.append('file', file, file.name);
-    await fetch(CRM_BASE + '/media-library/v0/asset/thumb/' + asset.id + '.png', { method: 'PUT', headers: H(), credentials: 'include', body: tfd }).catch(() => {});
-    console.log('    ' + label + ' -> ' + asset.absolute_link);
-    return asset.absolute_link;
+@JSON_GUARD_JS@
+@MEDIA_UPLOAD_JS@
+  // 'cdn' for anything that lands in the email body: every image there is
+  // addressed as https://{{cdn_hostname}}<relative>, the captured hero included.
+  async function upload(file, label, link) {
+    const asset = await uploadToMediaLibrary(file, label, H);
+    return link === 'cdn' ? 'https://{{cdn_hostname}}' + asset.relative_link : asset.absolute_link;
   }
 
   async function reserveId() {
     const r = await fetch(BASE + '/journeys/identifier', { method: 'POST', headers: H('application/json'), credentials: 'include', body: '' });
     const t = await r.text(); if (!r.ok) throw new Error('reserve id failed HTTP ' + r.status + ' ' + t);
-    const id = JSON.parse(t).journeyId; if (!id) throw new Error('no journeyId in reserve response: ' + t); return id;
+    const id = parseJsonText(t, 'reserve id', r.status).journeyId; if (!id) throw new Error('no journeyId in reserve response: ' + t); return id;
   }
 
   // Both journey bodies carry the SAME activity ids, so one shared mapping has
@@ -898,7 +895,7 @@ JS_TEMPLATE = r"""// Sport scratch-card comms — @JOURNEY_NAME@ — generated @
   try {
     // 1. artwork — three pickers. The campaign's live card is NOT uploaded:
     // it is already linked inside the email banner with per-player tracking.
-    const heroUrl = await upload(await pickFile('the EMAIL HERO (promo artwork)'), 'email hero');
+    const heroUrl = await upload(await pickFile('the EMAIL HERO (promo artwork)'), 'email hero', 'cdn');
     const iconUrl = await upload(await pickFile('the NOTIFICATION ICON (200x200)'), 'notification icon');
     const bgUrl = await upload(await pickFile('the POP-UP BACKGROUND'), 'pop-up background');
 
@@ -906,13 +903,17 @@ JS_TEMPLATE = r"""// Sport scratch-card comms — @JOURNEY_NAME@ — generated @
     let body = EMAIL_CREATE.split('%%EMAIL_HERO%%').join(heroUrl);
     let r = await fetch(CS_BASE, { method: 'POST', headers: H('application/json'), credentials: 'include', body: body });
     let t = await r.text(); if (!r.ok) throw new Error('email create HTTP ' + r.status + ' ' + t);
-    const contentId = JSON.parse(t).id; if (!contentId) throw new Error('no content id in response: ' + t);
+    const contentId = parseJsonText(t, 'email content create', r.status).id; if (!contentId) throw new Error('no content id in response: ' + t);
     console.log('%c    email content created ' + contentId, 'color:#22c55e');
 
     body = EMAIL_SAVE.split('%%EMAIL_HERO%%').join(heroUrl);
     r = await fetch(CS_BASE + '/' + contentId, { method: 'POST', headers: H('application/json'), credentials: 'include', body: body });
     t = await r.text(); if (!r.ok) throw new Error('email save HTTP ' + r.status + ' ' + t);
     console.log('    email content saved (subject + pre-header + body)');
+    // Without this the journey points at content that was never published.
+    r = await fetch(CS_BASE + '/' + contentId + '/publish', { method: 'PATCH', headers: H('application/json'), credentials: 'include', body: '{}' });
+    if (!r.ok) throw new Error('email publish HTTP ' + r.status + ' ' + (await r.text()));
+    console.log('    email content published');
 
     // 3. the journey, wired to the email that was just created
     const jid = await reserveId();
@@ -927,7 +928,7 @@ JS_TEMPLATE = r"""// Sport scratch-card comms — @JOURNEY_NAME@ — generated @
 
     r = await fetch(BASE + '/journey-drafts', { method: 'POST', headers: H('application/json'), credentials: 'include', body: createStr });
     t = await r.text(); if (!r.ok) throw new Error('journey create HTTP ' + r.status + ' ' + t);
-    const numId = JSON.parse(t).id; if (!numId) throw new Error('no draft id in create response: ' + t);
+    const numId = parseJsonText(t, 'draft create', r.status).id; if (!numId) throw new Error('no draft id in create response: ' + t);
     console.log('    draft created ' + numId);
 
     r = await fetch(BASE + '/journey-drafts/' + numId, { method: 'PUT', headers: H('application/json'), credentials: 'include', body: saveStr });
@@ -941,6 +942,8 @@ JS_TEMPLATE = r"""// Sport scratch-card comms — @JOURNEY_NAME@ — generated @
   }
 })();
 """
+
+JS_TEMPLATE = inject(JS_TEMPLATE)
 
 
 def build_js(bundle: dict) -> str:

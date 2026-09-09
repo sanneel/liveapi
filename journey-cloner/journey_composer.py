@@ -62,6 +62,8 @@ from collections import OrderedDict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from console_js import inject
+
 HERE = Path(__file__).resolve().parent
 TPL = HERE / "templates" / "casino"
 OUT = HERE / "out"
@@ -2010,20 +2012,9 @@ _PICKER_JS = """
   // No content-type: the media library wants the multipart boundary the browser
   // sets itself.
   const upHeaders = () => ({ accept: 'application/json, text/plain, */*', authorization: auth, 'x-brand': BRAND });
+@MEDIA_UPLOAD_JS@
   async function uploadAsset(file, label) {
-    const dims = await imageDims(file);
-    const base = (file.name || 'image').replace(/\\.[^./]+$/, '');
-    const url = CRM_BASE + '/media-library/v0/folder/' + FOLDER_ID + '/upload/' + encodeURIComponent(base) + '.png?height=' + dims.height + '&width=' + dims.width;
-    const fd = new FormData(); fd.append('file', file, file.name);
-    const r = await fetch(url, { method: 'PUT', headers: upHeaders(), credentials: 'include', body: fd });
-    const t = await r.text();
-    if (!r.ok) throw new Error(label + ' upload failed HTTP ' + r.status + ' ' + t);
-    const asset = JSON.parse(t);
-    const tfd = new FormData(); tfd.append('file', file, file.name);
-    await fetch(CRM_BASE + '/media-library/v0/asset/thumb/' + asset.id + '.png', { method: 'PUT', headers: upHeaders(), credentials: 'include', body: tfd }).catch(() => {});
-    if (!asset.absolute_link || !asset.relative_link) throw new Error(label + ' upload returned no link: ' + t);
-    console.log('    ' + label + ' -> ' + asset.absolute_link);
-    return asset;
+    return uploadToMediaLibrary(file, label, upHeaders);
   }
   for (const slot of PICK_SLOTS) {
     if (!text.includes(slot.token)) throw new Error('artwork placeholder for ' + slot.label + ' is not in the payload — regenerate the script.');
@@ -2034,6 +2025,9 @@ _PICKER_JS = """
   // picture. Refuse, the same way the composer refuses unset artwork.
   if (text.indexOf('@@PICK:') !== -1) throw new Error('unresolved artwork placeholder — refusing to create the draft.');
 """
+
+
+_PICKER_JS = inject(_PICKER_JS)
 
 
 _EMAIL_JS = """

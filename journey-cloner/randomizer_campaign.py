@@ -468,7 +468,8 @@ JS_VISUAL_TEMPLATE = r"""// Sport Wheel of Fortune — @INTERNAL_NAME@ — gener
   'use strict';
   const PREVIEW = false;
   const MANUAL_TOKEN = '';
-  const BASE = @BASE_URL@;
+@API_BASE_JS@
+  const BASE = apiBase(@BASE_URL@);
   const BRAND = @BRAND@;
   const WHEELS = @WHEELS@;              // one {create, save, uploads} per date
   const MASTER_CONTENT = @MASTER_CONTENT@;
@@ -552,6 +553,8 @@ JS_VISUAL_TEMPLATE = r"""// Sport Wheel of Fortune — @INTERNAL_NAME@ — gener
   if (!PREVIEW) console.log('Drafts are unpublished — open each in the Promo UI, check the wheel, then publish.');
 })();
 """
+
+JS_VISUAL_TEMPLATE = inject(JS_VISUAL_TEMPLATE)
 
 
 def build_visual_js(bundles: list) -> str:

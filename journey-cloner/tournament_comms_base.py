@@ -50,6 +50,7 @@ from create_journeys import LOCAL_TZ, UTC, utc_api  # noqa: E402
 from compose import audit_inherited_content  # noqa: E402
 from spec_parser import parse_spec  # noqa: E402
 import comms_engine as E  # noqa: E402
+from console_js import inject  # noqa: E402
 
 # Paste-time tokens the console script fills from the browser.
 RESERVED_TOKEN = "%%RESERVED%%"
@@ -627,7 +628,8 @@ JS_TEMPLATE = r"""// @BRAND@ Tournament comms — @JOURNEY@ — generated @GENER
 (async () => {
   'use strict';
   const MANUAL_TOKEN = '';
-  const BASE = @BASE_URL@;
+@API_BASE_JS@
+  const BASE = apiBase(@BASE_URL@);
   const BRAND = @BRAND_JSON@;
   const FOLDER_ID = @FOLDER_ID@;
   const CAPTURED_NC_ICON = @CAPTURED_NC_ICON@;   // restored when no folder is set
@@ -674,23 +676,18 @@ JS_TEMPLATE = r"""// @BRAND@ Tournament comms — @JOURNEY@ — generated @GENER
   const auth = await obtainAuth();
   const H = (ct) => { const h = { accept: 'application/json, text/plain, */*', authorization: auth, 'x-brand': BRAND }; if (ct) h['content-type'] = ct; return h; };
 
-  async function upload(file, label) {
-    const dims = await imageDims(file);
-    const base = (file.name || 'image').replace(/\.[^./]+$/, '');
-    const url = CRM_BASE + '/media-library/v0/folder/' + FOLDER_ID + '/upload/' + encodeURIComponent(base) + '.png?height=' + dims.height + '&width=' + dims.width;
-    const fd = new FormData(); fd.append('file', file, file.name);
-    const r = await fetch(url, { method: 'PUT', headers: H(), credentials: 'include', body: fd });
-    const t = await r.text(); if (!r.ok) throw new Error(label + ' upload HTTP ' + r.status + ' ' + t);
-    const asset = JSON.parse(t);
-    const tfd = new FormData(); tfd.append('file', file, file.name);
-    await fetch(CRM_BASE + '/media-library/v0/asset/thumb/' + asset.id + '.png', { method: 'PUT', headers: H(), credentials: 'include', body: tfd }).catch(() => {});
-    console.log('    ' + label + ' -> ' + asset.absolute_link);
-    return asset.absolute_link;
+@JSON_GUARD_JS@
+@MEDIA_UPLOAD_JS@
+  // 'cdn' for anything that lands in the email body: every image there is
+  // addressed as https://{{cdn_hostname}}<relative>, the captured hero included.
+  async function upload(file, label, link) {
+    const asset = await uploadToMediaLibrary(file, label, H);
+    return link === 'cdn' ? 'https://{{cdn_hostname}}' + asset.relative_link : asset.absolute_link;
   }
   async function reserveId() {
     const r = await fetch(BASE + '/journeys/identifier', { method: 'POST', headers: H('application/json'), credentials: 'include', body: '' });
     const t = await r.text(); if (!r.ok) throw new Error('reserve id HTTP ' + r.status + ' ' + t);
-    const id = JSON.parse(t).journeyId; if (!id) throw new Error('no journeyId: ' + t); return id;
+    const id = parseJsonText(t, 'reserve id', r.status).journeyId; if (!id) throw new Error('no journeyId: ' + t); return id;
   }
 
   // One id map, from BOTH bodies, applied to both — so create and save describe
@@ -716,16 +713,20 @@ JS_TEMPLATE = r"""// @BRAND@ Tournament comms — @JOURNEY@ — generated @GENER
     let emailContentId = null;
     if (MAKE_EMAIL) {
       if (!FOLDER_ID) throw new Error('the email hero needs an upload — rerun without "keep the template images".');
-      const heroUrl = await upload(await pickFile('the EMAIL HERO IMAGE'), 'email hero');
+      const heroUrl = await upload(await pickFile('the EMAIL HERO IMAGE'), 'email hero', 'cdn');
       let body = JSON.stringify(EMAIL_CREATE).split('%%EMAIL_HERO%%').join(heroUrl);
       let er = await fetch(CS_BASE, { method: 'POST', headers: H('application/json'), credentials: 'include', body: body });
       let et = await er.text(); if (!er.ok) throw new Error('email create HTTP ' + er.status + ' ' + et);
-      emailContentId = JSON.parse(et).id; if (!emailContentId) throw new Error('no email content id: ' + et);
+      emailContentId = parseJsonText(et, 'email content create', er.status).id; if (!emailContentId) throw new Error('no email content id: ' + et);
       console.log('%c    email content created ' + emailContentId, 'color:#22c55e');
       body = JSON.stringify(EMAIL_SAVE).split('%%EMAIL_HERO%%').join(heroUrl);
       er = await fetch(CS_BASE + '/' + emailContentId, { method: 'POST', headers: H('application/json'), credentials: 'include', body: body });
       et = await er.text(); if (!er.ok) throw new Error('email save HTTP ' + er.status + ' ' + et);
       console.log('    email content saved (subject + pre-header + body)');
+      // Without this the journey points at content that was never published.
+      er = await fetch(CS_BASE + '/' + emailContentId + '/publish', { method: 'PATCH', headers: H('application/json'), credentials: 'include', body: '{}' });
+      if (!er.ok) throw new Error('email publish HTTP ' + er.status + ' ' + (await er.text()));
+      console.log('    email content published');
     }
 
     // 3. the journey, wired to the email that was just created
@@ -738,7 +739,7 @@ JS_TEMPLATE = r"""// @BRAND@ Tournament comms — @JOURNEY@ — generated @GENER
 
     let r = await fetch(BASE + '/journey-drafts', { method: 'POST', headers: H('application/json'), credentials: 'include', body: createStr });
     let t = await r.text(); if (!r.ok) throw new Error('create HTTP ' + r.status + ' ' + t);
-    const numId = JSON.parse(t).id; if (!numId) throw new Error('no draft id: ' + t);
+    const numId = parseJsonText(t, 'draft create', r.status).id; if (!numId) throw new Error('no draft id: ' + t);
     console.log('    draft created ' + numId);
 
     r = await fetch(BASE + '/journey-drafts/' + numId, { method: 'PUT', headers: H('application/json'), credentials: 'include', body: saveStr });
@@ -752,6 +753,8 @@ JS_TEMPLATE = r"""// @BRAND@ Tournament comms — @JOURNEY@ — generated @GENER
   }
 })();
 """
+
+JS_TEMPLATE = inject(JS_TEMPLATE)
 
 
 def build_js(bundle: dict) -> str:
