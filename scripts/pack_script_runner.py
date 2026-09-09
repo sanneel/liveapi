@@ -56,6 +56,15 @@ CHROME_CANDIDATES = [
     "/opt/google/chrome/chrome",
 ]
 
+# The deploy box has no Google Chrome, but it does have Playwright's Chromium —
+# playwright is already in requirements.txt for the renderers. Same packer, same
+# CRX3 output, so it signs identically.
+PLAYWRIGHT_GLOBS = [
+    "~/.cache/ms-playwright/chromium-*/chrome-linux/chrome",
+    "~/.cache/ms-playwright/chromium_headless_shell-*/chrome-linux/headless_shell",
+    "~/Library/Caches/ms-playwright/chromium-*/chrome-mac*/Chromium.app/Contents/MacOS/Chromium",
+]
+
 
 def die(msg: str) -> "NoReturn":  # type: ignore[valid-type]
     print(f"error: {msg}", file=sys.stderr)
@@ -63,12 +72,26 @@ def die(msg: str) -> "NoReturn":  # type: ignore[valid-type]
 
 
 def find_chrome() -> str:
+    """Any Chrome/Chromium will do — we only use it as a CRX3 signer."""
     for path in CHROME_CANDIDATES:
         if Path(path).is_file():
             return path
+    for pattern in PLAYWRIGHT_GLOBS:
+        expanded = Path(pattern).expanduser()
+        # Newest first, so a stale Playwright revision is not preferred.
+        matches = sorted(
+            (p for p in Path(expanded.anchor).glob(str(expanded.relative_to(expanded.anchor)))
+             if p.is_file()),
+            reverse=True,
+        )
+        if matches:
+            return str(matches[0])
     die(
-        "Chrome not found. Packing needs it for the CRX signature; install "
-        "Chrome, or set one of: " + ", ".join(CHROME_CANDIDATES)
+        "No Chrome or Chromium found, and packing needs one to sign the CRX.\n"
+        "  Tried: " + ", ".join(CHROME_CANDIDATES) + "\n"
+        "  and Playwright's browsers: " + ", ".join(PLAYWRIGHT_GLOBS) + "\n"
+        "  Fix: install Chrome, or `.venv/bin/python -m playwright install chromium`,\n"
+        "  or pack on a machine that has Chrome and copy app/static/script-runner/ across."
     )
 
 
