@@ -58,13 +58,26 @@ Chrome on the company laptops is governed by **user cloud policy from the Google
 Admin console** — not the MDM configuration profile, which carries only an
 Endpoint Verification force-install and is therefore misleading if you check it
 and stop there. The cloud policy is cached per profile at
-`~/Library/Application Support/Google/Chrome/<Profile>/Policy/User Policy`; it
-sets an `ExtensionInstallAllowlist` of ~245 ids, so **Load unpacked fails with
-"Extension installation is blocked by policy."**
+`~/Library/Application Support/Google/Chrome/<Profile>/Policy/User Policy`. It is
+default-deny — `ExtensionInstallBlocklist: ["*"]` with an
+`ExtensionInstallAllowlist` of ~245 ids as the exceptions — so **Load unpacked
+fails with "Extension installation is blocked by policy."**
+`CloudExtensionRequestEnabled: false` disables Chrome's own request button, so it
+has to be a human ask.
 
-`ExtensionInstallForcelist` overrides that allowlist, and the org already uses it
-for another extension, so a force-install request is the way in. `chrome://policy`
-is the only reliable place to read the merged picture.
+`ExtensionInstallForcelist` overrides the blocklist and the org already uses it,
+so that is the way in. **Which policy IT edits matters**, because of Chrome's
+precedence order (platform machine > cloud machine > platform user > cloud user):
+
+| Where IT adds it | Works? |
+| --- | --- |
+| `ExtensionInstallForcelist`, Admin console (cloud user) | Yes — different policy, not overridden, and beats the blocklist |
+| `ExtensionSettings` in the Mac MDM profile (platform machine) | Yes — highest precedence. **Append** to the existing dict, or Endpoint Verification is dropped |
+| `ExtensionSettings` in the Admin console (cloud user) | **No** — the MDM sets `ExtensionSettings` at platform machine level, which overrides the cloud value wholesale. `chrome://policy` already flags this conflict |
+
+No `blocked_permissions` is set anywhere, so the `debugger` permission this
+design needs is already allowed. `chrome://policy` is the only reliable place to
+read the merged picture — the MDM plist alone is misleading.
 
 
 The install page renders the exact `ExtensionSettings` block for IT, with the id

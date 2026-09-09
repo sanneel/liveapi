@@ -37,18 +37,23 @@
     <div class="card-pad">
       <p class="help" style="margin:0">
         Chrome here is managed by user cloud policy from the Google Admin
-        console, with an <span class="mono">ExtensionInstallAllowlist</span> of
-        245 permitted extensions. Anything else is refused, so
-        <b>Load unpacked</b> fails with:
+        console, and it is default-deny:
+        <span class="mono">ExtensionInstallBlocklist</span> is
+        <span class="mono">["*"]</span>, with an
+        <span class="mono">ExtensionInstallAllowlist</span> of ~245 ids carving
+        out the exceptions. Ours is not one, so <b>Load unpacked</b> fails with:
       </p>
       <p class="mono" style="margin:10px 0; padding:8px 12px; background:var(--panel,#f7f8fa); border:1px solid var(--line,#e5e7eb); border-radius:8px">
         Extension installation is blocked by policy.
       </p>
       <p class="help" style="margin:0">
-        That is not the end of it. <span class="mono">ExtensionInstallForcelist</span>
-        overrides the allowlist, and your org already uses it for another
-        extension — so the request below is the way in. Option 2 is kept only
-        for a machine whose Chrome is not managed.
+        <span class="mono">CloudExtensionRequestEnabled</span> is
+        <span class="mono">false</span> too, so Chrome's own "request this
+        extension" button is disabled — it has to be a human ask.
+        <span class="mono">ExtensionInstallForcelist</span> overrides the
+        blocklist, though, and your org already uses it for another extension,
+        so the request below is the way in. Option 2 is kept only for a machine
+        whose Chrome is not managed.
       </p>
     </div>
   </section>
@@ -59,24 +64,40 @@
         <h2 class="card-title">Option 1 — ask IT to install it</h2>
         <p class="card-sub">The only route on a managed laptop. One ticket, then nothing for operators to do, ever.</p>
       </div>
-      <button type="button" id="policy-copy" class="btn primary">Copy policy</button>
+      <button type="button" id="policy-copy" class="btn primary">Copy line</button>
     </div>
     <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
       <p class="help" style="margin:0">
-        Send IT the block below and ask them to add it to the Chrome
-        <span class="mono">ExtensionSettings</span> policy in the Google Admin
-        console — the same place the current allowlist and forcelist live.
-        <span class="mono">force_installed</span> overrides the allowlist, so
-        the id does not also need allowlisting; if they would rather use
-        <span class="mono">ExtensionInstallForcelist</span>, the equivalent
-        single line is given below too. Either way it survives restarts and
-        picks up new versions on its own.
+        Ask the Google Workspace admin to add this one entry to
+        <span class="mono">ExtensionInstallForcelist</span> in the Admin console
+        — the policy they already populate. A forcelist entry beats
+        <span class="mono">ExtensionInstallBlocklist: ["*"]</span>, so the id
+        does not also need allowlisting.
       </p>
-      <textarea id="policy-text" class="input mono" readonly rows="8" spellcheck="false" style="font-size:12px">{{ policy }}</textarea>
+      <textarea id="policy-text" class="input mono" readonly rows="2" spellcheck="false" style="font-size:12px">{{ forcelist }}</textarea>
+
+      <div style="border-left:3px solid #f0613c; padding-left:12px">
+        <p class="help" style="margin:0">
+          <b>Do not put it in cloud <span class="mono">ExtensionSettings</span>.</b>
+          On these machines <span class="mono">ExtensionSettings</span> is set at
+          <i>platform machine</i> level by the Mac MDM, and Chrome's precedence
+          order — platform machine &gt; cloud machine &gt; platform user &gt;
+          cloud user — means the MDM value overrides the cloud one wholesale.
+          <span class="mono">chrome://policy</span> already reports that conflict.
+          An entry added to cloud <span class="mono">ExtensionSettings</span>
+          would be silently ignored.
+        </p>
+      </div>
+
       <p class="help" style="margin:0">
-        Or, as a single <span class="mono">ExtensionInstallForcelist</span> entry:
+        The alternative, for whoever manages the Macs: <b>append</b> this to the
+        existing <span class="mono">ExtensionSettings</span> dictionary in the
+        MDM profile (append — replacing it would drop Endpoint Verification).
+        That level has the highest precedence of all.
       </p>
-      <p class="mono" style="margin:0; padding:8px 12px; background:var(--panel,#f7f8fa); border:1px solid var(--line,#e5e7eb); border-radius:8px; overflow-x:auto; font-size:12px">{{ meta.id }};{{ base }}/script-runner/update.xml</p>
+      <textarea id="settings-text" class="input mono" readonly rows="7" spellcheck="false" style="font-size:12px">{{ policy }}</textarea>
+      <div><button type="button" id="settings-copy" class="btn">Copy ExtensionSettings entry</button></div>
+
       <dl class="help" style="display:grid; grid-template-columns:auto 1fr; gap:4px 14px; margin:0">
         <dt><b>Extension id</b></dt><dd class="mono">{{ meta.id }}</dd>
         <dt><b>Update URL</b></dt><dd class="mono">{{ base }}/script-runner/update.xml</dd>
@@ -86,7 +107,15 @@
       <p class="help" style="margin:0">
         The update URL has to be reachable without a login — Chrome cannot sign
         in — so that one route is public. It serves only the extension code,
-        which holds no secrets.
+        which holds no secrets. It is self-hosted rather than a Web Store
+        listing on purpose: the extension runs script text taken from the CRM
+        page, which would likely fail store review as remote code.
+      </p>
+      <p class="help" style="margin:0">
+        Worth telling IT: no <span class="mono">blocked_permissions</span> is set
+        anywhere in the current policy, so the <span class="mono">debugger</span>
+        permission this extension needs is already allowed. Nothing else has to
+        change.
       </p>
     </div>
   </section>
@@ -161,8 +190,10 @@
 
 <script>
   (function () {
-    var btn = document.getElementById('policy-copy');
-    var area = document.getElementById('policy-text');
+    var pairs = [['policy-copy', 'policy-text'], ['settings-copy', 'settings-text']];
+    pairs.forEach(function (pair) {
+    var btn = document.getElementById(pair[0]);
+    var area = document.getElementById(pair[1]);
     if (!btn || !area) return;
     btn.addEventListener('click', function () {
       var done = function () {
@@ -175,6 +206,7 @@
           area.select(); document.execCommand('copy'); done();
         });
       } else { area.select(); document.execCommand('copy'); done(); }
+    });
     });
   })();
 </script>

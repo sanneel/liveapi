@@ -107,15 +107,29 @@ def install_page(request: Request, user: User = Depends(require_role("editor")))
     meta = _meta()
     base = _public_base(request)
 
-    # The exact policy value IT pastes. Built here rather than written by hand
+    # The exact policy values IT pastes. Built here rather than written by hand
     # in the template so the id and the URL can never disagree with the CRX
     # actually being served.
+    #
+    # Two forms, because which policy IT edits matters here. On these laptops
+    # ExtensionInstallBlocklist is ["*"] from cloud (user) policy, and
+    # ExtensionSettings is set at PLATFORM MACHINE level by the Mac MDM — which
+    # per Chrome's precedence order (platform machine > cloud machine > platform
+    # user > cloud user) overrides the cloud ExtensionSettings wholesale.
+    # So:
+    #   * ExtensionInstallForcelist in the Admin console works (a different
+    #     policy, not overridden, and a forcelist entry beats the blocklist);
+    #   * adding to the MDM's ExtensionSettings works (highest precedence);
+    #   * adding to CLOUD ExtensionSettings would be silently ignored.
     policy = None
+    forcelist = None
     if meta:
+        update_url = f"{base}/script-runner/update.xml"
+        forcelist = f'{meta["id"]};{update_url}'
         policy = json.dumps(
             {meta["id"]: {
                 "installation_mode": "force_installed",
-                "update_url": f"{base}/script-runner/update.xml",
+                "update_url": update_url,
             }},
             indent=2,
         )
@@ -128,6 +142,7 @@ def install_page(request: Request, user: User = Depends(require_role("editor")))
             "active": "script_runner",
             "meta": meta,
             "policy": policy,
+            "forcelist": forcelist,
             "base": base,
             "crm_origin_pattern": base + "/*",
         },

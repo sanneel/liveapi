@@ -201,8 +201,8 @@ check("Jinja tags balanced", not tag_errors and not stack,
       "; ".join(tag_errors) or f"unclosed: {stack}")
 
 # Every name the template reads must be in the view's context.
-CONTEXT = {"request", "current_user", "active", "meta", "policy", "base",
-           "crm_origin_pattern"}
+CONTEXT = {"request", "current_user", "active", "meta", "policy", "forcelist",
+           "base", "crm_origin_pattern"}
 used = set(re.findall(r"\{\{\s*(\w+)", tpl))
 check("template uses only names the view passes", used <= CONTEXT,
       f"missing from context: {sorted(used - CONTEXT)}")
