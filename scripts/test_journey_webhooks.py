@@ -58,9 +58,18 @@ check("wageringRequirement" in js, "the rollover comes from the casino bonus its
 check("external_system_source" in js, "it looks for the API node")
 check("does not start at an API node" in js, "a journey without one is listed as missing, not skipped silently")
 check("the API node carries no webhookId" in js, "an API node without an id is reported")
-check("external-system-source" in js, "it asks the backoffice for the URL shape")
-check("the ids are shown instead" in js, "with no URL it prints ids rather than inventing one")
-check("__webhookTsv" in js, "a tab-separated copy is left for a spreadsheet")
+check(W.WEBHOOK_URL_TEMPLATE == "https://webhooks.flw.rest/{id}/",
+      "the URL is the one an API node shows, in one place")
+check("https://webhooks.flw.rest/" in js, "the template travels with the script")
+check("{id}" in W.WEBHOOK_URL_TEMPLATE, "the template names where the id goes")
+other = W.build_js(ids, "https://example.test/hook/{id}")
+check("https://webhooks.flw.rest/" not in other and "https://example.test/hook/" in other,
+      "--url-template replaces it without touching anything else")
+check("Amount (CLP)\', \'Prize\', \'Webhook URL\', \'Journey ID\', \'Webhook ID" in js,
+      "the sheet block is headed")
+check("__webhookTsv" in js and "__webhookCsv" in js,
+      "both a paste-into-A1 block and a CSV are left behind")
+check("paste into A1" in js, "it says where to paste")
 check(all(i in js for i in ids), "the ids travel with the script")
 
 print()

@@ -1,4 +1,4 @@
-// Webhook URLs for 12 journey(s) — generated 2026-09-09 12:15 -03
+// Webhook URLs for 12 journey(s) — generated 2026-09-09 12:27 -03
 // Read-only: it fetches each journey, reads its API node and its bonus, and
 // prints the amount / rollover / webhook table. Nothing is created or changed.
 (async () => {
@@ -32,6 +32,7 @@
   const BASE = apiBase("https://pmi.rea-backoffice.gr8.tech/api/ubo/api/v0/crm/journey-builder/v0");
   const BRAND = "JBCL";
   const IDS = ["JRN-0-685173", "JRN-0-685175", "JRN-0-685177", "JRN-0-685178", "JRN-0-685180", "JRN-0-685182", "JRN-0-685183", "JRN-0-685242", "JRN-0-685244", "JRN-0-685245", "JRN-0-685096", "JRN-0-685110"];
+  const URL_TEMPLATE = "https://webhooks.flw.rest/{id}/";
   const CRM_BASE = BASE.replace(/\/journey-builder\/v0$/, '');
 
   const decodeJwt = (t) => { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); } catch (e) { return null; } };
@@ -86,26 +87,13 @@
   // The URL is composed by the backoffice, not stored on the activity, so it is
   // asked for once and reused. Whatever this endpoint answers is printed raw the
   // first time, which is how the shape gets pinned down for good.
-  let urlTemplate = null, configShown = false;
-  async function webhookUrlFor(id, activity) {
-    const direct = activity.initializationData && (activity.initializationData.webhookUrl || activity.initializationData.url);
+  function webhookUrlFor(activity) {
+    const init = activity.initializationData || {};
+    const direct = init.webhookUrl || init.url;          // if a read ever carries it
     if (direct) return direct;
-    if (urlTemplate === null) {
-      urlTemplate = '';
-      try {
-        const r = await fetch(BASE + '/journey-activities/external-system-source', { headers: H(), credentials: 'include' });
-        const t = await r.text();
-        if (r.ok) {
-          if (!configShown) { console.log('    external-system-source config:', t.slice(0, 400)); configShown = true; }
-          const m = t.match(/https?:\/\/[^"'\s]+/);
-          if (m) urlTemplate = m[0];
-        }
-      } catch (e) {}
-    }
-    if (!urlTemplate) return '';
-    const wid = activity.initializationData.webhookId;
-    return urlTemplate.includes('{') ? urlTemplate.replace(/\{[^}]*\}/, wid)
-         : urlTemplate.replace(/\/+$/, '') + '/' + wid;
+    if (!init.webhookId) return '';
+    return URL_TEMPLATE.includes('{') ? URL_TEMPLATE.replace(/\{[^}]*\}/, init.webhookId)
+         : URL_TEMPLATE.replace(/\/+$/, '') + '/' + init.webhookId + '/';
   }
 
   // What the journey actually grants, read from the mechanic rather than from
@@ -137,7 +125,7 @@
         amount: p.major === null ? '?' : spaced(p.major),
         prize: p.rollover ? p.rollover + 'x' : (p.kind || '?'),
         webhookId: wid,
-        url: await webhookUrlFor(id, api),
+        url: webhookUrlFor(api),
       });
       console.log('    ' + id + '  ' + (j.journeyName || '').trim());
     } catch (e) {
@@ -152,15 +140,22 @@
 
   const pad = (s, n) => String(s).padEnd(n);
   const text = rows.map((r) => pad(r.amount, 10) + pad(r.prize, 14) + (r.url || r.webhookId)).join('\n');
-  console.log('%cThe table, ready to copy:', 'color:#3b82f6;font-weight:bold');
+  console.log('%cThe table:', 'color:#3b82f6;font-weight:bold');
   console.log(text);
-  const tsv = rows.map((r) => [r.amount, r.prize, r.url || r.webhookId, r.id, r.name].join('\t')).join('\n');
+
+  const HEAD = ['Amount (CLP)', 'Prize', 'Webhook URL', 'Journey ID', 'Webhook ID'];
+  const cells = rows.map((r) => [r.amount, r.prize, r.url || r.webhookId, r.id, r.webhookId]);
+  const tsv = [HEAD, ...cells].map((r) => r.join('\t')).join('\n');
+  const csv = [HEAD, ...cells].map((r) => r.map((c) => /[",\n]/.test(c) ? '"' + String(c).replace(/"/g, '""') + '"' : c).join(',')).join('\n');
+  console.log('%cFor Google Sheets — select this block and paste into A1:', 'color:#3b82f6;font-weight:bold');
+  console.log(tsv);
   window.__webhookRows = rows;
   window.__webhookTsv = tsv;
-  try { await navigator.clipboard.writeText(text); console.log('%cCopied to the clipboard.', 'color:#22c55e'); }
-  catch (e) { console.log('Clipboard blocked; copy the block above, or copy(window.__webhookTsv) for a spreadsheet.'); }
+  window.__webhookCsv = csv;
+  console.log('copy(window.__webhookTsv) puts the sheet block on the clipboard; copy(window.__webhookCsv) gives a CSV.');
+  try { await navigator.clipboard.writeText(tsv); console.log('%cThe sheet block is on your clipboard: paste into A1.', 'color:#22c55e'); }
+  catch (e) { console.log('Clipboard blocked — run copy(window.__webhookTsv) and paste into A1.'); }
   if (rows.some((r) => !r.url)) {
-    console.log('%cNo URL came back for ' + rows.filter((r) => !r.url).length + ' of them, so the ids are shown instead.', 'color:#eab308;font-weight:bold');
-    console.log('Open one journey\'s API node, copy its Webhook URL, and send it — the pattern then fills in for every row.');
+    console.log('%c' + rows.filter((r) => !r.url).length + ' journey(s) had no webhookId, so their id column is empty.', 'color:#eab308;font-weight:bold');
   }
 })();

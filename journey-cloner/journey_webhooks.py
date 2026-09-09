@@ -15,12 +15,13 @@ what it actually grants.
 
 THE URL
 -------
-A journey carries the webhookId; the full URL is composed by the backoffice and
-was not in any capture here. The script therefore tries, in order: a webhookUrl
-already on the activity, then the backoffice's own external-system-source
-endpoint, and falls back to printing the id with the raw response of that
-endpoint so the pattern can be baked in. Copy one URL out of an API node in the
-UI and it becomes a one-line change.
+A journey stores only the webhookId. The URL around it is
+https://webhooks.flw.rest/<webhookId>/, read off an API node in the UI, and
+--url-template changes it in one place if that ever moves.
+
+It prints the table twice: aligned for reading, and tab separated for a
+spreadsheet. The tab-separated block pastes straight into Google Sheets, and
+the CSV written next to the script imports there through File > Import.
 
 Usage:
   python journey_webhooks.py --ids JRN-0-685173,JRN-0-685175
@@ -45,6 +46,11 @@ BRAND = "JBCL"
 BASE_URL = "https://pmi.rea-backoffice.gr8.tech/api/ubo/api/v0/crm/journey-builder/v0"
 
 JRN_RE = re.compile(r"^JRN-\d+-\d+$", re.IGNORECASE)
+
+# The URL the integration is given. The journey only stores the id; this is the
+# shape the backoffice shows next to it, taken from an API node in the UI.
+# --url-template overrides it if it ever changes.
+WEBHOOK_URL_TEMPLATE = "https://webhooks.flw.rest/{id}/"
 
 
 def parse_ids(raw: str) -> tuple[list[str], list[str]]:
@@ -86,6 +92,7 @@ JS_TEMPLATE = r"""// Webhook URLs for @COUNT@ journey(s) — generated @GENERATE
   const BASE = apiBase(@BASE_URL@);
   const BRAND = @BRAND@;
   const IDS = @IDS@;
+  const URL_TEMPLATE = @URL_TEMPLATE@;
   const CRM_BASE = BASE.replace(/\/journey-builder\/v0$/, '');
 
   const decodeJwt = (t) => { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); } catch (e) { return null; } };
@@ -127,26 +134,13 @@ JS_TEMPLATE = r"""// Webhook URLs for @COUNT@ journey(s) — generated @GENERATE
   // The URL is composed by the backoffice, not stored on the activity, so it is
   // asked for once and reused. Whatever this endpoint answers is printed raw the
   // first time, which is how the shape gets pinned down for good.
-  let urlTemplate = null, configShown = false;
-  async function webhookUrlFor(id, activity) {
-    const direct = activity.initializationData && (activity.initializationData.webhookUrl || activity.initializationData.url);
+  function webhookUrlFor(activity) {
+    const init = activity.initializationData || {};
+    const direct = init.webhookUrl || init.url;          // if a read ever carries it
     if (direct) return direct;
-    if (urlTemplate === null) {
-      urlTemplate = '';
-      try {
-        const r = await fetch(BASE + '/journey-activities/external-system-source', { headers: H(), credentials: 'include' });
-        const t = await r.text();
-        if (r.ok) {
-          if (!configShown) { console.log('    external-system-source config:', t.slice(0, 400)); configShown = true; }
-          const m = t.match(/https?:\/\/[^"'\s]+/);
-          if (m) urlTemplate = m[0];
-        }
-      } catch (e) {}
-    }
-    if (!urlTemplate) return '';
-    const wid = activity.initializationData.webhookId;
-    return urlTemplate.includes('{') ? urlTemplate.replace(/\{[^}]*\}/, wid)
-         : urlTemplate.replace(/\/+$/, '') + '/' + wid;
+    if (!init.webhookId) return '';
+    return URL_TEMPLATE.includes('{') ? URL_TEMPLATE.replace(/\{[^}]*\}/, init.webhookId)
+         : URL_TEMPLATE.replace(/\/+$/, '') + '/' + init.webhookId + '/';
   }
 
   // What the journey actually grants, read from the mechanic rather than from
@@ -178,7 +172,7 @@ JS_TEMPLATE = r"""// Webhook URLs for @COUNT@ journey(s) — generated @GENERATE
         amount: p.major === null ? '?' : spaced(p.major),
         prize: p.rollover ? p.rollover + 'x' : (p.kind || '?'),
         webhookId: wid,
-        url: await webhookUrlFor(id, api),
+        url: webhookUrlFor(api),
       });
       console.log('    ' + id + '  ' + (j.journeyName || '').trim());
     } catch (e) {
@@ -193,16 +187,23 @@ JS_TEMPLATE = r"""// Webhook URLs for @COUNT@ journey(s) — generated @GENERATE
 
   const pad = (s, n) => String(s).padEnd(n);
   const text = rows.map((r) => pad(r.amount, 10) + pad(r.prize, 14) + (r.url || r.webhookId)).join('\n');
-  console.log('%cThe table, ready to copy:', 'color:#3b82f6;font-weight:bold');
+  console.log('%cThe table:', 'color:#3b82f6;font-weight:bold');
   console.log(text);
-  const tsv = rows.map((r) => [r.amount, r.prize, r.url || r.webhookId, r.id, r.name].join('\t')).join('\n');
+
+  const HEAD = ['Amount (CLP)', 'Prize', 'Webhook URL', 'Journey ID', 'Webhook ID'];
+  const cells = rows.map((r) => [r.amount, r.prize, r.url || r.webhookId, r.id, r.webhookId]);
+  const tsv = [HEAD, ...cells].map((r) => r.join('\t')).join('\n');
+  const csv = [HEAD, ...cells].map((r) => r.map((c) => /[",\n]/.test(c) ? '"' + String(c).replace(/"/g, '""') + '"' : c).join(',')).join('\n');
+  console.log('%cFor Google Sheets — select this block and paste into A1:', 'color:#3b82f6;font-weight:bold');
+  console.log(tsv);
   window.__webhookRows = rows;
   window.__webhookTsv = tsv;
-  try { await navigator.clipboard.writeText(text); console.log('%cCopied to the clipboard.', 'color:#22c55e'); }
-  catch (e) { console.log('Clipboard blocked; copy the block above, or copy(window.__webhookTsv) for a spreadsheet.'); }
+  window.__webhookCsv = csv;
+  console.log('copy(window.__webhookTsv) puts the sheet block on the clipboard; copy(window.__webhookCsv) gives a CSV.');
+  try { await navigator.clipboard.writeText(tsv); console.log('%cThe sheet block is on your clipboard: paste into A1.', 'color:#22c55e'); }
+  catch (e) { console.log('Clipboard blocked — run copy(window.__webhookTsv) and paste into A1.'); }
   if (rows.some((r) => !r.url)) {
-    console.log('%cNo URL came back for ' + rows.filter((r) => !r.url).length + ' of them, so the ids are shown instead.', 'color:#eab308;font-weight:bold');
-    console.log('Open one journey\'s API node, copy its Webhook URL, and send it — the pattern then fills in for every row.');
+    console.log('%c' + rows.filter((r) => !r.url).length + ' journey(s) had no webhookId, so their id column is empty.', 'color:#eab308;font-weight:bold');
   }
 })();
 """
@@ -210,8 +211,9 @@ JS_TEMPLATE = r"""// Webhook URLs for @COUNT@ journey(s) — generated @GENERATE
 JS_TEMPLATE = inject(JS_TEMPLATE)
 
 
-def build_js(ids: list[str]) -> str:
+def build_js(ids: list[str], url_template: str = WEBHOOK_URL_TEMPLATE) -> str:
     js = JS_TEMPLATE
+    js = js.replace("@URL_TEMPLATE@", json.dumps(url_template))
     js = js.replace("@GENERATED_AT@", datetime.now(LOCAL_TZ).strftime("%Y-%m-%d %H:%M %Z"))
     js = js.replace("@COUNT@", str(len(ids)))
     js = js.replace("@BASE_URL@", json.dumps(BASE_URL))
@@ -224,6 +226,8 @@ def main() -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--ids", default="", help="JRN ids, comma or space separated")
     p.add_argument("--ids-file", default="", help="file of JRN ids, or '-' for stdin")
+    p.add_argument("--url-template", default=WEBHOOK_URL_TEMPLATE,
+                   help=f"the URL around a webhook id (default: {WEBHOOK_URL_TEMPLATE})")
     p.add_argument("--name", default="journey_webhooks", help="output basename")
     args = p.parse_args()
 
@@ -241,7 +245,7 @@ def main() -> int:
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     path = OUT_DIR / f"{args.name}_console.js"
-    path.write_text(build_js(ids), encoding="utf-8")
+    path.write_text(build_js(ids, args.url_template), encoding="utf-8")
     print(f"\nConsole script written: {path}  ({len(ids)} journey(s))")
     print("Paste it into the DevTools console on a logged-in backoffice tab. It only reads.")
     return 0

@@ -116,11 +116,11 @@ The amount and the rollover come out of the bonus activity, not the journey
 name, so a journey whose name and payload disagree shows what it actually
 grants. It creates nothing.
 
-The journey carries the `webhookId`; the full URL is composed by the backoffice
-and no capture here holds the template, so the script tries the activity itself,
-then `GET /journey-activities/external-system-source`, and otherwise prints the
-ids with that endpoint's raw answer. One URL copied out of an API node turns
-that into a one-line fix.
+The journey stores only the `webhookId`; the URL around it is
+`https://webhooks.flw.rest/<webhookId>/`, read off an API node in the UI and
+kept in one constant (`--url-template` if it moves). The script prints the table
+twice: aligned for reading, and tab separated with a header row that pastes
+straight into Google Sheets at A1, with a CSV left in `window.__webhookCsv`.
 
 ### Gamification prizes — `gamif_prizes_jbcl_campaign.py` — shell only
 Twelve JBCL prize journeys, all entered through the **API (webhook)** node so
