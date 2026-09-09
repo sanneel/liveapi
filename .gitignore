@@ -87,3 +87,10 @@ app/static/tutorials/*
 # Figma export cache + outputs (large file tree, rendered PNGs)
 journey-cloner/figma_cache/
 journey-cloner/figma_out/
+
+# Script Runner extension distribution.
+# The signing key IS the extension's identity — the id IT pins in policy is
+# derived from it. Never commit it, never lose it (back it up with the other
+# deploy secrets). Regenerate the artifacts with scripts/pack_script_runner.py.
+deploy/script-runner.pem
+app/static/script-runner/

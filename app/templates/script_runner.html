@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Script Runner · Jugabet Admin{% endblock %}
+{% block content_theme %}content-light{% endblock %}
+{% block page_title %}Script Runner{% endblock %}
+{% block page_subtitle %}A Chrome extension that runs a generated console script in a logged-in backoffice tab — no F12, no "allow pasting", no 650 KB clipboard. Install it once and a Run in backoffice button appears beside every Copy script.{% endblock %}
+
+{% block content %}
+
+  {% if not meta %}
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Not packed yet</h2>
+        <p class="card-sub">There is nothing to install until someone builds it.</p>
+      </div>
+    </div>
+    <div class="card-pad">
+      <p class="help">On the server, from the repo root:</p>
+      <pre class="mono" style="margin:0; padding:10px 12px; background:var(--panel,#f7f8fa); border:1px solid var(--line,#e5e7eb); border-radius:8px; overflow-x:auto">python3 scripts/pack_script_runner.py</pre>
+      <p class="help" style="margin-top:10px">
+        That signs the extension and writes the download files. It also creates
+        <span class="mono">deploy/script-runner.pem</span> on the first run —
+        <b>back that key up</b>. The extension's identity is derived from it, so
+        losing it means a new id and a new IT ticket.
+      </p>
+    </div>
+  </section>
+  {% else %}
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Option 1 — ask IT to install it</h2>
+        <p class="card-sub">Recommended. One ticket, then nothing for operators to do, ever.</p>
+      </div>
+      <button type="button" id="policy-copy" class="btn primary">Copy policy</button>
+    </div>
+    <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+      <p class="help" style="margin:0">
+        Chrome on these laptops is managed, and it already force-installs
+        extensions this way (Endpoint Verification is one). Send IT the block
+        below and ask them to add it to the Chrome <span class="mono">ExtensionSettings</span>
+        policy. Force-installing means: no developer mode, no recurring
+        <i>"disable developer mode extensions"</i> prompt, survives restarts,
+        and picks up new versions on its own.
+      </p>
+      <textarea id="policy-text" class="input mono" readonly rows="8" spellcheck="false" style="font-size:12px">{{ policy }}</textarea>
+      <dl class="help" style="display:grid; grid-template-columns:auto 1fr; gap:4px 14px; margin:0">
+        <dt><b>Extension id</b></dt><dd class="mono">{{ meta.id }}</dd>
+        <dt><b>Update URL</b></dt><dd class="mono">{{ base }}/script-runner/update.xml</dd>
+        <dt><b>Version</b></dt><dd class="mono">{{ meta.version }}</dd>
+        <dt><b>Built</b></dt><dd class="mono">{{ meta.built_at }}</dd>
+      </dl>
+      <p class="help" style="margin:0">
+        The update URL has to be reachable without a login — Chrome cannot sign
+        in — so that one route is public. It serves only the extension code,
+        which holds no secrets.
+      </p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Option 2 — install it yourself now</h2>
+        <p class="card-sub">Works today, while the IT ticket is pending.</p>
+      </div>
+      <a href="/script-runner/script-runner.zip" class="btn primary">Download ZIP</a>
+    </div>
+    <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+      <ol class="help" style="margin:0; padding-left:18px; line-height:1.9">
+        <li>Download the ZIP above and unzip it somewhere permanent —
+            <b>not</b> Downloads, and don't move or delete the folder afterwards.
+            Chrome loads it from that path on every launch.</li>
+        <li>Open a new tab and go to <span class="mono">chrome://extensions</span>
+            (type it — Chrome blocks links to <span class="mono">chrome://</span> pages).</li>
+        <li>Turn on <b>Developer mode</b>, top right.</li>
+        <li>Click <b>Load unpacked</b> and pick the unzipped folder.</li>
+        <li>On the new <b>Jugabet Script Runner</b> card, click <b>Details</b> →
+            <b>Extension options</b>, add this origin, and click <b>Allow</b>
+            when Chrome asks:
+            <br><span class="mono">{{ crm_origin_pattern }}</span></li>
+        <li>Reload this CRM tab.</li>
+      </ol>
+      <p class="help" style="margin:0">
+        <b>One catch.</b> Chrome nags about developer-mode extensions on every
+        launch and can switch them off. If the <b>Run in backoffice</b> button
+        disappears, that is why — re-enable it at
+        <span class="mono">chrome://extensions</span>. It is the reason Option 1
+        is worth the ticket.
+      </p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Using it</h2>
+        <p class="card-sub">What changes once it is installed.</p>
+      </div>
+    </div>
+    <div class="card-pad">
+      <ol class="help" style="margin:0; padding-left:18px; line-height:1.9">
+        <li>Generate a script as usual, on <a href="/admin/promotions">Optimization</a>
+            or <a href="/admin/ai">AI</a>.</li>
+        <li>Press <b>Run in backoffice</b>. The extension's toolbar icon badges
+            the number of queued scripts.</li>
+        <li>Make sure a logged-in backoffice tab is open, then open the extension
+            popup and press <b>Run</b>.</li>
+        <li>Read the log in the popup. Created <span class="mono">JRN-…</span>
+            ids are pulled out and shown as chips.</li>
+      </ol>
+      <p class="help" style="margin-top:12px">
+        Two things that are expected, not faults: Chrome shows a
+        <i>"started debugging this browser"</i> bar while a script runs — that is
+        how the script gets to run in the page exactly as a console paste would,
+        and it clears when the run ends. And <b>Copy script</b> is still on every
+        card; it stays as the fallback whenever a run misbehaves.
+      </p>
+      <p class="help" style="margin-top:12px">
+        Nothing about how scripts are built changes. Verification still happens
+        before a script exists, the extension never builds a payload, and every
+        line the script logs — refusals included — is shown verbatim. A run that
+        stopped early looks stopped.
+      </p>
+    </div>
+  </section>
+  {% endif %}
+
+<script>
+  (function () {
+    var btn = document.getElementById('policy-copy');
+    var area = document.getElementById('policy-text');
+    if (!btn || !area) return;
+    btn.addEventListener('click', function () {
+      var done = function () {
+        var was = btn.textContent;
+        btn.textContent = 'Copied';
+        setTimeout(function () { btn.textContent = was; }, 1500);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(area.value).then(done, function () {
+          area.select(); document.execCommand('copy'); done();
+        });
+      } else { area.select(); document.execCommand('copy'); done(); }
+    });
+  })();
+</script>
+{% endblock %}

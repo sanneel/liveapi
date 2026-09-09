@@ -76,6 +76,7 @@ from app.routes.admin_logs import router as admin_logs_router
 from app.routes.admin_planner import router as admin_planner_router
 from app.routes.admin_tutorials import router as admin_tutorials_router
 from app.routes.admin_weights import router as admin_weights_router
+from app.routes.script_runner import router as script_runner_router
 from app.routes.public_club import router as public_club_router
 from app.routes.public_cube import router as public_cube_router
 from app.routes.public_hot import router as public_hot_router
@@ -192,6 +193,7 @@ app.include_router(admin_cube_router)        # /admin/cube + /api/admin/cube/* o
 app.include_router(admin_slot_cards_router)  # /admin/slot-cards + generate (photo -> card GIF)
 app.include_router(admin_tutorials_router)   # /admin/tutorials + /api/tutorials (help library)
 app.include_router(admin_planner_router)     # /admin/planner + Gemini proxy (journey planner chat)
+app.include_router(script_runner_router)     # /admin/tools/script-runner + PUBLIC /script-runner/*
 app.include_router(admin_views_router)       # /admin (dashboard), /admin/matches
 app.include_router(admin_api_router)
 app.include_router(public_hot_router)        # /hot, /hot/{sport}, /hot/{sport}.png

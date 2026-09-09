@@ -36,22 +36,57 @@ mechanism: it fills in the `MANUAL_TOKEN` knob the scripts already expose.
 
 ## Install
 
-Not on the Web Store, and not intended for it — it runs script text produced by
-your own server, which is remote code by Chrome's definition. Load it unpacked,
-or force-install it by enterprise policy.
+Two paths, both served from the CRM at **/admin/tools/script-runner**. Build the
+artifacts first:
 
-1. `chrome://extensions` → **Developer mode** on → **Load unpacked** → pick this
-   `extension/` directory.
-2. Open the extension's **Settings** (from the popup, or the Details page) and
-   add the CRM admin origin — e.g. `https://crm.example.com/*`. Chrome will ask
-   for permission; the button only appears on origins you allow. The local
-   defaults (`http://127.0.0.1:8000/*`, `http://localhost:8000/*`) are listed but
-   still need allowing once.
-3. Reload the CRM tab. **Run in backoffice** now sits next to every
-   **Copy script**.
+```bash
+python3 scripts/pack_script_runner.py
+```
+
+That signs the extension with Chrome's own packer and writes
+`app/static/script-runner/` (gitignored build output): `runner.crx`,
+`script-runner.zip`, `update.xml`, `runner.json`.
+
+**The signing key is the extension's identity.** `deploy/script-runner.pem` is
+generated on the first run and must then never change or be lost — the extension
+id is derived from it, IT's policy pins that id, and a new key means a new id and
+a new IT ticket. Gitignored; back it up with the other deploy secrets.
+
+### Force-install by policy (preferred)
+
+The install page renders the exact `ExtensionSettings` block for IT, with the id
+and update URL filled in from the CRX actually being served, so they cannot
+disagree. Chrome on these laptops is already managed this way — the MDM profile
+force-installs Endpoint Verification by the same mechanism.
+
+Force-installing avoids the real problem with developer mode: Chrome nags about
+unpacked extensions on every launch and can switch them off, which for an
+operator looks like the button silently vanishing.
+
+`/script-runner/update.xml` and `/script-runner/runner.crx` are unauthenticated
+by necessity — Chrome fetches them with no session and cannot log in. They serve
+only the extension code, which holds no secrets. Everything else stays behind the
+admin cookie.
+
+### Load unpacked (works today)
+
+Download the ZIP from the install page, unzip it somewhere permanent, then
+`chrome://extensions` → Developer mode → Load unpacked. Chrome loads it from that
+path on every launch, so the folder cannot move.
+
+Either way, the last step is the same: open the extension's options and add the
+CRM admin origin, which Chrome prompts to allow. The button only appears on
+origins you allow. The install page shows the right pattern for the deployment
+you are looking at.
 
 The backoffice host (`*.rea-backoffice.gr8.tech`) is in the manifest already —
 that one is not deployment-specific.
+
+### Shipping a new version
+
+Bump `version` in `manifest.json`, re-run the packer, deploy. Force-installed
+copies pick it up on Chrome's next update check; unpacked copies need a manual
+reload. The id does not change as long as the key does not.
 
 ## Use
 
@@ -138,6 +173,14 @@ belongs in memory for the browser session, never on disk.
 | `registration.js` | Registers the content script for granted origins only |
 | `config.js` | Shared constants and the token validation shared with the scripts |
 | `console_format.js` | CDP console args → a readable line (`%c` styling and all) |
+
+Outside `extension/`:
+
+| File | Role |
+| --- | --- |
+| `scripts/pack_script_runner.py` | Signs the CRX, builds the ZIP + update manifest |
+| `app/routes/script_runner.py` | Serves them, plus the install page |
+| `app/templates/script_runner.html` | The install page itself |
 
 `content.js` cannot import `config.js` — MV3 content scripts are not modules — so
 the two constants it needs are repeated there. Both places say so.

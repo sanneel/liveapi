@@ -13,6 +13,7 @@ generators (`journey-cloner/`) and an AI journey planner (`journey-planner/`).
 | wants a new journey shape composed | `journey-cloner/RECIPE_BUILDING.md`, then `COMPOSER_RULES.md` |
 | reports a generator building the wrong thing | `COMPOSER_RULES.md` — most such bugs are a value never written, so the template's own value shipped |
 | asks about the **Run in backoffice** button, or why a script still asks for a token | `extension/README.md` — the script runner extension |
+| wants operators to *get* the extension, or asks what to send IT | `/admin/tools/script-runner` in the running admin, built by `scripts/pack_script_runner.py`; details in `extension/README.md` |
 
 ## How this system works, in five lines
 
@@ -38,6 +39,9 @@ the script. `AUTOMATIONS.md` has the detail.
 - **HARs are credential dumps.** Scrub on load, never persist the raw file, never
   paste one into a chat or a commit.
 - **Drafts only.** Nothing here publishes a live promotion.
+- **`deploy/script-runner.pem` is the extension's identity.** The id IT pins in
+  Chrome policy is derived from that key. Never commit it, never regenerate it,
+  never lose it — a new key is a new extension and a new IT ticket.
 - **`const MANUAL_TOKEN = '';` is a contract, not a comment.** Every generator's
   JS template emits that exact line once, and `extension/config.js` splits on it
   to seed a token. Reformat it and the runner silently stops seeding. Guarded by

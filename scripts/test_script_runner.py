@@ -26,9 +26,11 @@ No network, no key, fast. Run: python scripts/test_script_runner.py
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sys
+import zipfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -147,6 +149,129 @@ else:
     ]
     check("every emitted script targets the permitted backoffice host",
           not off_host, ", ".join(off_host[:3]))
+
+# ── distribution: wiring ───────────────────────────────────────────────────
+print("\n── distribution wiring")
+
+server = (REPO / "server.py").read_text(encoding="utf-8")
+check("router imported in server.py", "script_runner import router" in server)
+check("router registered in server.py", "include_router(script_runner_router)" in server)
+# admin_views_router owns the broad /admin routes, so ours has to land first.
+check("registered before admin_views_router",
+      server.find("include_router(script_runner_router)")
+      < server.find("include_router(admin_views_router)"))
+
+base_html = (REPO / "app" / "templates" / "base.html").read_text(encoding="utf-8")
+check("nav entry present", "/admin/tools/script-runner" in base_html)
+
+routes = (REPO / "app" / "routes" / "script_runner.py").read_text(encoding="utf-8")
+for path in ("/script-runner/update.xml", "/script-runner/runner.crx",
+             "/script-runner/script-runner.zip", "/admin/tools/script-runner"):
+    check(f"route {path} defined", f'"{path}"' in routes)
+# Chrome cannot log in, so the file routes must not be behind require_role.
+public_part = routes[:routes.index("/admin/tools/script-runner")]
+check("the three file routes are unauthenticated (Chrome cannot log in)",
+      "require_role" not in public_part)
+
+gitignore = (REPO / ".gitignore").read_text(encoding="utf-8")
+check("signing key is gitignored", "deploy/script-runner.pem" in gitignore)
+check("build output is gitignored", "app/static/script-runner/" in gitignore)
+
+# ── the install page template ──────────────────────────────────────────────
+print("\n── install page template")
+
+tpl_path = REPO / "app" / "templates" / "script_runner.html"
+tpl = tpl_path.read_text(encoding="utf-8")
+
+tags = re.findall(r"\{%-?\s*(\w+)", tpl)
+PAIRS = {"block": "endblock", "if": "endif", "for": "endfor", "with": "endwith"}
+stack: list[str] = []
+tag_errors: list[str] = []
+for tag in tags:
+    if tag in PAIRS:
+        stack.append(tag)
+    elif tag.startswith("end"):
+        if not stack:
+            tag_errors.append(f"stray {tag}")
+        elif PAIRS[stack[-1]] != tag:
+            tag_errors.append(f"{tag} closes {stack[-1]}")
+        else:
+            stack.pop()
+check("Jinja tags balanced", not tag_errors and not stack,
+      "; ".join(tag_errors) or f"unclosed: {stack}")
+
+# Every name the template reads must be in the view's context.
+CONTEXT = {"request", "current_user", "active", "meta", "policy", "base",
+           "crm_origin_pattern"}
+used = set(re.findall(r"\{\{\s*(\w+)", tpl))
+check("template uses only names the view passes", used <= CONTEXT,
+      f"missing from context: {sorted(used - CONTEXT)}")
+
+# ── distribution: packed artifacts ─────────────────────────────────────────
+print("\n── packed artifacts")
+
+DIST = REPO / "app" / "static" / "script-runner"
+runner_json = DIST / "runner.json"
+if not runner_json.is_file():
+    print("  (not packed in this checkout — run scripts/pack_script_runner.py)")
+else:
+    dist_meta = json.loads(runner_json.read_text(encoding="utf-8"))
+    crx = (DIST / "runner.crx").read_bytes()
+
+    check("CRX is CRX3", crx[:4] == b"Cr24" and
+          int.from_bytes(crx[4:8], "little") == 3)
+
+    # The id IT pins comes from runner.json. If it disagreed with the id Chrome
+    # signed into the CRX, the policy would look right and never install
+    # anything — so check them against each other, not against a constant.
+    header_len = int.from_bytes(crx[8:12], "little")
+    header = crx[12:12 + header_len]
+    # CrxFileHeader field 10000 (signed_header_data), wire type 2.
+    TAG = bytes([0x82, 0xF1, 0x04])
+
+    def _varint(buf: bytes, i: int) -> tuple[int, int]:
+        n = shift = 0
+        while True:
+            byte = buf[i]
+            i += 1
+            n |= (byte & 0x7F) << shift
+            if not byte & 0x80:
+                return n, i
+            shift += 7
+
+    try:
+        i = header.index(TAG) + len(TAG)
+        size, i = _varint(header, i)
+        signed = header[i:i + size]
+        # SignedData field 1 (crx_id), 16 bytes.
+        assert signed[0] == 0x0A and signed[1] == 0x10
+        embedded = signed[2:18].hex().translate(
+            str.maketrans("0123456789abcdef", "abcdefghijklmnop"))
+    except (ValueError, AssertionError, IndexError) as exc:
+        embedded = f"unparseable ({exc})"
+    check("runner.json id matches the id Chrome signed into the CRX",
+          embedded == dist_meta.get("id"),
+          f"crx={embedded} runner.json={dist_meta.get('id')}")
+
+    check("crx_sha256 matches the served bytes",
+          hashlib.sha256(crx).hexdigest() == dist_meta.get("crx_sha256"))
+
+    update_xml = (DIST / "update.xml").read_text(encoding="utf-8")
+    check("update.xml carries the extension id", dist_meta["id"] in update_xml)
+    check("update.xml version matches the manifest",
+          dist_meta["version"] == manifest.get("version"),
+          f'{dist_meta["version"]} vs {manifest.get("version")}')
+    # The route substitutes the real origin; a literal placeholder must survive
+    # to the file, or every install would point at the wrong host.
+    check("update.xml keeps the @BASE@ placeholder for the route to fill",
+          "@BASE@" in update_xml)
+
+    shipped = zipfile.ZipFile(DIST / "script-runner.zip").namelist()
+    check("ZIP excludes tests/ and README",
+          not any(n.startswith("tests") or n == "README.md" for n in shipped),
+          ", ".join(n for n in shipped if n.startswith("tests"))[:60])
+    check("ZIP contains the manifest", "manifest.json" in shipped)
+
 
 print()
 if FAILURES:
