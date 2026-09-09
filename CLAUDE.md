@@ -66,6 +66,9 @@ Offline, no key, safe to run any time:
 .venv/bin/python scripts/test_sport_comms.py         # sport scratch-card comms generator
 .venv/bin/python scripts/test_tournament_comms.py    # tournament comms, both brands
 .venv/bin/python scripts/test_sport_wof.py           # Sport Wheel of Fortune randomizer
+.venv/bin/python scripts/test_sorry_bonus.py         # per-player goodwill casino bonus
+.venv/bin/python scripts/test_gamif_prizes.py        # API-triggered prize journeys + their artwork
+.venv/bin/python scripts/test_journey_webhooks.py    # the read-only webhook URL table
 .venv/bin/python -m compileall -q app server.py journey-cloner journey-planner
 ```
 

@@ -204,6 +204,25 @@
       }
     },
     {
+      "key": "journey_webhooks",
+      "label": "Webhook URLs",
+      "group": "Assets",
+      "brand": "JBCL/PMCL",
+      "what": "Reads a list of journeys and writes the amount / rollover / webhook table an integration is configured from",
+      "script": "journey_webhooks.py",
+      "driven_from": "shell only",
+      "summary": "List the API (webhook) entry of a set of journeys: amount, rollover, URL.",
+      "cli": {
+        "flags": [
+          "-------",
+          "--ids",
+          "--ids-file",
+          "--name"
+        ],
+        "required": []
+      }
+    },
+    {
       "key": "promo_codes",
       "label": "Promo Codes",
       "group": "Sport",

@@ -102,6 +102,26 @@ email`), and an email content created and saved, which the journey's email
 activity is then pointed at. Templates in `templates/pmcl_betandget/`, extracted
 from a HAR of one manual run.
 
+### Webhook URLs — `journey_webhooks.py` — shell only, read-only
+Give it the JRN ids the journey list prints and it emits a console script that
+fetches each journey, finds its `external_system_source` node and writes the
+table an integration is configured from:
+
+```
+10 000    5x            https://…/<webhookId>
+90 000    money bonus   https://…/<webhookId>
+```
+
+The amount and the rollover come out of the bonus activity, not the journey
+name, so a journey whose name and payload disagree shows what it actually
+grants. It creates nothing.
+
+The journey carries the `webhookId`; the full URL is composed by the backoffice
+and no capture here holds the template, so the script tries the activity itself,
+then `GET /journey-activities/external-system-source`, and otherwise prints the
+ids with that endpoint's raw answer. One URL copied out of an API node turns
+that into a one-line fix.
+
 ### Gamification prizes — `gamif_prizes_jbcl_campaign.py` — shell only
 Twelve JBCL prize journeys, all entered through the **API (webhook)** node so
 Smartico can push a winner into the one matching their prize: cash 90 000 /

@@ -279,13 +279,29 @@ JS_TEMPLATE = r"""// JBCL gamification prizes — @COUNT@ API-triggered draft(s)
   }
   const newUuid = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID()
     : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const r = Math.random()*16|0; return (c === 'x' ? r : (r&0x3)|0x8).toString(16); });
-  // Same alphabet and length as the webhookId the backoffice minted for the
-  // captured API node. One journey per prize means one URL per prize.
-  const newWebhookId = () => {
+  // One journey per prize means one URL per prize, and the id behind that URL
+  // is the backoffice's to give: this is the call its own API node makes. The
+  // local generator is only a fallback, and says so, because an id nobody
+  // minted may be an id nothing routes to.
+  const randomWebhookId = () => {
     const abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let s = ''; for (let i = 0; i < 12; i++) s += abc[Math.floor(Math.random() * abc.length)];
     return s;
   };
+  async function newWebhookId() {
+    try {
+      const r = await fetch(BASE + '/journey-activities/external-system-source/webhook-id', { headers: H(), credentials: 'include' });
+      const t = await r.text();
+      if (r.ok) {
+        const id = parseJsonText(t, 'mint webhook id', r.status).webhookId;
+        if (id) return id;
+      }
+      console.warn('    the backoffice would not mint a webhook id (HTTP ' + r.status + '); using a generated one');
+    } catch (e) {
+      console.warn('    could not reach the webhook-id endpoint (' + ((e && e.message) || e) + '); using a generated one');
+    }
+    return randomWebhookId();
+  }
   const UUID_RE = /"(?:activityId|id|promotionId|promotionLinkId|flowId|nodeId|filterConditionId)"\s*:\s*"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"/g;
   function regenIds(text) {
     const olds = new Set(); let m; UUID_RE.lastIndex = 0;
@@ -532,8 +548,8 @@ JS_TEMPLATE = r"""// JBCL gamification prizes — @COUNT@ API-triggered draft(s)
         delete body.duplicatedFromVersion;
 
         const webhookId = KEEP_WEBHOOK_ID
-          ? ((apiTemplate.initializationData || {}).webhookId || newWebhookId())
-          : newWebhookId();
+          ? ((apiTemplate.initializationData || {}).webhookId || await newWebhookId())
+          : await newWebhookId();
         useApiEntry(body, apiTemplate, P.name, webhookId);
 
         const counts = setAmount(body, P);

@@ -179,6 +179,10 @@ GENERATORS: List[dict] = [
      "label": "Gamification prizes",
      "what": "One API-triggered draft per prize amount: money bonus for cash, casino bonus at 1x/3x/5x",
      "script": "gamif_prizes_jbcl_campaign.py", "tab": None},
+    {"key": "journey_webhooks", "group": "Assets", "brand": "JBCL/PMCL",
+     "label": "Webhook URLs",
+     "what": "Reads a list of journeys and writes the amount / rollover / webhook table an integration is configured from",
+     "script": "journey_webhooks.py", "tab": None},
 
     # ── Sport ─────────────────────────────────────────────────────────────
     {"key": "promo_codes", "group": "Sport", "brand": "JBCL",
