@@ -52,23 +52,37 @@ generated on the first run and must then never change or be lost — the extensi
 id is derived from it, IT's policy pins that id, and a new key means a new id and
 a new IT ticket. Gitignored; back it up with the other deploy secrets.
 
-### Force-install by policy (preferred)
+### Force-install by policy (the only route on a managed laptop)
+
+Chrome on the company laptops is governed by **user cloud policy from the Google
+Admin console** — not the MDM configuration profile, which carries only an
+Endpoint Verification force-install and is therefore misleading if you check it
+and stop there. The cloud policy is cached per profile at
+`~/Library/Application Support/Google/Chrome/<Profile>/Policy/User Policy`; it
+sets an `ExtensionInstallAllowlist` of ~245 ids, so **Load unpacked fails with
+"Extension installation is blocked by policy."**
+
+`ExtensionInstallForcelist` overrides that allowlist, and the org already uses it
+for another extension, so a force-install request is the way in. `chrome://policy`
+is the only reliable place to read the merged picture.
+
 
 The install page renders the exact `ExtensionSettings` block for IT, with the id
 and update URL filled in from the CRX actually being served, so they cannot
 disagree. Chrome on these laptops is already managed this way — the MDM profile
 force-installs Endpoint Verification by the same mechanism.
 
-Force-installing avoids the real problem with developer mode: Chrome nags about
-unpacked extensions on every launch and can switch them off, which for an
-operator looks like the button silently vanishing.
+Force-installing was already preferable — Chrome nags about unpacked extensions
+on every launch and can switch them off, which for an operator looks like the
+button silently vanishing. Under this policy it is not merely preferable; it is
+the only thing that works.
 
 `/script-runner/update.xml` and `/script-runner/runner.crx` are unauthenticated
 by necessity — Chrome fetches them with no session and cannot log in. They serve
 only the extension code, which holds no secrets. Everything else stays behind the
 admin cookie.
 
-### Load unpacked (works today)
+### Load unpacked (unmanaged Chrome only)
 
 Download the ZIP from the install page, unzip it somewhere permanent, then
 `chrome://extensions` → Developer mode → Load unpacked. Chrome loads it from that
@@ -218,8 +232,10 @@ coming back out readable.
 - **`fetch_games_catalog_console.js` has no `MANUAL_TOKEN` knob.** It is
   hand-written rather than generated, so it still waits for a token. It runs
   fine; you just have to click something in the backoffice once.
-- **Remote code.** The script text comes from the CRM at run time. Fine for an
-  internal, force-installed extension; a blocker for Web Store distribution. If
-  that ever matters, the fix is to ship payloads plus a static runner instead of
-  JS — a much bigger change, because `gow_combined` and `prediction` have bespoke
-  multi-step flows.
+- **Remote code.** The script text comes out of the CRM page at run time, not
+  the bundle. Fine for an internal, force-installed extension; it would likely
+  fail Chrome Web Store review, which is one reason self-hosting the CRX and
+  force-installing it is the right distribution here rather than an unlisted
+  store listing. If store distribution ever becomes necessary, the fix is to
+  ship payloads plus a static runner instead of JS — a much bigger change,
+  because `gow_combined` and `prediction` have bespoke multi-step flows.

@@ -27,24 +27,56 @@
   </section>
   {% else %}
 
+  <section class="card" style="border-color:#f0613c">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Chrome policy blocks installing this yourself</h2>
+        <p class="card-sub">Confirmed on a company laptop — IT has to push it.</p>
+      </div>
+    </div>
+    <div class="card-pad">
+      <p class="help" style="margin:0">
+        Chrome here is managed by user cloud policy from the Google Admin
+        console, with an <span class="mono">ExtensionInstallAllowlist</span> of
+        245 permitted extensions. Anything else is refused, so
+        <b>Load unpacked</b> fails with:
+      </p>
+      <p class="mono" style="margin:10px 0; padding:8px 12px; background:var(--panel,#f7f8fa); border:1px solid var(--line,#e5e7eb); border-radius:8px">
+        Extension installation is blocked by policy.
+      </p>
+      <p class="help" style="margin:0">
+        That is not the end of it. <span class="mono">ExtensionInstallForcelist</span>
+        overrides the allowlist, and your org already uses it for another
+        extension — so the request below is the way in. Option 2 is kept only
+        for a machine whose Chrome is not managed.
+      </p>
+    </div>
+  </section>
+
   <section class="card">
     <div class="card-head">
       <div>
         <h2 class="card-title">Option 1 — ask IT to install it</h2>
-        <p class="card-sub">Recommended. One ticket, then nothing for operators to do, ever.</p>
+        <p class="card-sub">The only route on a managed laptop. One ticket, then nothing for operators to do, ever.</p>
       </div>
       <button type="button" id="policy-copy" class="btn primary">Copy policy</button>
     </div>
     <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
       <p class="help" style="margin:0">
-        Chrome on these laptops is managed, and it already force-installs
-        extensions this way (Endpoint Verification is one). Send IT the block
-        below and ask them to add it to the Chrome <span class="mono">ExtensionSettings</span>
-        policy. Force-installing means: no developer mode, no recurring
-        <i>"disable developer mode extensions"</i> prompt, survives restarts,
-        and picks up new versions on its own.
+        Send IT the block below and ask them to add it to the Chrome
+        <span class="mono">ExtensionSettings</span> policy in the Google Admin
+        console — the same place the current allowlist and forcelist live.
+        <span class="mono">force_installed</span> overrides the allowlist, so
+        the id does not also need allowlisting; if they would rather use
+        <span class="mono">ExtensionInstallForcelist</span>, the equivalent
+        single line is given below too. Either way it survives restarts and
+        picks up new versions on its own.
       </p>
       <textarea id="policy-text" class="input mono" readonly rows="8" spellcheck="false" style="font-size:12px">{{ policy }}</textarea>
+      <p class="help" style="margin:0">
+        Or, as a single <span class="mono">ExtensionInstallForcelist</span> entry:
+      </p>
+      <p class="mono" style="margin:0; padding:8px 12px; background:var(--panel,#f7f8fa); border:1px solid var(--line,#e5e7eb); border-radius:8px; overflow-x:auto; font-size:12px">{{ meta.id }};{{ base }}/script-runner/update.xml</p>
       <dl class="help" style="display:grid; grid-template-columns:auto 1fr; gap:4px 14px; margin:0">
         <dt><b>Extension id</b></dt><dd class="mono">{{ meta.id }}</dd>
         <dt><b>Update URL</b></dt><dd class="mono">{{ base }}/script-runner/update.xml</dd>
@@ -62,8 +94,8 @@
   <section class="card">
     <div class="card-head">
       <div>
-        <h2 class="card-title">Option 2 — install it yourself now</h2>
-        <p class="card-sub">Works today, while the IT ticket is pending.</p>
+        <h2 class="card-title">Option 2 — install it yourself</h2>
+        <p class="card-sub">Only on an unmanaged Chrome. Blocked by policy on company laptops — see above.</p>
       </div>
       <a href="/script-runner/script-runner.zip" class="btn primary">Download ZIP</a>
     </div>
