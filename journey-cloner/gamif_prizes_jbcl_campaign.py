@@ -205,7 +205,7 @@ JS_TEMPLATE = r"""// JBCL gamification prizes — @COUNT@ API-triggered draft(s)
     if (!p || p.typ !== 'Bearer' || p.exp - Date.now()/1000 < 30) return null;
     return 'Bearer ' + v.replace(/^Bearer\s+/i, '');
   };
-  async function obtainAuth() {
+  async function obtainAuth(quiet) {
     if (MANUAL_TOKEN.trim()) { const a = usableAuth('Bearer ' + MANUAL_TOKEN.trim()); if (!a) throw new Error('MANUAL_TOKEN invalid'); return a; }
     return new Promise((resolve, reject) => {
       let done = false; const of = window.fetch, oh = XMLHttpRequest.prototype.setRequestHeader;
@@ -218,8 +218,28 @@ JS_TEMPLATE = r"""// JBCL gamification prizes — @COUNT@ API-triggered draft(s)
     });
   }
 
-  const auth = await obtainAuth();
+  let auth = await obtainAuth();
   const H = (ct) => { const h = { accept: 'application/json, text/plain, */*', authorization: auth, 'x-brand': BRAND }; if (ct) h['content-type'] = ct; return h; };
+
+  // The backoffice's token lives about five minutes. Twelve prizes with a file
+  // picker each outlive that, and the first run died silently mid-way, so the
+  // token is checked before every prize and re-captured while there is still
+  // time. Re-capturing needs the page to make a call of its own: clicking
+  // anything in the backoffice is enough.
+  const secondsLeft = () => {
+    const p = decodeJwt(auth.replace(/^Bearer\s+/i, ''));
+    return p && p.exp ? Math.round(p.exp - Date.now() / 1000) : 0;
+  };
+  async function ensureToken() {
+    if (secondsLeft() > 90) return;
+    if (MANUAL_TOKEN.trim()) {
+      console.warn('    the pasted MANUAL_TOKEN has ' + secondsLeft() + 's left; paste a fresh one if calls start failing');
+      return;
+    }
+    console.log('%cToken has ' + secondsLeft() + 's left — click anything in the backoffice to hand over a fresh one.', 'color:#eab308;font-weight:bold');
+    auth = await obtainAuth();
+    console.log('%cToken refreshed (' + secondsLeft() + 's).', 'color:#22c55e');
+  }
 @JSON_GUARD_JS@
 @DRAFT_SAVE_JS@
   // The capture creates the draft, writes the artwork, then saves. Same order
@@ -361,14 +381,33 @@ JS_TEMPLATE = r"""// JBCL gamification prizes — @COUNT@ API-triggered draft(s)
     return hits;
   }
 
+  // Resolves with the file, or with null for "keep the artwork the copy came
+  // with". It never hangs: dismissing the dialog fires 'cancel' and not
+  // 'change', which is what stopped the first run dead at prize eight, and the
+  // backoffice re-rendering used to take the input out of the page with it.
   function pickFile(label) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
+      const box = document.createElement('div');
+      Object.assign(box.style, { position: 'fixed', top: '12px', left: '12px', zIndex: 999999,
+        background: '#fff', padding: '10px', border: '3px solid #22c55e', borderRadius: '6px',
+        font: '13px system-ui', boxShadow: '0 2px 12px rgba(0,0,0,.3)' });
+      const text = document.createElement('div');
+      text.textContent = 'Photo for ' + label;
+      text.style.marginBottom = '6px';
       const input = document.createElement('input');
       input.type = 'file'; input.accept = 'image/*';
-      Object.assign(input.style, { position: 'fixed', top: '12px', left: '12px', zIndex: 999999, background: '#fff', padding: '8px', border: '3px solid #22c55e', borderRadius: '6px' });
-      document.body.appendChild(input);
-      console.log('%cSelect the photo for ' + label + ' (top-left).', 'color:#eab308;font-weight:bold');
-      input.addEventListener('change', () => { const f = input.files && input.files[0]; input.remove(); if (!f) { reject(new Error('no photo chosen for ' + label)); return; } resolve(f); });
+      const skip = document.createElement('button');
+      skip.textContent = 'keep the copied artwork';
+      skip.style.marginLeft = '8px';
+      box.append(text, input, skip);
+      document.body.appendChild(box);
+      console.log('%cSelect the photo for ' + label + ', or press "keep the copied artwork".', 'color:#eab308;font-weight:bold');
+      const alive = setInterval(() => { if (!document.body.contains(box)) document.body.appendChild(box); }, 1000);
+      const finish = (file) => { clearInterval(alive); clearTimeout(timer); box.remove(); resolve(file); };
+      input.addEventListener('change', () => finish((input.files && input.files[0]) || null));
+      input.addEventListener('cancel', () => { console.warn('    picker dismissed for ' + label + ' — keeping the copied artwork'); finish(null); });
+      skip.addEventListener('click', () => { console.warn('    skipped ' + label + ' — keeping the copied artwork'); finish(null); });
+      const timer = setTimeout(() => { console.warn('    no photo chosen for ' + label + ' in 5 min — keeping the copied artwork'); finish(null); }, 300000);
     });
   }
 
@@ -451,6 +490,7 @@ JS_TEMPLATE = r"""// JBCL gamification prizes — @COUNT@ API-triggered draft(s)
     for (const P of PRIZES) {
       console.log('%c' + P.group + '  $' + P.amountText + ' ...', 'color:#3b82f6;font-weight:bold');
       try {
+        await ensureToken();
         const photo = WITH_PHOTOS ? await pickFile(P.group + ' $' + P.amountText) : null;
         const src = sources[P.kind];
         const sourceName = String(src.journeyName || '');
@@ -539,14 +579,24 @@ JS_TEMPLATE = r"""// JBCL gamification prizes — @COUNT@ API-triggered draft(s)
         const msg = String((e && e.message) || e);
         fail.push({ prize: P.group, amount: P.amountText, error: msg });
         console.error('    ✗ ' + P.group + ' $' + P.amountText + ' — ' + msg);
+        if (/HTTP 401|HTTP 403|No token in/.test(msg)) {
+          console.error('%cThe token was refused or never arrived. Stopping rather than half-making more drafts.', 'color:#ef4444;font-weight:bold');
+          break;
+        }
       }
     }
   } catch (e) {
     console.error('%cSTOPPED — ' + ((e && e.message) || e), 'color:#ef4444;font-weight:bold');
   }
-  console.log('%cDONE — ' + ok.length + ' created, ' + fail.length + ' failed.', 'color:' + (fail.length ? '#f59e0b' : '#22c55e') + ';font-weight:bold;font-size:14px');
+  console.log('%cDONE — ' + ok.length + ' created, ' + (PRIZES.length - ok.length) + ' not.', 'color:' + (ok.length === PRIZES.length ? '#22c55e' : '#f59e0b') + ';font-weight:bold;font-size:14px');
   if (ok.length) console.table(ok);
   if (fail.length) console.table(fail);
+  const done = new Set(ok.map((o) => o.prize + o.amount));
+  const left = [...new Set(PRIZES.filter((p) => !done.has(p.group + p.amountText)).map((p) => p.group))];
+  if (left.length) {
+    console.log('%cNot created: ' + left.join(', ') + '. Rerun the generator for just those:', 'color:#eab308;font-weight:bold');
+    console.log('    python gamif_prizes_jbcl_campaign.py --money-source ' + MONEY_SOURCE + ' --casino-source ' + CASINO_SOURCE + ' --only ' + left.join(','));
+  }
   console.log('Each draft has its own promotion content tree, carrying its own prize photo.');
   console.log('Open one, check the API node\'s URL and the amount, then publish — publishing starts it immediately.');
 })();

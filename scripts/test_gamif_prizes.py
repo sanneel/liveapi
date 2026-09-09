@@ -121,6 +121,20 @@ check(js.index("contents/v1/copy") < js.index("await createDraft("),
 check(js.index("await createDraft(") < js.index("await saveDraft("),
       "the photo lands between the create and the save, as the capture did")
 
+section("what stopped the first live run")
+# Seven of twelve drafts existed and the run went quiet: the eighth file dialog
+# was dismissed, which fires 'cancel' and never 'change', so the promise never
+# settled. A run this long also outlives the backoffice's five-minute token.
+check("addEventListener('cancel'" in js, "a dismissed file dialog is handled")
+check("keep the copied artwork" in js, "the picker offers a skip instead of blocking")
+check("300000" in js and "no photo chosen" in js, "an unanswered picker gives up after five minutes")
+check("document.body.contains(box)" in js, "the picker survives the backoffice re-rendering the page")
+check("async function ensureToken" in js and "secondsLeft()" in js, "the token is checked, not assumed")
+check(js.index("await ensureToken()") < js.index("await pickFile("),
+      "the token is refreshed before the picker, not after it has gone stale")
+check("HTTP 401|HTTP 403|No token in" in js, "a refused token stops the run instead of half-making drafts")
+check("--only ' + left.join(',')" in js, "it prints the rerun command for whatever it did not create")
+
 print()
 if failures:
     print(f"{len(failures)} check(s) failed:")
