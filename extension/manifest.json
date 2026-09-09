@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Jugabet Script Runner",
+  "version": "1.0.0",
+  "description": "Runs a generated promo console script in a logged-in REA backoffice tab. No DevTools, no 650 KB clipboard paste.",
+
+  "permissions": [
+    "debugger",
+    "webRequest",
+    "storage",
+    "tabs",
+    "scripting"
+  ],
+
+  "host_permissions": [
+    "https://*.rea-backoffice.gr8.tech/*"
+  ],
+
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Jugabet Script Runner"
+  },
+
+  "options_page": "options.html"
+}

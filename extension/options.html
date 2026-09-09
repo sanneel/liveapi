@@ -1,0 +1,28 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Script Runner — settings</title>
+<link rel="stylesheet" href="popup.css">
+<style>
+  body { width: 560px; }
+  input[type=text] { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; }
+  p.help { color: var(--muted); font-size: 12px; }
+  code { font-family: ui-monospace, Menlo, monospace; }
+</style>
+
+<h1>Script Runner settings</h1>
+
+<h2>CRM admin origins</h2>
+<p class="help">
+  Where the Jugabet CRM admin is served. The extension adds its
+  <b>Run in backoffice</b> button to the console-script cards on these pages,
+  and asks Chrome for permission to do so. The backoffice itself
+  (<code>*.rea-backoffice.gr8.tech</code>) is already permitted.
+</p>
+<ul id="origins"></ul>
+<div class="row">
+  <input id="origin" type="text" placeholder="https://crm.example.com/*" spellcheck="false">
+  <button id="add" class="primary" type="button">Add</button>
+</div>
+<p id="msg" class="help"></p>
+
+<script type="module" src="options.js"></script>

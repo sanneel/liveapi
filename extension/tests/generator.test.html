@@ -1,0 +1,82 @@
+<!doctype html><meta charset=utf-8><title>generator template tests</title>
+<h1>Generator JS templates</h1>
+<p>
+  Every generator's JS template must parse, expose the MANUAL_TOKEN knob exactly
+  once, and still parse once the extension has seeded it. Run via
+  <code>python3 extension/tests/serve.py</code>; every line must read OK.
+</p>
+<pre id=out>running…</pre>
+<script type="module">
+import { MANUAL_TOKEN_LINE } from '../config.js';
+
+const lines = [];
+const check = (label, cond, extra) =>
+  lines.push((cond ? 'OK   ' : 'FAIL ') + label + (extra ? ' -> ' + extra : ''));
+
+// The generators that hold a JS template. Each is Python with the template in a
+// raw triple-quoted string, so the template can be pulled out with a regex and
+// compiled here — there is no JS runtime on the deploy box to do it any other way.
+const GENERATORS = [
+  'compose.py',
+  'compose_comms.py',
+  'generate_console_script.py',
+  'gow_combined.py',
+  'gow_campaign.py',
+  'comms_campaign.py',
+  'casino_journey.py',
+  'nc_discount_campaign.py',
+  'nc_discount_pmcl_campaign.py',
+  'randomizer_campaign.py',
+  'prediction_campaign.py',
+  'bet_and_get_pmcl_campaign.py',
+  'tournament_pmcl_campaign.py',
+];
+
+// r'''...''' and plain """...""" both appear across the generators.
+const TEMPLATE_RE = /^(\w*JS_TEMPLATE)\s*=\s*(?:r?'''|r?""")([\s\S]*?)(?:'''|""")/gm;
+
+let found = 0;
+for (const file of GENERATORS) {
+  let src;
+  try {
+    src = await (await fetch('../../journey-cloner/' + file)).text();
+  } catch (e) {
+    check(file + ': readable', false, e.message);
+    continue;
+  }
+
+  TEMPLATE_RE.lastIndex = 0;
+  let m;
+  let seen = 0;
+  while ((m = TEMPLATE_RE.exec(src)) !== null) {
+    const label = `${file}::${m[1]}` + (seen ? `#${seen}` : '');
+    seen++;
+    found++;
+    const rendered = m[2]
+      // A non-raw template opened with \"\"\"\\ starts with a Python line
+      // continuation, which is not part of the JS.
+      .replace(/^\\\n/, '')
+      // Placeholders are @MARKER@ — digits included (@PHOTO_B64@). Substitute a
+      // literal so the template compiles.
+      .replace(/@[A-Z0-9_]+@/g, '"m"');
+
+    let why = '';
+    try { new Function(rendered); } catch (e) { why = e.message; }
+
+    if (!why) {
+      const parts = rendered.split(MANUAL_TOKEN_LINE);
+      if (parts.length !== 2) {
+        why = `MANUAL_TOKEN line appears ${parts.length - 1}x (want exactly 1)`;
+      } else {
+        // The one edit the extension makes must leave valid JS behind.
+        const seeded = parts[0] + 'const MANUAL_TOKEN = "tok";' + parts[1];
+        try { new Function(seeded); } catch (e) { why = 'seeded: ' + e.message; }
+      }
+    }
+    check(label, !why, why);
+  }
+}
+
+check('found JS templates to check', found > 0, found + ' templates');
+document.getElementById('out').textContent = lines.join('\n');
+</script>

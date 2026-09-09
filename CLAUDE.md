@@ -12,6 +12,7 @@ generators (`journey-cloner/`) and an AI journey planner (`journey-planner/`).
 | asks about the AI planner's state | `JOURNEY_COMPOSER_STATUS.md` |
 | wants a new journey shape composed | `journey-cloner/RECIPE_BUILDING.md`, then `COMPOSER_RULES.md` |
 | reports a generator building the wrong thing | `COMPOSER_RULES.md` — most such bugs are a value never written, so the template's own value shipped |
+| asks about the **Run in backoffice** button, or why a script still asks for a token | `extension/README.md` — the script runner extension |
 
 ## How this system works, in five lines
 
@@ -37,6 +38,10 @@ the script. `AUTOMATIONS.md` has the detail.
 - **HARs are credential dumps.** Scrub on load, never persist the raw file, never
   paste one into a chat or a commit.
 - **Drafts only.** Nothing here publishes a live promotion.
+- **`const MANUAL_TOKEN = '';` is a contract, not a comment.** Every generator's
+  JS template emits that exact line once, and `extension/config.js` splits on it
+  to seed a token. Reformat it and the runner silently stops seeding. Guarded by
+  `scripts/test_script_runner.py`.
 
 ## Environment
 
@@ -57,6 +62,7 @@ Offline, no key, safe to run any time:
 .venv/bin/python scripts/test_composer_contract.py   # planner -> composer contract
 .venv/bin/python scripts/test_journey_design.py      # design-board renderer
 .venv/bin/python scripts/test_har_analyse.py         # HAR analyser + secret scrubbing
+.venv/bin/python scripts/test_script_runner.py       # runner extension manifest + MANUAL_TOKEN contract
 .venv/bin/python -m compileall -q app server.py journey-cloner journey-planner
 ```
 
@@ -66,3 +72,7 @@ after any prompt change:
 ```bash
 .venv/bin/python scripts/eval_planner.py             # scores the planner's plans
 ```
+
+The extension's own JS tests are browser pages (no JS runtime on the deploy box):
+`python3 extension/tests/serve.py`, then open the URLs it prints — every line
+must read `OK`.

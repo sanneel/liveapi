@@ -1,0 +1,196 @@
+<!doctype html><meta charset=utf-8><title>fixture</title>
+<div id="root">
+  <section class="card">
+    <div class="card-head">
+      <div><h2 class="card-title">Console Script Ready</h2>
+      <p class="card-sub">multi_number_prediction_console.js</p></div>
+      <button type="button" id="pred-copy" class="btn primary">Copy script</button>
+    </div>
+    <div class="card-pad">
+      <textarea id="pred-script-text" class="input mono" readonly>(async()=>{})()</textarea>
+    </div>
+  </section>
+  <section class="card">
+    <div class="card-head">
+      <div><h2 class="card-title">Console Script Ready</h2>
+      <p class="card-sub">GOW_console.js</p></div>
+    </div>
+    <div class="card-pad">
+      <textarea id="console-script-text" class="input mono" readonly>(async()=>{})()</textarea>
+    </div>
+  </section>
+</div>
+<pre id="out">running...</pre>
+<script>
+// Minimal chrome shim: record what content.js would send.
+window.__sent = [];
+window.chrome = { runtime: { sendMessage: (m) => { window.__sent.push(m); return Promise.resolve({ok:true}); } } };
+</script>
+<script>// Injected into the Jugabet CRM admin. Adds a "Run in backoffice" button to
+// every rendered console-script card and hands the text to the service worker.
+//
+// Nothing server-side changes. The admin already renders the full script into
+// <textarea id="*-script-text"> next to a "Copy script" button, so the text is
+// right there in the DOM — the extension only has to notice it and offer a
+// better verb than "copy". Install the extension and the buttons appear;
+// uninstall it and the pages are exactly as they were.
+//
+// NOTE: MV3 content scripts are not modules, so the two constants shared with
+// config.js are repeated here. Keep them in sync.
+
+(() => {
+  'use strict';
+
+  // Cards the admin renders for a generated script. See
+  // app/templates/promotions.html and app/templates/partials/_*_form.html.
+  const SCRIPT_AREA = 'textarea[id$="-script-text"]';
+  const MARK = 'data-jbrunner';
+
+  function nameFor(area, card) {
+    // The card head carries the generated filename, e.g. "GOW_console.js".
+    const sub = card && card.querySelector('.card-head .card-sub');
+    const text = sub && sub.textContent.trim();
+    if (text) return text;
+    // Fall back to the textarea id: "pred-script-text" -> "pred".
+    return area.id.replace(/-script-text$/, '') || 'console script';
+  }
+
+  function button(label, title) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn primary jb-runner-btn';
+    b.textContent = label;
+    b.title = title;
+    return b;
+  }
+
+  function status(text, kind) {
+    const s = document.createElement('span');
+    s.className = 'jb-runner-status jb-runner-' + (kind || 'info');
+    s.textContent = text;
+    return s;
+  }
+
+  function attach(area) {
+    if (area.getAttribute(MARK)) return;
+    area.setAttribute(MARK, '1');
+
+    const card = area.closest('section.card') || area.closest('.card') || area.parentElement;
+    const head = card && card.querySelector('.card-head');
+    if (!head) return;
+
+    const name = nameFor(area, card);
+    const run = button('Run in backoffice', 'Send this script to the Script Runner extension');
+    const note = status('', 'info');
+
+    run.addEventListener('click', async () => {
+      run.disabled = true;
+      note.textContent = 'Sending…';
+      note.className = 'jb-runner-status jb-runner-info';
+      try {
+        const res = await chrome.runtime.sendMessage({
+          type: 'ENQUEUE',
+          job: { name, code: area.value, source: location.href },
+        });
+        if (!res || !res.ok) throw new Error((res && res.error) || 'Extension did not respond.');
+        note.textContent = 'Queued — open the Script Runner to start it.';
+        note.className = 'jb-runner-status jb-runner-ok';
+      } catch (e) {
+        // The usual cause is the worker having been reloaded mid-session; the
+        // Copy button is untouched, so say what still works.
+        note.textContent = (e && e.message) || String(e);
+        note.className = 'jb-runner-status jb-runner-err';
+      } finally {
+        run.disabled = false;
+      }
+    });
+
+    // Sit left of "Copy script" so Run reads as the primary action but Copy is
+    // never taken away — it is the fallback whenever a run misbehaves.
+    const copy = head.querySelector('button[id$="-copy"]');
+    const wrap = document.createElement('span');
+    wrap.className = 'jb-runner-wrap';
+    wrap.append(run, note);
+    if (copy) {
+      copy.classList.add('jb-runner-demoted');
+      copy.parentElement.insertBefore(wrap, copy);
+    } else {
+      head.append(wrap);
+    }
+  }
+
+  function scan(root) {
+    const scope = root && root.querySelectorAll ? root : document;
+    scope.querySelectorAll(SCRIPT_AREA).forEach(attach);
+  }
+
+  scan(document);
+
+  // The admin swaps panels in with htmx (see base.html), so a script card can
+  // appear long after load.
+  document.addEventListener('htmx:afterSwap', (e) => scan(e.target));
+  new MutationObserver((records) => {
+    for (const r of records) {
+      for (const node of r.addedNodes) {
+        if (node.nodeType !== 1) continue;
+        if (node.matches && node.matches(SCRIPT_AREA)) attach(node);
+        else scan(node);
+      }
+    }
+  }).observe(document.documentElement, { childList: true, subtree: true });
+})();
+</script>
+<script>
+(async () => {
+  const lines = [];
+  const check = (label, cond, extra) => lines.push((cond ? 'OK   ' : 'FAIL ') + label + (extra ? ' -> ' + extra : ''));
+
+  // 1. a Run button next to each of the two cards
+  const buttons = [...document.querySelectorAll('button.jb-runner-btn')];
+  check('one Run button per script card', buttons.length === 2, buttons.length + ' found');
+
+  // 2. Run sits before Copy, and Copy survives
+  const head = document.querySelector('.card-head');
+  const order = [...head.querySelectorAll('button')].map(b => b.id || b.className.split(' ')[0]);
+  check('Run inserted before Copy script', order.indexOf('btn') < order.indexOf('pred-copy')
+        || order[0].includes('jb-runner') || order[0] === 'btn', order.join(','));
+  check('Copy script still present', !!document.getElementById('pred-copy'));
+
+  // 3. clicking Run sends the textarea text under the card-head name
+  buttons[0].click();
+  await new Promise(r => setTimeout(r, 30));
+  const msg = window.__sent[0];
+  check('ENQUEUE sent', msg && msg.type === 'ENQUEUE');
+  check('name read from .card-sub', msg && msg.job.name === 'multi_number_prediction_console.js', msg && msg.job.name);
+  check('code is the textarea text', msg && msg.job.code === '(async()=>{})()', msg && JSON.stringify(msg.job.code));
+
+  // 4. card with no Copy button still gets a Run button
+  const second = document.querySelectorAll('section.card')[1];
+  check('card without Copy still wired', !!second.querySelector('button.jb-runner-btn'));
+
+  // 5. name falls back to the textarea id when there is no .card-sub
+  const late = document.createElement('section');
+  late.className = 'card';
+  late.innerHTML = '<div class="card-head"><div></div></div>'
+    + '<textarea id="rnd-script-text">LATE</textarea>';
+  document.getElementById('root').append(late);
+  await new Promise(r => setTimeout(r, 60));
+  const lateBtn = late.querySelector('button.jb-runner-btn');
+  check('htmx/observer wires a late card', !!lateBtn);
+  if (lateBtn) {
+    lateBtn.click();
+    await new Promise(r => setTimeout(r, 30));
+    const m2 = window.__sent[window.__sent.length - 1];
+    check('name falls back to textarea id', m2.job.name === 'rnd', m2.job.name);
+  }
+
+  // 6. idempotent: a re-scan must not double up
+  document.dispatchEvent(new CustomEvent('htmx:afterSwap', {detail:{}}));
+  await new Promise(r => setTimeout(r, 30));
+  check('no duplicate buttons after re-scan',
+        document.querySelectorAll('button.jb-runner-btn').length === 3,
+        document.querySelectorAll('button.jb-runner-btn').length + ' buttons');
+
+  document.getElementById('out').textContent = lines.join('\n');
+})();
+</script>

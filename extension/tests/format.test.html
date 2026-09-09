@@ -1,0 +1,46 @@
+<!doctype html><meta charset=utf-8><title>fmt</title>
+<pre id=out>running...</pre>
+<script type="module">
+import { formatConsoleArgs } from '../console_format.js';
+const lines = [];
+const eq = (label, got, want) => lines.push((got === want ? 'OK   ' : 'FAIL ') + label
+  + (got === want ? '' : ` -> got ${JSON.stringify(got)} want ${JSON.stringify(want)}`));
+
+const S = (v) => ({ type: 'string', value: v });
+const O = (v) => ({ type: 'object', value: v, description: 'Object' });
+const N = (v) => ({ type: 'number', value: v });
+
+// The exact call shapes the generated scripts make.
+eq('plain string', formatConsoleArgs([S('Reserving real journey IDs...')]),
+   'Reserving real journey IDs...');
+
+// console.log('%cToken captured from the page.', 'color:#22c55e;font-weight:bold')
+eq('%c drops the CSS', formatConsoleArgs([S('%cToken captured from the page.'), S('color:#22c55e;font-weight:bold')]),
+   'Token captured from the page.');
+
+// console.log('%cDONE. Created journey IDs:', 'color:#22c55e;...', realIds)
+eq('%c keeps the trailing object',
+   formatConsoleArgs([S('%cDONE. Created journey IDs:'), S('color:#22c55e'), O({ followup: 'JRN-1', two_hours: 'JRN-2' })]),
+   'DONE. Created journey IDs: {"followup":"JRN-1","two_hours":"JRN-2"}');
+
+// console.error(`[${type}] FAILED: HTTP ${r.status}`, respText)
+eq('error line with a response body',
+   formatConsoleArgs([S('[bfr] FAILED: HTTP 409'), S('{"error":"exists"}')]),
+   '[bfr] FAILED: HTTP 409 {"error":"exists"}');
+
+// console.log('%c[bfr] Created.', 'color:#22c55e', respText)
+eq('%c mid-line with a body after',
+   formatConsoleArgs([S('%c[bfr] Created.'), S('color:#22c55e'), S('{"id":"JRN-9"}')]),
+   '[bfr] Created. {"id":"JRN-9"}');
+
+eq('%s substitution', formatConsoleArgs([S('game %s at %s'), S('Gates of Olympus'), S('CLP 200')]),
+   'game Gates of Olympus at CLP 200');
+eq('%d substitution', formatConsoleArgs([S('page %d'), N(7)]), 'page 7');
+eq('literal %% survives', formatConsoleArgs([S('100%% done')]), '100% done');
+eq('missing arg leaves the directive', formatConsoleArgs([S('page %d')]), 'page %d');
+eq('no args', formatConsoleArgs([]), '');
+eq('a bare %-free multi-arg line',
+   formatConsoleArgs([S('  [bfr]'), S('JRN-8')]), '  [bfr] JRN-8');
+
+document.getElementById('out').textContent = lines.join('\n');
+</script>

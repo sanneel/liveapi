@@ -1,0 +1,86 @@
+<!doctype html><meta charset=utf-8><title>seed + token tests</title>
+<h1>Token validation &amp; MANUAL_TOKEN seeding</h1>
+<p>Run via <code>python3 extension/tests/serve.py</code>. Every line must read OK.</p>
+<pre id=out>running…</pre>
+<script type="module">
+import { MANUAL_TOKEN_LINE, usableAuth, tokenTtl } from '../config.js';
+
+const lines = [];
+const check = (label, cond, extra) =>
+  lines.push((cond ? 'OK   ' : 'FAIL ') + label + (extra ? ' -> ' + extra : ''));
+
+// seedToken, mirroring background.js. Kept here rather than imported because
+// importing background.js would register its webRequest listeners.
+function seedToken(code, auth) {
+  const parts = code.split(MANUAL_TOKEN_LINE);
+  if (parts.length !== 2) return { code, seeded: false };
+  const jwt = auth.replace(/^Bearer\s+/i, '');
+  return {
+    code: parts[0] + 'const MANUAL_TOKEN = ' + JSON.stringify(jwt) + ';' + parts[1],
+    seeded: true,
+  };
+}
+
+const b64 = (o) => btoa(JSON.stringify(o)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const jwtWith = (claims) => b64({ alg: 'RS256' }) + '.' + b64(claims) + '.sig';
+const now = () => Math.floor(Date.now() / 1000);
+const GOOD = jwtWith({ typ: 'Bearer', exp: now() + 3600 });
+
+// ── token validation ─────────────────────────────────────────────────────
+// These mirror usableAuth() in the generated scripts, so the extension can
+// never seed a token the script itself would have thrown out.
+check('accepts a fresh Bearer token', usableAuth('Bearer ' + GOOD) === 'Bearer ' + GOOD);
+check('rejects one expiring inside the TTL floor',
+      usableAuth('Bearer ' + jwtWith({ typ: 'Bearer', exp: now() + 10 })) === null);
+check('rejects an already-expired one',
+      usableAuth('Bearer ' + jwtWith({ typ: 'Bearer', exp: now() - 10 })) === null);
+check('rejects a refresh token (typ != Bearer)',
+      usableAuth('Bearer ' + jwtWith({ typ: 'Refresh', exp: now() + 3600 })) === null);
+check('rejects a token with no exp',
+      usableAuth('Bearer ' + jwtWith({ typ: 'Bearer' })) === null);
+check('rejects a bare token with no scheme', usableAuth(GOOD) === null);
+check('rejects junk', usableAuth('Bearer not-a-jwt') === null);
+check('rejects empty', usableAuth('') === null);
+check('normalises the scheme casing', usableAuth('bearer ' + GOOD) === 'Bearer ' + GOOD);
+check('ttl is roughly right', Math.abs(tokenTtl('Bearer ' + GOOD) - 3600) <= 2,
+      String(tokenTtl('Bearer ' + GOOD)));
+
+// ── seeding is a no-op unless it is unambiguous ──────────────────────────
+check('no MANUAL_TOKEN line -> untouched', seedToken('console.log(1)', 'Bearer x').seeded === false);
+check('two MANUAL_TOKEN lines -> untouched (refuses to guess)',
+      seedToken(MANUAL_TOKEN_LINE + '\n' + MANUAL_TOKEN_LINE, 'Bearer x').seeded === false);
+
+// ── every real generated script ──────────────────────────────────────────
+// Discovered from the directory index, not a baked-in list, so a newly
+// generated script is covered without editing this file.
+const DIR = '../../journey-cloner/console_scripts/';
+let names = [];
+try {
+  const html = await (await fetch(DIR)).text();
+  names = [...html.matchAll(/href="([^"]+\.js)"/g)]
+    .map((m) => decodeURIComponent(m[1].split('/').pop()));
+} catch (e) {
+  check('could list console_scripts/', false, e.message);
+}
+check('found generated scripts to check', names.length > 0, names.length + ' files');
+
+let seeded = 0;
+const problems = [];
+for (const name of names) {
+  const code = await (await fetch(DIR + encodeURIComponent(name))).text();
+  const r = seedToken(code, 'Bearer ' + GOOD);
+  if (r.seeded) {
+    seeded++;
+    if (r.code.split(GOOD).length !== 2) problems.push(name + ': token not present exactly once');
+  }
+  // A seeded script must still be valid JS — this is the whole risk of editing
+  // someone else's generated source.
+  try { new Function(r.code); } catch (e) { problems.push(name + ': ' + e.message); }
+}
+check('every script still parses after seeding', problems.length === 0,
+      problems.slice(0, 3).join(' | '));
+check('most scripts expose the MANUAL_TOKEN knob', names.length > 0 && seeded / names.length > 0.5,
+      seeded + '/' + names.length + ' seeded');
+
+document.getElementById('out').textContent = lines.join('\n');
+</script>

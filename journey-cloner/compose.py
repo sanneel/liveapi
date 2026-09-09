@@ -1417,7 +1417,13 @@ JS_TEMPLATE = r'''// Composed journey — generated @GENERATED_AT@
 
   function decodeJwt(t){ try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); } catch(e){ return null; } }
   function usableAuth(v){ if(!v || !/^Bearer\s+\S+/i.test(v)) return null; const p=decodeJwt(v.replace(/^Bearer\s+/i,'')); if(!p||p.typ!=='Bearer') return null; return 'Bearer '+v.replace(/^Bearer\s+/i,''); }
-  function obtainAuth(){ return new Promise((resolve,reject)=>{
+  // Optional: the Script Runner extension (extension/) seeds this from the
+  // token it reads off the backoffice's own traffic, so the script never has to
+  // wait for the page to issue a request. Left empty, auto-capture runs as before.
+  const MANUAL_TOKEN = '';
+  function obtainAuth(){
+    if (MANUAL_TOKEN.trim()) { const a=usableAuth('Bearer '+MANUAL_TOKEN.trim().replace(/^Bearer\s+/i,'')); if(!a) throw new Error('MANUAL_TOKEN is not a valid unexpired access token (typ must be "Bearer").'); return Promise.resolve(a); }
+    return new Promise((resolve,reject)=>{
     let settled=false; const of=window.fetch; const os=XMLHttpRequest.prototype.setRequestHeader;
     const cleanup=()=>{ window.fetch=of; XMLHttpRequest.prototype.setRequestHeader=os; };
     const consider=(v)=>{ const a=usableAuth(v); if(a&&!settled){ settled=true; cleanup(); clearTimeout(t); console.log('%cToken captured.','color:#22c55e;font-weight:bold'); resolve(a); } };
@@ -1471,7 +1477,13 @@ BATCH_JS_TEMPLATE = r'''// Composed CAMPAIGN — @COUNT@ journeys, generated @GE
 
   function decodeJwt(t){ try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); } catch(e){ return null; } }
   function usableAuth(v){ if(!v || !/^Bearer\s+\S+/i.test(v)) return null; const p=decodeJwt(v.replace(/^Bearer\s+/i,'')); if(!p||p.typ!=='Bearer') return null; return 'Bearer '+v.replace(/^Bearer\s+/i,''); }
-  function obtainAuth(){ return new Promise((resolve,reject)=>{
+  // Optional: the Script Runner extension (extension/) seeds this from the
+  // token it reads off the backoffice's own traffic, so the script never has to
+  // wait for the page to issue a request. Left empty, auto-capture runs as before.
+  const MANUAL_TOKEN = '';
+  function obtainAuth(){
+    if (MANUAL_TOKEN.trim()) { const a=usableAuth('Bearer '+MANUAL_TOKEN.trim().replace(/^Bearer\s+/i,'')); if(!a) throw new Error('MANUAL_TOKEN is not a valid unexpired access token (typ must be "Bearer").'); return Promise.resolve(a); }
+    return new Promise((resolve,reject)=>{
     let settled=false; const of=window.fetch; const os=XMLHttpRequest.prototype.setRequestHeader;
     const cleanup=()=>{ window.fetch=of; XMLHttpRequest.prototype.setRequestHeader=os; };
     const consider=(v)=>{ const a=usableAuth(v); if(a&&!settled){ settled=true; cleanup(); clearTimeout(t); console.log('%cToken captured.','color:#22c55e;font-weight:bold'); resolve(a); } };

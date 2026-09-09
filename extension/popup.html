@@ -1,0 +1,38 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Script Runner</title>
+<link rel="stylesheet" href="popup.css">
+
+<header>
+  <h1>Script Runner</h1>
+  <div id="token" class="pill">checking…</div>
+</header>
+
+<section id="queue-section">
+  <h2>Queued</h2>
+  <ul id="queue"></ul>
+  <p id="queue-empty" class="empty">
+    Nothing queued. In the CRM, generate a script and press
+    <b>Run in backoffice</b>.
+  </p>
+</section>
+
+<section id="run-section" hidden>
+  <h2>
+    <span id="run-name"></span>
+    <span id="run-status" class="pill"></span>
+  </h2>
+  <div id="ids" class="ids" hidden></div>
+  <pre id="log" aria-live="polite"></pre>
+  <div class="row">
+    <button id="clear" type="button">Clear</button>
+    <label class="tail"><input id="tail" type="checkbox" checked> Follow</label>
+  </div>
+</section>
+
+<footer>
+  <span id="err" class="err"></span>
+  <a id="opts" href="#">Settings</a>
+</footer>
+
+<script type="module" src="popup.js"></script>

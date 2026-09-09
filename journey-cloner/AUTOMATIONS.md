@@ -49,6 +49,31 @@ Two consequences worth internalising:
 Where output lands: `console_scripts/<name>_console.js`, plus `out/` for
 intermediate JSON when a generator writes one.
 
+### Step 5, without the clipboard
+
+The paste is the one step that is all operator and no automation, and it is the
+step that goes wrong: 650 KB into a console that first wants `allow pasting`,
+then "Waiting for a token — click anything in the backoffice", then reading JRN
+ids out of console scrollback.
+
+`extension/` is a Chrome extension that does that step instead. It puts a **Run
+in backoffice** button next to every **Copy script** in the admin, runs the
+script in a logged-in backoffice tab via `Runtime.evaluate` (the same thing the
+console does), and streams the output into a popup with the created JRN ids
+pulled out.
+
+Nothing above step 5 changes. The generators, templates, substitution and
+verification are untouched, and **Copy script** stays exactly where it was as the
+fallback. The extension makes exactly one edit to a generated script: it fills in
+the `MANUAL_TOKEN` knob every generator already emits, using a token it reads
+passively off the backoffice's own traffic — so the "click anything" step
+disappears. Exact line, single occurrence, or no edit at all; if that line ever
+gets reformatted the script simply captures its own token as before.
+
+See `../extension/README.md` for the mechanism and the tradeoffs, and
+`../scripts/test_script_runner.py` for the contract that keeps the Python and JS
+sides of the `MANUAL_TOKEN` line in step.
+
 ---
 
 ## Casino

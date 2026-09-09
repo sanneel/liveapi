@@ -1,0 +1,26 @@
+/* Styling for the injected Run button. Borrows the admin's own .btn shape but
+   stays namespaced, so a redesign of the CRM cannot silently restyle it. */
+.jb-runner-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: 10px;
+}
+
+.jb-runner-status {
+  font-size: 12px;
+  line-height: 1.3;
+  max-width: 260px;
+}
+.jb-runner-status:empty { display: none; }
+.jb-runner-info { color: #6b7280; }
+.jb-runner-ok { color: #16a34a; }
+.jb-runner-err { color: #dc2626; }
+
+/* Copy script stays, but stops being the obvious thing to click. */
+button.jb-runner-demoted {
+  background: transparent !important;
+  color: #6b7280 !important;
+  border: 1px solid #d7dae0 !important;
+  box-shadow: none !important;
+}
