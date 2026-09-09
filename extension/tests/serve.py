@@ -2,9 +2,9 @@
 """Serve the repo root so the extension's browser tests can fetch their inputs.
 
 The tests are HTML pages rather than Python because what they check is JS
-behaviour: that content.js finds the admin's script cards, that seeding a token
-leaves every generated script parseable, and that a %c-styled console line comes
-back out readable. There is no JS runtime on the deploy box, so they run in a
+behaviour: that content.js and run_code.js find the admin's script cards, that
+seeding a token leaves every generated script parseable, and that a %c-styled
+console line comes back out readable. There is no JS runtime on the deploy box, so they run in a
 browser.
 
     python3 extension/tests/serve.py
@@ -26,6 +26,9 @@ PAGES = [
     "seed.test.html",
     "format.test.html",
     "generator.test.html",
+    # Not extension code, but the same feature: the CRM-side button that mints
+    # a run code so the operator never carries 650 KB through the clipboard.
+    "run_code.test.html",
 ]
 
 

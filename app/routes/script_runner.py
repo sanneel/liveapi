@@ -1,9 +1,11 @@
 """Script Runner extension — distribution + the install page.
 
-  GET /script-runner/update.xml         update manifest        PUBLIC
-  GET /script-runner/runner.crx         signed extension       PUBLIC
-  GET /script-runner/script-runner.zip  unsigned, for unpacked PUBLIC
-  GET /admin/tools/script-runner        install instructions   editor
+  GET  /script-runner/update.xml         update manifest        PUBLIC
+  GET  /script-runner/runner.crx         signed extension       PUBLIC
+  GET  /script-runner/script-runner.zip  unsigned, for unpacked PUBLIC
+  GET  /admin/tools/script-runner        install instructions   editor
+  POST /admin/tools/script-runner/job    mint a run code        editor
+  GET  /run/{code}                       hand over the script   PUBLIC
 
 The three file routes are deliberately unauthenticated: Chrome fetches an
 update manifest and a CRX with no session and no way to log in, so a
@@ -21,15 +23,18 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from urllib.parse import quote, urlsplit
 
-from fastapi import APIRouter, Depends, Request, Response
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Body, Depends, Request, Response
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from ..auth.dependencies import require_role
 from ..config import get_settings
 from ..logging_config import get_logger
+from ..middleware import limiter
 from ..models import User
+from ..services import run_jobs
 
 logger = get_logger("app.routes.script_runner")
 
@@ -41,8 +46,47 @@ router = APIRouter()
 
 # Chrome's own content types. It is forgiving about the CRX one, but an
 # update manifest served as text/html is not parsed at all.
+# The loader the operator saves once, as a DevTools Snippet or a bookmarklet.
+# It is fixed: the only thing that changes per run is the code typed into the
+# prompt, which is what makes saving it worthwhile.
+LOADER_TEMPLATE = """\
+(async () => {
+  const CRM = '@CRM@';
+  const code = prompt('Run code from the CRM:');
+  if (!code) return;
+  const r = await fetch(CRM + '/run/' + encodeURIComponent(code.trim().toUpperCase()));
+  const src = await r.text();
+  if (!r.ok) { console.error(src.trim()); return; }
+  console.log('%cLoaded ' + src.length.toLocaleString() + ' bytes. Running...', 'color:#22c55e;font-weight:bold');
+  try {
+    (0, eval)(src);
+  } catch (e) {
+    console.error('Could not run it: ' + e.message);
+    console.error('If that mentions Content Security Policy, this page forbids eval. '
+      + 'Fall back to Copy script in the CRM and paste it here.');
+  }
+})();
+"""
+
 CRX_TYPE = "application/x-chrome-extension"
 XML_TYPE = "application/xml"
+
+# The loader runs on a page served by the backoffice, so the response has to be
+# readable cross-origin. Echo the Origin only when it is the backoffice — never
+# "*", which would let any site read a script off a leaked code.
+ALLOWED_ORIGIN_SUFFIX = ".rea-backoffice.gr8.tech"
+
+
+def _cors(origin: str | None) -> dict:
+    if not origin:
+        return {}
+    try:
+        host = urlsplit(origin).hostname or ""
+    except ValueError:
+        return {}
+    if not host.endswith(ALLOWED_ORIGIN_SUFFIX):
+        return {}
+    return {"Access-Control-Allow-Origin": origin, "Vary": "Origin"}
 
 
 def _meta() -> dict | None:
@@ -134,6 +178,14 @@ def install_page(request: Request, user: User = Depends(require_role("editor")))
             indent=2,
         )
 
+    loader = LOADER_TEMPLATE.replace("@CRM@", base)
+    # A bookmarklet has to be one line, and every character that could end the
+    # href needs escaping — build it here rather than in the template.
+    bookmarklet = "javascript:" + quote(
+        " ".join(line.strip() for line in loader.splitlines() if line.strip()),
+        safe="",
+    )
+
     return templates.TemplateResponse(
         "script_runner.html",
         {
@@ -143,7 +195,70 @@ def install_page(request: Request, user: User = Depends(require_role("editor")))
             "meta": meta,
             "policy": policy,
             "forcelist": forcelist,
+            "loader": loader,
+            "bookmarklet": bookmarklet,
+            # From the service, so the page cannot drift from what it enforces.
+            "ttl_minutes": run_jobs.TTL_SECONDS // 60,
+            "max_reads": run_jobs.MAX_READS,
             "base": base,
             "crm_origin_pattern": base + "/*",
         },
     )
+
+
+@router.post("/admin/tools/script-runner/job")
+@limiter.limit("60/minute")
+def mint_run_code(
+    request: Request,
+    body: dict = Body(...),
+    user: User = Depends(require_role("editor")),
+) -> JSONResponse:
+    """Store the script the page is already showing, and return a run code.
+
+    Called by /static/js/run_code.js from the admin page, which has the script
+    text in the DOM already. Doing it this way means none of the ~10 view
+    functions that render a console-script card have to change.
+    """
+    try:
+        job = run_jobs.create(
+            name=str(body.get("name") or "console script"),
+            text=body.get("text") or "",
+            created_by=user.username,
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+    logger.info("run code minted for %s by %s", job.name, user.username)
+    return JSONResponse({
+        "code": job.code,
+        "expires_in": job.expires_in,
+        "reads_left": run_jobs.MAX_READS,
+        "bytes": len(job.text),
+    })
+
+
+@router.get("/run/{code}")
+@limiter.limit("20/minute")
+def hand_over_script(code: str, request: Request) -> Response:
+    """Hand the script to the loader running in the backoffice console.
+
+    PUBLIC, and it has to be: the fetch comes from a page on the backoffice
+    origin, which carries no CRM session because the cookie is SameSite=lax.
+    The code is the credential — 31^10, minutes to live, a few reads — and the
+    rate limit above is what makes guessing pointless rather than merely slow.
+    """
+    headers = _cors(request.headers.get("origin"))
+    job = run_jobs.claim(code)
+    if job is None:
+        # Deliberately identical for expired, spent and never-existed: a
+        # guesser learns nothing about which codes are real.
+        return Response(
+            "// No such run code, or it has expired. Generate a new one in the CRM.\n",
+            status_code=404,
+            media_type="application/javascript",
+            headers=headers,
+        )
+
+    logger.info("run code redeemed: %s (%s)", job.name, job.created_by)
+    headers["Cache-Control"] = "no-store"
+    return Response(job.text, media_type="application/javascript", headers=headers)

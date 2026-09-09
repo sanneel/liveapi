@@ -272,6 +272,20 @@
   document.body.addEventListener('htmx:afterSwap', () => { if (window.lucide) lucide.createIcons(); });
 </script>
 
+<!-- "Get run code" on every console-script card. See app/routes/script_runner.py. -->
+<script src="/static/js/run_code.js" defer></script>
+<style>
+  .jb-run-wrap { display:inline-flex; align-items:center; gap:10px; margin-right:10px; }
+  .jb-run-out { font-size:12px; display:inline-flex; align-items:center; gap:8px; }
+  .jb-run-out:empty { display:none; }
+  .jb-run-err { color:#dc2626; max-width:260px; }
+  .jb-run-code { font-family:ui-monospace,Menlo,monospace; font-size:15px; font-weight:600;
+                 letter-spacing:.08em; padding:3px 9px; border-radius:6px; cursor:pointer;
+                 background:#16a34a1a; color:#16a34a; border:1px solid #16a34a44; }
+  .jb-run-copied { background:#16a34a33; }
+  .jb-run-note { color:#6b7280; }
+</style>
+
 {% block scripts %}{% endblock %}
 </body>
 </html>

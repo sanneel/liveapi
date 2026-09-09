@@ -1,0 +1,221 @@
+<!doctype html><meta charset=utf-8><title>run code button tests</title>
+<h1>CRM "Get run code" button</h1>
+<p>Run via <code>python3 extension/tests/serve.py</code>. Every line must read OK.</p>
+<div id="root">
+  <section class="card">
+    <div class="card-head">
+      <div><h2 class="card-title">Console Script Ready</h2>
+      <p class="card-sub">gow_combined_console.js</p></div>
+      <button type="button" id="gow-copy" class="btn primary">Copy script</button>
+    </div>
+    <div class="card-pad">
+      <textarea id="console-script-text" readonly>(async()=>{ /* payload */ })()</textarea>
+    </div>
+  </section>
+  <section class="card">
+    <div class="card-head"><div><p class="card-sub">nc_discount_console.js</p></div></div>
+    <div class="card-pad"><textarea id="nc-script-text" readonly>NC</textarea></div>
+  </section>
+</div>
+<pre id="out">running…</pre>
+
+<script>
+// Stub the endpoint. Records calls; first card succeeds, second fails, so both
+// branches are exercised.
+window.__calls = [];
+window.fetch = function (url, opts) {
+  window.__calls.push({ url: url, opts: opts, body: JSON.parse(opts.body) });
+  var n = window.__calls.length;
+  if (n === 2) {
+    return Promise.resolve({ ok: false, status: 400,
+      json: function () { return Promise.resolve({ error: 'script is too large to hand over' }); } });
+  }
+  return Promise.resolve({ ok: true, status: 200,
+    json: function () { return Promise.resolve({ code: 'BT383YRAHA', expires_in: 899, reads_left: 3, bytes: 42 }); } });
+};
+</script>
+<script>/* Adds "Get run code" to every console-script card in the admin.
+ *
+ * 96% of an emitted script is embedded JSON — gow_combined is 651 KB of which
+ * 621 KB is payload. So instead of the operator carrying that through the
+ * clipboard, the page hands the text back to the CRM, gets a short code, and
+ * the operator runs a fixed five-line loader that fetches it. The loader never
+ * changes, so it can live in a saved DevTools Snippet or a bookmarklet — and
+ * neither of those is touched by Chrome's extension policy.
+ *
+ * Auto-wires by scanning for the cards the admin already renders, so none of
+ * the ~10 view functions that produce a console script had to change. Same
+ * detection the extension's content script uses.
+ */
+(function () {
+  'use strict';
+
+  var SCRIPT_AREA = 'textarea[id$="-script-text"]';
+  var MARK = 'data-jbruncode';
+
+  function nameFor(area, card) {
+    var sub = card && card.querySelector('.card-head .card-sub');
+    var text = sub && sub.textContent.trim();
+    return text || area.id.replace(/-script-text$/, '') || 'console script';
+  }
+
+  function attach(area) {
+    if (area.getAttribute(MARK)) return;
+    area.setAttribute(MARK, '1');
+
+    var card = area.closest('section.card') || area.closest('.card') || area.parentElement;
+    var head = card && card.querySelector('.card-head');
+    if (!head) return;
+
+    var wrap = document.createElement('span');
+    wrap.className = 'jb-run-wrap';
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn primary jb-run-btn';
+    btn.textContent = 'Get run code';
+    btn.title = 'Hand this script to the CRM and get a code to run it with';
+
+    var out = document.createElement('span');
+    out.className = 'jb-run-out';
+
+    btn.addEventListener('click', function () {
+      btn.disabled = true;
+      out.textContent = 'Working…';
+      out.className = 'jb-run-out';
+
+      fetch('/admin/tools/script-runner/job', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ name: nameFor(area, card), text: area.value }),
+      })
+        .then(function (r) {
+          return r.json().then(function (data) {
+            if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+            return data;
+          });
+        })
+        .then(function (data) {
+          out.textContent = '';
+          out.className = 'jb-run-out jb-run-ok';
+
+          var code = document.createElement('code');
+          code.className = 'jb-run-code';
+          code.textContent = data.code;
+          code.title = 'Click to copy';
+          code.addEventListener('click', function () {
+            if (navigator.clipboard) navigator.clipboard.writeText(data.code);
+            code.classList.add('jb-run-copied');
+            setTimeout(function () { code.classList.remove('jb-run-copied'); }, 1200);
+          });
+
+          var note = document.createElement('span');
+          var mins = Math.max(1, Math.round(data.expires_in / 60));
+          note.className = 'jb-run-note';
+          note.textContent = 'run it within ' + mins + ' min';
+
+          out.appendChild(code);
+          out.appendChild(note);
+        })
+        .catch(function (e) {
+          out.textContent = e.message || String(e);
+          out.className = 'jb-run-out jb-run-err';
+        })
+        .then(function () { btn.disabled = false; });
+    });
+
+    wrap.appendChild(btn);
+    wrap.appendChild(out);
+
+    // Left of "Copy script", which stays as the fallback.
+    var copy = head.querySelector('button[id$="-copy"]');
+    if (copy) copy.parentElement.insertBefore(wrap, copy);
+    else head.appendChild(wrap);
+  }
+
+  function scan(root) {
+    var scope = root && root.querySelectorAll ? root : document;
+    var found = scope.querySelectorAll(SCRIPT_AREA);
+    for (var i = 0; i < found.length; i++) attach(found[i]);
+  }
+
+  function start() {
+    scan(document);
+    // Script cards arrive with htmx swaps and after form posts.
+    document.addEventListener('htmx:afterSwap', function (e) { scan(e.target); });
+    new MutationObserver(function (records) {
+      records.forEach(function (r) {
+        Array.prototype.forEach.call(r.addedNodes, function (node) {
+          if (node.nodeType !== 1) return;
+          if (node.matches && node.matches(SCRIPT_AREA)) attach(node);
+          else scan(node);
+        });
+      });
+    }).observe(document.documentElement, { childList: true, subtree: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+<script>
+(async () => {
+  const lines = [];
+  const check = (l, c, e) => lines.push((c ? 'OK   ' : 'FAIL ') + l + (e ? ' -> ' + e : ''));
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+  await sleep(40);
+
+  const buttons = () => [...document.querySelectorAll('button.jb-run-btn')];
+  check('one button per script card', buttons().length === 2, buttons().length + ' found');
+
+  const head = document.querySelector('.card-head');
+  const ids = [...head.querySelectorAll('button')].map(b => b.id || b.className.split(' ').pop());
+  check('inserted before Copy script', ids.indexOf('jb-run-btn') < ids.indexOf('gow-copy'), ids.join(','));
+  check('Copy script survives', !!document.getElementById('gow-copy'));
+
+  // success path
+  buttons()[0].click();
+  await sleep(40);
+  const call = window.__calls[0];
+  check('POSTs to the mint endpoint', call.url === '/admin/tools/script-runner/job', call.url);
+  check('sends same-origin credentials', call.opts.credentials === 'same-origin');
+  check('sends the card name', call.body.name === 'gow_combined_console.js', call.body.name);
+  check('sends the textarea text', call.body.text === '(async()=>{ /* payload */ })()', JSON.stringify(call.body.text));
+  const code = document.querySelector('.jb-run-code');
+  check('renders the code', !!code && code.textContent === 'BT383YRAHA', code && code.textContent);
+  check('renders the expiry hint', /within 15 min/.test(document.querySelector('.jb-run-note').textContent),
+        document.querySelector('.jb-run-note').textContent);
+  check('button re-enabled after success', buttons()[0].disabled === false);
+
+  // failure path — the server's message must reach the operator, not be swallowed
+  buttons()[1].click();
+  await sleep(40);
+  const err = document.querySelectorAll('.jb-run-out')[1];
+  check('shows the server error verbatim', err.textContent === 'script is too large to hand over', err.textContent);
+  check('error styled as an error', err.className.indexOf('jb-run-err') >= 0, err.className);
+  check('button re-enabled after failure', buttons()[1].disabled === false);
+
+  // card with no Copy button still wired
+  check('card without Copy still wired',
+        !!document.querySelectorAll('section.card')[1].querySelector('button.jb-run-btn'));
+
+  // late card via observer
+  const late = document.createElement('section');
+  late.className = 'card';
+  late.innerHTML = '<div class="card-head"><div></div></div><textarea id="rnd-script-text">L</textarea>';
+  document.getElementById('root').append(late);
+  await sleep(60);
+  check('observer wires a late card', !!late.querySelector('button.jb-run-btn'));
+
+  // idempotent
+  document.dispatchEvent(new CustomEvent('htmx:afterSwap', { detail: {} }));
+  await sleep(40);
+  check('no duplicates after re-scan', buttons().length === 3, buttons().length + ' buttons');
+
+  document.getElementById('out').textContent = lines.join('\n');
+})();
+</script>

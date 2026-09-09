@@ -27,10 +27,71 @@
   </section>
   {% else %}
 
+  <section class="card" style="border-color:#16a34a">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">Works today — no install, no IT</h2>
+        <p class="card-sub">Set up once per laptop, then a code per run.</p>
+      </div>
+      <button type="button" id="loader-copy" class="btn primary">Copy loader</button>
+    </div>
+    <div class="card-pad" style="display:flex; flex-direction:column; gap:14px">
+      <p class="help" style="margin:0">
+        96% of an emitted script is embedded JSON — the big GOW one is 651 KB of
+        which 621 KB is payload. So don't carry it through the clipboard. Press
+        <b>Get run code</b> on any script card, then run this loader and type the
+        code. The loader never changes, so save it once and you are done with
+        pasting scripts. Chrome's extension policy does not apply to snippets or
+        bookmarklets.
+      </p>
+
+      <div>
+        <p class="help" style="margin:0 0 6px"><b>Set up once</b> — as a DevTools Snippet:</p>
+        <ol class="help" style="margin:0; padding-left:18px; line-height:1.8">
+          <li>On a backoffice tab: <span class="mono">F12</span> → <b>Sources</b> → <b>Snippets</b> → <b>New snippet</b>.</li>
+          <li>Paste the loader (button above) and save with <span class="mono">Cmd-S</span>. Name it <b>Jugabet Runner</b>.</li>
+        </ol>
+      </div>
+      <textarea id="loader-text" class="input mono" readonly rows="15" spellcheck="false" style="font-size:12px">{{ loader }}</textarea>
+
+      <div>
+        <p class="help" style="margin:0 0 6px"><b>Every run after that:</b></p>
+        <ol class="help" style="margin:0; padding-left:18px; line-height:1.8">
+          <li>In the CRM, press <b>Get run code</b> on the script card and note the code.</li>
+          <li>On the backoffice tab: <span class="mono">F12</span> → <b>Sources</b> → <b>Snippets</b> → double-click <b>Jugabet Runner</b>.</li>
+          <li>Type the code into the prompt. Watch the console for the created <span class="mono">JRN-…</span> ids.</li>
+        </ol>
+      </div>
+
+      <div style="border-left:3px solid var(--line,#e5e7eb); padding-left:12px">
+        <p class="help" style="margin:0 0 8px">
+          <b>Try this first — it's one click instead of F12.</b> Drag this link to
+          your bookmarks bar, then click it while on a backoffice tab:
+        </p>
+        <p style="margin:0">
+          <a class="btn" href="{{ bookmarklet }}" onclick="return false" title="Drag me to the bookmarks bar">Jugabet Runner</a>
+        </p>
+        <p class="help" style="margin:8px 0 0">
+          Whether it works depends on the backoffice's Content Security Policy:
+          a bookmarklet is allowed to run, but the <span class="mono">eval</span>
+          inside it may not be. If the console says so, use the Snippet instead —
+          DevTools is exempt, which is why pasting works today. Nothing is lost
+          by testing it.
+        </p>
+      </div>
+
+      <p class="help" style="margin:0">
+        A code is good for {{ ttl_minutes }} minutes and {{ max_reads }} runs, then it dies. The
+        script never leaves the CRM until a code is redeemed, and
+        <b>Copy script</b> is still on every card as the fallback.
+      </p>
+    </div>
+  </section>
+
   <section class="card" style="border-color:#f0613c">
     <div class="card-head">
       <div>
-        <h2 class="card-title">Chrome policy blocks installing this yourself</h2>
+        <h2 class="card-title">The extension route — blocked until IT acts</h2>
         <p class="card-sub">Confirmed on a company laptop — IT has to push it.</p>
       </div>
     </div>
@@ -61,7 +122,7 @@
   <section class="card">
     <div class="card-head">
       <div>
-        <h2 class="card-title">Option 1 — ask IT to install it</h2>
+        <h2 class="card-title">Extension, option 1 — ask IT to install it</h2>
         <p class="card-sub">The only route on a managed laptop. One ticket, then nothing for operators to do, ever.</p>
       </div>
       <button type="button" id="policy-copy" class="btn primary">Copy line</button>
@@ -123,7 +184,7 @@
   <section class="card">
     <div class="card-head">
       <div>
-        <h2 class="card-title">Option 2 — install it yourself</h2>
+        <h2 class="card-title">Extension, option 2 — install it yourself</h2>
         <p class="card-sub">Only on an unmanaged Chrome. Blocked by policy on company laptops — see above.</p>
       </div>
       <a href="/script-runner/script-runner.zip" class="btn primary">Download ZIP</a>
@@ -190,7 +251,8 @@
 
 <script>
   (function () {
-    var pairs = [['policy-copy', 'policy-text'], ['settings-copy', 'settings-text']];
+    var pairs = [['policy-copy', 'policy-text'], ['settings-copy', 'settings-text'],
+                 ['loader-copy', 'loader-text']];
     pairs.forEach(function (pair) {
     var btn = document.getElementById(pair[0]);
     var area = document.getElementById(pair[1]);

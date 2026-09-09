@@ -202,7 +202,8 @@ check("Jinja tags balanced", not tag_errors and not stack,
 
 # Every name the template reads must be in the view's context.
 CONTEXT = {"request", "current_user", "active", "meta", "policy", "forcelist",
-           "base", "crm_origin_pattern"}
+           "base", "crm_origin_pattern", "loader", "bookmarklet",
+           "ttl_minutes", "max_reads"}
 used = set(re.findall(r"\{\{\s*(\w+)", tpl))
 check("template uses only names the view passes", used <= CONTEXT,
       f"missing from context: {sorted(used - CONTEXT)}")
@@ -272,6 +273,85 @@ else:
           ", ".join(n for n in shipped if n.startswith("tests"))[:60])
     check("ZIP contains the manifest", "manifest.json" in shipped)
 
+
+# ── run codes ──────────────────────────────────────────────────────────────
+# The job store is what makes the no-install route possible: the page hands the
+# script back, the operator gets a code, and a fixed five-line loader fetches it.
+# GET /run/<code> is PUBLIC by necessity, so the code IS the credential and its
+# limits are security properties, not conveniences.
+print("\n── run codes")
+
+import importlib.util  # noqa: E402
+
+_spec = importlib.util.spec_from_file_location(
+    "run_jobs", REPO / "app" / "services" / "run_jobs.py")
+run_jobs = importlib.util.module_from_spec(_spec)
+sys.modules["run_jobs"] = _spec.loader and run_jobs
+_spec.loader.exec_module(run_jobs)
+
+SCRIPT = "(async () => { console.log(1); })();"
+
+job = run_jobs.create("gow_console.js", SCRIPT, "sandro")
+check("a code is minted", bool(job.code))
+check("code is long enough to be unguessable",
+      len(job.code) >= 10 and 31 ** len(job.code) > 10 ** 14,
+      f"len={len(job.code)}, alphabet={len(run_jobs.ALPHABET)}")
+check("code alphabet excludes look-alike characters",
+      not (set("O0I1L") & set(run_jobs.ALPHABET)),
+      "".join(sorted(set("O0I1L") & set(run_jobs.ALPHABET))))
+
+check("exact code claims the script", (run_jobs.claim(job.code) or {}) and
+      run_jobs.claim(job.code).text == SCRIPT)
+# Codes get read off a screen and typed.
+spaced = job.code[:5].lower() + "-" + job.code[5:].lower()
+check("claim tolerates case and separators", run_jobs.claim(spaced) is not None, spaced)
+
+check("unknown code returns nothing", run_jobs.claim("ZZZZZZZZZZ") is None)
+check("empty code returns nothing", run_jobs.claim("") is None and run_jobs.claim(None) is None)
+
+# Reads are capped so a leaked code is not a standing grant.
+spent = run_jobs.create("n.js", SCRIPT, "u")
+for _ in range(run_jobs.MAX_READS):
+    run_jobs.claim(spent.code)
+check(f"code dies after MAX_READS ({run_jobs.MAX_READS}) reads",
+      run_jobs.claim(spent.code) is None)
+
+for bad, label in [("an empty", ""), ("a whitespace-only", "   "), ("a None", None)]:
+    try:
+        run_jobs.create("n.js", label, "u")
+        check(f"refuses {bad} script", False, "accepted it")
+    except (ValueError, TypeError, AttributeError):
+        check(f"refuses {bad} script", True)
+try:
+    run_jobs.create("n.js", "x" * (run_jobs.MAX_SCRIPT_BYTES + 1), "u")
+    check("refuses an oversize script", False, "accepted it")
+except ValueError:
+    check("refuses an oversize script", True)
+
+# A runaway page must not be able to pin hundreds of 650 KB scripts in memory.
+for i in range(run_jobs.MAX_JOBS + 10):
+    run_jobs.create(f"j{i}.js", SCRIPT, "u")
+check("outstanding jobs are capped",
+      run_jobs.stats()["outstanding"] <= run_jobs.MAX_JOBS, str(run_jobs.stats()))
+
+run_jobs.TTL_SECONDS = 0
+stale = run_jobs.create("t.js", SCRIPT, "u")
+check("code expires by TTL", run_jobs.claim(stale.code) is None)
+
+# ── CORS on the public handover ────────────────────────────────────────────
+print("\n── CORS on /run/{code}")
+
+routes_src = (REPO / "app" / "routes" / "script_runner.py").read_text(encoding="utf-8")
+check("never sends a wildcard origin", '"Access-Control-Allow-Origin": "*"' not in routes_src)
+check("allows only the backoffice origin",
+      'ALLOWED_ORIGIN_SUFFIX = ".rea-backoffice.gr8.tech"' in routes_src)
+check("varies on Origin", '"Vary": "Origin"' in routes_src)
+check("both public endpoints are rate limited",
+      routes_src.count("@limiter.limit") >= 2,
+      f'{routes_src.count("@limiter.limit")} limited')
+# A guesser must not be able to tell a spent code from a nonexistent one.
+check("missing and expired codes are indistinguishable",
+      "Deliberately identical" in routes_src)
 
 print()
 if FAILURES:
