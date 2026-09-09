@@ -135,6 +135,21 @@ check(js.index("await ensureToken()") < js.index("await pickFile("),
 check("HTTP 401|HTTP 403|No token in" in js, "a refused token stops the run instead of half-making drafts")
 check("--only ' + left.join(',')" in js, "it prints the rerun command for whatever it did not create")
 
+section("naming a source")
+check(G.source_kind("JRN-0-685173") == "journey", "a JRN id is recognised")
+check(G.source_kind("693903") == "draft", "a numeric draft id is recognised")
+check(G.source_kind("JRN-0-685173 ") == "journey", "surrounding space does not matter")
+for bad in ("", "JRN-685173", "https://…/drafts/693903", "abc", "12"):
+    check(G.source_kind(bad) == "", f"{bad!r} is refused as a source id")
+# A bare number cannot be told from a draft id, so it is taken as one and the
+# 404 at paste time names it. Only the JRN prefix says "journey".
+check(G.source_kind("685173") == "draft", "a bare number is read as a draft id, prefix or nothing")
+check("/journeys/' : '/journey-drafts/'" in js, "the script picks the endpoint from the id it was given")
+check("if (body.isImmediatelyAfterPublish) body.startAt = null" in js,
+      "a running journey's start time does not travel into the new draft")
+check("startAt" in G.POST_KEYS and "status" not in G.POST_KEYS and "version" not in G.POST_KEYS,
+      "the posted keys are the ones the backoffice posts, not everything a journey read returns")
+
 print()
 if failures:
     print(f"{len(failures)} check(s) failed:")

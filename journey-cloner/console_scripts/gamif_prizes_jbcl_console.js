@@ -1,6 +1,6 @@
-// JBCL gamification prizes — 12 API-triggered draft(s) — generated 2026-09-09 11:41 -03
-// Clones the two source drafts live: money bonus "693903", casino bonus
-// "693908". Per prize it reserves a journey id and a promotion display
+// JBCL gamification prizes — 5 API-triggered draft(s) — generated 2026-09-09 12:07 -03
+// Clones the two source drafts live: money bonus "JRN-0-685173", casino bonus
+// "JRN-0-685183". Per prize it reserves a journey id and a promotion display
 // id, regenerates every internal id, writes the amount (and the rollover, for a
 // casino bonus) into both storages, gives the API node its own webhookId, then
 // creates the draft and saves it. Nothing is published.
@@ -34,9 +34,9 @@
 
   const BASE = apiBase("https://pmi.rea-backoffice.gr8.tech/api/ubo/api/v0/crm/journey-builder/v0");
   const BRAND = "JBCL";
-  const MONEY_SOURCE = "693903";
-  const CASINO_SOURCE = "693908";
-  const PRIZES = [{"group": "cash", "kind": "money", "amount": 90000, "wagering": null, "name": "JBCL | CS&SP | Gamif - money bonus | 90 000", "amountText": "90 000"}, {"group": "cash", "kind": "money", "amount": 120000, "wagering": null, "name": "JBCL | CS&SP | Gamif - money bonus | 120 000", "amountText": "120 000"}, {"group": "cash", "kind": "money", "amount": 150000, "wagering": null, "name": "JBCL | CS&SP | Gamif - money bonus | 150 000", "amountText": "150 000"}, {"group": "1x", "kind": "casino", "amount": 45000, "wagering": 1, "name": "JBCL | CS | Gamif - casino bonus 1x | 45 000", "amountText": "45 000"}, {"group": "1x", "kind": "casino", "amount": 60000, "wagering": 1, "name": "JBCL | CS | Gamif - casino bonus 1x | 60 000", "amountText": "60 000"}, {"group": "3x", "kind": "casino", "amount": 20000, "wagering": 3, "name": "JBCL | CS | Gamif - casino bonus 3x | 20 000", "amountText": "20 000"}, {"group": "3x", "kind": "casino", "amount": 30000, "wagering": 3, "name": "JBCL | CS | Gamif - casino bonus 3x | 30 000", "amountText": "30 000"}, {"group": "5x", "kind": "casino", "amount": 1000, "wagering": 5, "name": "JBCL | CS | Gamif - casino bonus 5x | 1 000", "amountText": "1 000"}, {"group": "5x", "kind": "casino", "amount": 4000, "wagering": 5, "name": "JBCL | CS | Gamif - casino bonus 5x | 4 000", "amountText": "4 000"}, {"group": "5x", "kind": "casino", "amount": 7000, "wagering": 5, "name": "JBCL | CS | Gamif - casino bonus 5x | 7 000", "amountText": "7 000"}, {"group": "5x", "kind": "casino", "amount": 10000, "wagering": 5, "name": "JBCL | CS | Gamif - casino bonus 5x | 10 000", "amountText": "10 000"}, {"group": "5x", "kind": "casino", "amount": 15000, "wagering": 5, "name": "JBCL | CS | Gamif - casino bonus 5x | 15 000", "amountText": "15 000"}];               // [{group, kind, amount, wagering, name, amountText}]
+  const MONEY_SOURCE = "JRN-0-685173";
+  const CASINO_SOURCE = "JRN-0-685183";
+  const PRIZES = [{"group": "5x", "kind": "casino", "amount": 1000, "wagering": 5, "name": "JBCL | CS | Gamif - casino bonus 5x | 1 000", "amountText": "1 000"}, {"group": "5x", "kind": "casino", "amount": 4000, "wagering": 5, "name": "JBCL | CS | Gamif - casino bonus 5x | 4 000", "amountText": "4 000"}, {"group": "5x", "kind": "casino", "amount": 7000, "wagering": 5, "name": "JBCL | CS | Gamif - casino bonus 5x | 7 000", "amountText": "7 000"}, {"group": "5x", "kind": "casino", "amount": 10000, "wagering": 5, "name": "JBCL | CS | Gamif - casino bonus 5x | 10 000", "amountText": "10 000"}, {"group": "5x", "kind": "casino", "amount": 15000, "wagering": 5, "name": "JBCL | CS | Gamif - casino bonus 5x | 15 000", "amountText": "15 000"}];               // [{group, kind, amount, wagering, name, amountText}]
   const POST_KEYS = ["journeyName", "brand", "currencyCodes", "activities", "metadata", "reEntryRule", "timeZoneId", "testControlGroupParameters", "activityEventConversionMetrics", "reservedJourneyId", "journeySource", "isArchived", "isUnlimited", "isImmediatelyAfterPublish", "rawJourneyData", "stopAt", "startAt", "exitCriteriaId"];
   const KEEP_WEBHOOK_ID = false;
   const COPIES = [{"tree": "front", "part": "spa", "files": null}, {"tree": "front", "part": "widget", "files": null}, {"tree": "content", "part": "widgetModulor", "files": ["manifest.json", "content/content-es.json", "content/content-en.json"]}, {"tree": "content", "part": "spa", "files": ["manifest.json", "content/content-es.json", "content/content-en.json", "media/box.png", "media/bonusHeaderImage.png"]}, {"tree": "content", "part": "widget", "files": ["manifest.json", "content/content-es.json", "content/content-en.json", "media/box.png", "media/widgetImgKey.png"]}, {"tree": "content", "part": "cashier", "files": ["manifest.json", "content/content-es.json", "content/content-en.json"]}];               // the six content-tree copies the UI makes
@@ -163,11 +163,18 @@
     if (!id) throw new Error('no promotionDisplayId: ' + t);
     return String(id);
   }
-  async function getDraft(numId, label) {
-    const r = await fetch(BASE + '/journey-drafts/' + numId, { headers: H(), credentials: 'include' });
-    const t = await r.text(); if (!r.ok) throw new Error(label + ' source draft ' + numId + ' HTTP ' + r.status + ' ' + t);
-    const d = parseJsonText(t, label + ' source draft', r.status);
-    if (!d || !Array.isArray(d.activities) || !d.activities.length) throw new Error(label + ' source draft ' + numId + ' has no activities[]');
+  // A source is whatever the operator has to hand: the JRN id the journey list
+  // shows, or the numeric draft id in the editor URL. Both answer with the same
+  // shape, so the rest of the script does not care which it was given.
+  async function getSource(id, label) {
+    const isJrn = /^JRN-/i.test(String(id).trim());
+    const url = BASE + (isJrn ? '/journeys/' : '/journey-drafts/') + String(id).trim();
+    const r = await fetch(url, { headers: H(), credentials: 'include' });
+    const t = await r.text();
+    if (!r.ok) throw new Error(label + ' source ' + id + ' HTTP ' + r.status + ' ' + t.slice(0, 200));
+    const d = parseJsonText(t, label + ' source', r.status);
+    if (!d || !Array.isArray(d.activities) || !d.activities.length) throw new Error(label + ' source ' + id + ' has no activities[]');
+    console.log('    ' + label + ' source ' + id + (isJrn ? ' (' + (d.status || 'journey') + ')' : ' (draft)') + ': ' + d.journeyName);
     return d;
   }
 
@@ -348,12 +355,9 @@
   const ok = [], fail = [];
   try {
     const sources = {};
-    sources.money = await getDraft(MONEY_SOURCE, 'money bonus');
-    console.log('    money source  ' + MONEY_SOURCE + ': ' + sources.money.journeyName);
-    if (PRIZES.some((p) => p.kind === 'casino')) {
-      sources.casino = await getDraft(CASINO_SOURCE, 'casino bonus');
-      console.log('    casino source ' + CASINO_SOURCE + ': ' + sources.casino.journeyName);
-    }
+    if (PRIZES.some((p) => p.kind === 'money')) sources.money = await getSource(MONEY_SOURCE, 'money bonus');
+    if (PRIZES.some((p) => p.kind === 'casino')) sources.casino = await getSource(CASINO_SOURCE, 'casino bonus');
+    if (!sources.money) sources.money = await getSource(MONEY_SOURCE, 'money bonus');   // the API node is lifted from it
     const apiTemplate = entryActivity(sources.money);
     if (!apiTemplate || apiTemplate.activityName !== 'external_system_source') {
       throw new Error('the money source does not start with the API node — nothing to clone the webhook entry from.');
@@ -371,6 +375,9 @@
         body.brand = BRAND;
         body.journeySource = 'UBO';
         body.isArchived = false;
+        // Cloning a running journey brings the moment it started with it. These
+        // start when they are published, so the stale timestamp goes.
+        if (body.isImmediatelyAfterPublish) body.startAt = null;
         delete body.duplicatedFromId;
         delete body.duplicatedFromVersion;
 

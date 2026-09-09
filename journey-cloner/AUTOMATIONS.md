@@ -109,8 +109,11 @@ Smartico can push a winner into the one matching their prize: cash 90 000 /
 (1x), 20 000 / 30 000 (3x), 1 000 / 4 000 / 7 000 / 10 000 / 15 000 (5x).
 
 Like `welcome_pack_campaign.py` it stores no template: the console script GETs
-the two source drafts at paste time and clones them, so shape is whatever those
-drafts are on the day you paste. Per prize it writes the amount (major units for
+the two sources at paste time and clones them, so shape is whatever they are on
+the day you paste. A source is named either way the backoffice shows it — the
+JRN id from the journey list or the numeric draft id from the editor URL — so a
+journey already running is as good a source as a draft, and usually a better
+one; its start time is dropped rather than inherited. Per prize it writes the amount (major units for
 a money bonus, minor plus a `_majorUnits` twin for a casino bonus), the rollover,
 the name, the webhook description, the transaction title and the notification's
 `%money-amount%`, then reserves a journey id and a promotion display id, mints a

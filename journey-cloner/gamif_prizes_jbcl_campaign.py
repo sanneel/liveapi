@@ -62,15 +62,23 @@ have.
 Nothing is published. Both sources publish immediately when published
 (isImmediatelyAfterPublish), so review each draft first.
 
+A source is named either way you see it in the backoffice: the JRN id the
+journey list prints, or the numeric draft id in the editor URL. The script asks
+for the right endpoint for whichever you gave it, so a journey already running
+is as good a source as a draft — and usually a better one, since it is the shape
+you last approved.
+
 Usage:
+  python gamif_prizes_jbcl_campaign.py --money-source JRN-0-685173 --casino-source JRN-0-685183
   python gamif_prizes_jbcl_campaign.py --money-source 693903 --casino-source 693908
-  python gamif_prizes_jbcl_campaign.py --money-source 693903 --casino-source 693908 \
-      --only cash,5x --name gamif_cash
+  python gamif_prizes_jbcl_campaign.py --money-source JRN-0-685173 --casino-source JRN-0-685183 \
+      --only 5x --name gamif_5x
 """
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -135,6 +143,20 @@ PRIZES = [
 ]
 
 GROUPS = ("cash", "1x", "3x", "5x")
+
+# A source is named either way the operator sees it: the JRN id printed in the
+# journey list, or the numeric draft id in the editor URL.
+JRN_RE = re.compile(r"^JRN-\d+-\d+$", re.IGNORECASE)
+DRAFT_RE = re.compile(r"^\d{4,}$")
+
+
+def source_kind(value: str) -> str:
+    v = (value or "").strip()
+    if JRN_RE.match(v):
+        return "journey"
+    if DRAFT_RE.match(v):
+        return "draft"
+    return ""
 
 
 def spaced(amount: int) -> str:
@@ -291,11 +313,18 @@ JS_TEMPLATE = r"""// JBCL gamification prizes — @COUNT@ API-triggered draft(s)
     if (!id) throw new Error('no promotionDisplayId: ' + t);
     return String(id);
   }
-  async function getDraft(numId, label) {
-    const r = await fetch(BASE + '/journey-drafts/' + numId, { headers: H(), credentials: 'include' });
-    const t = await r.text(); if (!r.ok) throw new Error(label + ' source draft ' + numId + ' HTTP ' + r.status + ' ' + t);
-    const d = parseJsonText(t, label + ' source draft', r.status);
-    if (!d || !Array.isArray(d.activities) || !d.activities.length) throw new Error(label + ' source draft ' + numId + ' has no activities[]');
+  // A source is whatever the operator has to hand: the JRN id the journey list
+  // shows, or the numeric draft id in the editor URL. Both answer with the same
+  // shape, so the rest of the script does not care which it was given.
+  async function getSource(id, label) {
+    const isJrn = /^JRN-/i.test(String(id).trim());
+    const url = BASE + (isJrn ? '/journeys/' : '/journey-drafts/') + String(id).trim();
+    const r = await fetch(url, { headers: H(), credentials: 'include' });
+    const t = await r.text();
+    if (!r.ok) throw new Error(label + ' source ' + id + ' HTTP ' + r.status + ' ' + t.slice(0, 200));
+    const d = parseJsonText(t, label + ' source', r.status);
+    if (!d || !Array.isArray(d.activities) || !d.activities.length) throw new Error(label + ' source ' + id + ' has no activities[]');
+    console.log('    ' + label + ' source ' + id + (isJrn ? ' (' + (d.status || 'journey') + ')' : ' (draft)') + ': ' + d.journeyName);
     return d;
   }
 
@@ -476,12 +505,9 @@ JS_TEMPLATE = r"""// JBCL gamification prizes — @COUNT@ API-triggered draft(s)
   const ok = [], fail = [];
   try {
     const sources = {};
-    sources.money = await getDraft(MONEY_SOURCE, 'money bonus');
-    console.log('    money source  ' + MONEY_SOURCE + ': ' + sources.money.journeyName);
-    if (PRIZES.some((p) => p.kind === 'casino')) {
-      sources.casino = await getDraft(CASINO_SOURCE, 'casino bonus');
-      console.log('    casino source ' + CASINO_SOURCE + ': ' + sources.casino.journeyName);
-    }
+    if (PRIZES.some((p) => p.kind === 'money')) sources.money = await getSource(MONEY_SOURCE, 'money bonus');
+    if (PRIZES.some((p) => p.kind === 'casino')) sources.casino = await getSource(CASINO_SOURCE, 'casino bonus');
+    if (!sources.money) sources.money = await getSource(MONEY_SOURCE, 'money bonus');   // the API node is lifted from it
     const apiTemplate = entryActivity(sources.money);
     if (!apiTemplate || apiTemplate.activityName !== 'external_system_source') {
       throw new Error('the money source does not start with the API node — nothing to clone the webhook entry from.');
@@ -499,6 +525,9 @@ JS_TEMPLATE = r"""// JBCL gamification prizes — @COUNT@ API-triggered draft(s)
         body.brand = BRAND;
         body.journeySource = 'UBO';
         body.isArchived = false;
+        // Cloning a running journey brings the moment it started with it. These
+        // start when they are published, so the stale timestamp goes.
+        if (body.isImmediatelyAfterPublish) body.startAt = null;
         delete body.duplicatedFromId;
         delete body.duplicatedFromVersion;
 
@@ -625,8 +654,10 @@ def build_js(drafts: list[dict], money_source: str, casino_source: str, keep_web
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--money-source", required=True, help="draft id of the money bonus journey to clone (numeric, e.g. 693903)")
-    p.add_argument("--casino-source", default="", help="draft id of the casino bonus journey to clone (numeric, e.g. 693908)")
+    p.add_argument("--money-source", required=True,
+                   help="the money bonus journey to clone: its JRN id (JRN-0-685173) or its draft id (693903)")
+    p.add_argument("--casino-source", default="",
+                   help="the casino bonus journey to clone: its JRN id (JRN-0-685183) or its draft id (693908)")
     p.add_argument("--only", default="", help=f"comma-separated prize groups to build ({', '.join(GROUPS)}); default all")
     p.add_argument("--keep-webhook-id", action="store_true",
                    help="reuse the source's webhookId instead of minting one per journey (twelve journeys then share one URL)")
@@ -646,10 +677,13 @@ def main() -> int:
         print(line)
 
     needs_casino = any(d["kind"] == "casino" for d in drafts)
+    money_kind = source_kind(args.money_source)
+    casino_kind = source_kind(args.casino_source)
     checks = verify(drafts) + [
-        (bool(args.money_source.strip()), "a money bonus source draft was given"),
-        (not needs_casino or bool(args.casino_source.strip()),
-         "a casino bonus source draft was given (the 1x/3x/5x prizes need one)"),
+        (bool(money_kind), f"the money source {args.money_source.strip()!r} is a JRN id or a draft id ({money_kind or 'neither'})"),
+        (not needs_casino or bool(casino_kind),
+         f"the casino source {args.casino_source.strip()!r} is a JRN id or a draft id ({casino_kind or 'neither'})"
+         " — the 1x/3x/5x prizes need one"),
     ]
     print()
     for good, label in checks:
